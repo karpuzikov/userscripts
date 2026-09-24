@@ -1,0 +1,12 @@
+uuid = "8a8ec0b6-c320-4951-b119-43f0801e928b"
+name = "Picard - Add EP/Single Suffix"
+version = "1.0.0"
+description = "Adds - EP or - Single to release titles from the primary release type."
+api = ["3.0"]
+authors = ["karpuzikov"]
+license = "MIT"
+license_url = "https://opensource.org/license/mit"
+categories = ["scripting", "metadata"]
+homepage = "https://github.com/karpuzikov/userscripts/tree/picard-plugin-add-ep-single-suffix"
+report_bugs_to = "https://github.com/karpuzikov/userscripts/issues"
+min_python_version = "3.9"
