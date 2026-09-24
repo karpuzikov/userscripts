@@ -1,17 +1,12 @@
-# Picard - Format Multiple Artists
+# Deprecated installation branch
 
-Picard 3.0 plugin version of the tagging script published in `karpuzikov/userscripts`.
+This branch is no longer the recommended Picard installation method.
 
-## Install in Picard 3.0
+Install the combined Picard 3 plugin from:
 
-1. Open `Options -> Plugins`.
-2. Choose `Install Plugin`.
-3. Select installation from URL.
-4. Git URL: `https://github.com/karpuzikov/userscripts`
-5. Ref/Tag: `picard-plugin-format-multiple-artists`
-6. Install and enable the plugin.
+- Git URL: `https://github.com/karpuzikov/userscripts.git`
+- Ref/Tag: leave empty (uses `main`)
 
-Picard tracks this Git branch and can check for and install later updates from its Plugins interface.
+Then enable the desired script under `Options -> Plugins -> Karpuzikov Picard Scripts`.
 
-The original manual-import `.txt` version remains available on the `main` branch:
-`picard-tools/scripts/Format_Multiple_Artists.txt`.
+The original manual `.txt` scripts remain on the `main` branch.
