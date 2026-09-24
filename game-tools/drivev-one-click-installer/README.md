@@ -66,3 +66,12 @@ The installer retries downloads three times. If an upstream author changes hosti
 ## Automatic dependency setup
 
 `Install_DriveV.bat` checks WinGet first. If WinGet is missing, it bootstraps it automatically. It then installs or updates Python 3.13 and 7-Zip before launching the installer GUI. `Restore_DriveV.bat` routes through the same setup path.
+
+
+## Single-file distribution
+
+The user-facing download is now only `Install_DriveV.bat`. It bootstraps WinGet, Python 3.13, and 7-Zip, then downloads/updates the self-contained `DriveV_AutoInstaller.pyw` into the per-user application folder and launches it.
+
+The Python GUI no longer requires a separate `.py` helper or `manifest.json`. Restore is available from the GUI and can also be launched with:
+
+`Install_DriveV.bat --restore`
