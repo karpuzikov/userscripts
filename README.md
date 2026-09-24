@@ -13,6 +13,7 @@ A collection of my Tampermonkey userscripts, apps, scripts, and utilities.
 | Project | Description | Version | Download |
 | --- | --- | ---: | --- |
 | **MusicBrainz BOIU Cover Art Removal** | Adds a **BOIU** button next to Edit/Remove for each cover image. One click removes that image with the edit note `better one is uploaded`. | 1.0.0 | [![Download](https://img.shields.io/badge/Download-.user.js-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/MusicBrainz_BOIU_Cover_Art_Removal.user.js) |
+| **Apple Music Barcodes/ISRCs** | Improved fork for extracting Apple Music barcodes, ISRCs, and metadata with a dark theme, centered table, selectable text, and one-click ISRC copying. | 0.24 | [![Download](https://img.shields.io/badge/Download-.user.js-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/apple-music-barcode-isrc/master/apple-music-barcode-isrc.user.js) |
 
 ## Media Tools
 
