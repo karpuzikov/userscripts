@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         BPTopTracker -> MusicBrainz Importer
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.0.0
+// @version      1.0.1
 // @description  Seed BPTopTracker Beatport release data into the MusicBrainz release editor.
 // @author       karpuzikov
 // @license      MIT
@@ -18,6 +18,7 @@
 
     const MUSICBRAINZ_ADD_RELEASE_URL = 'https://musicbrainz.org/release/add';
     const MUSICBRAINZ_SEARCH_URL = 'https://musicbrainz.org/search';
+    const SCRIPT_URL = 'https://github.com/karpuzikov/userscripts/blob/main/musicbrainz-tools/bptoptracker-musicbrainz-importer/BPTopTracker_MusicBrainz_Importer.user.js';
     const PURCHASE_FOR_DOWNLOAD_LINK_TYPE = '74';
 
     const normalizeWhitespace = (value) =>
@@ -314,6 +315,7 @@
             release.beatportUrl
                 ? `Original Beatport release: ${release.beatportUrl}`
                 : '',
+            `Script: ${SCRIPT_URL}`,
         ]
             .filter(Boolean)
             .join('\n');
