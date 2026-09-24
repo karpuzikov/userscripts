@@ -15,9 +15,9 @@ A collection of Tampermonkey userscripts, MusicBrainz/Picard helpers, Windows ut
 
 | Project | Description | Version | Download |
 | --- | --- | ---: | --- |
-| **BPTopTracker -> MusicBrainz Importer** | Imports BPTopTracker release metadata into the MusicBrainz Add Release editor, including artist credits, label, catalog number, date, digital medium, track titles, artists, lengths, and Beatport purchase URL without inventing unavailable identifiers. | 1.0.0 | [![Install](https://img.shields.io/badge/Install-.user.js-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/bptoptracker-musicbrainz-importer/BPTopTracker_MusicBrainz_Importer.user.js) |
-| **MusicBrainz BOIU Cover Art Removal** | Adds a **BOIU** button next to Edit/Remove for each cover image. One click removes that image with the edit note `better one is uploaded`. | 1.0.0 | [![Install](https://img.shields.io/badge/Install-.user.js-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/MusicBrainz_BOIU_Cover_Art_Removal.user.js) |
-| **MusicBrainz Release Events -> Worldwide** | Replaces all release events with one `[Worldwide]` event while preserving the existing release date. | 1.0.0 | [![Install](https://img.shields.io/badge/Install-.user.js-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/release-events-worldwide/MusicBrainz_Release_Events_Worldwide.user.js) |
+| **BPTopTracker -> MusicBrainz Importer** | Imports BPTopTracker release metadata into the MusicBrainz Add Release editor, including artist credits, label, catalog number, date, digital medium, track titles, artists, lengths, and Beatport purchase URL without inventing unavailable identifiers. | 1.0.1 | [![Install](https://img.shields.io/badge/Install-.user.js-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/bptoptracker-musicbrainz-importer/BPTopTracker_MusicBrainz_Importer.user.js) |
+| **MusicBrainz BOIU Cover Art Removal** | Adds a **BOIU** button next to Edit/Remove for each cover image. One click removes that image with the edit note `better one is uploaded`. | 1.0.1 | [![Install](https://img.shields.io/badge/Install-.user.js-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/MusicBrainz_BOIU_Cover_Art_Removal.user.js) |
+| **MusicBrainz Release Events -> Worldwide** | Replaces all release events with one `[Worldwide]` event while preserving the existing release date. | 1.1.0 | [![Install](https://img.shields.io/badge/Install-.user.js-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/release-events-worldwide/MusicBrainz_Release_Events_Worldwide.user.js) |
 | **Apple Music Barcodes/ISRCs** | Improved fork for extracting Apple Music barcodes, ISRCs, and metadata with a dark theme, centered table, selectable text, and one-click ISRC copying. | 0.24 | [![Install](https://img.shields.io/badge/Install-.user.js-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/apple-music-barcode-isrc/master/apple-music-barcode-isrc.user.js) |
 
 ## MusicBrainz Picard Tools
@@ -83,6 +83,7 @@ Repository software also follows these layout rules:
 - A `.py` helper is only acceptable when the software is launched through a BAT and merging it would materially hurt reliability.
 - Redundant launchers/helpers are embedded or removed where practical.
 - Host-required formats such as Picard `__init__.py`, Tampermonkey `.user.js`, and Photoshop `.jsx` keep the filenames required by their host applications.
+- MusicBrainz userscripts that create, submit, or modify MusicBrainz edits must include a link to the exact GitHub script in the edit note, while preserving any user-entered edit-note text.
 
 ## Notes
 
