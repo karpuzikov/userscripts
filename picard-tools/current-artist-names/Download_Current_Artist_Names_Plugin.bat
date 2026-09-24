@@ -22,7 +22,7 @@ set "OUT=%~dp0Current_Artist_Names_Picard_Plugin"
 set "BASE=https://raw.githubusercontent.com/karpuzikov/userscripts/main/picard-tools/current-artist-names"
 mkdir "%OUT%" 2>nul
 
-for %%F in (__init__.py MANIFEST.toml README.md test_helpers.py) do (
+for %%F in (__init__.py MANIFEST.toml) do (
     call :Download "%BASE%/%%F" "%OUT%\%%F"
     if errorlevel 1 goto :failed
 )
