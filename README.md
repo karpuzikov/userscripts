@@ -70,9 +70,11 @@ A collection of Tampermonkey userscripts, MusicBrainz/Picard helpers, Windows ut
 | **SyncTrayzor & Syncthing Backup** | Creates a verified timestamped ZIP of SyncTrayzor/Syncthing configuration, supports relocated current-user profiles, and refuses to copy live-changing config while either app is running. | 1.1.0 | [![Download](https://img.shields.io/badge/Download-.bat-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/main/backup-tools/syncthing-backup/SyncTrayzor_Syncthing_Backup.bat) |
 | **qBittorrent Backup & Restore** | Single BAT with Backup/Restore menu. Creates timestamped ZIP backups (`YYYY-MM-DD-HH-MM`) and restores the newest backup with automatic WinGet bootstrap. | 2.0.0 | [![Download](https://img.shields.io/badge/Download-.bat-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/main/backup-tools/qbittorrent-backup/qBittorrent_Backup_Restore.bat) |
 
-## Dependency Bootstrap and Software Layout
+## Dependency Bootstrap, Credentials, and Software Layout
 
 Standalone Windows entrypoints check WinGet first. If it is missing, they bootstrap WinGet automatically, then install or update the dependencies required by that tool. See [Windows Dependency Bootstrap Policy](windows-tools/DEPENDENCY_BOOTSTRAP.md).
+
+Software that explicitly manages authentication stores protected credentials under the dynamically resolved Windows Documents library at `Software Credentials\\<App Name>`, migrates legacy locations when practical, and reuses that store across updates.
 
 Repository software also follows these layout rules:
 - Prefer a single BAT or PYW whenever technically practical.
