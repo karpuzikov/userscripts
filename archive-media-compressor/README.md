@@ -1,10 +1,21 @@
 # Archive Media Compressor
 
-Double-click `ArchiveMedia.bat`.
+On a fresh Windows installation, download and run `ArchiveMedia_Setup.bat`.
 
-## What it does
+## First-run setup
 
-- Checks dependencies and installs PowerShell 7, FFmpeg/FFprobe, and ImageMagick through WinGet when needed.
+The setup launcher:
+
+- checks whether WinGet is installed;
+- installs WinGet automatically if it is missing;
+- installs or updates PowerShell 7;
+- installs or updates FFmpeg/FFprobe;
+- installs or updates ImageMagick;
+- downloads the latest `ArchiveMedia.zip`;
+- extracts it and launches `ArchiveMedia.bat`.
+
+## What Archive Media Compressor does
+
 - Asks for input and output folders.
 - Recursively preserves the source folder structure.
 - Detects NVIDIA, Intel, and AMD hardware encoding support.
@@ -20,9 +31,11 @@ Double-click `ArchiveMedia.bat`.
 
 ## Download
 
-[Download ArchiveMedia.zip](https://raw.githubusercontent.com/karpuzikov/userscripts/main/archive-media-compressor/ArchiveMedia.zip)
+[Download ArchiveMedia_Setup.bat](https://raw.githubusercontent.com/karpuzikov/userscripts/main/archive-media-compressor/ArchiveMedia_Setup.bat)
 
-The ZIP contains `ArchiveMedia.bat`, `ArchiveMedia.ps1`, and the full README.
+The original ZIP remains available for manual use:
+
+[Download ArchiveMedia.zip](https://raw.githubusercontent.com/karpuzikov/userscripts/main/archive-media-compressor/ArchiveMedia.zip)
 
 ## Important
 
