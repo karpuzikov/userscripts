@@ -55,3 +55,8 @@ Fixed recursive alias expansion where a short alias inside an already-canonical 
 `Download_Current_Artist_Names_Plugin.bat` checks WinGet first. If MusicBrainz Picard is missing, it installs Picard automatically. If the existing Picard installation is managed by WinGet, it checks for updates.
 
 If Picard is already installed outside WinGet, the downloader leaves that installation alone. This preserves prerelease or custom release channels instead of silently replacing them with WinGet's stable package.
+
+
+## File layout
+
+The downloader itself is one BAT. The installed Picard plugin uses only two runtime files: `__init__.py` and `MANIFEST.toml`. The `__init__.py` filename is required by the Picard/Python plugin format, so converting it to `.pyw` would break the plugin.
