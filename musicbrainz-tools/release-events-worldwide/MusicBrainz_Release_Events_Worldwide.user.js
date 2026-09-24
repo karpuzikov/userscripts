@@ -1,9 +1,13 @@
 // ==UserScript==
 // @name         MusicBrainz - Release Events to Worldwide
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.0.0
+// @version      1.1.0
 // @description  Replace all release events with one Worldwide event while keeping the existing date.
+// @author       karpuzikov
+// @license      MIT
 // @match        https://musicbrainz.org/release/*/edit*
+// @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/release-events-worldwide/MusicBrainz_Release_Events_Worldwide.user.js
+// @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/release-events-worldwide/MusicBrainz_Release_Events_Worldwide.user.js
 // @grant        none
 // @run-at       document-idle
 // ==/UserScript==
@@ -13,6 +17,7 @@
 
     const WORLDWIDE_ID = '240';
     const BUTTON_ID = 'mb-replace-release-events-worldwide';
+    const SCRIPT_URL = 'https://github.com/karpuzikov/userscripts/blob/main/musicbrainz-tools/release-events-worldwide/MusicBrainz_Release_Events_Worldwide.user.js';
 
     function wait(ms) {
         return new Promise(resolve => setTimeout(resolve, ms));
@@ -20,6 +25,30 @@
 
     function fire(element, type) {
         element.dispatchEvent(new Event(type, { bubbles: true }));
+    }
+
+    function appendScriptLinkToEditNote() {
+        const textarea = document.querySelector('#edit-note-text, textarea.edit-note');
+        if (!textarea || textarea.value.includes(SCRIPT_URL)) return;
+
+        const currentNote = textarea.value.trimEnd();
+        const newNote = currentNote
+            ? `${currentNote}\n\nScript: ${SCRIPT_URL}`
+            : `Script: ${SCRIPT_URL}`;
+
+        const setter = Object.getOwnPropertyDescriptor(
+            HTMLTextAreaElement.prototype,
+            'value'
+        )?.set;
+
+        if (setter) {
+            setter.call(textarea, newNote);
+        } else {
+            textarea.value = newNote;
+        }
+
+        fire(textarea, 'input');
+        fire(textarea, 'change');
     }
 
     function getFieldset() {
@@ -106,6 +135,8 @@
             if (!country) throw new Error('Country selector was not found.');
             country.value = WORLDWIDE_ID;
             fire(country, 'change');
+
+            appendScriptLinkToEditNote();
 
             button.textContent = 'Done';
             await wait(900);
