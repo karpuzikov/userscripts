@@ -43,6 +43,7 @@ A collection of Tampermonkey userscripts, MusicBrainz/Picard helpers, Windows ut
 | --- | --- | ---: | --- |
 | **3x3 Image Combiner** | Combines up to nine images into a 3x3 JPEG grid with a simple file picker. | - | [![Download](https://img.shields.io/badge/Download-.pyw-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/main/image-tools/3x3-image-combiner/3x3_Image_Combiner.pyw) |
 | **Fast Image to JPG Converter** | Multicore recursive PNG/HEIC/HEIF/JPEG-to-JPG converter with transparency checks and high-quality JPEG output. | - | [![Download](https://img.shields.io/badge/Download-.bat-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/main/image-tools/fast-image-to-jpg/Fast_Image_to_JPG_Converter.bat) |
+| **Photoshop 500px PNG / 600px JPG Batch Exporter** | Batch-processes images in Photoshop, creating a 600px JPG with smart size control and a 500px PNG with JPG fallback when needed. | 1.4 | [![Download](https://img.shields.io/badge/Download-.jsx-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/main/image-tools/photoshop-batch-export/Photoshop_Batch_500PNG_600JPG.jsx) |
 
 ## Media Tools
 
