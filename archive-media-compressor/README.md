@@ -1,20 +1,21 @@
 # Archive Media Compressor
 
-On a fresh Windows installation, download and run `ArchiveMedia_Setup.bat`.
+Download and double-click `ArchiveMedia.bat`.
 
-## First-run setup
+## Single-file design
 
-The setup launcher:
+`ArchiveMedia.bat` is self-contained. It embeds the compressor PowerShell payload and extracts it only to a temporary folder while running. Temporary payload files are removed when the run finishes.
 
-- checks whether WinGet is installed;
-- installs WinGet automatically if it is missing;
+On startup it:
+
+- checks whether WinGet is installed and bootstraps it if needed;
 - installs or updates PowerShell 7;
 - installs or updates FFmpeg/FFprobe;
 - installs or updates ImageMagick;
-- downloads the latest `ArchiveMedia.zip`;
-- extracts it and launches `ArchiveMedia.bat`.
+- extracts the embedded compressor payload to `%TEMP%`;
+- runs the compressor and cleans up the temporary payload.
 
-## What Archive Media Compressor does
+## What it does
 
 - Asks for input and output folders.
 - Recursively preserves the source folder structure.
@@ -31,11 +32,7 @@ The setup launcher:
 
 ## Download
 
-[Download ArchiveMedia_Setup.bat](https://raw.githubusercontent.com/karpuzikov/userscripts/main/archive-media-compressor/ArchiveMedia_Setup.bat)
-
-The original ZIP remains available for manual use:
-
-[Download ArchiveMedia.zip](https://raw.githubusercontent.com/karpuzikov/userscripts/main/archive-media-compressor/ArchiveMedia.zip)
+[Download ArchiveMedia.bat](https://raw.githubusercontent.com/karpuzikov/userscripts/main/archive-media-compressor/ArchiveMedia.bat)
 
 ## Important
 
