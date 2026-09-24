@@ -2,6 +2,14 @@
 setlocal EnableExtensions DisableDelayedExpansion
 title qBittorrent Backup
 
+call :EnsureWinget
+if errorlevel 1 (
+    echo.
+    echo ERROR: Dependency bootstrap failed.
+    pause
+    exit /b 1
+)
+
 set "CURDIR=%~dp0"
 for /f "usebackq delims=" %%T in (`powershell.exe -NoProfile -Command "Get-Date -Format 'yyyy-MM-dd-HH-mm'"`) do set "TIMESTAMP=%%T"
 if not defined TIMESTAMP (
@@ -176,3 +184,30 @@ echo Backup failed. No completed timestamped backup was created.
 echo.
 pause
 exit /b 1
+
+:EnsureWinget
+set "WINGET="
+where winget.exe >nul 2>&1
+if not errorlevel 1 set "WINGET=winget.exe"
+if not defined WINGET if exist "%LOCALAPPDATA%\Microsoft\WindowsApps\winget.exe" set "WINGET=%LOCALAPPDATA%\Microsoft\WindowsApps\winget.exe"
+
+if not defined WINGET (
+    echo [SETUP] WinGet is not installed. Installing the latest WinGet...
+    powershell.exe -NoProfile -ExecutionPolicy Bypass -Command ^
+     "$ErrorActionPreference='Stop'; [Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12; $ProgressPreference='SilentlyContinue'; try { if(-not (Get-PackageProvider -Name NuGet -ListAvailable -ErrorAction SilentlyContinue)){ Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Scope CurrentUser -Force | Out-Null }; if(-not (Get-PSRepository -Name PSGallery -ErrorAction SilentlyContinue)){ Register-PSRepository -Default }; Set-PSRepository -Name PSGallery -InstallationPolicy Trusted; Install-Module -Name Microsoft.WinGet.Client -Repository PSGallery -Scope CurrentUser -Force -AllowClobber; Import-Module Microsoft.WinGet.Client -Force; Repair-WinGetPackageManager -Latest -Force } catch { $tmp=Join-Path $env:TEMP 'Microsoft.DesktopAppInstaller.msixbundle'; Invoke-WebRequest -UseBasicParsing 'https://aka.ms/getwinget' -OutFile $tmp; Add-AppxPackage -Path $tmp; Remove-Item $tmp -Force -ErrorAction SilentlyContinue }"
+    if errorlevel 1 (
+        echo ERROR: Automatic WinGet installation failed.
+        exit /b 1
+    )
+    if exist "%LOCALAPPDATA%\Microsoft\WindowsApps\winget.exe" set "WINGET=%LOCALAPPDATA%\Microsoft\WindowsApps\winget.exe"
+    if not defined WINGET (
+        where winget.exe >nul 2>&1
+        if not errorlevel 1 set "WINGET=winget.exe"
+    )
+)
+if not defined WINGET (
+    echo ERROR: WinGet is still unavailable after installation.
+    exit /b 1
+)
+"%WINGET%" source update >nul 2>&1
+exit /b 0
