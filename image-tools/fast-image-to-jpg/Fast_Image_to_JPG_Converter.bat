@@ -1,5 +1,18 @@
 @echo off
-setlocal DisableDelayedExpansion
+setlocal EnableExtensions DisableDelayedExpansion
+title Fast Image to JPG Converter
+
+call :EnsureWinget
+if errorlevel 1 goto :bootstrap_failed
+call :EnsureWingetPackage ImageMagick.ImageMagick
+if errorlevel 1 goto :bootstrap_failed
+call :FindMagick
+if not defined MAGICK_EXE (
+    echo ERROR: ImageMagick was installed but magick.exe could not be located.
+    goto :bootstrap_failed
+)
+
+set "FAST_CONVERTER_SELF=%~f0"
 
 :loop
 echo.
@@ -9,15 +22,15 @@ set /p "imgfolder=> "
 if "%imgfolder%"=="" goto end
 set "imgfolder=%imgfolder:"=%"
 
-if not exist "%imgfolder%" (
+if not exist "%imgfolder%\" (
     echo Folder not found: "%imgfolder%"
     goto loop
 )
 
 set "IMG_FOLDER=%imgfolder%"
 
-powershell -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command ^
-"$script = (Get-Content -LiteralPath '%~f0' -Raw) -replace '(?s).*::BEGIN_SCRIPT(.*)::END_SCRIPT.*', '$1'; $env:IMG_FOLDER = '%IMG_FOLDER%'; Invoke-Expression $script"
+powershell.exe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command ^
+ "$script=(Get-Content -LiteralPath $env:FAST_CONVERTER_SELF -Raw) -replace '(?s).*::BEGIN_SCRIPT(.*)::END_SCRIPT.*','$1'; Invoke-Expression $script"
 
 goto loop
 
@@ -25,7 +38,58 @@ goto loop
 echo.
 echo All conversions finished.
 pause
-exit /b
+exit /b 0
+
+:bootstrap_failed
+echo.
+echo ERROR: Automatic dependency setup failed.
+pause
+exit /b 1
+
+:FindMagick
+set "MAGICK_EXE="
+for /f "delims=" %%M in ('where magick.exe 2^>nul') do if not defined MAGICK_EXE set "MAGICK_EXE=%%M"
+if defined MAGICK_EXE exit /b 0
+for /d %%D in ("%ProgramFiles%\ImageMagick-*") do if exist "%%~fD\magick.exe" set "MAGICK_EXE=%%~fD\magick.exe"
+if not defined MAGICK_EXE if defined ProgramFiles(x86) for /d %%D in ("%ProgramFiles(x86)%\ImageMagick-*") do if exist "%%~fD\magick.exe" set "MAGICK_EXE=%%~fD\magick.exe"
+exit /b 0
+
+:EnsureWinget
+set "WINGET="
+where winget.exe >nul 2>&1
+if not errorlevel 1 set "WINGET=winget.exe"
+if not defined WINGET if exist "%LOCALAPPDATA%\Microsoft\WindowsApps\winget.exe" set "WINGET=%LOCALAPPDATA%\Microsoft\WindowsApps\winget.exe"
+if not defined WINGET (
+    echo [SETUP] WinGet is not installed. Installing the latest WinGet...
+    powershell.exe -NoProfile -ExecutionPolicy Bypass -Command ^
+     "$ErrorActionPreference='Stop'; [Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12; $ProgressPreference='SilentlyContinue'; try { if(-not (Get-PackageProvider -Name NuGet -ListAvailable -ErrorAction SilentlyContinue)){ Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Scope CurrentUser -Force | Out-Null }; if(-not (Get-PSRepository -Name PSGallery -ErrorAction SilentlyContinue)){ Register-PSRepository -Default }; Set-PSRepository -Name PSGallery -InstallationPolicy Trusted; Install-Module -Name Microsoft.WinGet.Client -Repository PSGallery -Scope CurrentUser -Force -AllowClobber; Import-Module Microsoft.WinGet.Client -Force; Repair-WinGetPackageManager -Latest -Force } catch { $tmp=Join-Path $env:TEMP 'Microsoft.DesktopAppInstaller.msixbundle'; Invoke-WebRequest -UseBasicParsing 'https://aka.ms/getwinget' -OutFile $tmp; Add-AppxPackage -Path $tmp; Remove-Item $tmp -Force -ErrorAction SilentlyContinue }"
+    if errorlevel 1 exit /b 1
+    if exist "%LOCALAPPDATA%\Microsoft\WindowsApps\winget.exe" set "WINGET=%LOCALAPPDATA%\Microsoft\WindowsApps\winget.exe"
+    if not defined WINGET (
+        where winget.exe >nul 2>&1
+        if not errorlevel 1 set "WINGET=winget.exe"
+    )
+)
+if not defined WINGET exit /b 1
+"%WINGET%" source update >nul 2>&1
+exit /b 0
+
+:EnsureWingetPackage
+setlocal
+set "PKG=%~1"
+"%WINGET%" list --id "%PKG%" -e >nul 2>&1
+if errorlevel 1 (
+    echo [SETUP] Installing %PKG%...
+    "%WINGET%" install --id "%PKG%" -e --silent --accept-package-agreements --accept-source-agreements --disable-interactivity
+    if errorlevel 1 (
+        endlocal & exit /b 1
+    )
+) else (
+    echo [SETUP] Checking %PKG% for updates...
+    "%WINGET%" upgrade --id "%PKG%" -e --silent --accept-package-agreements --accept-source-agreements --disable-interactivity >nul 2>&1
+)
+endlocal & exit /b 0
+
 
 ::BEGIN_SCRIPT
 Add-Type -AssemblyName System.Drawing
@@ -35,6 +99,7 @@ if (-not ('FastImageConvert' -as [type])) {
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
@@ -55,21 +120,18 @@ public static class FastImageConvert
     private static bool HasPotentialAlpha(Image image)
     {
         PixelFormat pf = image.PixelFormat;
-
         if ((pf & PixelFormat.Alpha) != 0 || (pf & PixelFormat.PAlpha) != 0)
             return true;
 
         if ((pf & PixelFormat.Indexed) != 0)
         {
             ColorPalette palette = image.Palette;
-            Color[] entries = palette.Entries;
-            for (int i = 0; i < entries.Length; i++)
+            foreach (Color entry in palette.Entries)
             {
-                if (entries[i].A < 255)
+                if (entry.A < 255)
                     return true;
             }
         }
-
         return false;
     }
 
@@ -88,7 +150,6 @@ public static class FastImageConvert
 
             Rectangle rect = new Rectangle(0, 0, bitmap.Width, bitmap.Height);
             BitmapData data = bitmap.LockBits(rect, ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb);
-
             try
             {
                 int rowBytes = bitmap.Width * 4;
@@ -111,7 +172,6 @@ public static class FastImageConvert
                 bitmap.UnlockBits(data);
             }
         }
-
         return false;
     }
 
@@ -120,8 +180,6 @@ public static class FastImageConvert
         using (EncoderParameters parameters = new EncoderParameters(1))
         {
             parameters.Param[0] = new EncoderParameter(System.Drawing.Imaging.Encoder.Quality, quality);
-
-            // Create/overwrite directly. This avoids Test-Path and a second filesystem lookup.
             using (FileStream stream = new FileStream(destination, FileMode.Create, FileAccess.Write, FileShare.None, 1024 * 1024))
             {
                 image.Save(stream, JpegCodec, parameters);
@@ -129,7 +187,40 @@ public static class FastImageConvert
         }
     }
 
-    private static string ConvertOne(string filePath, byte alphaThreshold, long jpegQuality)
+    private static string Quote(string value)
+    {
+        return "\"" + value + "\"";
+    }
+
+    private static string ConvertHeic(string filePath, string jpgPath, string magickExe, long jpegQuality)
+    {
+        ProcessStartInfo psi = new ProcessStartInfo();
+        psi.FileName = magickExe;
+        psi.Arguments = Quote(filePath) + " -auto-orient -colorspace sRGB -quality " + jpegQuality +
+                        " -sampling-factor 4:4:4 " + Quote(jpgPath);
+        psi.UseShellExecute = false;
+        psi.CreateNoWindow = true;
+        psi.RedirectStandardOutput = true;
+        psi.RedirectStandardError = true;
+
+        using (Process process = Process.Start(psi))
+        {
+            string stdout = process.StandardOutput.ReadToEnd();
+            string stderr = process.StandardError.ReadToEnd();
+            process.WaitForExit();
+
+            if (process.ExitCode != 0)
+                return "ERROR: " + filePath + " ImageMagick: " + (stderr.Trim().Length > 0 ? stderr.Trim() : stdout.Trim());
+        }
+
+        if (!File.Exists(jpgPath) || new FileInfo(jpgPath).Length <= 0)
+            return "WARNING: JPG not created: " + filePath;
+
+        File.Delete(filePath);
+        return "Converted: " + filePath;
+    }
+
+    private static string ConvertOne(string filePath, byte alphaThreshold, long jpegQuality, string magickExe)
     {
         string ext = Path.GetExtension(filePath);
 
@@ -139,6 +230,12 @@ public static class FastImageConvert
         try
         {
             string jpgPath = Path.ChangeExtension(filePath, ".jpg");
+
+            if (ext.Equals(".heic", StringComparison.OrdinalIgnoreCase) ||
+                ext.Equals(".heif", StringComparison.OrdinalIgnoreCase))
+            {
+                return ConvertHeic(filePath, jpgPath, magickExe, jpegQuality);
+            }
 
             using (Image image = Image.FromFile(filePath, false))
             {
@@ -154,7 +251,6 @@ public static class FastImageConvert
             if (!File.Exists(jpgPath))
                 return "WARNING: JPG not created: " + filePath;
 
-            // Image.FromFile locks the source, so delete only after Image.Dispose().
             File.Delete(filePath);
             return "Converted: " + filePath;
         }
@@ -164,7 +260,7 @@ public static class FastImageConvert
         }
     }
 
-    public static string[] ProcessFolder(string folder, int maxThreads, byte alphaThreshold, long jpegQuality)
+    public static string[] ProcessFolder(string folder, int maxThreads, byte alphaThreshold, long jpegQuality, string magickExe)
     {
         ConcurrentQueue<string> results = new ConcurrentQueue<string>();
 
@@ -176,7 +272,7 @@ public static class FastImageConvert
 
         Parallel.ForEach(files, options, delegate(string file)
         {
-            results.Enqueue(ConvertOne(file, alphaThreshold, jpegQuality));
+            results.Enqueue(ConvertOne(file, alphaThreshold, jpegQuality, magickExe));
         });
 
         return results.ToArray();
@@ -186,13 +282,14 @@ public static class FastImageConvert
 }
 
 $imgfolder = $env:IMG_FOLDER
+$magickExe = $env:MAGICK_EXE
 $maxThreads = [Environment]::ProcessorCount
 $alphaThreshold = [byte]250
 $jpegQuality = 100L
 
 $sw = [System.Diagnostics.Stopwatch]::StartNew()
 try {
-    $results = [FastImageConvert]::ProcessFolder($imgfolder, $maxThreads, $alphaThreshold, $jpegQuality)
+    $results = [FastImageConvert]::ProcessFolder($imgfolder, $maxThreads, $alphaThreshold, $jpegQuality, $magickExe)
     if ($results.Count -eq 0) {
         Write-Host 'No supported image files found.'
     } else {
