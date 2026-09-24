@@ -49,3 +49,9 @@ This directory is a Picard 3 plugin repository. In Picard:
 ## 0.2.0
 
 Fixed recursive alias expansion where a short alias inside an already-canonical artist name could duplicate the name (for example `Krizz Kaliko` becoming `Krizz Krizz Kaliko`). Canonical artist-name spans are now protected during replacement while standalone and longer historical credits still normalize.
+
+## Dependency bootstrap
+
+`Download_Current_Artist_Names_Plugin.bat` checks WinGet first. If MusicBrainz Picard is missing, it installs Picard automatically. If the existing Picard installation is managed by WinGet, it checks for updates.
+
+If Picard is already installed outside WinGet, the downloader leaves that installation alone. This preserves prerelease or custom release channels instead of silently replacing them with WinGet's stable package.
