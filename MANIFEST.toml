@@ -1,0 +1,12 @@
+uuid = "7fba00c1-9506-4650-ba0a-887ea14ac0aa"
+name = "Picard - Unicode to ASCII"
+version = "1.0.0"
+description = "Normalizes common Unicode punctuation and symbols to ASCII in selected tags."
+api = ["3.0"]
+authors = ["karpuzikov"]
+license = "MIT"
+license_url = "https://opensource.org/license/mit"
+categories = ["scripting", "metadata"]
+homepage = "https://github.com/karpuzikov/userscripts/tree/picard-plugin-unicode-to-ascii"
+report_bugs_to = "https://github.com/karpuzikov/userscripts/issues"
+min_python_version = "3.9"
