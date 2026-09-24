@@ -41,3 +41,21 @@ Some tools execute inside another application and must keep that host's required
 - MusicBrainz Picard script snippets: text copied into Picard
 
 Where practical, a single Windows downloader/installer prepares the minimum required host-side files.
+
+
+## Credential storage
+
+Any software that needs authentication data follows one shared Windows credential-storage convention from its first release.
+
+- Resolve the actual Windows Documents known folder dynamically. Never assume `C:\Users\<name>\Documents` because Documents may be moved or redirected.
+- Use one common root under Documents:
+  `<Documents>\Software Credentials\<App Name>\`
+- Reuse the same per-app credential location across future versions so users do not have to enter API keys, tokens, cookies, login/session data, or similar secrets again after an update.
+- Protect secrets at rest with Windows DPAPI for the current Windows user whenever practical.
+- Treat login-capable session material (for example exported sessions, tokens, cookies, refresh tokens, or API secrets) as credentials and protect it too.
+- Migrate known legacy credential locations automatically when possible.
+- Migration should be copy/convert-first and only delete the old plaintext secret after the new protected store has been written and verified.
+- Preserve backward compatibility with existing credential locations and formats whenever practical.
+- Never commit real credentials to GitHub and never write secrets to normal application logs.
+- Non-secret settings, caches, logs, and generated data do not belong in the shared credential store.
+- Browser userscripts that merely inherit an existing browser/site login must not copy browser cookies or session data into this store unless the script itself explicitly needs to persist credentials.
