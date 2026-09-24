@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MusicBrainz - BOIU Cover Art Removal
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.0.0
+// @version      1.0.1
 // @description  Adds a BOIU button to MusicBrainz cover art. One click removes the image with the edit note "better one is uploaded".
 // @author       karpuzikov
 // @license      MIT
@@ -15,7 +15,8 @@
 (function () {
     'use strict';
 
-    const EDIT_NOTE = 'better one is uploaded';
+    const SCRIPT_URL = 'https://github.com/karpuzikov/userscripts/blob/main/musicbrainz-tools/MusicBrainz_BOIU_Cover_Art_Removal.user.js';
+    const EDIT_NOTE = `better one is uploaded\n\nScript: ${SCRIPT_URL}`;
     const STORAGE_KEY = 'mb_boiu_remove';
 
     if (/^\/release\/[^/]+\/cover-art\/?$/.test(location.pathname)) {
