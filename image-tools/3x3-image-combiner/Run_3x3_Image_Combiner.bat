@@ -8,6 +8,35 @@ call :EnsurePython313
 if errorlevel 1 goto :failed
 
 echo [SETUP] Checking Pillow...
+"%PYTHON313%" -m ensurepip --upgrade >nul 2>&1
+"%PYTHON313%" -m pip install --upgrade --disable-pip-version-check Pillow >nul 2>&1
+if errorlevel 1 goto :failed
+
+set "TEMP_PYW=%TEMP%\3x3_Image_Combiner_%RANDOM%_%RANDOM%.pyw"
+set "PAYLOAD_SELF=%~f0"
+set "PAYLOAD_OUT=%TEMP_PYW%"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference='Stop'; $lines=Get-Content -LiteralPath $env:PAYLOAD_SELF; $m=[Array]::IndexOf($lines,'::PYTHON_PAYLOAD'); if($m -lt 0){throw 'Embedded Python payload not found.'}; $b64=($lines[($m+1)..($lines.Count-1)] -join ''); [IO.File]::WriteAllBytes($env:PAYLOAD_OUT,[Convert]::FromBase64String($b64))"
+if errorlevel 1 goto :failed
+
+"%PYTHONW313%" "%TEMP_PYW%"
+set "RC=%ERRORLEVEL%"
+del /f /q "%TEMP_PYW%" >nul 2>&1
+exit /b %RC%
+
+:failed
+if defined TEMP_PYW del /f /q "%TEMP_PYW%" >nul 2>&1
+echo.
+echo ERROR: Automatic setup failed.
+echo Check the internet connection and Windows software-installation permissions.
+pause
+exit /b 1
+
+:EnsureWinget
+if errorlevel 1 goto :failed
+call :EnsurePython313
+if errorlevel 1 goto :failed
+
+echo [SETUP] Checking Pillow...
 "%PYTHON313%" -c "import PIL" >nul 2>&1
 if errorlevel 1 (
     "%PYTHON313%" -m ensurepip --upgrade >nul 2>&1
@@ -113,3 +142,42 @@ if defined PYTHON313 (
 )
 if not defined PYTHONW313 set "PYTHONW313=%PYTHON313%"
 exit /b 0
+
+::PYTHON_PAYLOAD
+ZnJvbSBQSUwgaW1wb3J0IEltYWdlLCBJbWFnZU9wcwpmcm9tIHRraW50ZXIgaW1wb3J0IFRrLCBm
+aWxlZGlhbG9nLCBtZXNzYWdlYm94CmZyb20gcGF0aGxpYiBpbXBvcnQgUGF0aAoKR1JJRF9TSVpF
+ID0gMwpDRUxMX1NJWkUgPSAxMDAwCk9VVFBVVF9TSVpFID0gR1JJRF9TSVpFICogQ0VMTF9TSVpF
+CkJBQ0tHUk9VTkQgPSAoMCwgMCwgMCkKSlBFR19RVUFMSVRZID0gOTUKClNVUFBPUlRFRCA9IFsK
+ICAgICgiSW1hZ2VzIiwgIiouanBnICouanBlZyAqLnBuZyAqLndlYnAgKi5ibXAgKi50aWYgKi50
+aWZmIiksCiAgICAoIkFsbCBmaWxlcyIsICIqLioiKSwKXQoKCmRlZiBtYWluKCk6CiAgICByb290
+ID0gVGsoKQogICAgcm9vdC53aXRoZHJhdygpCiAgICByb290LmF0dHJpYnV0ZXMoIi10b3Btb3N0
+IiwgVHJ1ZSkKCiAgICB0cnk6CiAgICAgICAgZmlsZXMgPSBmaWxlZGlhbG9nLmFza29wZW5maWxl
+bmFtZXMoCiAgICAgICAgICAgIHBhcmVudD1yb290LAogICAgICAgICAgICB0aXRsZT0iU2VsZWN0
+IHVwIHRvIDkgcGljdHVyZXMiLAogICAgICAgICAgICBmaWxldHlwZXM9U1VQUE9SVEVELAogICAg
+ICAgICkKCiAgICAgICAgaWYgbm90IGZpbGVzOgogICAgICAgICAgICByZXR1cm4KCiAgICAgICAg
+ZmlsZXMgPSBsaXN0KGZpbGVzKVs6OV0KCiAgICAgICAgY2FudmFzID0gSW1hZ2UubmV3KAogICAg
+ICAgICAgICAiUkdCIiwKICAgICAgICAgICAgKE9VVFBVVF9TSVpFLCBPVVRQVVRfU0laRSksCiAg
+ICAgICAgICAgIEJBQ0tHUk9VTkQKICAgICAgICApCgogICAgICAgIGZvciBpbmRleCwgZmlsZW5h
+bWUgaW4gZW51bWVyYXRlKGZpbGVzKToKICAgICAgICAgICAgd2l0aCBJbWFnZS5vcGVuKGZpbGVu
+YW1lKSBhcyBpbWc6CiAgICAgICAgICAgICAgICBpbWcgPSBJbWFnZU9wcy5leGlmX3RyYW5zcG9z
+ZShpbWcpLmNvbnZlcnQoIlJHQiIpCgogICAgICAgICAgICAgICAgaW1nID0gSW1hZ2VPcHMuZml0
+KAogICAgICAgICAgICAgICAgICAgIGltZywKICAgICAgICAgICAgICAgICAgICAoQ0VMTF9TSVpF
+LCBDRUxMX1NJWkUpLAogICAgICAgICAgICAgICAgICAgIG1ldGhvZD1JbWFnZS5SZXNhbXBsaW5n
+LkxBTkNaT1MsCiAgICAgICAgICAgICAgICAgICAgY2VudGVyaW5nPSgwLjUsIDAuNSksCiAgICAg
+ICAgICAgICAgICApCgogICAgICAgICAgICAgICAgY29sdW1uID0gaW5kZXggJSBHUklEX1NJWkUK
+ICAgICAgICAgICAgICAgIHJvdyA9IGluZGV4IC8vIEdSSURfU0laRQoKICAgICAgICAgICAgICAg
+IHggPSBjb2x1bW4gKiBDRUxMX1NJWkUKICAgICAgICAgICAgICAgIHkgPSByb3cgKiBDRUxMX1NJ
+WkUKCiAgICAgICAgICAgICAgICBjYW52YXMucGFzdGUoaW1nLCAoeCwgeSkpCgogICAgICAgIGZp
+cnN0X2ZpbGUgPSBQYXRoKGZpbGVzWzBdKQogICAgICAgIG91dHB1dF9wYXRoID0gZmlyc3RfZmls
+ZS5wYXJlbnQgLyAiY29tYmluZWRfM3gzLmpwZyIKCiAgICAgICAgY291bnRlciA9IDIKICAgICAg
+ICB3aGlsZSBvdXRwdXRfcGF0aC5leGlzdHMoKToKICAgICAgICAgICAgb3V0cHV0X3BhdGggPSBm
+aXJzdF9maWxlLnBhcmVudCAvIGYiY29tYmluZWRfM3gzX3tjb3VudGVyfS5qcGciCiAgICAgICAg
+ICAgIGNvdW50ZXIgKz0gMQoKICAgICAgICBjYW52YXMuc2F2ZSgKICAgICAgICAgICAgb3V0cHV0
+X3BhdGgsCiAgICAgICAgICAgICJKUEVHIiwKICAgICAgICAgICAgcXVhbGl0eT1KUEVHX1FVQUxJ
+VFksCiAgICAgICAgICAgIHN1YnNhbXBsaW5nPTAsCiAgICAgICAgICAgIG9wdGltaXplPVRydWUs
+CiAgICAgICAgKQoKICAgICAgICBtZXNzYWdlYm94LnNob3dpbmZvKAogICAgICAgICAgICAiRG9u
+ZSIsCiAgICAgICAgICAgIGYiU2F2ZWQ6XG57b3V0cHV0X3BhdGh9IiwKICAgICAgICAgICAgcGFy
+ZW50PXJvb3QKICAgICAgICApCgogICAgZXhjZXB0IEV4Y2VwdGlvbiBhcyBlOgogICAgICAgIG1l
+c3NhZ2Vib3guc2hvd2Vycm9yKAogICAgICAgICAgICAiRXJyb3IiLAogICAgICAgICAgICBzdHIo
+ZSksCiAgICAgICAgICAgIHBhcmVudD1yb290CiAgICAgICAgKQoKICAgIGZpbmFsbHk6CiAgICAg
+ICAgcm9vdC5kZXN0cm95KCkKCgppZiBfX25hbWVfXyA9PSAiX19tYWluX18iOgogICAgbWFpbigp
