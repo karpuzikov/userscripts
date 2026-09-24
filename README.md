@@ -68,8 +68,9 @@ A collection of Tampermonkey userscripts, MusicBrainz/Picard helpers, Windows ut
 
 | Project | Description | Version | Download |
 | --- | --- | ---: | --- |
-| **SyncTrayzor & Syncthing Backup** | Creates a verified timestamped ZIP of SyncTrayzor/Syncthing configuration, supports relocated current-user profiles, and refuses to copy live-changing config while either app is running. | 1.1.0 | [![Download](https://img.shields.io/badge/Download-.bat-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/main/backup-tools/syncthing-backup/SyncTrayzor_Syncthing_Backup.bat) |
-| **qBittorrent Backup & Restore** | Single BAT with Backup/Restore menu. Creates timestamped ZIP backups (`YYYY-MM-DD-HH-MM`) and restores the newest backup with automatic WinGet bootstrap. | 2.0.0 | [![Download](https://img.shields.io/badge/Download-.bat-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/main/backup-tools/qbittorrent-backup/qBittorrent_Backup_Restore.bat) |
+| **Backup and Restore Windows Drivers** | Single BAT with Backup/Restore menu. Creates verified timestamped ZIP backups of third-party Windows drivers and restores the newest backup with PnPUtil, administrator elevation, detailed logging, reboot tracking, and legacy backup compatibility. | 1.0.0 | [![Download](https://img.shields.io/badge/Download-.bat-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/main/backup-tools/windows-drivers/Backup_and_Restore_Windows_Drivers.bat) |
+| **Backup and Restore SyncTrayzor & Syncthing** | Single BAT with Backup/Restore menu. Creates verified timestamped ZIP backups of SyncTrayzor/Syncthing configuration, refuses live-changing copies while either app is running, restores the newest backup, and supports legacy backup layouts. | 2.0.0 | [![Download](https://img.shields.io/badge/Download-.bat-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/main/backup-tools/syncthing-backup/Backup_and_Restore_SyncTrayzor_Syncthing.bat) |
+| **Backup and Restore qBittorrent** | Single BAT with Backup/Restore menu. Creates verified timestamped ZIP backups of qBittorrent profiles and installation data, restores the newest backup with automatic elevation, and supports legacy backup layouts. | 2.1.0 | [![Download](https://img.shields.io/badge/Download-.bat-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/main/backup-tools/qbittorrent-backup/Backup_and_Restore_qBittorrent.bat) |
 
 ## Dependency Bootstrap, Credentials, and Software Layout
 
@@ -82,6 +83,8 @@ Repository software also follows these layout rules:
 - Python GUI software uses `.pyw` rather than `.py`.
 - A `.py` helper is only acceptable when the software is launched through a BAT and merging it would materially hurt reliability.
 - Redundant launchers/helpers are embedded or removed where practical.
+- Related tools use unified UI/UX, status wording, logging, naming, and behavior whenever practical.
+- Backup tools use timestamped names in the form `<Product>_Backup_YYYY-MM-DD-HH-MM`, restore the newest compatible backup by default, and preserve legacy backup compatibility when practical.
 - Host-required formats such as Picard `__init__.py`, Tampermonkey `.user.js`, and Photoshop `.jsx` keep the filenames required by their host applications.
 - MusicBrainz userscripts that create, submit, or modify MusicBrainz edits must include a link to the exact GitHub script in the edit note, while preserving any user-entered edit-note text.
 
