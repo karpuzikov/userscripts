@@ -62,3 +62,7 @@ The installer retries downloads three times. If an upstream author changes hosti
 - **Detect** checks Steam libraries (including libraries on D:, E:, etc.), Epic launcher manifests, Rockstar registry locations, and common GTA V folders on every fixed/removable Windows drive.
 - The last valid GTA V folder is saved to `%LOCALAPPDATA%\DriveV_AutoInstaller\settings.json` and restored automatically the next time the installer starts.
 - The saved path survives replacing or re-extracting this installer.
+
+## Automatic dependency setup
+
+`Install_DriveV.bat` checks WinGet first. If WinGet is missing, it bootstraps it automatically. It then installs or updates Python 3.13 and 7-Zip before launching the installer GUI. `Restore_DriveV.bat` routes through the same setup path.
