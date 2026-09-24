@@ -67,6 +67,7 @@ A collection of Tampermonkey userscripts, MusicBrainz/Picard helpers, Windows ut
 | Project | Description | Version | Download |
 | --- | --- | ---: | --- |
 | **SyncTrayzor & Syncthing Backup** | Creates a timestamped ZIP containing both SyncTrayzor and Syncthing configuration folders while preserving the original `Users/<user>/AppData/...` structure. | - | [![Download](https://img.shields.io/badge/Download-.bat-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/main/backup-tools/syncthing-backup/SyncTrayzor_Syncthing_Backup.bat) |
+| **qBittorrent Backup & Restore** | Creates timestamped qBittorrent ZIP backups (`YYYY-MM-DD-HH-MM`) and restores the newest backup, including profile data and the installed program when available. | 1.0.0 | [![Backup](https://img.shields.io/badge/Download-Backup.bat-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/main/backup-tools/qbittorrent-backup/qBittorrent_pack.bat) [![Restore](https://img.shields.io/badge/Download-Restore.bat-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/main/backup-tools/qbittorrent-backup/qBittorrent_unpack.bat) |
 
 ## Notes
 
