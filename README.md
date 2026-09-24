@@ -50,6 +50,12 @@ A collection of Tampermonkey userscripts, MusicBrainz/Picard helpers, Windows ut
 | --- | --- | ---: | --- |
 | **Archive Media Compressor** | Recursively compresses and standardizes video/photo archives, preserves folder structure, auto-detects hardware encoders, and installs required tools on Windows. | 1.0.0 | [![Download](https://img.shields.io/badge/Download-.zip-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/main/archive-media-compressor/ArchiveMedia.zip) |
 
+## Windows Tools
+
+| Project | Description | Version | Download |
+| --- | --- | ---: | --- |
+| **Requirements Manager** | Installs a single or multiple `requirements.txt` files, auto-detects ComfyUI embedded Python or system Python, and can add/remove a Windows context-menu installer. | 1.0.0 | [![Download](https://img.shields.io/badge/Download-.bat-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/main/windows-tools/requirements-manager/Requirements_Manager.bat) |
+
 ## Game Tools
 
 | Project | Description | Version | Download |
