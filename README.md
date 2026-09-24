@@ -23,7 +23,7 @@ A collection of Tampermonkey userscripts, MusicBrainz/Picard helpers, Windows ut
 
 | Project | Description | Version | Download |
 | --- | --- | ---: | --- |
-| **Picard - Current Artist Names Everywhere** | Replaces historical/credited/alias artist names with the current MusicBrainz artist name across tags and titles. | 0.2.0 | [![Download](https://img.shields.io/badge/Download-.bat-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/main/picard-tools/current-artist-names/Download_Current_Artist_Names_Plugin.bat) |
+| **Picard - Current Artist Names Everywhere** | Replaces historical/credited/alias artist names with the current MusicBrainz artist name. Its downloader bootstraps WinGet and installs Picard when missing while preserving non-WinGet prerelease/custom installations. | 0.2.0 | [![Download](https://img.shields.io/badge/Download-.bat-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/main/picard-tools/current-artist-names/Download_Current_Artist_Names_Plugin.bat) |
 | **Picard - Move Featured Artists to Title** | Moves featured credits into the title using `(ft. Artist)` and removes the featured credit from artist/album artist fields. | - | [![Download](https://img.shields.io/badge/Download-.txt-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/main/picard-tools/scripts/Move_Featured_Artists_to_Title.txt) |
 | **Picard - Unicode to ASCII** | Normalizes common Unicode punctuation and symbols to ASCII while keeping Unicode letters intact. | - | [![Download](https://img.shields.io/badge/Download-.txt-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/main/picard-tools/scripts/Unicode_to_ASCII.txt) |
 | **Picard - Format Multiple Artists** | Formats multiple artists as `A & B` or `A, B & C`. | - | [![Download](https://img.shields.io/badge/Download-.txt-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/main/picard-tools/scripts/Format_Multiple_Artists.txt) |
@@ -34,41 +34,47 @@ A collection of Tampermonkey userscripts, MusicBrainz/Picard helpers, Windows ut
 
 | Project | Description | Version | Download |
 | --- | --- | ---: | --- |
-| **CUE Filename Fixer - UTF-8 Recursive** | Recursively repairs CUE `FILE` references to match numbered audio files, creates backups, and saves CUE files as UTF-8. | - | [![Download](https://img.shields.io/badge/Download-.pyw-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/main/audio-tools/cue-filename-fixer/CUE_Filename_Fixer_UTF8_Recursive.pyw) |
-| **AudioChecker UTF-8 Patch (Experimental)** | Adds UTF-8 process manifests to the legacy AudioChecker executable and bundled command-line codecs without redistributing the original third-party binaries. | Experimental | [![Download](https://img.shields.io/badge/Download-.bat-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/main/audio-tools/audiochecker-utf8-patch/Install_AudioChecker_UTF8_Patch.bat) |
+| **CUE Filename Fixer - UTF-8 Recursive** | Recursively repairs CUE `FILE` references, creates backups, saves UTF-8, and self-installs/updates Python 3.13 on first run. | 1.1.0 | [![Download](https://img.shields.io/badge/Download-.bat-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/main/audio-tools/cue-filename-fixer/CUE_Filename_Fixer_UTF8_Recursive.bat) |
+| **AudioChecker UTF-8 Patch (Experimental)** | Adds UTF-8 process manifests to legacy AudioChecker binaries without redistributing them. The installer now bootstraps WinGet and uses path-safe downloads. | Experimental | [![Download](https://img.shields.io/badge/Download-.bat-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/main/audio-tools/audiochecker-utf8-patch/Install_AudioChecker_UTF8_Patch.bat) |
 
 ## Image Tools
 
 | Project | Description | Version | Download |
 | --- | --- | ---: | --- |
-| **3x3 Image Combiner** | Combines up to nine images into a 3x3 JPEG grid with a simple file picker. | - | [![Download](https://img.shields.io/badge/Download-.pyw-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/main/image-tools/3x3-image-combiner/3x3_Image_Combiner.pyw) |
-| **Fast Image to JPG Converter** | Multicore recursive PNG/HEIC/HEIF/JPEG-to-JPG converter with transparency checks and high-quality JPEG output. | - | [![Download](https://img.shields.io/badge/Download-.bat-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/main/image-tools/fast-image-to-jpg/Fast_Image_to_JPG_Converter.bat) |
+| **3x3 Image Combiner** | Combines up to nine images into a 3x3 JPEG grid. The launcher self-installs/updates Python 3.13 and Pillow. | 1.1.0 | [![Download](https://img.shields.io/badge/Download-.bat-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/main/image-tools/3x3-image-combiner/Run_3x3_Image_Combiner.bat) |
+| **Fast Image to JPG Converter** | Multicore recursive PNG/HEIC/HEIF/JPEG-to-JPG converter with transparency checks. WinGet and ImageMagick are installed/updated automatically; HEIC/HEIF now use ImageMagick. | 2.0.0 | [![Download](https://img.shields.io/badge/Download-.bat-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/main/image-tools/fast-image-to-jpg/Fast_Image_to_JPG_Converter.bat) |
 | **Photoshop 500px PNG / 600px JPG Batch Exporter** | Batch-processes images in Photoshop, creating a 600px JPG with smart size control and a 500px PNG with JPG fallback when needed. | 1.4 | [![Download](https://img.shields.io/badge/Download-.jsx-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/main/image-tools/photoshop-batch-export/Photoshop_Batch_500PNG_600JPG.jsx) |
 
 ## Media Tools
 
 | Project | Description | Version | Download |
 | --- | --- | ---: | --- |
-| **Archive Media Compressor** | Recursively compresses and standardizes video/photo archives, preserves folder structure, auto-detects hardware encoders, and installs required tools on Windows. | 1.0.0 | [![Download](https://img.shields.io/badge/Download-.zip-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/main/archive-media-compressor/ArchiveMedia.zip) |
+| **Archive Media Compressor** | Recursively compresses and standardizes video/photo archives. The setup launcher bootstraps WinGet and installs/updates PowerShell 7, FFmpeg, and ImageMagick before launch. | 1.1.0 | [![Download](https://img.shields.io/badge/Download-.bat-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/main/archive-media-compressor/ArchiveMedia_Setup.bat) |
 
 ## Windows Tools
 
 | Project | Description | Version | Download |
 | --- | --- | ---: | --- |
-| **Requirements Manager** | Installs a single or multiple `requirements.txt` files, auto-detects ComfyUI embedded Python or system Python, and can add/remove a Windows context-menu installer. | 1.0.0 | [![Download](https://img.shields.io/badge/Download-.bat-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/main/windows-tools/requirements-manager/Requirements_Manager.bat) |
+| **Requirements Manager** | Installs one or many `requirements.txt` files, prefers ComfyUI embedded Python, and auto-installs/updates Python 3.13 when needed. WinGet is bootstrapped automatically. | 1.1.0 | [![Download](https://img.shields.io/badge/Download-.bat-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/main/windows-tools/requirements-manager/Requirements_Manager.bat) |
 
 ## Game Tools
 
 | Project | Description | Version | Download |
 | --- | --- | ---: | --- |
-| **DriveV One-Click Auto Installer** | Automated DriveV setup for GTA V with package downloads, validation, backups, install state, and restore support. | 2.0.5 | [![Download](https://img.shields.io/badge/Download-.bat-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/main/game-tools/drivev-one-click-installer/Download_DriveV_One_Click_Installer.bat) |
+| **DriveV One-Click Auto Installer** | Automated DriveV setup for GTA V with package downloads, validation, backups, install state, and restore support. WinGet, Python 3.13, and 7-Zip are provisioned automatically. | 2.0.5 | [![Download](https://img.shields.io/badge/Download-.bat-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/main/game-tools/drivev-one-click-installer/Download_DriveV_One_Click_Installer.bat) |
 
 ## Backup Tools
 
 | Project | Description | Version | Download |
 | --- | --- | ---: | --- |
-| **SyncTrayzor & Syncthing Backup** | Creates a timestamped ZIP containing both SyncTrayzor and Syncthing configuration folders while preserving the original `Users/<user>/AppData/...` structure. | - | [![Download](https://img.shields.io/badge/Download-.bat-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/main/backup-tools/syncthing-backup/SyncTrayzor_Syncthing_Backup.bat) |
-| **qBittorrent Backup & Restore** | Creates timestamped qBittorrent ZIP backups (`YYYY-MM-DD-HH-MM`) and restores the newest backup, including profile data and the installed program when available. | 1.0.0 | [![Backup](https://img.shields.io/badge/Download-Backup.bat-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/main/backup-tools/qbittorrent-backup/qBittorrent_pack.bat) [![Restore](https://img.shields.io/badge/Download-Restore.bat-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/main/backup-tools/qbittorrent-backup/qBittorrent_unpack.bat) |
+| **SyncTrayzor & Syncthing Backup** | Creates a verified timestamped ZIP of SyncTrayzor/Syncthing configuration, supports relocated current-user profiles, and refuses to copy live-changing config while either app is running. | 1.1.0 | [![Download](https://img.shields.io/badge/Download-.bat-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/main/backup-tools/syncthing-backup/SyncTrayzor_Syncthing_Backup.bat) |
+| **qBittorrent Backup & Restore** | Creates timestamped qBittorrent ZIP backups (`YYYY-MM-DD-HH-MM`) and restores the newest backup. Both entrypoints bootstrap WinGet before running. | 1.1.0 | [![Backup](https://img.shields.io/badge/Download-Backup.bat-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/main/backup-tools/qbittorrent-backup/qBittorrent_pack.bat) [![Restore](https://img.shields.io/badge/Download-Restore.bat-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/main/backup-tools/qbittorrent-backup/qBittorrent_unpack.bat) |
+
+## Dependency Bootstrap
+
+Standalone Windows entrypoints check WinGet first. If it is missing, they bootstrap WinGet automatically, then install or update the dependencies required by that tool. See [Windows Dependency Bootstrap Policy](windows-tools/DEPENDENCY_BOOTSTRAP.md).
+
+Host-only scripts such as Tampermonkey userscripts and Photoshop JSX files still require their host application/extension; those hosts cannot always be safely provisioned from inside the hosted script.
 
 ## Notes
 
