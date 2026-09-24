@@ -1,0 +1,12 @@
+uuid = "50536a31-e658-4910-a43f-ca48bb0be0fc"
+name = "Picard - Format Multiple Artists"
+version = "1.0.0"
+description = "Formats multiple main artists as A & B or A, B & C."
+api = ["3.0"]
+authors = ["karpuzikov"]
+license = "MIT"
+license_url = "https://opensource.org/license/mit"
+categories = ["scripting", "metadata"]
+homepage = "https://github.com/karpuzikov/userscripts/tree/picard-plugin-format-multiple-artists"
+report_bugs_to = "https://github.com/karpuzikov/userscripts/issues"
+min_python_version = "3.9"

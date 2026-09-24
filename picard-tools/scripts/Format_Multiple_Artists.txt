@@ -1,6 +1,0 @@
-$setmulti(_mainartists,%artists%)
-$foreach(%artists%,$if($not($in(%artist%,%_loop_value%)),$setmulti(_mainartists,$replacemulti(%_mainartists%,%_loop_value%,))))
-$set(_artistcount,$lenmulti(%_mainartists%))
-$if($eq(%_artistcount%,1),$set(artist,$getmulti(%_mainartists%,0)),$if($eq(%_artistcount%,2),$set(artist,$join(%_mainartists%, & )),$if($gt(%_artistcount%,2),$set(artist,$join($slice(%_mainartists%,0,-1),\, ) & $getmulti(%_mainartists%,-1)))))
-$unset(_mainartists)
-$unset(_artistcount)

@@ -1,5 +1,0 @@
-$set(_feat_title,$rsearch(%artist%,\\s+\\\(?\(f\(ea\)?t\\.[^\)]*\)))
-$set(_feat_title,$rreplace(%_feat_title%,^f\(ea\)?t\\.,ft.))
-$set(artist,$rreplace(%artist%,\\s+\\\(?f\(ea\)?t\\.[^\)]*\\\)?,))
-$set(albumartist,$rreplace(%albumartist%,\\s+\\\(?f\(ea\)?t\\.[^\)]*\\\)?,))
-$set(title,$if(%_feat_title%,%title% \(%_feat_title%\),%title%))
