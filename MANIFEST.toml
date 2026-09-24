@@ -1,0 +1,12 @@
+uuid = "d44146a2-1947-4de6-a2ce-74a916188b45"
+name = "Picard - English Title Capitalization"
+version = "1.0.0"
+description = "Applies the collection's English title capitalization rules to track titles."
+api = ["3.0"]
+authors = ["karpuzikov"]
+license = "MIT"
+license_url = "https://opensource.org/license/mit"
+categories = ["scripting", "metadata"]
+homepage = "https://github.com/karpuzikov/userscripts/tree/picard-plugin-english-title-capitalization"
+report_bugs_to = "https://github.com/karpuzikov/userscripts/issues"
+min_python_version = "3.9"
