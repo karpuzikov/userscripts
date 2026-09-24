@@ -1,0 +1,77 @@
+{
+  "as_of": "2026-09-15",
+  "packages": {
+    "drivev": {
+      "name": "Drive V",
+      "version": "7.4",
+      "required_legacy": true,
+      "required_enhanced": true,
+      "page": "https://www.gta5-mods.com/vehicles/drive-v-realistic-driving-car-handling"
+    },
+    "oiv_installer": {
+      "name": "CodeWalker OIV Package Installer",
+      "version": "2.1.1",
+      "required_legacy": true,
+      "required_enhanced": true,
+      "page": "https://www.gta5-mods.com/tools/oiv-package-installer"
+    },
+    "script_hook_v": {
+      "name": "Script Hook V",
+      "version": "3889.0 / 1158.13",
+      "required_legacy": true,
+      "required_enhanced": true,
+      "page": "https://dev-c.com/gtav/scripthookv/",
+      "direct_url": "https://dev-c.com/files/ScriptHookV_3889.0_1158.13.zip",
+      "supported_legacy_patch": "1.0.3889.0",
+      "supported_enhanced_patch": "1.0.1158.13"
+    },
+    "simple_trainer": {
+      "name": "Simple Trainer for GTA V",
+      "version": "18.4",
+      "required_legacy": true,
+      "required_enhanced": true,
+      "page": "https://www.gta5-mods.com/scripts/simple-trainer-for-gtav"
+    },
+    "inverse_power": {
+      "name": "InversePower",
+      "version": "2.0.0",
+      "required_legacy": true,
+      "required_enhanced": true,
+      "page": "https://www.gta5-mods.com/scripts/inversepower"
+    },
+    "rageopenv": {
+      "name": "RageOpenV",
+      "version": "1.0",
+      "required_legacy": false,
+      "required_enhanced": false,
+      "conditional_legacy": "required_if_OpenIV.asi_is_absent",
+      "page": "https://www.gta5-mods.com/tools/rageopenv"
+    },
+    "openrpf": {
+      "name": "OpenRPF",
+      "version": "0.3",
+      "required_legacy": false,
+      "required_enhanced": true,
+      "page": "https://www.gta5-mods.com/tools/openrpf-openiv-asi-for-gta-v-enhanced"
+    },
+    "enb": {
+      "name": "ENBSeries for GTA V",
+      "version": "0.492",
+      "required_legacy": true,
+      "required_enhanced": false,
+      "experimental_enhanced": true,
+      "page": "https://enbdev.com/download_mod_gta5.htm"
+    },
+    "scratches": {
+      "name": "Subtle Scratches (and Dents)",
+      "version": "1.3",
+      "required_legacy": false,
+      "recommended_legacy": true,
+      "required_enhanced": false,
+      "experimental_enhanced": true,
+      "page": "https://www.gta5-mods.com/misc/subtle-scratches-and-dents"
+    }
+  },
+  "installer_version": "2.0.5",
+  "download_mode": "automatic"
+}

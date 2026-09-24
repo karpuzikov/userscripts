@@ -1,0 +1,6 @@
+$set(_case,$title(%title%))
+$set(_case,$replace(%_case%, A , a , An , an , The , the , And , and , But , but , Or , or , Nor , nor , As , as , At , at , For , for , Of , of , To , to , Cum , cum , Mid , mid , Per , per , Qua , qua , Re , re , Via , via , With , with , Without , without ))
+$set(_case,$replace(%_case%,: a ,: A ,: an ,: An ,: the ,: The ,: and ,: And ,: but ,: But ,: or ,: Or ,: nor ,: Nor ,: as ,: As ,: at ,: At ,: for ,: For ,: of ,: Of ,: to ,: To ,: cum ,: Cum ,: mid ,: Mid ,: per ,: Per ,: qua ,: Qua ,: re ,: Re ,: via ,: Via ,: with ,: With ,: without ,: Without ))
+$set(_case,$replace(%_case%,! a ,! A ,! an ,! An ,! the ,! The ,? a ,? A ,? an ,? An ,? the ,? The ))
+$set(title,%_case%)
+$unset(_case)
