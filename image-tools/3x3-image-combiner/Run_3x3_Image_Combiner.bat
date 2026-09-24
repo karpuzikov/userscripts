@@ -15,7 +15,7 @@ if errorlevel 1 goto :failed
 set "TEMP_PYW=%TEMP%\3x3_Image_Combiner_%RANDOM%_%RANDOM%.pyw"
 set "PAYLOAD_SELF=%~f0"
 set "PAYLOAD_OUT=%TEMP_PYW%"
-powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference='Stop'; $lines=Get-Content -LiteralPath $env:PAYLOAD_SELF; $m=[Array]::IndexOf($lines,'::PYTHON_PAYLOAD'); if($m -lt 0){throw 'Embedded Python payload not found.'}; $b64=($lines[($m+1)..($lines.Count-1)] -join ''); [IO.File]::WriteAllBytes($env:PAYLOAD_OUT,[Convert]::FromBase64String($b64))"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference='Stop'; $lines=Get-Content -LiteralPath $env:PAYLOAD_SELF; $m=[Array]::LastIndexOf($lines,'::PYTHON_PAYLOAD'); if($m -lt 0){throw 'Embedded Python payload not found.'}; $b64=($lines[($m+1)..($lines.Count-1)] -join ''); [IO.File]::WriteAllBytes($env:PAYLOAD_OUT,[Convert]::FromBase64String($b64))"
 if errorlevel 1 goto :failed
 
 "%PYTHONW313%" "%TEMP_PYW%"
@@ -30,74 +30,6 @@ echo ERROR: Automatic setup failed.
 echo Check the internet connection and Windows software-installation permissions.
 pause
 exit /b 1
-
-:EnsureWinget
-if errorlevel 1 goto :failed
-call :EnsurePython313
-if errorlevel 1 goto :failed
-
-echo [SETUP] Checking Pillow...
-"%PYTHON313%" -c "import PIL" >nul 2>&1
-if errorlevel 1 (
-    "%PYTHON313%" -m ensurepip --upgrade >nul 2>&1
-    "%PYTHON313%" -m pip install --upgrade --disable-pip-version-check Pillow
-    if errorlevel 1 goto :failed
-) else (
-    "%PYTHON313%" -m pip install --upgrade --disable-pip-version-check Pillow >nul 2>&1
-)
-
-set "APPDIR=%LOCALAPPDATA%\KarpuzikovTools\3x3_Image_Combiner"
-set "SCRIPT=%APPDIR%\3x3_Image_Combiner.pyw"
-set "URL=https://raw.githubusercontent.com/karpuzikov/userscripts/main/image-tools/3x3-image-combiner/3x3_Image_Combiner.pyw"
-
-mkdir "%APPDIR%" 2>nul
-call :DownloadLatest "%URL%" "%SCRIPT%"
-if errorlevel 1 goto :failed
-
-start "" "%PYTHONW313%" "%SCRIPT%"
-exit /b 0
-
-:DownloadLatest
-set "DL_URL=%~1"
-set "DL_DEST=%~2"
-set "DL_TEMP=%~2.download"
-powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference='Stop'; $ProgressPreference='SilentlyContinue'; Invoke-WebRequest -UseBasicParsing -Uri $env:DL_URL -OutFile $env:DL_TEMP"
-if errorlevel 1 (
-    if exist "%DL_DEST%" (
-        echo [WARNING] Could not download the latest script. Using the cached copy.
-        exit /b 0
-    )
-    exit /b 1
-)
-move /y "%DL_TEMP%" "%DL_DEST%" >nul
-exit /b %ERRORLEVEL%
-
-:failed
-echo.
-echo ERROR: Automatic setup failed.
-echo Check the internet connection and Windows software-installation permissions.
-pause
-exit /b 1
-
-:EnsureWinget
-set "WINGET="
-where winget.exe >nul 2>&1
-if not errorlevel 1 set "WINGET=winget.exe"
-if not defined WINGET if exist "%LOCALAPPDATA%\Microsoft\WindowsApps\winget.exe" set "WINGET=%LOCALAPPDATA%\Microsoft\WindowsApps\winget.exe"
-if not defined WINGET (
-    echo [SETUP] WinGet is not installed. Installing the latest WinGet...
-    powershell.exe -NoProfile -ExecutionPolicy Bypass -Command ^
-     "$ErrorActionPreference='Stop'; [Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12; $ProgressPreference='SilentlyContinue'; try { if(-not (Get-PackageProvider -Name NuGet -ListAvailable -ErrorAction SilentlyContinue)){ Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Scope CurrentUser -Force | Out-Null }; if(-not (Get-PSRepository -Name PSGallery -ErrorAction SilentlyContinue)){ Register-PSRepository -Default }; Set-PSRepository -Name PSGallery -InstallationPolicy Trusted; Install-Module -Name Microsoft.WinGet.Client -Repository PSGallery -Scope CurrentUser -Force -AllowClobber; Import-Module Microsoft.WinGet.Client -Force; Repair-WinGetPackageManager -Latest -Force } catch { $tmp=Join-Path $env:TEMP 'Microsoft.DesktopAppInstaller.msixbundle'; Invoke-WebRequest -UseBasicParsing 'https://aka.ms/getwinget' -OutFile $tmp; Add-AppxPackage -Path $tmp; Remove-Item $tmp -Force -ErrorAction SilentlyContinue }"
-    if errorlevel 1 exit /b 1
-    if exist "%LOCALAPPDATA%\Microsoft\WindowsApps\winget.exe" set "WINGET=%LOCALAPPDATA%\Microsoft\WindowsApps\winget.exe"
-    if not defined WINGET (
-        where winget.exe >nul 2>&1
-        if not errorlevel 1 set "WINGET=winget.exe"
-    )
-)
-if not defined WINGET exit /b 1
-"%WINGET%" source update >nul 2>&1
-exit /b 0
 
 :EnsureWingetPackage
 setlocal
