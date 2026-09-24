@@ -25,23 +25,25 @@ A collection of Tampermonkey userscripts, MusicBrainz/Picard helpers, Windows ut
 | Project | Description | Version | Download |
 | --- | --- | ---: | --- |
 | **Picard - Current Artist Names Everywhere** | Replaces historical/credited/alias artist names with the current MusicBrainz artist name. Its downloader bootstraps WinGet and installs Picard when missing while preserving non-WinGet prerelease/custom installations. | 0.2.0 | [![Download](https://img.shields.io/badge/Download-.bat-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/main/picard-tools/current-artist-names/Download_Current_Artist_Names_Plugin.bat) |
-| **Picard - Move Featured Artists to Title** | Moves featured credits into the title using `(ft. Artist)` and removes the featured credit from artist/album artist fields. | 1.0.0 | [![TXT](https://img.shields.io/badge/Manual-.txt-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/main/picard-tools/scripts/Move_Featured_Artists_to_Title.txt) [![Picard 3](https://img.shields.io/badge/Picard_3-Git_plugin-0969da?style=for-the-badge)](https://github.com/karpuzikov/userscripts/tree/picard-plugin-move-featured-artists-to-title)<br>`Ref/Tag: picard-plugin-move-featured-artists-to-title` |
-| **Picard - Unicode to ASCII** | Normalizes common Unicode punctuation and symbols to ASCII while keeping Unicode letters intact. | 1.0.0 | [![TXT](https://img.shields.io/badge/Manual-.txt-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/main/picard-tools/scripts/Unicode_to_ASCII.txt) [![Picard 3](https://img.shields.io/badge/Picard_3-Git_plugin-0969da?style=for-the-badge)](https://github.com/karpuzikov/userscripts/tree/picard-plugin-unicode-to-ascii)<br>`Ref/Tag: picard-plugin-unicode-to-ascii` |
-| **Picard - Format Multiple Artists** | Formats multiple artists as `A & B` or `A, B & C`. | 1.0.0 | [![TXT](https://img.shields.io/badge/Manual-.txt-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/main/picard-tools/scripts/Format_Multiple_Artists.txt) [![Picard 3](https://img.shields.io/badge/Picard_3-Git_plugin-0969da?style=for-the-badge)](https://github.com/karpuzikov/userscripts/tree/picard-plugin-format-multiple-artists)<br>`Ref/Tag: picard-plugin-format-multiple-artists` |
-| **Picard - Add EP/Single Suffix** | Adds ` - EP` or ` - Single` to release titles based on the primary release type. | 1.0.0 | [![TXT](https://img.shields.io/badge/Manual-.txt-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/main/picard-tools/scripts/Add_EP_Single_Suffix.txt) [![Picard 3](https://img.shields.io/badge/Picard_3-Git_plugin-0969da?style=for-the-badge)](https://github.com/karpuzikov/userscripts/tree/picard-plugin-add-ep-single-suffix)<br>`Ref/Tag: picard-plugin-add-ep-single-suffix` |
-| **Picard - English Title Capitalization** | Applies the Picard title-capitalization rules used in this collection while preserving ambiguous words such as `Up`, `In`, `On`, `Off`, and `By`. | 1.0.0 | [![TXT](https://img.shields.io/badge/Manual-.txt-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/main/picard-tools/scripts/English_Title_Capitalization.txt) [![Picard 3](https://img.shields.io/badge/Picard_3-Git_plugin-0969da?style=for-the-badge)](https://github.com/karpuzikov/userscripts/tree/picard-plugin-english-title-capitalization)<br>`Ref/Tag: picard-plugin-english-title-capitalization` |
+| **Picard - Move Featured Artists to Title** | Moves featured credits into the title using `(ft. Artist)` and removes the featured credit from artist/album artist fields. | 1.0.0 | [![TXT](https://img.shields.io/badge/Manual-.txt-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/main/picard-tools/scripts/Move_Featured_Artists_to_Title.txt) [![Picard 3](https://img.shields.io/badge/Picard_3-Git_plugin-0969da?style=for-the-badge)](https://github.com/karpuzikov/userscripts) |
+| **Picard - Unicode to ASCII** | Normalizes common Unicode punctuation and symbols to ASCII while keeping Unicode letters intact. | 1.0.0 | [![TXT](https://img.shields.io/badge/Manual-.txt-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/main/picard-tools/scripts/Unicode_to_ASCII.txt) [![Picard 3](https://img.shields.io/badge/Picard_3-Git_plugin-0969da?style=for-the-badge)](https://github.com/karpuzikov/userscripts) |
+| **Picard - Format Multiple Artists** | Formats multiple artists as `A & B` or `A, B & C`. | 1.0.0 | [![TXT](https://img.shields.io/badge/Manual-.txt-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/main/picard-tools/scripts/Format_Multiple_Artists.txt) [![Picard 3](https://img.shields.io/badge/Picard_3-Git_plugin-0969da?style=for-the-badge)](https://github.com/karpuzikov/userscripts) |
+| **Picard - Add EP/Single Suffix** | Adds ` - EP` or ` - Single` to release titles based on the primary release type. | 1.0.0 | [![TXT](https://img.shields.io/badge/Manual-.txt-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/main/picard-tools/scripts/Add_EP_Single_Suffix.txt) [![Picard 3](https://img.shields.io/badge/Picard_3-Git_plugin-0969da?style=for-the-badge)](https://github.com/karpuzikov/userscripts) |
+| **Picard - English Title Capitalization** | Applies the Picard title-capitalization rules used in this collection while preserving ambiguous words such as `Up`, `In`, `On`, `Off`, and `By`. | 1.0.0 | [![TXT](https://img.shields.io/badge/Manual-.txt-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/main/picard-tools/scripts/English_Title_Capitalization.txt) [![Picard 3](https://img.shields.io/badge/Picard_3-Git_plugin-0969da?style=for-the-badge)](https://github.com/karpuzikov/userscripts) |
 
 ### Picard 3 Git plugin installation
 
-For the five tagging scripts above, the green **Manual .txt** button remains the original importable script. The blue **Picard 3 Git plugin** button opens the corresponding plugin branch.
+The five tagging scripts above remain available as individual **Manual .txt** downloads.
 
-In Picard 3.0 use `Options -> Plugins -> Install Plugin -> URL`:
+For automatic GitHub updates, install the shared **Karpuzikov Picard Scripts** plugin once:
 
-- Git URL: `https://github.com/karpuzikov/userscripts`
-- **Ref/Tag is required**: enter the exact branch shown next to that plugin. Leaving it blank makes Picard clone `main`, which does not contain a root `MANIFEST.toml` and installation will fail.
+1. Open `Options -> Plugins -> Install Plugin -> URL`.
+2. Git URL: `https://github.com/karpuzikov/userscripts.git`
+3. Leave `Ref/Tag` empty so Picard uses `main`.
+4. Install and enable **Karpuzikov Picard Scripts**.
+5. Open `Options -> Plugins -> Karpuzikov Picard Scripts` and enable only the scripts you want.
 
-Once installed from Git, Picard can check for and install later updates from its Plugins interface.
-
+Picard can then check for and install future updates from its Plugins interface. If the same script is also enabled under `Options -> Scripting`, disable one copy so it is not run twice.
 
 ## Audio Tools
 
