@@ -18,7 +18,7 @@ A collection of my Tampermonkey userscripts, apps, scripts, and utilities.
 
 | Project | Description | Version | Download |
 | --- | --- | ---: | --- |
-| **Archive Media Compressor** | Recursively compresses and standardizes video/photo archives, preserves folder structure, auto-detects hardware encoders, and installs required tools on Windows. | v9 | [![Download](https://img.shields.io/badge/Download-.zip-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/main/archive-media-compressor/ArchiveMedia.zip) |
+| **Archive Media Compressor** | Recursively compresses and standardizes video/photo archives, preserves folder structure, auto-detects hardware encoders, and installs required tools on Windows. | 1.0.0 | [![Download](https://img.shields.io/badge/Download-.zip-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/main/archive-media-compressor/ArchiveMedia.zip) |
 
 ## Notes
 
