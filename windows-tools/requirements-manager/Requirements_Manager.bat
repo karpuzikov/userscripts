@@ -10,6 +10,13 @@ rem   - add_context_menu.bat
 rem   - remove_context_menu.bat
 rem ============================================================
 
+call :EnsureWinget
+if errorlevel 1 (
+    echo ERROR: Dependency bootstrap failed.
+    pause
+    exit /b 1
+)
+
 set "SELF=%~f0"
 
 rem Context-menu mode: install the selected requirements file.
@@ -241,7 +248,32 @@ for /f "delims=" %%I in ('where python.exe 2^>nul') do (
     goto PythonFound
 )
 
-echo ERROR: Python not found.
+echo [SETUP] Python not found. Installing/updating Python 3.13...
+call :EnsureWingetPackage Python.Python.3.13
+if errorlevel 1 (
+    echo ERROR: Python installation failed.
+    endlocal & exit /b 1
+)
+
+set "PATH=!PATH!;%LOCALAPPDATA%\Programs\Python\Python313;%LOCALAPPDATA%\Programs\Python\Python313\Scripts;%LOCALAPPDATA%\Programs\Python\Launcher"
+
+where py.exe >nul 2>nul
+if not errorlevel 1 (
+    set "PYTHON=py"
+    goto PythonFound
+)
+
+if exist "%LOCALAPPDATA%\Programs\Python\Python313\python.exe" (
+    set "PYTHON=%LOCALAPPDATA%\Programs\Python\Python313\python.exe"
+    goto PythonFound
+)
+
+if exist "%ProgramFiles%\Python313\python.exe" (
+    set "PYTHON=%ProgramFiles%\Python313\python.exe"
+    goto PythonFound
+)
+
+echo ERROR: Python 3.13 was installed but could not be located.
 endlocal & exit /b 1
 
 
