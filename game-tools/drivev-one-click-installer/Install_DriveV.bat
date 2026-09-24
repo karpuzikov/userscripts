@@ -10,6 +10,44 @@ if errorlevel 1 goto :failed
 call :EnsureWingetPackage 7zip.7zip
 if errorlevel 1 goto :failed
 
+set "APPDIR=%LOCALAPPDATA%\KarpuzikovTools\DriveV_AutoInstaller"
+set "SCRIPT=%APPDIR%\DriveV_AutoInstaller.pyw"
+set "DL_URL=https://raw.githubusercontent.com/karpuzikov/userscripts/main/game-tools/drivev-one-click-installer/DriveV_AutoInstaller.pyw"
+set "DL_TEMP=%SCRIPT%.download"
+
+mkdir "%APPDIR%" >nul 2>&1
+
+echo [SETUP] Downloading/updating DriveV Auto Installer...
+powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference='Stop'; $ProgressPreference='SilentlyContinue'; Invoke-WebRequest -UseBasicParsing -Uri $env:DL_URL -OutFile $env:DL_TEMP"
+if errorlevel 1 (
+    if exist "%SCRIPT%" (
+        echo [WARNING] Could not download the latest version. Using the cached copy.
+    ) else (
+        goto :failed
+    )
+) else (
+    move /y "%DL_TEMP%" "%SCRIPT%" >nul
+    if errorlevel 1 goto :failed
+)
+
+start "" "%PYTHONW313%" "%SCRIPT%" %*
+exit /b 0
+
+:failed
+if defined DL_TEMP if exist "%DL_TEMP%" del /f /q "%DL_TEMP%" >nul 2>&1
+echo.
+echo ERROR: Automatic DriveV setup failed.
+echo Check the internet connection and Windows software-installation permissions.
+pause
+exit /b 1
+
+:EnsureWinget
+if errorlevel 1 goto :failed
+call :EnsurePython313
+if errorlevel 1 goto :failed
+call :EnsureWingetPackage 7zip.7zip
+if errorlevel 1 goto :failed
+
 if not exist "%~dp0DriveV_AutoInstaller.pyw" (
     echo ERROR: DriveV_AutoInstaller.pyw is missing.
     goto :failed
