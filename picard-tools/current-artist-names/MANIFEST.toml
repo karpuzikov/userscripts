@@ -1,9 +1,0 @@
-uuid = "9e9bc96f-29ca-4af1-81a0-98b985f444b6"
-name = "Current Artist Names Everywhere"
-version = "0.2.0"
-description = "Normalizes historical and credited artist names to each artist's current MusicBrainz name across Picard metadata, including titles."
-api = ["3.0"]
-license = "GPL-2.0-or-later"
-license_url = "https://www.gnu.org/licenses/gpl-2.0.html"
-categories = ["metadata"]
-min_python_version = "3.9"
