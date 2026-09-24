@@ -1,0 +1,16 @@
+$foreach(title; album; artist; albumartist; artistsort; albumartistsort; discsubtitle; work; composer; composersort; lyricist; conductor; arranger; remixer; producer; mixer; djmixer; engineer; director; grouping; comment,
+$set(%_loop_value%,$replace($get(%_loop_value%),
+‘,' ,’,', ‚,', ‛,',
+“,'"', ”,'"', „,'"', ‟,'"',
+‐,-, ‑,-, ‒,-, –,-, —,-, ―,-, −,-,
+…, ..., ·,., •,*, ‧,.,
+×, &, ÷,/, ⁄,/,
+＆, &, ＋,+, ＝,=,
+（,(, ）,), ［,[, ］,], ｛,{, ｝,},
+：,:, ；,;, ！,!, ？,?, ，,\,, ．,.,
+／,/, ＼,\\, ｜,|,
+＜,<, ＞,>, ＿,_,
+©,(c), ®,(R), ™,TM, №,No.,
+ , ,  , ,   , ,
+))
+)
