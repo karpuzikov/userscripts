@@ -34,14 +34,14 @@ A collection of Tampermonkey userscripts, MusicBrainz/Picard helpers, Windows ut
 
 | Project | Description | Version | Download |
 | --- | --- | ---: | --- |
-| **CUE Filename Fixer - UTF-8 Recursive** | Recursively repairs CUE `FILE` references, creates backups, saves UTF-8, and self-installs/updates Python 3.13 on first run. | 1.1.0 | [![Download](https://img.shields.io/badge/Download-.bat-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/main/audio-tools/cue-filename-fixer/CUE_Filename_Fixer_UTF8_Recursive.bat) |
-| **AudioChecker UTF-8 Patch (Experimental)** | Adds UTF-8 process manifests to legacy AudioChecker binaries without redistributing them. The installer now bootstraps WinGet and uses path-safe downloads. | Experimental | [![Download](https://img.shields.io/badge/Download-.bat-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/main/audio-tools/audiochecker-utf8-patch/Install_AudioChecker_UTF8_Patch.bat) |
+| **CUE Filename Fixer - UTF-8 Recursive** | Single-file BAT. Recursively repairs CUE `FILE` references, creates backups, saves UTF-8, and embeds its Python GUI internally while bootstrapping Python 3.13 automatically. | 2.0.0 | [![Download](https://img.shields.io/badge/Download-.bat-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/main/audio-tools/cue-filename-fixer/CUE_Filename_Fixer_UTF8_Recursive.bat) |
+| **AudioChecker UTF-8 Patch (Experimental)** | Single-file BAT that generates all required UTF-8 manifests itself and patches the existing AudioChecker folder without bundled helper files. | Experimental | [![Download](https://img.shields.io/badge/Download-.bat-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/main/audio-tools/audiochecker-utf8-patch/Install_AudioChecker_UTF8_Patch.bat) |
 
 ## Image Tools
 
 | Project | Description | Version | Download |
 | --- | --- | ---: | --- |
-| **3x3 Image Combiner** | Combines up to nine images into a 3x3 JPEG grid. The launcher self-installs/updates Python 3.13 and Pillow. | 1.1.0 | [![Download](https://img.shields.io/badge/Download-.bat-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/main/image-tools/3x3-image-combiner/Run_3x3_Image_Combiner.bat) |
+| **3x3 Image Combiner** | Single-file BAT with an embedded `.pyw` payload. Installs/updates Python 3.13 and Pillow automatically, then combines up to nine images into a 3x3 JPEG grid. | 2.0.0 | [![Download](https://img.shields.io/badge/Download-.bat-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/main/image-tools/3x3-image-combiner/Run_3x3_Image_Combiner.bat) |
 | **Fast Image to JPG Converter** | Multicore recursive PNG/HEIC/HEIF/JPEG-to-JPG converter with transparency checks. WinGet and ImageMagick are installed/updated automatically; HEIC/HEIF now use ImageMagick. | 2.0.0 | [![Download](https://img.shields.io/badge/Download-.bat-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/main/image-tools/fast-image-to-jpg/Fast_Image_to_JPG_Converter.bat) |
 | **Photoshop 500px PNG / 600px JPG Batch Exporter** | Batch-processes images in Photoshop, creating a 600px JPG with smart size control and a 500px PNG with JPG fallback when needed. | 1.4 | [![Download](https://img.shields.io/badge/Download-.jsx-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/main/image-tools/photoshop-batch-export/Photoshop_Batch_500PNG_600JPG.jsx) |
 
@@ -49,7 +49,7 @@ A collection of Tampermonkey userscripts, MusicBrainz/Picard helpers, Windows ut
 
 | Project | Description | Version | Download |
 | --- | --- | ---: | --- |
-| **Archive Media Compressor** | Recursively compresses and standardizes video/photo archives. The setup launcher bootstraps WinGet and installs/updates PowerShell 7, FFmpeg, and ImageMagick before launch. | 1.1.0 | [![Download](https://img.shields.io/badge/Download-.bat-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/main/archive-media-compressor/ArchiveMedia_Setup.bat) |
+| **Archive Media Compressor** | Single-file BAT with the PowerShell compressor embedded. Bootstraps WinGet and installs/updates PowerShell 7, FFmpeg, and ImageMagick before launch. | 2.0.0 | [![Download](https://img.shields.io/badge/Download-.bat-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/main/archive-media-compressor/ArchiveMedia.bat) |
 
 ## Windows Tools
 
@@ -61,25 +61,30 @@ A collection of Tampermonkey userscripts, MusicBrainz/Picard helpers, Windows ut
 
 | Project | Description | Version | Download |
 | --- | --- | ---: | --- |
-| **DriveV One-Click Auto Installer** | Automated DriveV setup for GTA V with package downloads, validation, backups, install state, and restore support. WinGet, Python 3.13, and 7-Zip are provisioned automatically. | 2.0.5 | [![Download](https://img.shields.io/badge/Download-.bat-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/main/game-tools/drivev-one-click-installer/Download_DriveV_One_Click_Installer.bat) |
+| **DriveV One-Click Auto Installer** | One-BAT user entrypoint. Bootstraps WinGet, Python 3.13, and 7-Zip, then downloads/updates one self-contained `.pyw` GUI with the core and package manifest embedded. | 2.1.0 | [![Download](https://img.shields.io/badge/Download-.bat-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/main/game-tools/drivev-one-click-installer/Install_DriveV.bat) |
 
 ## Backup Tools
 
 | Project | Description | Version | Download |
 | --- | --- | ---: | --- |
 | **SyncTrayzor & Syncthing Backup** | Creates a verified timestamped ZIP of SyncTrayzor/Syncthing configuration, supports relocated current-user profiles, and refuses to copy live-changing config while either app is running. | 1.1.0 | [![Download](https://img.shields.io/badge/Download-.bat-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/main/backup-tools/syncthing-backup/SyncTrayzor_Syncthing_Backup.bat) |
-| **qBittorrent Backup & Restore** | Creates timestamped qBittorrent ZIP backups (`YYYY-MM-DD-HH-MM`) and restores the newest backup. Both entrypoints bootstrap WinGet before running. | 1.1.0 | [![Backup](https://img.shields.io/badge/Download-Backup.bat-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/main/backup-tools/qbittorrent-backup/qBittorrent_pack.bat) [![Restore](https://img.shields.io/badge/Download-Restore.bat-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/main/backup-tools/qbittorrent-backup/qBittorrent_unpack.bat) |
+| **qBittorrent Backup & Restore** | Single BAT with Backup/Restore menu. Creates timestamped ZIP backups (`YYYY-MM-DD-HH-MM`) and restores the newest backup with automatic WinGet bootstrap. | 2.0.0 | [![Download](https://img.shields.io/badge/Download-.bat-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/main/backup-tools/qbittorrent-backup/qBittorrent_Backup_Restore.bat) |
 
-## Dependency Bootstrap
+## Dependency Bootstrap and Software Layout
 
 Standalone Windows entrypoints check WinGet first. If it is missing, they bootstrap WinGet automatically, then install or update the dependencies required by that tool. See [Windows Dependency Bootstrap Policy](windows-tools/DEPENDENCY_BOOTSTRAP.md).
 
-Host-only scripts such as Tampermonkey userscripts and Photoshop JSX files still require their host application/extension; those hosts cannot always be safely provisioned from inside the hosted script.
+Repository software also follows these layout rules:
+- Prefer a single BAT or PYW whenever technically practical.
+- Python GUI software uses `.pyw` rather than `.py`.
+- A `.py` helper is only acceptable when the software is launched through a BAT and merging it would materially hurt reliability.
+- Redundant launchers/helpers are embedded or removed where practical.
+- Host-required formats such as Picard `__init__.py`, Tampermonkey `.user.js`, and Photoshop `.jsx` keep the filenames required by their host applications.
 
 ## Notes
 
 - Tampermonkey userscripts use direct `.user.js` links so clicking **Install** should open the userscript installer when Tampermonkey is installed.
-- Multi-file projects include a small downloader BAT in the table above so they can be fetched without cloning the whole repository.
+- When a host format genuinely requires multiple runtime files, the downloadable BAT creates or downloads only the minimum required files.
 - Source files remain available in their project folders.
 
 ## License
