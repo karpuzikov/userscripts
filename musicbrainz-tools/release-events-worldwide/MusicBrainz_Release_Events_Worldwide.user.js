@@ -1,11 +1,12 @@
 // ==UserScript==
 // @name         MusicBrainz - Release Events to Worldwide
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.1.0
+// @version      1.1.1
 // @description  Replace all release events with one Worldwide event while keeping the existing date.
 // @author       karpuzikov
 // @license      MIT
-// @match        https://musicbrainz.org/release/*/edit*
+// @match        https://musicbrainz.org/release/*/edit
+// @match        https://beta.musicbrainz.org/release/*/edit
 // @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/release-events-worldwide/MusicBrainz_Release_Events_Worldwide.user.js
 // @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/release-events-worldwide/MusicBrainz_Release_Events_Worldwide.user.js
 // @grant        none
@@ -14,6 +15,8 @@
 
 (function () {
     'use strict';
+
+    if (!/^\/release\/[0-9a-f-]{36}\/edit\/?$/i.test(location.pathname)) return;
 
     const WORLDWIDE_ID = '240';
     const BUTTON_ID = 'mb-replace-release-events-worldwide';
