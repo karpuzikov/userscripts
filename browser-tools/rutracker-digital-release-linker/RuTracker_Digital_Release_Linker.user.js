@@ -1,11 +1,11 @@
 // ==UserScript==
 // @name         RuTracker Digital Release Linker
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.1.8
+// @version      1.1.9
 // @description  Links exact digital release pages in RuTracker BBCode, falls back from Deezer to MusicBrainz-linked Beatport releases, and adds country flag emoji.
 // @author       karpuzikov
-// @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/browser-tools/rutracker-digital-release-linker/RuTracker_Digital_Release_Linker.user.js?v=1.1.8
-// @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/browser-tools/rutracker-digital-release-linker/RuTracker_Digital_Release_Linker.user.js?v=1.1.8
+// @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/browser-tools/rutracker-digital-release-linker/RuTracker_Digital_Release_Linker.user.js?v=1.1.9
+// @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/browser-tools/rutracker-digital-release-linker/RuTracker_Digital_Release_Linker.user.js?v=1.1.9
 // @match        https://rutracker.org/forum/posting.php*
 // @grant        GM_xmlhttpRequest
 // @connect      api.deezer.com
@@ -101,7 +101,7 @@
             return gmJson(url, {
                 retries: 2,
                 headers: {
-                    'User-Agent': `${SCRIPT_NAME}/1.1.8 (Tampermonkey userscript)`,
+                    'User-Agent': `${SCRIPT_NAME}/1.1.9 (Tampermonkey userscript)`,
                 },
             });
         });
@@ -335,8 +335,50 @@
         return /https?:\/\/(?:www\.)?beatport\.com\/release\/[^?#\s]+/i.test(String(url || ''));
     }
 
+    function isArtistPlaceholderUrl(url) {
+        const value = String(url || '').trim();
+        if (!value) return false;
+
+        try {
+            const parsed = new URL(value);
+            const host = parsed.hostname.toLowerCase();
+            const path = parsed.pathname.replace(/\/+$/, '') || '/';
+
+            if (/(?:^|\.)deezer\.com$/.test(host)) {
+                return /^\/(?:[^/]+\/)?artist\/\d+$/i.test(path);
+            }
+
+            if (/(?:^|\.)beatport\.com$/.test(host)) {
+                return /^\/artist\/[^/]+(?:\/\d+)?$/i.test(path);
+            }
+
+            if (/\.bandcamp\.com$/.test(host)) {
+                return path === '/' || path === '/music';
+            }
+
+            if (/(?:^|\.)7digital\.com$/.test(host)) {
+                return /^\/artist\/[^/]+$/i.test(path);
+            }
+
+            if (/(?:^|\.)qobuz\.com$/.test(host)) {
+                return /\/(?:artist|interpreter)\/[^/]+$/i.test(path);
+            }
+
+            return false;
+        } catch {
+            return false;
+        }
+    }
+
     function isResolvedDigitalReleaseUrl(url) {
-        return isDeezerAlbumUrl(url) || isBeatportReleaseUrl(url);
+        const value = String(url || '').trim();
+        if (!value) return false;
+
+        if (isDeezerAlbumUrl(value) || isBeatportReleaseUrl(value)) return true;
+
+        // Existing concrete source URLs are already useful. Only known
+        // artist-level pages are placeholders that should be replaced.
+        return !isArtistPlaceholderUrl(value);
     }
 
     async function deezerAlbumById(id) {
