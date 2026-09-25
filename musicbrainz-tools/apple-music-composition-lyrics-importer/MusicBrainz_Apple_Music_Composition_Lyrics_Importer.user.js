@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Apple Music works credits -> MusicBrainz
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      2.3.6
+// @version      2.3.7
 // @description  Resolve the correct Apple Music release and import supported Apple Music credits to the proper MusicBrainz Recording, Work, or Release relationships.
 // @author       karpuzikov
 // @license      MIT
@@ -24,6 +24,7 @@
     'use strict';
 
     const PAGE = typeof unsafeWindow !== 'undefined' ? unsafeWindow : window;
+    const SCRIPT_VERSION = '2.3.7';
     let MB = PAGE.MB;
     const APPLE_API_BASE = 'https://amp-api.music.apple.com/v1';
     const APPLE_TOKEN_BOOTSTRAP_URL = 'https://music.apple.com/us/browse';
@@ -243,6 +244,29 @@
 
         return normalizeText(title);
     }
+
+    function verifyTitleMatcher() {
+        const tests = [
+            ['Before We Had a Label (feat. Elle Vee)', 'Before We Had a Label'],
+            ['Let You Down (feat. Sunset City)', 'Let You Down'],
+            ['We Should (feat. Shadow Aspect)', 'We Should'],
+            ['Like You (ft. Elle Vee)', 'Like You'],
+            ['Song [featuring Artist]', 'Song'],
+        ];
+
+        for (const [appleTitle, mbTitle] of tests) {
+            if (
+                normalizeTrackTitleForMatch(appleTitle) !==
+                normalizeTrackTitleForMatch(mbTitle)
+            ) {
+                throw new Error(
+                    `Internal title matcher test failed: "${appleTitle}" vs "${mbTitle}"`
+                );
+            }
+        }
+    }
+
+    verifyTitleMatcher();
 
     function escapeHtml(value) {
         return String(value ?? '')
@@ -2010,7 +2034,14 @@
     }
 
     function injectUi() {
-        if (document.getElementById('am2mb-panel')) return;
+        const existingPanel = document.getElementById('am2mb-panel');
+        if (existingPanel) {
+            if (existingPanel.dataset.scriptVersion === SCRIPT_VERSION) return;
+
+            // A legacy installation can remain active after the userscript was
+            // renamed. Remove its panel so the current version always wins.
+            existingPanel.remove();
+        }
 
         const form =
             document.getElementById('relationship-editor-form') ||
@@ -2025,6 +2056,7 @@
 
         const panel = document.createElement('div');
         panel.id = 'am2mb-panel';
+        panel.dataset.scriptVersion = SCRIPT_VERSION;
         panel.innerHTML = `
             <style>
                 #am2mb-panel {
@@ -2084,7 +2116,7 @@
                 }
             </style>
 
-            <h2>Apple Music works credits -> MusicBrainz</h2>
+            <h2>Apple Music works credits -> MusicBrainz <small>v${SCRIPT_VERSION}</small></h2>
             <div class="am2mb-controls">
                 <button type="button" id="am2mb-load">Find Apple Music & Load Credits</button>
             </div>
