@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Apple Music works credits -> MusicBrainz
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      2.3.8
+// @version      2.3.9
 // @description  Resolve the correct Apple Music release and import supported Apple Music credits to the proper MusicBrainz Recording, Work, or Release relationships.
 // @author       karpuzikov
 // @license      MIT
@@ -24,7 +24,7 @@
     'use strict';
 
     const PAGE = typeof unsafeWindow !== 'undefined' ? unsafeWindow : window;
-    const SCRIPT_VERSION = '2.3.8';
+    const SCRIPT_VERSION = '2.3.9';
     let MB = PAGE.MB;
     const APPLE_API_BASE = 'https://amp-api.music.apple.com/v1';
     const APPLE_TOKEN_BOOTSTRAP_URL = 'https://music.apple.com/us/browse';
@@ -1304,7 +1304,7 @@
         }
 
         const query = parts.join(' AND ');
-        const url = `/ws/2/work/?query=${encodeURIComponent(query)}&fmt=json&limit=25`;
+        const url = `/ws/2/work/?query=${encodeURIComponent(query)}&fmt=json&limit=100`;
         const cacheSuffix = uniqueArtists.map(normalizeText).sort().join('|');
         const json = await musicBrainzWsJson(
             url,
@@ -1319,64 +1319,191 @@
             type: work.type || '',
             disambiguation: work.disambiguation || '',
             score: Number(work.score ?? 0),
+            relations: Array.isArray(work.relations) ? work.relations : [],
         }));
     }
 
-    async function disambiguateWorksByAppleAuthors(title, exactCandidates, workCredits) {
-        const exactIds = new Set(exactCandidates.map(candidate => candidate.mbid));
-        const authorNames = [...new Map(
-            workCredits
-                .map(credit => String(credit.appleName || '').trim())
-                .filter(Boolean)
-                .map(name => [normalizeText(name), name])
-        ).values()];
+    const workAuthorResolutionCache = new Map();
 
-        if (!authorNames.length) {
+    function workRelationMatchesAppleRole(relationType, appleRole) {
+        const relation = normalizeText(relationType);
+        const role = normalizeText(appleRole);
+
+        if (role === 'writer') {
+            return ['writer', 'composer', 'lyricist', 'librettist'].includes(relation);
+        }
+        if (role === 'composer') {
+            return relation === 'composer' || relation === 'writer';
+        }
+        if (role === 'lyricist') {
+            return relation === 'lyricist' || relation === 'writer';
+        }
+        if (role === 'librettist') {
+            return relation === 'librettist' || relation === 'writer';
+        }
+        if (role === 'translator') {
+            return relation === 'translator';
+        }
+        return relation === role;
+    }
+
+    async function resolveAppleAuthorForWork(name) {
+        const key = normalizeText(name);
+        if (workAuthorResolutionCache.has(key)) {
+            return workAuthorResolutionCache.get(key);
+        }
+
+        let candidates = [];
+        let reason = '';
+
+        const context = await findContextArtistCandidates(name);
+        if (context.candidates.length) {
+            candidates = context.candidates;
+            reason = `context circle ${context.circle}`;
+        } else {
+            const global = await searchArtists(name);
+            const exactIndexes = exactCandidateIndexes(name, global);
+            candidates = exactIndexes.map(index => global[index]);
+            reason = exactIndexes.length
+                ? 'global exact name/alias match'
+                : 'no exact MusicBrainz artist/alias match';
+        }
+
+        const mbids = [...new Set(
+            candidates.map(candidate => candidate.mbid).filter(Boolean)
+        )];
+
+        const resolved = { name, mbids, candidates, reason };
+        workAuthorResolutionCache.set(key, resolved);
+        return resolved;
+    }
+
+    async function searchWorksByArtistMbids(title, mbids) {
+        const uniqueMbids = [...new Set(mbids.filter(Boolean))];
+        if (!uniqueMbids.length) return [];
+
+        const artistClause = uniqueMbids
+            .map(mbid => `arid:${mbid}`)
+            .join(' OR ');
+        const query = `work:"${escapeLucene(title)}" AND (${artistClause})`;
+        const url = `/ws/2/work/?query=${encodeURIComponent(query)}&fmt=json&limit=100`;
+        const cacheSuffix = uniqueMbids.slice().sort().join('|');
+        const json = await musicBrainzWsJson(
+            url,
+            `MusicBrainz Work search for "${title}" by related artist MBIDs`,
+            `work-arid-search:${normalizeText(title)}:${cacheSuffix}`
+        );
+
+        return (json.works || []).map(work => ({
+            mbid: work.id,
+            title: work.title || '',
+            type: work.type || '',
+            disambiguation: work.disambiguation || '',
+            score: Number(work.score ?? 0),
+            relations: Array.isArray(work.relations) ? work.relations : [],
+        }));
+    }
+
+    function matchedAppleAuthorsForWork(candidate, authors) {
+        const matched = new Set();
+
+        for (const author of authors) {
+            const mbids = new Set(author.mbids);
+            if (!mbids.size) continue;
+
+            const relationMatch = (candidate.relations || []).some(relation => {
+                const artistMbid = relation?.artist?.id || '';
+                if (!mbids.has(artistMbid)) return false;
+
+                return [...author.roles].some(role =>
+                    workRelationMatchesAppleRole(relation?.type, role)
+                );
+            });
+
+            if (relationMatch) matched.add(author.key);
+        }
+
+        return matched;
+    }
+
+    async function disambiguateWorksByAppleAuthors(title, exactCandidates, workCredits) {
+        const people = new Map();
+
+        for (const credit of workCredits) {
+            const name = String(credit.appleName || '').trim();
+            if (!name) continue;
+
+            const key = normalizeText(name);
+            if (!people.has(key)) {
+                people.set(key, {
+                    key,
+                    name,
+                    roles: new Set(),
+                    mbids: [],
+                    resolutionReason: '',
+                });
+            }
+            people.get(key).roles.add(credit.mbRole);
+        }
+
+        const authors = [...people.values()];
+        if (!authors.length) {
             return { match: null, reason: 'no Apple authorship names are available' };
         }
 
-        // Strongest check: same title AND every Apple author name.
-        const allAuthorResults = await searchWorks(title, authorNames);
-        const allAuthorExact = allAuthorResults.filter(candidate =>
-            exactIds.has(candidate.mbid) &&
-            normalizeText(candidate.title) === normalizeText(title)
-        );
+        for (const author of authors) {
+            const resolved = await resolveAppleAuthorForWork(author.name);
+            author.mbids = resolved.mbids;
+            author.resolutionReason = resolved.reason;
+        }
 
-        if (allAuthorExact.length === 1) {
+        const resolvedAuthors = authors.filter(author => author.mbids.length);
+        const unresolvedAuthors = authors.filter(author => !author.mbids.length);
+
+        if (!resolvedAuthors.length) {
             return {
-                match: allAuthorExact[0],
-                matchedAuthors: authorNames.length,
-                totalAuthors: authorNames.length,
-                mode: 'all authors',
+                match: null,
+                reason: 'none of the Apple authors could be resolved to MusicBrainz artists',
             };
         }
 
-        // If MusicBrainz is missing one or more author relationships, score
-        // the same-title candidates by individual Apple author matches.
-        const counts = new Map(exactCandidates.map(candidate => [candidate.mbid, 0]));
-        for (const authorName of authorNames) {
-            const authorResults = await searchWorks(title, [authorName]);
-            const matchedIds = new Set(
-                authorResults
-                    .filter(candidate =>
-                        exactIds.has(candidate.mbid) &&
-                        normalizeText(candidate.title) === normalizeText(title)
-                    )
-                    .map(candidate => candidate.mbid)
-            );
+        const allArtistMbids = resolvedAuthors.flatMap(author => author.mbids);
+        const authorResults = await searchWorksByArtistMbids(title, allArtistMbids);
 
-            for (const mbid of matchedIds) {
-                counts.set(mbid, (counts.get(mbid) || 0) + 1);
-            }
+        const candidates = new Map();
+        for (const candidate of exactCandidates) {
+            candidates.set(candidate.mbid, candidate);
+        }
+        for (const candidate of authorResults) {
+            if (normalizeText(candidate.title) !== normalizeText(title)) continue;
+
+            const existing = candidates.get(candidate.mbid);
+            candidates.set(candidate.mbid, {
+                ...(existing || {}),
+                ...candidate,
+                relations: candidate.relations?.length
+                    ? candidate.relations
+                    : (existing?.relations || []),
+            });
         }
 
-        const ranked = exactCandidates
-            .map(candidate => ({ candidate, matchedAuthors: counts.get(candidate.mbid) || 0 }))
-            .sort((a, b) => b.matchedAuthors - a.matchedAuthors);
+        const ranked = [...candidates.values()]
+            .map(candidate => {
+                const matched = matchedAppleAuthorsForWork(candidate, resolvedAuthors);
+                return {
+                    candidate,
+                    matched,
+                    matchedAuthors: matched.size,
+                };
+            })
+            .sort((a, b) =>
+                b.matchedAuthors - a.matchedAuthors ||
+                Number(b.candidate.score || 0) - Number(a.candidate.score || 0)
+            );
 
         const best = ranked[0];
         const second = ranked[1];
-        const requiredMatches = authorNames.length === 1 ? 1 : Math.min(2, authorNames.length);
+        const requiredMatches = authors.length === 1 ? 1 : Math.min(2, authors.length);
 
         if (
             best &&
@@ -1386,18 +1513,27 @@
             return {
                 match: best.candidate,
                 matchedAuthors: best.matchedAuthors,
-                totalAuthors: authorNames.length,
-                mode: 'author score',
+                totalAuthors: authors.length,
+                unresolvedAuthors: unresolvedAuthors.map(author => author.name),
+                mode: 'artist MBID',
             };
         }
 
         const topCount = best?.matchedAuthors || 0;
-        const tied = ranked.filter(item => item.matchedAuthors === topCount && topCount > 0).length;
-        const reason = topCount === 0
-            ? 'none of the same-title Works match the Apple credited authors'
-            : tied > 1
-                ? `${tied} same-title Works tie at ${topCount}/${authorNames.length} author matches`
-                : `best same-title Work matches only ${topCount}/${authorNames.length} authors`;
+        const tied = ranked.filter(item =>
+            item.matchedAuthors === topCount && topCount > 0
+        ).length;
+
+        let reason;
+        if (topCount === 0) {
+            reason = unresolvedAuthors.length
+                ? `no same-title Work matches the resolved Apple authors; unresolved: ${unresolvedAuthors.map(author => author.name).join(', ')}`
+                : 'no same-title Work matches the Apple authors by MusicBrainz artist MBID';
+        } else if (tied > 1) {
+            reason = `${tied} same-title Works tie at ${topCount}/${authors.length} author matches`;
+        } else {
+            reason = `best same-title Work matches only ${topCount}/${authors.length} authors`;
+        }
 
         return { match: null, reason };
     }
@@ -1652,8 +1788,8 @@
                 );
                 row.works = [work];
                 row.workResolution =
-                    `Linked existing Work by credited authors: ${work.name || title} ` +
-                    `(${resolved.matchedAuthors}/${resolved.totalAuthors} author names matched)`;
+                    `Linked existing Work by MusicBrainz author IDs: ${work.name || title} ` +
+                    `(${resolved.matchedAuthors}/${resolved.totalAuthors} Apple authors matched)`;
                 return;
             }
 
