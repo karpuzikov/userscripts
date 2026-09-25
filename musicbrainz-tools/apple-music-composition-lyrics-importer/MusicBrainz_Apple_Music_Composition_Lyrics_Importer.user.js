@@ -1,11 +1,11 @@
 // ==UserScript==
 // @name         Apple Music Credits -> MusicBrainz
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      2.3.3
+// @version      2.3.4
 // @description  Resolve the correct Apple Music release and import supported Apple Music credits to the proper MusicBrainz Recording, Work, or Release relationships.
 // @author       karpuzikov
 // @license      MIT
-// @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/tampermonkey-apple-music-credits-v2.3.3/musicbrainz-tools/apple-music-composition-lyrics-importer/MusicBrainz_Apple_Music_Composition_Lyrics_Importer.user.js
+// @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/tampermonkey-apple-music-credits-v2.3.4/musicbrainz-tools/apple-music-composition-lyrics-importer/MusicBrainz_Apple_Music_Composition_Lyrics_Importer.user.js
 // @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/refs/heads/main/musicbrainz-tools/apple-music-composition-lyrics-importer/MusicBrainz_Apple_Music_Composition_Lyrics_Importer.user.js
 // @supportURL   https://github.com/karpuzikov/userscripts
 // @match        https://musicbrainz.org/release/*/edit-relationships
@@ -104,6 +104,7 @@
         rows: [],
         people: new Map(),
         creditedArtists: [],
+        workLanguages: null,
         aliasEdits: 0,
         applied: false,
     };
@@ -1332,7 +1333,52 @@
         await wait(50);
     }
 
+    async function createWorkWithSavedLanguage(recording) {
+        const previousSelection = selectedRecordingsSnapshot();
+
+        MB.relationshipEditor.dispatch({
+            isSelected: false,
+            type: 'toggle-select-all-recordings',
+        });
+
+        MB.relationshipEditor.dispatch({
+            isSelected: true,
+            recording,
+            type: 'toggle-select-recording',
+        });
+
+        try {
+            MB.relationshipEditor.dispatch({
+                attributes: null,
+                begin_date: null,
+                end_date: null,
+                ended: false,
+                languages: state.workLanguages,
+                linkType: null,
+                type: 'accept-batch-create-works-dialog',
+                workType: WORK_TYPE_SONG_ID,
+            });
+
+            await wait(100);
+
+            const created = findTemporaryCreatedWork(recording.name);
+            if (!created) {
+                throw new Error(
+                    `MusicBrainz did not stage a new Work for "${recording.name}".`
+                );
+            }
+
+            return created;
+        } finally {
+            await restoreRecordingSelection(recording, previousSelection);
+        }
+    }
+
     async function createWorkForRecording(recording) {
+        if (Array.isArray(state.workLanguages) && state.workLanguages.length) {
+            return createWorkWithSavedLanguage(recording);
+        }
+
         const previousSelection = selectedRecordingsSnapshot();
 
         MB.relationshipEditor.dispatch({
@@ -1373,7 +1419,7 @@
             setNativeSelectValue(workType, WORK_TYPE_SONG_ID);
 
             setStatus(
-                `New Work "${recording.name}": Work type is set to Song. Choose the song language in the MusicBrainz dialog, then click Done.`,
+                'Choose the lyrics language once for this album, then click Done. The same language will be reused for all new Works.',
                 'warn'
             );
 
@@ -1385,7 +1431,7 @@
 
             if (document.body.contains(dialog)) {
                 throw new Error(
-                    `Timed out waiting for language selection for "${recording.name}".`
+                    'Timed out waiting for the album lyrics language selection.'
                 );
             }
 
@@ -1404,12 +1450,17 @@
                 );
             }
 
-            if (!Array.isArray(created.languages) || !created.languages.length) {
+            const chosenLanguages = (created.languages || [])
+                .map(item => item?.language)
+                .filter(Boolean);
+
+            if (!chosenLanguages.length) {
                 throw new Error(
-                    `No song language was selected for the new Work "${recording.name}".`
+                    'No lyrics language was selected for the album.'
                 );
             }
 
+            state.workLanguages = chosenLanguages;
             return created;
         } finally {
             await restoreRecordingSelection(recording, previousSelection);
@@ -1665,6 +1716,7 @@
             state.rows = [];
             state.people.clear();
             state.creditedArtists = [];
+            state.workLanguages = null;
             state.aliasEdits = 0;
             state.applied = false;
 
