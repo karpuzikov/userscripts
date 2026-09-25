@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Harmony - Link External IDs in One Click
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.2.0
+// @version      1.2.1
 // @description  Adds all-in-one and per-type fast submission of Harmony MusicBrainz external-ID edits without opening one edit tab per entity.
 // @author       karpuzikov
 // @license      MIT
@@ -302,13 +302,29 @@
         }) || null;
     }
 
-    function formToUrlEncoded(form) {
+    function formToUrlEncoded(form, item) {
         const formData = new FormData(form);
         const params = new URLSearchParams();
 
         for (const [key, value] of formData.entries()) {
             if (typeof value === 'string') {
                 params.append(key, value);
+            }
+        }
+
+        // MusicBrainz's external-links editor is React-based. On a normal
+        // browser submit it dynamically creates hidden edit-<type>.url.*
+        // fields. A background fetch does not run that submit handler, so
+        // copy Harmony's already-seeded URL relationship fields directly
+        // from the edit URL into the POST body.
+        const seededUrl = new URL(item.url);
+        const prefix = `edit-${item.type}.url.`;
+        for (const [key, value] of seededUrl.searchParams.entries()) {
+            if (
+                key.startsWith(prefix) &&
+                (key.endsWith('.text') || key.endsWith('.link_type_id'))
+            ) {
+                params.set(key, value);
             }
         }
 
@@ -380,9 +396,19 @@
             throw new Error(pageError || `Could not find the MusicBrainz ${item.type} edit form.`);
         }
 
-        const body = formToUrlEncoded(form);
-        if (![...body.keys()].some((key) => key.startsWith(`edit-${item.type}.`))) {
-            throw new Error(`MusicBrainz ${item.type} form did not contain expected edit fields.`);
+        const body = formToUrlEncoded(form, item);
+        const urlPrefix = `edit-${item.type}.url.`;
+        const seededTextFields = [...body.keys()].filter(
+            (key) => key.startsWith(urlPrefix) && key.endsWith('.text')
+        );
+        const seededTypeFields = [...body.keys()].filter(
+            (key) => key.startsWith(urlPrefix) && key.endsWith('.link_type_id')
+        );
+
+        if (!seededTextFields.length || seededTextFields.length !== seededTypeFields.length) {
+            throw new Error(
+                `Harmony did not provide a complete MusicBrainz ${item.type} external-link payload.`
+            );
         }
 
         const action = new URL(form.getAttribute('action') || getResponse.url, getResponse.url);
