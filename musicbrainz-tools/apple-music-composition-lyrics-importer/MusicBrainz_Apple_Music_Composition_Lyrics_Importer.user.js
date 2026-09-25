@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Apple Music Credits -> MusicBrainz
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      2.0.1
+// @version      2.1.0
 // @description  Resolve the correct Apple Music release and import supported Apple Music credits to the proper MusicBrainz Recording, Work, or Release relationships.
 // @author       karpuzikov
 // @license      MIT
@@ -27,6 +27,7 @@
     const MB = PAGE.MB;
     const APPLE_API_BASE = 'https://amp-api.music.apple.com/v1';
     const APPLE_TOKEN_BOOTSTRAP_URL = 'https://music.apple.com/us/browse';
+    const RECORDING_OF_LINK_TYPE_ID = 278;
     const FALLBACK_STOREFRONTS = ['us', 'gb', 'de', 'fr', 'ca', 'au', 'jp', 'ua'];
     let appleToken = '';
 
@@ -758,7 +759,7 @@
         if (!note || state.applied) return;
 
         const sourceLine = `Apple Music credits: ${state.appleUrl}`;
-        const scriptLine = 'Imported with Apple Music Credits -> MusicBrainz\nScript: https://github.com/karpuzikov/userscripts/blob/main/musicbrainz-tools/apple-music-composition-lyrics-importer/MusicBrainz_Apple_Music_Composition_Lyrics_Importer.user.js';
+        const scriptLine = 'Imported with Apple Music Credits -> MusicBrainz; missing Works were searched and staged when no exact Work match existed.\nScript: https://github.com/karpuzikov/userscripts/blob/main/musicbrainz-tools/apple-music-composition-lyrics-importer/MusicBrainz_Apple_Music_Composition_Lyrics_Importer.user.js';
         const current = note.value.trimEnd();
         const addition = `${sourceLine}\n${scriptLine}`;
 
@@ -802,18 +803,164 @@
         return indexes;
     }
 
-    async function fetchMbEntity(mbid) {
+    async function fetchMbEntity(mbid, fallbackEntityType = 'artist') {
         const response = await fetch(`/ws/js/entity/${encodeURIComponent(mbid)}`, {
             credentials: 'same-origin',
         });
 
         if (!response.ok) {
-            throw new Error(`Cannot load MusicBrainz artist ${mbid}: HTTP ${response.status}`);
+            throw new Error(`Cannot load MusicBrainz ${fallbackEntityType} ${mbid}: HTTP ${response.status}`);
         }
 
         const entity = await response.json();
-        if (!entity.entityType) entity.entityType = 'artist';
+        if (!entity.entityType) entity.entityType = fallbackEntityType;
         return entity;
+    }
+
+    async function searchWorks(title) {
+        const query = `work:"${escapeLucene(title)}"`;
+        const url = `/ws/2/work/?query=${encodeURIComponent(query)}&fmt=json&limit=25`;
+        const response = await fetch(url, {
+            credentials: 'same-origin',
+            headers: { Accept: 'application/json' },
+        });
+
+        if (!response.ok) {
+            throw new Error(`MusicBrainz Work search failed: HTTP ${response.status}`);
+        }
+
+        const json = await response.json();
+        return (json.works || []).map(work => ({
+            mbid: work.id,
+            title: work.title || '',
+            type: work.type || '',
+            disambiguation: work.disambiguation || '',
+            score: Number(work.score ?? 0),
+        }));
+    }
+
+    function findTemporaryCreatedWork(title) {
+        let found = null;
+        walk(MB?.relationshipEditor?.state, object => {
+            if (
+                !found &&
+                object?.entityType === 'work' &&
+                object?._fromBatchCreateWorksDialog === true &&
+                normalizeText(object?.name) === normalizeText(title)
+            ) {
+                found = object;
+            }
+        });
+        return found;
+    }
+
+    function selectedRecordingsSnapshot() {
+        const selected = [];
+        const seen = new Set();
+
+        walk(MB?.relationshipEditor?.state?.selectedRecordings, object => {
+            if (object?.entityType !== 'recording') return;
+            const key = object.gid || object.id;
+            if (!key || seen.has(key)) return;
+            seen.add(key);
+            selected.push(object);
+        });
+
+        return selected;
+    }
+
+    async function createWorkForRecording(recording) {
+        const previousSelection = selectedRecordingsSnapshot();
+
+        MB.relationshipEditor.dispatch({
+            isSelected: false,
+            type: 'toggle-select-all-recordings',
+        });
+
+        MB.relationshipEditor.dispatch({
+            isSelected: true,
+            recording,
+            type: 'toggle-select-recording',
+        });
+
+        MB.relationshipEditor.dispatch({
+            attributes: null,
+            begin_date: null,
+            end_date: null,
+            ended: false,
+            languages: [],
+            linkType: null,
+            type: 'accept-batch-create-works-dialog',
+            workType: null,
+        });
+
+        MB.relationshipEditor.dispatch({
+            isSelected: false,
+            recording,
+            type: 'toggle-select-recording',
+        });
+
+        for (const oldRecording of previousSelection) {
+            MB.relationshipEditor.dispatch({
+                isSelected: true,
+                recording: oldRecording,
+                type: 'toggle-select-recording',
+            });
+        }
+
+        await wait(50);
+
+        const created = findTemporaryCreatedWork(recording.name);
+        if (!created) {
+            throw new Error(`MusicBrainz did not stage a new Work for "${recording.name}".`);
+        }
+        return created;
+    }
+
+    async function ensureWorkForRow(row) {
+        const workCredits = row.supportedCredits.filter(credit => credit.target === 'work');
+        if (!workCredits.length) return;
+
+        if (row.works.length === 1) {
+            row.workResolution = 'Existing linked Work';
+            return;
+        }
+
+        if (row.works.length > 1) {
+            row.workResolution = `Multiple Works already linked (${row.works.length}) - manual review`;
+            return;
+        }
+
+        const title = row.mbTitle || row.appleTrack.title;
+        setStatus(`Searching MusicBrainz Work: ${title}`);
+
+        const candidates = await searchWorks(title);
+        const exact = candidates.filter(candidate =>
+            normalizeText(candidate.title) === normalizeText(title)
+        );
+
+        if (exact.length === 1) {
+            const work = await fetchMbEntity(exact[0].mbid, 'work');
+            addRelationship(
+                row.mbTrack.recording,
+                work,
+                RECORDING_OF_LINK_TYPE_ID,
+                ''
+            );
+            row.works = [work];
+            row.workResolution = `Linked existing Work: ${work.name || title}`;
+            return;
+        }
+
+        if (exact.length > 1) {
+            row.workResolution = `Multiple exact Work matches found (${exact.length}) - manual review`;
+            return;
+        }
+
+        setStatus(`No matching Work found. Creating Work: ${title}`);
+        const work = await createWorkForRecording(row.mbTrack.recording);
+        row.works = [work];
+        row.workResolution = `New Work staged: ${work.name || title}`;
     }
 
     function selectedMbid(person) {
@@ -868,11 +1015,14 @@
                 css = 'bad';
             } else {
                 const details = [];
+                if (row.workResolution) {
+                    details.push(row.workResolution);
+                }
                 if (blockedWork.length) {
                     details.push(
                         row.works.length === 0
-                            ? `${blockedWork.length} Work credit(s) skipped - no Work linked`
-                            : `${blockedWork.length} Work credit(s) skipped - multiple Works linked`
+                            ? `${blockedWork.length} Work credit(s) blocked - no unambiguous Work could be resolved`
+                            : `${blockedWork.length} Work credit(s) blocked - multiple Works linked`
                     );
                 }
                 if (unsupported.length) {
@@ -1059,10 +1209,32 @@
                     mbTrack,
                     mbTitle,
                     works,
+                    workResolution: '',
                     titleMatch: !!mbTrack && normalizeText(appleTrack.title) === normalizeText(mbTitle),
                     error: result?.error ? result.error.message : '',
                 };
             });
+
+            for (let index = 0; index < state.rows.length; index++) {
+                const row = state.rows[index];
+                if (row.error || !row.mbTrack || !row.titleMatch) continue;
+
+                const hasWorkCredits = row.supportedCredits.some(credit => credit.target === 'work');
+                if (hasWorkCredits && row.works.length === 0) {
+                    setStatus(
+                        `Resolving Work ${index + 1}/${state.rows.length}: ${row.appleTrack.title}`
+                    );
+                    try {
+                        await ensureWorkForRow(row);
+                    } catch (error) {
+                        row.workResolution = error.message;
+                        console.warn('[Apple Music -> MusicBrainz] Work resolution failed:', error);
+                    }
+                    if (index < state.rows.length - 1) await wait(1100);
+                } else if (hasWorkCredits) {
+                    await ensureWorkForRow(row);
+                }
+            }
 
             for (const row of state.rows) {
                 if (row.error || !row.mbTrack || !row.titleMatch) continue;
@@ -1093,7 +1265,7 @@
                 )];
                 throw new Error(
                     allRoles.length
-                        ? `Apple Music credits were found, but none currently map to a supported MusicBrainz relationship: ${allRoles.join(', ')}`
+                        ? `Apple Music credits were found, but none are currently importable. Check unresolved Work matches or unsupported roles: ${allRoles.join(', ')}`
                         : 'No Apple Music credits were found.'
                 );
             }
