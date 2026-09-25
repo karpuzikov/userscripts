@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         Emoji Text Renderer
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.0.0
-// @description  Display Unicode emoji, including flags, in color on Chrome.
+// @version      1.0.1
+// @description  Display Unicode emoji in page text, including flags, without changing editor fonts.
 // @match        *://*/*
 // @run-at       document-idle
 // @grant        none
@@ -11,7 +11,7 @@
 (() => {
   'use strict';
 
-  const emojiPattern = /\p{RGI_Emoji}|\p{Extended_Pictographic}/gv;
+  const emojiPattern = /\p{RGI_Emoji}/gv;
 
   function splitEmoji(text) {
     const parts = [];
@@ -19,13 +19,8 @@
     emojiPattern.lastIndex = 0;
     for (const match of text.matchAll(emojiPattern)) {
       if (match.index > last) parts.push({ text: text.slice(last, match.index) });
-      let emoji = match[0];
-      last = match.index + emoji.length;
-      if (!/\p{RGI_Emoji}/v.test(emoji)) {
-        if (text[last] === '\uFE0E' || text[last] === '\uFE0F') last++;
-        emoji += '\uFE0F';
-      }
-      parts.push({ emoji });
+      last = match.index + match[0].length;
+      parts.push({ emoji: match[0] });
     }
     if (last < text.length || parts.length === 0) parts.push({ text: text.slice(last) });
     return parts;
@@ -54,25 +49,6 @@
       }
     }
     node.replaceWith(fragment);
-  }
-
-  const styledEditors = new WeakSet();
-
-  function styleEditable(element) {
-    if (styledEditors.has(element)) return;
-    const tag = element.tagName.toLowerCase();
-    if (tag === 'input' &&
-        /^(password|hidden|file|checkbox|radio|range|color|button|submit|reset|image)$/.test(element.type)) {
-      return;
-    }
-    if (tag !== 'input' && tag !== 'textarea' &&
-        !['', 'true', 'plaintext-only'].includes(element.getAttribute('contenteditable'))) {
-      return;
-    }
-    const fontFamily = getComputedStyle(element).fontFamily;
-    element.style.setProperty('font-family', '"Noto Color Emoji", ' + fontFamily, 'important');
-    element.style.setProperty('font-variant-emoji', 'emoji', 'important');
-    styledEditors.add(element);
   }
 
   function start() {
@@ -115,12 +91,6 @@
       if (root.nodeType === 3) {
         pending.add(root);
       } else if (root.nodeType === 1 || root.nodeType === 11) {
-        if (root.nodeType === 1 && root.matches?.('input, textarea, [contenteditable]')) {
-          styleEditable(root);
-        }
-        for (const field of root.querySelectorAll?.('input, textarea, [contenteditable]') || []) {
-          styleEditable(field);
-        }
         const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
         let node;
         while ((node = walker.nextNode())) pending.add(node);
@@ -131,13 +101,11 @@
     const observer = new MutationObserver((records) => {
       for (const record of records) {
         if (record.type === 'characterData') enqueue(record.target);
-        else if (record.type === 'attributes') styleEditable(record.target);
         else for (const node of record.addedNodes) enqueue(node);
       }
     });
     observer.observe(document.documentElement, {
       childList: true, characterData: true, subtree: true,
-      attributes: true, attributeFilter: ['contenteditable'],
     });
     enqueue(document.body);
   }
