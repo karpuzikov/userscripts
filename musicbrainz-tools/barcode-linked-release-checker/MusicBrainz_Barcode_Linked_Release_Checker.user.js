@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MusicBrainz - Barcode vs Linked Releases Checker
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.1.0
+// @version      1.1.1
 // @description  Checks Digital Media release barcodes against linked provider release pages through Harmony and stages MusicBrainz correction edits.
 // @author       karpuzikov
 // @license      MIT
@@ -875,10 +875,31 @@
         node.dataset.kind = kind;
     }
 
+    let lastCheckResults = null;
+
+    function updateResultsButton(results) {
+        const resultButton = document.getElementById('mb-barcode-checker-results-button');
+        if (!resultButton) return;
+
+        lastCheckResults = results;
+        const hasProblems = results.some(result =>
+            hasCorrection(result.correction) || result.correction.ambiguous
+        );
+
+        resultButton.textContent = hasProblems ? '⚠️' : '✅';
+        resultButton.title = hasProblems ? 'Open barcode/link check results - review needed' : 'Open barcode/link check results - all passed';
+        resultButton.style.display = '';
+        resultButton.onclick = () => {
+            if (lastCheckResults) showResults(lastCheckResults);
+        };
+    }
+
     async function runCheck() {
         const button = document.getElementById('mb-barcode-checker-button');
+        const resultButton = document.getElementById('mb-barcode-checker-results-button');
         if (!button) return;
         button.disabled = true;
+        if (resultButton) resultButton.style.display = 'none';
 
         try {
             const rgid = extractMbid(location.pathname);
@@ -890,7 +911,7 @@
 
             if (!eligible.length) {
                 setSidebarStatus('No Digital Media releases with barcodes found.', 'ok');
-                showResults([]);
+                updateResultsButton([]);
                 return;
             }
 
@@ -909,7 +930,7 @@
                 `Checked ${eligible.length} Digital Media release(s): ${corrections} correction(s), ${ambiguous} manual review.`,
                 corrections || ambiguous ? 'warn' : 'ok',
             );
-            showResults(results);
+            updateResultsButton(results);
         } catch (error) {
             console.error(`[${SCRIPT_NAME}]`, error);
             setSidebarStatus(error.message, 'bad');
@@ -923,19 +944,21 @@
         block.id = 'mb-barcode-checker-block';
         block.innerHTML = `
             <button type="button" id="mb-barcode-checker-button">Check barcodes against links</button>
+            <button type="button" id="mb-barcode-checker-results-button" title="Open check results" style="display:none">✅</button>
             <div id="mb-barcode-checker-status"></div>
         `;
         const style = document.createElement('style');
         style.textContent = `
             #mb-barcode-checker-block { margin:8px 0 14px; }
             #mb-barcode-checker-button { width:100%; }
+            #mb-barcode-checker-results-button { margin-top:6px; min-width:2.4em; font-size:18px; line-height:1.2; cursor:pointer; }
             #mb-barcode-checker-status { margin-top:5px; text-align:left; font-size:90%; line-height:1.3; overflow-wrap:anywhere; }
             #mb-barcode-checker-status[data-kind="bad"] { color:#b00020; }
             #mb-barcode-checker-status[data-kind="warn"] { color:#8a5a00; }
             #mb-barcode-checker-status[data-kind="ok"] { color:#087a28; }
         `;
         document.head.appendChild(style);
-        block.querySelector('button').addEventListener('click', runCheck);
+        block.querySelector('#mb-barcode-checker-button').addEventListener('click', runCheck);
         return block;
     }
 
