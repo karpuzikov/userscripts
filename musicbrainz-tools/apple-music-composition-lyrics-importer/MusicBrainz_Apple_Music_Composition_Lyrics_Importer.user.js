@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Apple Music Credits -> MusicBrainz
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      2.0.0
+// @version      2.0.1
 // @description  Resolve the correct Apple Music release and import supported Apple Music credits to the proper MusicBrainz Recording, Work, or Release relationships.
 // @author       karpuzikov
 // @license      MIT
@@ -50,7 +50,7 @@
         mixer: { target: 'recording', id: 143, label: 'mixer' },
         'mix engineer': { target: 'recording', id: 143, label: 'mixer' },
         'mixing engineer': { target: 'recording', id: 143, label: 'mixer' },
-        'recording engineer': { target: 'recording', id: 139, label: 'recording engineer' },
+        'recording engineer': { target: 'recording', id: 128, label: 'recording engineer' },
         editor: { target: 'recording', id: 144, label: 'editor' },
         remixer: { target: 'recording', id: 153, label: 'remixer' },
         'dj mixer': { target: 'recording', id: 155, label: 'DJ-mixer' },
