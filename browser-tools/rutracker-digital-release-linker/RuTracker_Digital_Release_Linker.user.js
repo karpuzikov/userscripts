@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         RuTracker Digital Release Linker
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.0.1
+// @version      1.0.2
 // @description  Replaces generic digital-store source links in RuTracker BBCode with exact release pages. Deezer is supported first; more providers can be added later.
 // @author       karpuzikov
 // @match        https://rutracker.org/forum/posting.php*
@@ -24,6 +24,7 @@
         deezerArtist: new Map(),
         deezerSearch: new Map(),
         musicBrainzCatalog: new Map(),
+        musicBrainzBarcode: new Map(),
     };
 
     let mbQueue = Promise.resolve();
@@ -97,7 +98,7 @@
             return gmJson(url, {
                 retries: 2,
                 headers: {
-                    'User-Agent': `${SCRIPT_NAME}/1.0.1 (Tampermonkey userscript)`,
+                    'User-Agent': `${SCRIPT_NAME}/1.0.2 (Tampermonkey userscript)`,
                 },
             });
         });
@@ -230,28 +231,54 @@
         return promise;
     }
 
+    function barcodeLookupVariants(value) {
+        const digits = String(value ?? '').replace(/\D/g, '');
+        if (!digits) return [];
+
+        const variants = [];
+        const add = (candidate) => {
+            if (candidate && !variants.includes(candidate)) variants.push(candidate);
+        };
+
+        add(digits);
+
+        let trimmed = digits;
+        while (trimmed.startsWith('0') && trimmed.length > 8) {
+            trimmed = trimmed.slice(1);
+            if ([14, 13, 12, 8].includes(trimmed.length)) add(trimmed);
+        }
+
+        return variants;
+    }
+
     async function deezerAlbumByBarcode(barcode) {
         const key = normalizeBarcode(barcode);
         if (!key) return null;
         if (caches.deezerBarcode.has(key)) return caches.deezerBarcode.get(key);
 
-        const promise = gmJson(`https://api.deezer.com/album/upc:${encodeURIComponent(barcode)}`)
-            .then((data) => {
-                if (!data || data.error || !data.id) return null;
+        const promise = (async () => {
+            for (const variant of barcodeLookupVariants(barcode)) {
+                const data = await gmJson(`https://api.deezer.com/album/upc:${encodeURIComponent(variant)}`)
+                    .catch(() => null);
+
+                if (!data || data.error || !data.id) continue;
 
                 const returned = normalizeBarcode(data.upc);
                 if (!returned || returned !== key) {
                     console.warn(`[${SCRIPT_NAME}] Deezer UPC mismatch`, {
                         requested: barcode,
+                        attempted: variant,
                         returned: data.upc,
                         albumId: data.id,
                     });
-                    return null;
+                    continue;
                 }
 
                 return data;
-            })
-            .catch(() => null);
+            }
+
+            return null;
+        })();
 
         caches.deezerBarcode.set(key, promise);
         return promise;
@@ -367,6 +394,80 @@
         return mbJson(url).catch(() => null);
     }
 
+    async function musicBrainzEquivalentBarcodesByBarcode(barcode, meta) {
+        const key = `${normalizeBarcode(barcode)}|${normalizeText(meta.title)}|${meta.date}|${meta.trackCount}`;
+        if (caches.musicBrainzBarcode.has(key)) return caches.musicBrainzBarcode.get(key);
+
+        const promise = (async () => {
+            let matched = [];
+
+            for (const variant of barcodeLookupVariants(barcode)) {
+                const query = `barcode:"${escapeLucenePhrase(variant)}"`;
+                const url = `https://musicbrainz.org/ws/2/release/?query=${encodeURIComponent(query)}&fmt=json&limit=10`;
+                const data = await mbJson(url).catch(() => null);
+                const releases = Array.isArray(data?.releases) ? data.releases : [];
+
+                matched = releases.filter((release) =>
+                    normalizeBarcode(release.barcode) === normalizeBarcode(barcode)
+                );
+
+                if (matched.length) break;
+            }
+
+            if (!matched.length) return [];
+
+            matched.sort((a, b) => scoreMusicBrainzRelease(b, meta) - scoreMusicBrainzRelease(a, meta));
+            const source = matched[0];
+            const releaseGroupId = source?.['release-group']?.id;
+            if (!releaseGroupId) return [];
+
+            const sourceTitle = normalizeText(source.title || meta.title);
+            const sourceComment = normalizeText(source.disambiguation || '');
+            const groupQuery = `rgid:${releaseGroupId}`;
+            const groupUrl = `https://musicbrainz.org/ws/2/release/?query=${encodeURIComponent(groupQuery)}&fmt=json&limit=100`;
+            const groupData = await mbJson(groupUrl).catch(() => null);
+            const siblings = Array.isArray(groupData?.releases) ? groupData.releases : [];
+
+            const candidates = siblings
+                .filter((release) => {
+                    const siblingBarcode = String(release.barcode || '').replace(/\D/g, '');
+                    if (!siblingBarcode) return false;
+                    if (normalizeBarcode(siblingBarcode) === normalizeBarcode(barcode)) return false;
+
+                    if (sourceTitle && normalizeText(release.title) !== sourceTitle) return false;
+
+                    if (meta.date && release.date && release.date !== meta.date) return false;
+
+                    const trackCount = Number(release['track-count'] || 0);
+                    if (meta.trackCount && trackCount && trackCount !== meta.trackCount) return false;
+
+                    if (sourceComment) {
+                        const siblingComment = normalizeText(release.disambiguation || '');
+                        if (siblingComment !== sourceComment) return false;
+                    }
+
+                    return true;
+                })
+                .sort((a, b) => scoreMusicBrainzRelease(b, meta) - scoreMusicBrainzRelease(a, meta));
+
+            const barcodes = [];
+            for (const release of candidates) {
+                const siblingBarcode = String(release.barcode || '').replace(/\D/g, '');
+                if (!siblingBarcode) continue;
+                if (!barcodes.some((existing) =>
+                    normalizeBarcode(existing) === normalizeBarcode(siblingBarcode)
+                )) {
+                    barcodes.push(siblingBarcode);
+                }
+            }
+
+            return barcodes;
+        })();
+
+        caches.musicBrainzBarcode.set(key, promise);
+        return promise;
+    }
+
     async function musicBrainzBarcodesByCatalog(catalog, meta) {
         const key = `${normalizeCatalog(catalog)}|${normalizeText(meta.title)}|${meta.date}`;
         if (caches.musicBrainzCatalog.has(key)) return caches.musicBrainzCatalog.get(key);
@@ -420,6 +521,15 @@
         if (meta.identifier?.type === 'barcode') {
             const album = await deezerAlbumByBarcode(meta.identifier.value);
             if (album) return `https://www.deezer.com/album/${album.id}`;
+
+            // Deezer can use a different regional barcode for the same digital
+            // release. Use MusicBrainz only to bridge to equivalent barcodes
+            // from the same release group/version, then retry Deezer by barcode.
+            const equivalentBarcodes = await musicBrainzEquivalentBarcodesByBarcode(meta.identifier.value, meta);
+            for (const barcode of equivalentBarcodes) {
+                const equivalentAlbum = await deezerAlbumByBarcode(barcode);
+                if (equivalentAlbum) return `https://www.deezer.com/album/${equivalentAlbum.id}`;
+            }
 
             // A numeric identifier can sometimes actually be a catalog number.
             const mbBarcodes = await musicBrainzBarcodesByCatalog(meta.identifier.value, meta);
