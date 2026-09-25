@@ -1,12 +1,11 @@
 // ==UserScript==
 // @name         Harmony - Link External IDs in One Click
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.2.4
+// @version      1.2.5
 // @description  Adds all-in-one and per-type fast submission of Harmony MusicBrainz external-ID edits without opening one edit tab per entity.
 // @author       karpuzikov
 // @license      MIT
-// @match        https://harmony.pulsewidth.org.uk/release/actions
-// @match        https://harmony.pulsewidth.org.uk/release/actions/
+// @match        https://harmony.pulsewidth.org.uk/release/actions*
 // @match        https://musicbrainz.org/release-group/*
 // @exclude      https://musicbrainz.org/release-group/*/*
 // @connect      musicbrainz.org
