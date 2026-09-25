@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         RuTracker Digital Release Linker
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.0.0
+// @version      1.0.1
 // @description  Replaces generic digital-store source links in RuTracker BBCode with exact release pages. Deezer is supported first; more providers can be added later.
 // @author       karpuzikov
 // @match        https://rutracker.org/forum/posting.php*
@@ -97,7 +97,7 @@
             return gmJson(url, {
                 retries: 2,
                 headers: {
-                    'User-Agent': `${SCRIPT_NAME}/1.0.0 (Tampermonkey userscript)`,
+                    'User-Agent': `${SCRIPT_NAME}/1.0.1 (Tampermonkey userscript)`,
                 },
             });
         });
@@ -416,24 +416,19 @@
 
     async function resolveDeezer(context) {
         const { meta, currentUrl, topicArtist } = context;
-        let artistName = topicArtist || '';
-
-        const deezerArtistId = getDeezerArtistId(currentUrl);
-        if (deezerArtistId) {
-            const artist = await deezerArtistById(deezerArtistId);
-            if (artist?.name) artistName = artist.name;
-        }
 
         if (meta.identifier?.type === 'barcode') {
             const album = await deezerAlbumByBarcode(meta.identifier.value);
             if (album) return `https://www.deezer.com/album/${album.id}`;
 
-            // Some numeric values are catalog numbers rather than barcodes.
+            // A numeric identifier can sometimes actually be a catalog number.
             const mbBarcodes = await musicBrainzBarcodesByCatalog(meta.identifier.value, meta);
             for (const barcode of mbBarcodes) {
                 const mbAlbum = await deezerAlbumByBarcode(barcode);
                 if (mbAlbum) return `https://www.deezer.com/album/${mbAlbum.id}`;
             }
+
+            return null;
         }
 
         if (meta.identifier?.type === 'catalog') {
@@ -442,7 +437,18 @@
                 const album = await deezerAlbumByBarcode(barcode);
                 if (album) return `https://www.deezer.com/album/${album.id}`;
             }
+
+            return null;
         }
+
+        // No identifier: only search by metadata when repairing an existing
+        // generic Deezer artist link, as explicitly requested.
+        const deezerArtistId = getDeezerArtistId(currentUrl);
+        if (!deezerArtistId) return null;
+
+        let artistName = topicArtist || '';
+        const artist = await deezerArtistById(deezerArtistId);
+        if (artist?.name) artistName = artist.name;
 
         const fallback = await resolveDeezerByMetadata(meta, artistName);
         return fallback ? `https://www.deezer.com/album/${fallback.id}` : null;
