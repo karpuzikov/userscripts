@@ -322,4 +322,139 @@
             }
         }
 
-        await Promise.all(Array.from({ length: Math.min(concurren
+        await Promise.all(Array.from({ length: Math.min(concurrency, Math.max(items.length, 1)) }, run));
+        return results;
+    }
+
+    async function fetchReleaseGroupReleases(releaseGroupMbid) {
+        const releases = [];
+        let offset = 0;
+        const limit = 100;
+
+        while (true) {
+            const url = `/ws/2/release?release-group=${encodeURIComponent(releaseGroupMbid)}` +
+                `&inc=media+url-rels&fmt=json&limit=${limit}&offset=${offset}`;
+            const response = await fetch(url, {
+                credentials: 'same-origin',
+                headers: { Accept: 'application/json' },
+            });
+            if (!response.ok) throw new Error(`MusicBrainz API HTTP ${response.status}`);
+
+            const data = await response.json();
+            const page = data.releases || [];
+            releases.push(...page);
+
+            if (releases.length >= Number(data['release-count'] || releases.length) || page.length < limit) break;
+            offset += limit;
+            await sleep(1100);
+        }
+
+        return releases;
+    }
+
+    function dedupeExternalLinks(links) {
+        const map = new Map();
+        for (const link of links || []) {
+            if (!providerFamily(link.url)) continue;
+            const key = providerEntityKey(link.url);
+            if (!map.has(key)) {
+                map.set(key, { url: link.url, types: [...new Set(link.types || [])] });
+            } else {
+                const existing = map.get(key);
+                existing.types = [...new Set([...existing.types, ...(link.types || [])])];
+            }
+        }
+        return [...map.values()];
+    }
+
+    function selectReverseLinks(reverse, existingUrls, wantedFamilies = null) {
+        const existingKeys = new Set(existingUrls.map(providerEntityKey));
+        return dedupeExternalLinks(reverse?.externalLinks || []).filter(link => {
+            if (existingKeys.has(providerEntityKey(link.url))) return false;
+            if (wantedFamilies && !wantedFamilies.has(providerFamily(link.url))) return false;
+            return true;
+        });
+    }
+
+    function uniqueGtinGroups(checks) {
+        const groups = [];
+        for (const check of checks.filter(item => item.gtin)) {
+            let group = groups.find(item => equalGtin(item.gtin, check.gtin));
+            if (!group) {
+                group = { gtin: check.gtin, checks: [] };
+                groups.push(group);
+            }
+            group.checks.push(check);
+        }
+        return groups;
+    }
+
+    function buildCorrection(release, checks, reverse) {
+        const mbBarcode = release.barcode;
+        const existingUrls = releaseRelations(release);
+        const successful = checks.filter(check => check.gtin);
+        const matches = successful.filter(check => equalGtin(check.gtin, mbBarcode));
+        const mismatches = successful.filter(check => !equalGtin(check.gtin, mbBarcode));
+        const unreadable = checks.filter(check => !check.gtin);
+        const gtinGroups = uniqueGtinGroups(successful);
+        const reverseLinks = dedupeExternalLinks(reverse?.externalLinks || []);
+        const correction = {
+            mbid: release.id,
+            title: release.title,
+            oldBarcode: mbBarcode,
+            newBarcode: '',
+            addLinks: [],
+            removeUrls: [],
+            reasons: [],
+            notes: [],
+            evidence: checks,
+            reverse,
+            ambiguous: false,
+        };
+
+        if (!checks.length) {
+            correction.addLinks = selectReverseLinks(reverse, existingUrls);
+            if (correction.addLinks.length) {
+                correction.reasons.push(`No supported linked release pages were present; found ${correction.addLinks.length} link(s) by barcode ${mbBarcode}.`);
+            } else {
+                correction.notes.push('No supported linked release pages were present, and Harmony found no links by barcode.');
+            }
+            return correction;
+        }
+
+        if (!successful.length) {
+            correction.addLinks = selectReverseLinks(reverse, existingUrls);
+            if (correction.addLinks.length) {
+                correction.reasons.push(`Linked pages did not return a usable GTIN; found ${correction.addLinks.length} replacement/additional link(s) by barcode ${mbBarcode}.`);
+            } else {
+                correction.notes.push('Linked pages did not return a usable GTIN, and Harmony found no links by barcode.');
+            }
+            if (unreadable.length) {
+                correction.notes.push('Unreadable/dead links are not removed automatically; MusicBrainz guidance generally prefers ending a formerly-correct dead URL relationship.');
+            }
+            return correction;
+        }
+
+        if (!mismatches.length) {
+            if (unreadable.length) {
+                const deadFamilies = new Set(unreadable.map(check => check.provider).filter(Boolean));
+                correction.addLinks = selectReverseLinks(reverse, existingUrls, deadFamilies);
+                if (correction.addLinks.length) {
+                    correction.reasons.push(`Some linked pages were unreadable; found ${correction.addLinks.length} same-provider replacement link(s) by barcode.`);
+                }
+                correction.notes.push('Unreadable/dead links are left in place for manual review/end-date handling.');
+            }
+            return correction;
+        }
+
+        if (matches.length) {
+            correction.removeUrls = mismatches.map(check => check.sourceUrl);
+            const mismatchFamilies = new Set(mismatches.map(check => check.provider).filter(Boolean));
+            correction.addLinks = selectReverseLinks(reverse, existingUrls, mismatchFamilies);
+            correction.reasons.push(
+                `${matches.length} linked page(s) confirm MusicBrainz barcode ${mbBarcode}; ${mismatches.length} linked page(s) resolve to a different GTIN and are staged for removal.`,
+            );
+            return correction;
+        }
+
+        if (gtinGroups.length === 1)
