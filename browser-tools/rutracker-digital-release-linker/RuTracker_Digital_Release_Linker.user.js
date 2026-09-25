@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         RuTracker Digital Release Linker
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.0.2
-// @description  Replaces generic digital-store source links in RuTracker BBCode with exact release pages. Deezer is supported first; more providers can be added later.
+// @version      1.1.0
+// @description  Links exact digital release pages in RuTracker BBCode, falls back from Deezer to MusicBrainz-linked Beatport releases, and adds country flag emoji.
 // @author       karpuzikov
 // @match        https://rutracker.org/forum/posting.php*
 // @grant        GM_xmlhttpRequest
@@ -25,6 +25,7 @@
         deezerSearch: new Map(),
         musicBrainzCatalog: new Map(),
         musicBrainzBarcode: new Map(),
+        musicBrainzIdentifier: new Map(),
     };
 
     let mbQueue = Promise.resolve();
@@ -98,13 +99,104 @@
             return gmJson(url, {
                 retries: 2,
                 headers: {
-                    'User-Agent': `${SCRIPT_NAME}/1.0.2 (Tampermonkey userscript)`,
+                    'User-Agent': `${SCRIPT_NAME}/1.1.0 (Tampermonkey userscript)`,
                 },
             });
         });
 
         mbQueue = task.catch(() => undefined);
         return task;
+    }
+
+
+    const COUNTRY_ALIASES = new Map(Object.entries({
+        usa: 'US',
+        'united states': 'US',
+        'united states of america': 'US',
+        uk: 'GB',
+        'great britain': 'GB',
+        russia: 'RU',
+        'south korea': 'KR',
+        'north korea': 'KP',
+        'czech republic': 'CZ',
+        czechia: 'CZ',
+        vietnam: 'VN',
+        'viet nam': 'VN',
+        iran: 'IR',
+        syria: 'SY',
+        laos: 'LA',
+        moldova: 'MD',
+        bolivia: 'BO',
+        venezuela: 'VE',
+        tanzania: 'TZ',
+        'ivory coast': 'CI',
+        "cote d'ivoire": 'CI',
+        taiwan: 'TW',
+    }));
+
+    let countryNameIndex = null;
+
+    function normalizeCountryName(value) {
+        return String(value ?? '')
+            .normalize('NFKD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, ' ')
+            .trim()
+            .replace(/\s+/g, ' ');
+    }
+
+    function countryCodeFromName(value) {
+        const key = normalizeCountryName(value);
+        if (!key) return '';
+
+        const alias = COUNTRY_ALIASES.get(key);
+        if (alias) return alias;
+
+        if (!countryNameIndex) {
+            countryNameIndex = new Map();
+            if (typeof Intl?.DisplayNames === 'function') {
+                const displayNames = new Intl.DisplayNames(['en'], { type: 'region' });
+                for (let first = 65; first <= 90; first += 1) {
+                    for (let second = 65; second <= 90; second += 1) {
+                        const code = String.fromCharCode(first, second);
+                        const name = displayNames.of(code);
+                        if (!name || name === code) continue;
+                        countryNameIndex.set(normalizeCountryName(name), code);
+                    }
+                }
+            }
+        }
+
+        return countryNameIndex.get(key) || '';
+    }
+
+    function flagEmoji(countryCode) {
+        if (!/^[A-Z]{2}$/.test(countryCode)) return '';
+        return [...countryCode]
+            .map((letter) => String.fromCodePoint(127397 + letter.charCodeAt(0)))
+            .join('');
+    }
+
+    function addCountryFlags(text) {
+        let changed = 0;
+        const updated = text.replace(
+            /(\[b\]Страна\[\/b\]\s*:\s*)([^|\r\n]+)/gi,
+            (full, prefix, rawCountry) => {
+                const country = rawCountry
+                    .replace(/\s*[\u{1F1E6}-\u{1F1FF}]{2}\s*$/u, '')
+                    .trim();
+                const code = countryCodeFromName(country);
+                const flag = flagEmoji(code);
+                if (!flag) return full;
+
+                const replacement = `${prefix}${country} ${flag}`;
+                if (replacement !== full) changed += 1;
+                return replacement;
+            },
+        );
+
+        return { text: updated, changed };
     }
 
     function normalizeBarcode(value) {
@@ -390,8 +482,91 @@
     }
 
     async function musicBrainzReleaseDetails(mbid) {
-        const url = `https://musicbrainz.org/ws/2/release/${encodeURIComponent(mbid)}?inc=labels&fmt=json`;
+        const url = `https://musicbrainz.org/ws/2/release/${encodeURIComponent(mbid)}?inc=labels+url-rels&fmt=json`;
         return mbJson(url).catch(() => null);
+    }
+
+    function beatportReleaseUrl(release) {
+        const relations = Array.isArray(release?.relations) ? release.relations : [];
+        for (const relation of relations) {
+            const resource = String(relation?.url?.resource || '').trim();
+            if (/^https?:\/\/(?:www\.)?beatport\.com\/release\/[^?#\s]+/i.test(resource)) {
+                return resource;
+            }
+        }
+        return '';
+    }
+
+    async function musicBrainzReleasesByIdentifier(identifier, meta) {
+        if (!identifier?.type || !identifier?.value) return [];
+
+        const cacheKey = `${identifier.type}|${identifier.value}|${normalizeText(meta.title)}|${meta.date}|${meta.trackCount}`;
+        if (caches.musicBrainzIdentifier.has(cacheKey)) {
+            return caches.musicBrainzIdentifier.get(cacheKey);
+        }
+
+        const promise = (async () => {
+            let releases = [];
+
+            if (identifier.type === 'barcode') {
+                for (const variant of barcodeLookupVariants(identifier.value)) {
+                    const query = `barcode:"${escapeLucenePhrase(variant)}"`;
+                    const url = `https://musicbrainz.org/ws/2/release/?query=${encodeURIComponent(query)}&fmt=json&limit=10`;
+                    const data = await mbJson(url).catch(() => null);
+                    const matches = Array.isArray(data?.releases) ? data.releases : [];
+
+                    releases = matches.filter((release) =>
+                        normalizeBarcode(release.barcode) === normalizeBarcode(identifier.value)
+                    );
+                    if (releases.length) break;
+                }
+            } else if (identifier.type === 'catalog') {
+                const targetCatalog = normalizeCatalog(identifier.value);
+                const query = `catno:"${escapeLucenePhrase(identifier.value)}"`;
+                const url = `https://musicbrainz.org/ws/2/release/?query=${encodeURIComponent(query)}&fmt=json&limit=25`;
+                const data = await mbJson(url).catch(() => null);
+                const matches = Array.isArray(data?.releases) ? data.releases : [];
+
+                for (const release of matches) {
+                    if (!release.id) continue;
+                    const full = await musicBrainzReleaseDetails(release.id);
+                    if (!full) continue;
+                    const labelInfo = Array.isArray(full['label-info']) ? full['label-info'] : [];
+                    const exactCatalog = labelInfo.some((entry) =>
+                        normalizeCatalog(entry?.['catalog-number']) === targetCatalog
+                    );
+                    if (exactCatalog) releases.push(full);
+                }
+            }
+
+            releases.sort((a, b) => scoreMusicBrainzRelease(b, meta) - scoreMusicBrainzRelease(a, meta));
+
+            const detailed = [];
+            for (const release of releases) {
+                if (!release?.id) continue;
+                const full = Array.isArray(release.relations)
+                    ? release
+                    : await musicBrainzReleaseDetails(release.id);
+                if (full) detailed.push(full);
+            }
+
+            return detailed;
+        })();
+
+        caches.musicBrainzIdentifier.set(cacheKey, promise);
+        return promise;
+    }
+
+    async function resolveBeatportFromMusicBrainz(meta) {
+        if (!meta.identifier) return null;
+
+        const releases = await musicBrainzReleasesByIdentifier(meta.identifier, meta);
+        for (const release of releases) {
+            const url = beatportReleaseUrl(release);
+            if (url) return { kind: 'beatport', url };
+        }
+
+        return null;
     }
 
     async function musicBrainzEquivalentBarcodesByBarcode(barcode, meta) {
@@ -520,7 +695,7 @@
 
         if (meta.identifier?.type === 'barcode') {
             const album = await deezerAlbumByBarcode(meta.identifier.value);
-            if (album) return `https://www.deezer.com/album/${album.id}`;
+            if (album) return { kind: 'deezer', url: `https://www.deezer.com/album/${album.id}` };
 
             // Deezer can use a different regional barcode for the same digital
             // release. Use MusicBrainz only to bridge to equivalent barcodes
@@ -528,31 +703,34 @@
             const equivalentBarcodes = await musicBrainzEquivalentBarcodesByBarcode(meta.identifier.value, meta);
             for (const barcode of equivalentBarcodes) {
                 const equivalentAlbum = await deezerAlbumByBarcode(barcode);
-                if (equivalentAlbum) return `https://www.deezer.com/album/${equivalentAlbum.id}`;
+                if (equivalentAlbum) {
+                    return { kind: 'deezer', url: `https://www.deezer.com/album/${equivalentAlbum.id}` };
+                }
             }
 
             // A numeric identifier can sometimes actually be a catalog number.
             const mbBarcodes = await musicBrainzBarcodesByCatalog(meta.identifier.value, meta);
             for (const barcode of mbBarcodes) {
                 const mbAlbum = await deezerAlbumByBarcode(barcode);
-                if (mbAlbum) return `https://www.deezer.com/album/${mbAlbum.id}`;
+                if (mbAlbum) return { kind: 'deezer', url: `https://www.deezer.com/album/${mbAlbum.id}` };
             }
 
-            return null;
+            return resolveBeatportFromMusicBrainz(meta);
         }
 
         if (meta.identifier?.type === 'catalog') {
             const barcodes = await musicBrainzBarcodesByCatalog(meta.identifier.value, meta);
             for (const barcode of barcodes) {
                 const album = await deezerAlbumByBarcode(barcode);
-                if (album) return `https://www.deezer.com/album/${album.id}`;
+                if (album) return { kind: 'deezer', url: `https://www.deezer.com/album/${album.id}` };
             }
 
-            return null;
+            return resolveBeatportFromMusicBrainz(meta);
         }
 
         // No identifier: only search by metadata when repairing an existing
-        // generic Deezer artist link, as explicitly requested.
+        // generic Deezer artist link. Beatport fallback is intentionally not
+        // attempted without a barcode or catalog number.
         const deezerArtistId = getDeezerArtistId(currentUrl);
         if (!deezerArtistId) return null;
 
@@ -561,7 +739,9 @@
         if (artist?.name) artistName = artist.name;
 
         const fallback = await resolveDeezerByMetadata(meta, artistName);
-        return fallback ? `https://www.deezer.com/album/${fallback.id}` : null;
+        return fallback
+            ? { kind: 'deezer', url: `https://www.deezer.com/album/${fallback.id}` }
+            : null;
     }
 
     const PROVIDERS = [
@@ -571,8 +751,11 @@
             sourceRegex: /(\[b\]Носитель\|Источник\[\/b\]\s*:\s*WEB\|)(?:Deezer|\[url=(?:"([^"]+)"|([^\]]+))\]Deezer\[\/url\])(\[hr\])/i,
             isReleaseUrl: isDeezerAlbumUrl,
             resolve: resolveDeezer,
-            makeLinkedSource(match, url) {
-                return `${match[1]}[url=${url}]Deezer[/url]${match[4]}`;
+            makeLinkedSource(match, resolution) {
+                if (resolution.kind === 'beatport') {
+                    return `[b]Носитель|Источник[/b]: [url=${resolution.url}]WEB[/url]|redacted.sh${match[4]}`;
+                }
+                return `${match[1]}[url=${resolution.url}]Deezer[/url]${match[4]}`;
             },
             getCurrentUrl(match) {
                 return (match[2] || match[3] || '').trim();
@@ -644,8 +827,10 @@
 
     async function runLinker(textarea, ui) {
         const originalText = textarea.value;
-        const topicArtist = getTopicArtist(originalText);
-        const spoilers = findSpoilers(originalText);
+        const countryResult = addCountryFlags(originalText);
+        const workingText = countryResult.text;
+        const topicArtist = getTopicArtist(workingText);
+        const spoilers = findSpoilers(workingText);
         const candidates = [];
         let alreadyLinked = 0;
 
@@ -669,7 +854,16 @@
         }
 
         if (!candidates.length) {
-            setStatus(ui.status, alreadyLinked ? `Nothing to change. ${alreadyLinked} release link(s) already present.` : 'Nothing to link.');
+            if (workingText !== originalText) {
+                textarea.value = workingText;
+                textarea.dispatchEvent(new Event('input', { bubbles: true }));
+                textarea.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+
+            const parts = [];
+            if (countryResult.changed) parts.push(`country flags: ${countryResult.changed}`);
+            if (alreadyLinked) parts.push(`already linked: ${alreadyLinked}`);
+            setStatus(ui.status, parts.length ? parts.join(' | ') : 'Nothing to link.');
             return;
         }
 
@@ -679,11 +873,11 @@
 
         try {
             const results = await mapLimit(candidates, CONCURRENCY, async (candidate) => {
-                let url = null;
+                let resolution = null;
                 let error = null;
 
                 try {
-                    url = await candidate.provider.resolve({
+                    resolution = await candidate.provider.resolve({
                         meta: candidate.meta,
                         currentUrl: candidate.currentUrl,
                         topicArtist,
@@ -696,15 +890,16 @@
 
                 finished += 1;
                 setStatus(ui.status, `Resolving ${finished}/${candidates.length}...`);
-                return { candidate, url, error };
+                return { candidate, resolution, error };
             });
 
             const replacements = [];
             let linked = 0;
+            let beatportFallbacks = 0;
             let notFound = 0;
 
             for (const result of results) {
-                if (!result.url) {
+                if (!result.resolution?.url) {
                     notFound += 1;
                     console.warn(`[${SCRIPT_NAME}] Release not resolved: ${result.candidate.meta.spoilerTitle}`);
                     continue;
@@ -713,7 +908,7 @@
                 const { candidate } = result;
                 const replacedBlock = candidate.spoiler.fullText.replace(
                     candidate.provider.sourceRegex,
-                    (...args) => candidate.provider.makeLinkedSource(args, result.url),
+                    (...args) => candidate.provider.makeLinkedSource(args, result.resolution),
                 );
 
                 if (replacedBlock !== candidate.spoiler.fullText) {
@@ -723,11 +918,12 @@
                         text: replacedBlock,
                     });
                     linked += 1;
+                    if (result.resolution.kind === 'beatport') beatportFallbacks += 1;
                 }
             }
 
             replacements.sort((a, b) => b.start - a.start);
-            let updatedText = originalText;
+            let updatedText = workingText;
             for (const replacement of replacements) {
                 updatedText = updatedText.slice(0, replacement.start) + replacement.text + updatedText.slice(replacement.end);
             }
@@ -739,6 +935,8 @@
             }
 
             const parts = [`Linked: ${linked}`];
+            if (beatportFallbacks) parts.push(`Beatport fallback: ${beatportFallbacks}`);
+            if (countryResult.changed) parts.push(`country flags: ${countryResult.changed}`);
             if (alreadyLinked) parts.push(`already linked: ${alreadyLinked}`);
             if (notFound) parts.push(`not found: ${notFound}`);
             setStatus(ui.status, parts.join(' | '));
