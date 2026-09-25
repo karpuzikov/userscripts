@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MusicBrainz - Barcode vs Linked Releases Checker
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.1.1
+// @version      1.2.0
 // @description  Checks Digital Media release barcodes against linked provider release pages through Harmony and stages MusicBrainz correction edits.
 // @author       karpuzikov
 // @license      MIT
@@ -13,6 +13,8 @@
 // @match        https://musicbrainz.org/release/*/edit*
 // @match        https://beta.musicbrainz.org/release/*/edit*
 // @connect      harmony.pulsewidth.org.uk
+// @connect      music.apple.com
+// @connect      amp-api.music.apple.com
 // @grant        GM_xmlhttpRequest
 // @run-at       document-end
 // ==/UserScript==
@@ -23,7 +25,9 @@
     const SCRIPT_NAME = 'MusicBrainz - Barcode vs Linked Releases Checker';
     const SCRIPT_URL = 'https://github.com/karpuzikov/userscripts/blob/main/musicbrainz-tools/barcode-linked-release-checker/MusicBrainz_Barcode_Linked_Release_Checker.user.js';
     const HARMONY_URL = 'https://harmony.pulsewidth.org.uk/';
+    const APPLE_API_BASE = 'https://amp-api.music.apple.com/v1';
     const TASK_PREFIX = 'mb-barcode-link-checker:';
+    let appleTokenPromise = null;
 
     const RELEASE_LINK_TYPE_IDS = new Map([
         ['free streaming', 85],
@@ -187,6 +191,247 @@
         return (release.relations || [])
             .filter(rel => rel?.['target-type'] === 'url' && !rel?.ended && rel?.url?.resource)
             .map(rel => rel.url.resource);
+    }
+
+    function gmTextRequest(url, { headers = {}, timeout = 60000 } = {}) {
+        return new Promise((resolve, reject) => {
+            GM_xmlhttpRequest({
+                method: 'GET',
+                url,
+                headers,
+                timeout,
+                onload(response) {
+                    if (response.status >= 200 && response.status < 400) {
+                        resolve({
+                            text: response.responseText,
+                            finalUrl: response.finalUrl || url,
+                            status: response.status,
+                        });
+                    } else {
+                        reject(new Error(`HTTP ${response.status}: ${url}`));
+                    }
+                },
+                ontimeout() {
+                    reject(new Error(`Request timed out: ${url}`));
+                },
+                onerror() {
+                    reject(new Error(`Request failed: ${url}`));
+                },
+            });
+        });
+    }
+
+    function parseAppleAlbumUrl(value) {
+        let url;
+        try {
+            url = new URL(value);
+        } catch {
+            return null;
+        }
+
+        if (providerFamily(url) !== 'apple') return null;
+
+        // Always use the regular music.apple.com host for token extraction.
+        url.hostname = 'music.apple.com';
+
+        const parts = url.pathname.split('/').filter(Boolean);
+        const albumIndex = parts.findIndex(part => part === 'album');
+        if (albumIndex < 0) return null;
+
+        const id = parts.slice(albumIndex + 1).reverse().find(part => /^\d+$/.test(part));
+        if (!id) return null;
+
+        return {
+            id,
+            storefront: (parts[0] || 'us').toLowerCase(),
+            pageUrl: url.href,
+        };
+    }
+
+    async function getAppleMusicToken(seedUrl) {
+        if (appleTokenPromise) return appleTokenPromise;
+
+        appleTokenPromise = (async () => {
+            const pages = [
+                parseAppleAlbumUrl(seedUrl)?.pageUrl,
+                'https://music.apple.com/us/browse',
+            ].filter(Boolean);
+
+            let lastError = null;
+            for (const pageUrl of [...new Set(pages)]) {
+                try {
+                    const page = await gmTextRequest(pageUrl);
+                    const doc = new DOMParser().parseFromString(page.text, 'text/html');
+                    const scripts = [...doc.querySelectorAll('script[crossorigin][src]')];
+
+                    for (const script of scripts) {
+                        const scriptUrl = new URL(script.getAttribute('src'), pageUrl).href;
+                        const source = await gmTextRequest(scriptUrl);
+                        const token = source.text.match(/["'](eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+)["']/)?.[1];
+                        if (token) return token;
+                    }
+                } catch (error) {
+                    lastError = error;
+                }
+            }
+
+            throw lastError || new Error('Could not extract the Apple Music bearer token.');
+        })();
+
+        try {
+            return await appleTokenPromise;
+        } catch (error) {
+            appleTokenPromise = null;
+            throw error;
+        }
+    }
+
+    async function appleApiRequest(apiUrl, seedUrl) {
+        const token = await getAppleMusicToken(seedUrl);
+        const response = await gmTextRequest(apiUrl, {
+            headers: {
+                Accept: 'application/json',
+                Authorization: `Bearer ${token}`,
+                Origin: new URL(APPLE_API_BASE).origin,
+            },
+        });
+        return JSON.parse(response.text);
+    }
+
+    async function lookupAppleByUrl(url) {
+        const parsedUrl = parseAppleAlbumUrl(url);
+        const lookupUrl = parsedUrl
+            ? `${APPLE_API_BASE}/catalog/${parsedUrl.storefront}/albums/${parsedUrl.id}`
+            : '';
+
+        if (!parsedUrl) {
+            return {
+                sourceUrl: url,
+                provider: 'apple',
+                found: false,
+                gtin: '',
+                externalLinks: [],
+                providers: ['Apple Music'],
+                errors: ['Unsupported Apple Music album URL'],
+                lookupUrl,
+                state: 'failed',
+            };
+        }
+
+        try {
+            const json = await appleApiRequest(lookupUrl, parsedUrl.pageUrl);
+            const album = (json.data || []).find(item => item.type === 'albums') || json.data?.[0];
+            const gtin = album?.attributes?.upc || '';
+            const releaseUrl = album?.attributes?.url || parsedUrl.pageUrl;
+
+            return {
+                sourceUrl: url,
+                provider: 'apple',
+                found: Boolean(album),
+                gtin,
+                externalLinks: album ? [{ url: releaseUrl, types: ['paid streaming'] }] : [],
+                providers: ['Apple Music'],
+                errors: [],
+                lookupUrl,
+                state: gtin ? 'ok' : (album ? 'no-gtin' : 'failed'),
+            };
+        } catch (error) {
+            return {
+                sourceUrl: url,
+                provider: 'apple',
+                found: false,
+                gtin: '',
+                externalLinks: [],
+                providers: ['Apple Music'],
+                errors: [error.message],
+                lookupUrl,
+                state: 'failed',
+            };
+        }
+    }
+
+    async function lookupAppleByBarcode(barcode, seedUrl = 'https://music.apple.com/us/browse') {
+        const seed = parseAppleAlbumUrl(seedUrl);
+        const storefronts = [...new Set([
+            seed?.storefront,
+            'us',
+            'gb',
+            'de',
+            'jp',
+        ].filter(Boolean))];
+
+        const lookupUrls = [];
+        let lastError = null;
+
+        for (const storefront of storefronts) {
+            const url = new URL(`${APPLE_API_BASE}/catalog/${storefront}/albums`);
+            url.searchParams.set('filter[upc]', barcode);
+            lookupUrls.push(url.href);
+
+            try {
+                const json = await appleApiRequest(url.href, seed?.pageUrl || seedUrl);
+                const albums = (json.data || []).filter(item => item.type === 'albums');
+                const album = albums.find(item => equalGtin(item.attributes?.upc, barcode)) || albums[0];
+                if (!album) continue;
+
+                return {
+                    found: true,
+                    gtin: album.attributes?.upc || barcode,
+                    externalLinks: album.attributes?.url
+                        ? [{ url: album.attributes.url, types: ['paid streaming'] }]
+                        : [],
+                    providers: ['Apple Music'],
+                    errors: [],
+                    lookupUrl: url.href,
+                    lookupUrls,
+                };
+            } catch (error) {
+                lastError = error;
+            }
+        }
+
+        return {
+            found: false,
+            gtin: '',
+            externalLinks: [],
+            providers: ['Apple Music'],
+            errors: lastError ? [lastError.message] : [],
+            lookupUrl: lookupUrls[0] || '',
+            lookupUrls,
+        };
+    }
+
+    async function lookupLinkedUrl(url) {
+        return providerFamily(url) === 'apple'
+            ? lookupAppleByUrl(url)
+            : lookupHarmonyByUrl(url);
+    }
+
+    async function lookupByBarcode(barcode, appleSeedUrl) {
+        const harmony = await lookupHarmonyByBarcode(barcode);
+        harmony.externalLinks = (harmony.externalLinks || [])
+            .filter(link => providerFamily(link.url) !== 'apple');
+
+        const apple = await lookupAppleByBarcode(barcode, appleSeedUrl);
+
+        return {
+            found: Boolean(harmony.found || apple.found),
+            gtin: harmony.gtin || apple.gtin || '',
+            externalLinks: dedupeExternalLinks([
+                ...(harmony.externalLinks || []),
+                ...(apple.externalLinks || []),
+            ]),
+            providers: [...new Set([
+                ...(harmony.providers || []),
+                ...(apple.providers || []),
+            ])],
+            errors: [...(harmony.errors || []), ...(apple.errors || [])],
+            lookupUrl: [harmony.lookupUrl, apple.lookupUrl].filter(Boolean).join(' | '),
+            lookupUrls: [
+                harmony.lookupUrl,
+                ...(apple.lookupUrls || [apple.lookupUrl]),
+            ].filter(Boolean),
+        };
     }
 
     function harmonyRequest(url) {
@@ -417,7 +662,7 @@
             if (correction.addLinks.length) {
                 correction.reasons.push(`No supported linked release pages were present; found ${correction.addLinks.length} link(s) by barcode ${mbBarcode}.`);
             } else {
-                correction.notes.push('No supported linked release pages were present, and Harmony found no links by barcode.');
+                correction.notes.push('No supported linked release pages were present, and no provider links were found by barcode.');
             }
             return correction;
         }
@@ -427,7 +672,7 @@
             if (correction.addLinks.length) {
                 correction.reasons.push(`Linked pages did not return a usable GTIN; found ${correction.addLinks.length} replacement/additional link(s) by barcode ${mbBarcode}.`);
             } else {
-                correction.notes.push('Linked pages did not return a usable GTIN, and Harmony found no links by barcode.');
+                correction.notes.push('Linked pages did not return a usable GTIN, and no provider links were found by barcode.');
             }
             if (unreadable.length) {
                 correction.notes.push('Unreadable/dead links are not removed automatically; MusicBrainz guidance generally prefers ending a formerly-correct dead URL relationship.');
@@ -465,7 +710,7 @@
                 correction.removeUrls = mismatches.map(check => check.sourceUrl);
                 correction.addLinks = selectReverseLinks(reverse, existingUrls);
                 correction.reasons.push(
-                    `All readable linked pages disagree with MusicBrainz barcode ${mbBarcode}, but Harmony resolves ${mbBarcode} to other provider page(s); current mismatching links are staged for removal and barcode-matched links for addition.`,
+                    `All readable linked pages disagree with MusicBrainz barcode ${mbBarcode}, but the barcode lookup resolves ${mbBarcode} to other provider page(s); current mismatching links are staged for removal and barcode-matched links for addition.`,
                 );
                 return correction;
             }
@@ -473,7 +718,7 @@
             if (distinctProviders.size >= 2) {
                 correction.newBarcode = externalGtin;
                 correction.reasons.push(
-                    `${distinctProviders.size} independent linked providers agree on GTIN ${externalGtin}, while Harmony found no provider pages for MusicBrainz barcode ${mbBarcode}; barcode ${externalGtin} is staged.`,
+                    `${distinctProviders.size} independent linked providers agree on GTIN ${externalGtin}, while the barcode lookup found no provider pages for MusicBrainz barcode ${mbBarcode}; barcode ${externalGtin} is staged.`,
                 );
                 return correction;
             }
@@ -552,11 +797,15 @@
 
     async function checkRelease(release, progress) {
         const allUrls = releaseRelations(release);
-        const supportedUrls = allUrls.filter(providerFamily);
+        const supportedUrls = [...new Map(
+            allUrls
+                .filter(providerFamily)
+                .map(url => [providerEntityKey(url), url])
+        ).values()];
 
         const checks = await mapPool(supportedUrls, 3, async (url, index) => {
             progress(`Checking ${release.title}: ${index + 1}/${supportedUrls.length} ${providerLabel(url)}`);
-            return lookupHarmonyByUrl(url);
+            return lookupLinkedUrl(url);
         });
 
         const successful = checks.filter(check => check.gtin);
@@ -566,8 +815,9 @@
 
         let reverse = null;
         if (needsReverse) {
-            progress(`Looking up barcode ${release.barcode} with Harmony...`);
-            reverse = await lookupHarmonyByBarcode(release.barcode);
+            progress(`Looking up barcode ${release.barcode} across providers...`);
+            const appleSeedUrl = supportedUrls.find(url => providerFamily(url) === 'apple');
+            reverse = await lookupByBarcode(release.barcode, appleSeedUrl);
         }
 
         return {
@@ -581,7 +831,7 @@
 
     function makeEditNote(correction) {
         const lines = [
-            'Checked Digital Media release barcode against linked provider release pages using Harmony.',
+            'Checked Digital Media release barcode against linked provider release pages using Harmony; Apple Music uses direct Apple Music API barcode data via the ToadKing method.',
             `MusicBrainz release: https://musicbrainz.org/release/${correction.mbid}`,
             `MusicBrainz barcode before check: ${correction.oldBarcode}`,
         ];
@@ -602,7 +852,7 @@
             for (const reason of correction.reasons) lines.push(`- ${reason}`);
         }
 
-        lines.push('', `Script: ${SCRIPT_URL}`, 'Harmony: https://github.com/kellnerd/harmony');
+        lines.push('', `Script: ${SCRIPT_URL}`, 'Harmony: https://github.com/kellnerd/harmony', 'Apple Music barcode method: https://github.com/ToadKing/apple-music-barcode-isrc');
         return lines.join('\n');
     }
 
@@ -939,7 +1189,7 @@
         }
     }
 
-    function makeReleaseTableBlock() {
+    function makeReleaseTableBlock(releaseTable, barcodeHeader) {
         const block = document.createElement('div');
         block.id = 'mb-barcode-checker-block';
         block.innerHTML = `
@@ -947,43 +1197,40 @@
             <button type="button" id="mb-barcode-checker-results-button" title="Open check results" style="display:none">✅</button>
             <div id="mb-barcode-checker-status"></div>
         `;
+
         const style = document.createElement('style');
         style.textContent = `
-            #mb-barcode-checker-block { margin:8px 0 14px; }
-            #mb-barcode-checker-button { width:100%; }
-            #mb-barcode-checker-results-button { margin-top:6px; min-width:2.4em; font-size:18px; line-height:1.2; cursor:pointer; }
+            #mb-barcode-checker-block { margin:0 0 6px 0; box-sizing:border-box; }
+            #mb-barcode-checker-button,
+            #mb-barcode-checker-results-button { width:100%; box-sizing:border-box; }
+            #mb-barcode-checker-results-button { margin-top:4px; font-size:18px; line-height:1.2; cursor:pointer; }
             #mb-barcode-checker-status { margin-top:5px; text-align:left; font-size:90%; line-height:1.3; overflow-wrap:anywhere; }
             #mb-barcode-checker-status[data-kind="bad"] { color:#b00020; }
             #mb-barcode-checker-status[data-kind="warn"] { color:#8a5a00; }
             #mb-barcode-checker-status[data-kind="ok"] { color:#087a28; }
         `;
         document.head.appendChild(style);
+
+        const alignToBarcodeColumn = () => {
+            if (!block.isConnected || !releaseTable.isConnected || !barcodeHeader.isConnected) return;
+            const headerRect = barcodeHeader.getBoundingClientRect();
+            const parentRect = releaseTable.parentElement.getBoundingClientRect();
+            block.style.width = `${headerRect.width}px`;
+            block.style.marginLeft = `${headerRect.left - parentRect.left}px`;
+        };
+
         block.querySelector('#mb-barcode-checker-button').addEventListener('click', runCheck);
+        requestAnimationFrame(alignToBarcodeColumn);
+        window.addEventListener('resize', alignToBarcodeColumn, { passive: true });
+        if (typeof ResizeObserver !== 'undefined') {
+            new ResizeObserver(alignToBarcodeColumn).observe(releaseTable);
+        }
+
         return block;
     }
 
     function insertReleaseGroupButton() {
         if (document.getElementById('mb-barcode-checker-block')) return;
-
-        const sidebar = document.getElementById('sidebar');
-        if (sidebar) {
-            const headings = [...sidebar.querySelectorAll('h2, h3')];
-            const barcodeHeading = headings.find(heading =>
-                /^barcodes?$/i.test(normalizeSpace(heading.textContent))
-            );
-
-            if (barcodeHeading) {
-                let anchor = barcodeHeading;
-                while (
-                    anchor.nextElementSibling &&
-                    !/^H[23]$/i.test(anchor.nextElementSibling.tagName)
-                ) {
-                    anchor = anchor.nextElementSibling;
-                }
-                anchor.insertAdjacentElement('afterend', makeReleaseTableBlock());
-                return;
-            }
-        }
 
         const releaseTable = [...document.querySelectorAll('table.tbl.mergeable-table')].find(table =>
             [...table.querySelectorAll('thead th')].some(th => /^barcode$/i.test(normalizeSpace(th.textContent)))
@@ -993,7 +1240,14 @@
             return;
         }
 
-        releaseTable.insertAdjacentElement('afterend', makeReleaseTableBlock());
+        const barcodeHeader = [...releaseTable.querySelectorAll('thead th')]
+            .find(th => /^barcode$/i.test(normalizeSpace(th.textContent)));
+        if (!barcodeHeader) {
+            setTimeout(insertReleaseGroupButton, 500);
+            return;
+        }
+
+        releaseTable.insertAdjacentElement('beforebegin', makeReleaseTableBlock(releaseTable, barcodeHeader));
     }
 
     cleanupExpiredTasks();
