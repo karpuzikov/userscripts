@@ -1,11 +1,11 @@
 // ==UserScript==
 // @name         Apple Music Credits -> MusicBrainz
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      2.3.1
+// @version      2.3.2
 // @description  Resolve the correct Apple Music release and import supported Apple Music credits to the proper MusicBrainz Recording, Work, or Release relationships.
 // @author       karpuzikov
 // @license      MIT
-// @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/tampermonkey-apple-music-credits-v2.3.1/musicbrainz-tools/apple-music-composition-lyrics-importer/MusicBrainz_Apple_Music_Composition_Lyrics_Importer.user.js
+// @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/tampermonkey-apple-music-credits-v2.3.2/musicbrainz-tools/apple-music-composition-lyrics-importer/MusicBrainz_Apple_Music_Composition_Lyrics_Importer.user.js
 // @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/refs/heads/main/musicbrainz-tools/apple-music-composition-lyrics-importer/MusicBrainz_Apple_Music_Composition_Lyrics_Importer.user.js
 // @supportURL   https://github.com/karpuzikov/userscripts
 // @match        https://musicbrainz.org/release/*/edit-relationships
@@ -29,6 +29,7 @@
     const APPLE_TOKEN_BOOTSTRAP_URL = 'https://music.apple.com/us/browse';
     const RECORDING_OF_LINK_TYPE_ID = 278;
     const WORK_TYPE_SONG_ID = 17;
+    const SCRIPT_URL = 'https://github.com/karpuzikov/userscripts/blob/main/musicbrainz-tools/apple-music-composition-lyrics-importer/MusicBrainz_Apple_Music_Composition_Lyrics_Importer.user.js';
     const FALLBACK_STOREFRONTS = ['us', 'gb', 'de', 'fr', 'ca', 'au', 'jp', 'ua'];
     let appleToken = '';
 
@@ -905,15 +906,33 @@
     }
 
     function addEditNote() {
-        const note = document.getElementById('edit-note-text');
-        if (!note || state.applied) return;
+        if (state.applied) return;
+
+        const note =
+            document.getElementById('edit-note-text') ||
+            document.querySelector('textarea.edit-note') ||
+            document.querySelector('textarea[name="edit_note"]') ||
+            document.querySelector('textarea[name$=".edit_note"]') ||
+            document.querySelector('textarea[name*="edit_note"]');
+
+        if (!note) {
+            throw new Error('Required MusicBrainz Edit Note field was not found.');
+        }
 
         const sourceLine = `Apple Music credits: ${state.appleUrl}`;
-        const scriptLine = 'Imported with Apple Music Credits -> MusicBrainz; missing Works were searched first, and newly created Works use Work type Song with a user-selected lyrics language.\nScript: https://github.com/karpuzikov/userscripts/blob/main/musicbrainz-tools/apple-music-composition-lyrics-importer/MusicBrainz_Apple_Music_Composition_Lyrics_Importer.user.js';
-        const current = note.value.trimEnd();
+        const scriptLine =
+            'Imported with Apple Music Credits -> MusicBrainz; missing Works were searched first, and newly created Works use Work type Song with a user-selected lyrics language.' +
+            `\nScript: ${SCRIPT_URL}`;
+        const current = String(note.value || '').trimEnd();
         const addition = `${sourceLine}\n${scriptLine}`;
+        const nextValue = current ? `${current}\n\n${addition}` : addition;
 
-        setReactTextareaValue(note, current ? `${current}\n\n${addition}` : addition);
+        setReactTextareaValue(note, nextValue);
+
+        if (!String(note.value || '').includes(SCRIPT_URL)) {
+            throw new Error('Required GitHub script link could not be added to the MusicBrainz Edit Note.');
+        }
+
         state.applied = true;
     }
 
@@ -1154,12 +1173,14 @@
         const noteField = form.querySelector(
             'textarea[name*="edit_note"], textarea[name*="edit-note"], textarea[name*="editnote"]'
         );
-        if (noteField?.name) {
-            params.set(
-                noteField.name,
-                `Apple Music credits list "${aliasName}" for ${artistName}. Adding the alias so this credit resolves correctly in future imports.\nSource: ${state.appleUrl}\nScript: https://github.com/karpuzikov/userscripts/blob/main/musicbrainz-tools/apple-music-composition-lyrics-importer/MusicBrainz_Apple_Music_Composition_Lyrics_Importer.user.js`
-            );
+        if (!noteField?.name) {
+            throw new Error(`Required MusicBrainz Edit Note field was not found for alias "${aliasName}".`);
         }
+
+        params.set(
+            noteField.name,
+            `Apple Music credits list "${aliasName}" for ${artistName}. Adding the alias so this credit resolves correctly in future imports.\nSource: ${state.appleUrl}\nScript: ${SCRIPT_URL}`
+        );
 
         const action = new URL(form.getAttribute('action') || addAliasUrl, location.origin).href;
         const response = await fetch(action, {
