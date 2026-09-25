@@ -1,11 +1,11 @@
 // ==UserScript==
 // @name         Apple Music Credits -> MusicBrainz
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      2.3.0
+// @version      2.3.1
 // @description  Resolve the correct Apple Music release and import supported Apple Music credits to the proper MusicBrainz Recording, Work, or Release relationships.
 // @author       karpuzikov
 // @license      MIT
-// @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/tampermonkey-apple-music-credits-v2.3.0/musicbrainz-tools/apple-music-composition-lyrics-importer/MusicBrainz_Apple_Music_Composition_Lyrics_Importer.user.js
+// @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/tampermonkey-apple-music-credits-v2.3.1/musicbrainz-tools/apple-music-composition-lyrics-importer/MusicBrainz_Apple_Music_Composition_Lyrics_Importer.user.js
 // @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/refs/heads/main/musicbrainz-tools/apple-music-composition-lyrics-importer/MusicBrainz_Apple_Music_Composition_Lyrics_Importer.user.js
 // @supportURL   https://github.com/karpuzikov/userscripts
 // @match        https://musicbrainz.org/release/*/edit-relationships
@@ -28,6 +28,7 @@
     const APPLE_API_BASE = 'https://amp-api.music.apple.com/v1';
     const APPLE_TOKEN_BOOTSTRAP_URL = 'https://music.apple.com/us/browse';
     const RECORDING_OF_LINK_TYPE_ID = 278;
+    const WORK_TYPE_SONG_ID = 17;
     const FALLBACK_STOREFRONTS = ['us', 'gb', 'de', 'fr', 'ca', 'au', 'jp', 'ua'];
     let appleToken = '';
 
@@ -908,7 +909,7 @@
         if (!note || state.applied) return;
 
         const sourceLine = `Apple Music credits: ${state.appleUrl}`;
-        const scriptLine = 'Imported with Apple Music Credits -> MusicBrainz; missing Works were searched and staged when no exact Work match existed.\nScript: https://github.com/karpuzikov/userscripts/blob/main/musicbrainz-tools/apple-music-composition-lyrics-importer/MusicBrainz_Apple_Music_Composition_Lyrics_Importer.user.js';
+        const scriptLine = 'Imported with Apple Music Credits -> MusicBrainz; missing Works were searched first, and newly created Works use Work type Song with a user-selected lyrics language.\nScript: https://github.com/karpuzikov/userscripts/blob/main/musicbrainz-tools/apple-music-composition-lyrics-importer/MusicBrainz_Apple_Music_Composition_Lyrics_Importer.user.js';
         const current = note.value.trimEnd();
         const addition = `${sourceLine}\n${scriptLine}`;
 
@@ -1268,31 +1269,26 @@
         return selected;
     }
 
-    async function createWorkForRecording(recording) {
-        const previousSelection = selectedRecordingsSnapshot();
+    async function waitForDom(selector, timeout = 10000) {
+        const started = Date.now();
+        while (Date.now() - started < timeout) {
+            const element = document.querySelector(selector);
+            if (element) return element;
+            await wait(100);
+        }
+        throw new Error(`Timed out waiting for MusicBrainz UI: ${selector}`);
+    }
 
-        MB.relationshipEditor.dispatch({
-            isSelected: false,
-            type: 'toggle-select-all-recordings',
-        });
+    function setNativeSelectValue(select, value) {
+        const descriptor = Object.getOwnPropertyDescriptor(
+            HTMLSelectElement.prototype,
+            'value'
+        );
+        descriptor.set.call(select, String(value));
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+    }
 
-        MB.relationshipEditor.dispatch({
-            isSelected: true,
-            recording,
-            type: 'toggle-select-recording',
-        });
-
-        MB.relationshipEditor.dispatch({
-            attributes: null,
-            begin_date: null,
-            end_date: null,
-            ended: false,
-            languages: [],
-            linkType: null,
-            type: 'accept-batch-create-works-dialog',
-            workType: null,
-        });
-
+    async function restoreRecordingSelection(recording, previousSelection) {
         MB.relationshipEditor.dispatch({
             isSelected: false,
             recording,
@@ -1308,12 +1304,90 @@
         }
 
         await wait(50);
+    }
 
-        const created = findTemporaryCreatedWork(recording.name);
-        if (!created) {
-            throw new Error(`MusicBrainz did not stage a new Work for "${recording.name}".`);
+    async function createWorkForRecording(recording) {
+        const previousSelection = selectedRecordingsSnapshot();
+
+        MB.relationshipEditor.dispatch({
+            isSelected: false,
+            type: 'toggle-select-all-recordings',
+        });
+
+        MB.relationshipEditor.dispatch({
+            isSelected: true,
+            recording,
+            type: 'toggle-select-recording',
+        });
+
+        try {
+            let button = null;
+            const started = Date.now();
+
+            while (Date.now() - started < 10000) {
+                button = document.querySelector('button.batch-create-works');
+                if (button && !button.disabled) break;
+                await wait(100);
+            }
+
+            if (!button || button.disabled) {
+                throw new Error(
+                    'MusicBrainz "Batch-add new works" button did not become available.'
+                );
+            }
+
+            button.click();
+
+            const dialog = await waitForDom('#batch-create-works-dialog', 10000);
+            const workType = await waitForDom(
+                '#batch-create-works-dialog #work-type',
+                10000
+            );
+
+            setNativeSelectValue(workType, WORK_TYPE_SONG_ID);
+
+            setStatus(
+                `New Work "${recording.name}": Work type is set to Song. Choose the song language in the MusicBrainz dialog, then click Done.`,
+                'warn'
+            );
+
+            const dialogStarted = Date.now();
+            while (Date.now() - dialogStarted < 10 * 60 * 1000) {
+                if (!document.body.contains(dialog)) break;
+                await wait(200);
+            }
+
+            if (document.body.contains(dialog)) {
+                throw new Error(
+                    `Timed out waiting for language selection for "${recording.name}".`
+                );
+            }
+
+            await wait(100);
+
+            const created = findTemporaryCreatedWork(recording.name);
+            if (!created) {
+                throw new Error(
+                    `Work creation for "${recording.name}" was cancelled or not accepted.`
+                );
+            }
+
+            if (Number(created.typeID) !== WORK_TYPE_SONG_ID) {
+                throw new Error(
+                    `The new Work "${recording.name}" was not created with Work type Song.`
+                );
+            }
+
+            if (!Array.isArray(created.languages) || !created.languages.length) {
+                throw new Error(
+                    `No song language was selected for the new Work "${recording.name}".`
+                );
+            }
+
+            return created;
+        } finally {
+            await restoreRecordingSelection(recording, previousSelection);
         }
-        return created;
     }
 
     async function ensureWorkForRow(row) {
