@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         RuTracker Digital Release Linker
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.1.4
+// @version      1.1.5
 // @description  Links exact digital release pages in RuTracker BBCode, falls back from Deezer to MusicBrainz-linked Beatport releases, and adds country flag emoji.
 // @author       karpuzikov
 // @match        https://rutracker.org/forum/posting.php*
@@ -99,7 +99,7 @@
             return gmJson(url, {
                 retries: 2,
                 headers: {
-                    'User-Agent': `${SCRIPT_NAME}/1.1.4 (Tampermonkey userscript)`,
+                    'User-Agent': `${SCRIPT_NAME}/1.1.5 (Tampermonkey userscript)`,
                 },
             });
         });
@@ -255,11 +255,15 @@
         const dateMatch = spoilerTitle.match(/^(\d{4}-\d{2}-\d{2})\s*-\s*/);
         const date = dateMatch ? dateMatch[1] : '';
 
+        const identifier = extractIdentifier(spoilerTitle);
+
         let title = spoilerTitle.replace(/^\d{4}-\d{2}-\d{2}\s*-\s*/, '').trim();
-        title = title.replace(/\s*\[[^\[\]]+\]\s*$/, '').trim();
+        title = title.replace(/\s*\(by\s+[\s\S]*\)\s*$/i, '').trim();
+        if (identifier) {
+            title = title.replace(/\s*\[[^\[\]]+\]\s*$/, '').trim();
+        }
         title = title.replace(/\s*-\s*(?:single|ep|album)\s*$/i, '').trim();
 
-        const identifier = extractIdentifier(spoilerTitle);
         const tracks = [];
         const trackRegex = /^\[b\]\d{1,3}\[\/b\]\s+(.+?)\s+\(\d{1,2}:\d{2}\)\s*$/gmi;
         let trackMatch;
@@ -278,7 +282,11 @@
     }
 
     function extractIdentifier(spoilerTitle) {
-        const match = spoilerTitle.match(/\[([^\[\]]+)\]\s*$/);
+        const cleaned = String(spoilerTitle ?? '')
+            .replace(/\s*\(by\s+[\s\S]*\)\s*$/i, '')
+            .trim();
+
+        const match = cleaned.match(/\[([^\[\]]+)\]\s*$/);
         if (!match) return null;
 
         let value = match[1].trim();
@@ -296,7 +304,6 @@
 
         return null;
     }
-
     function getTopicArtist(postText) {
         const heading = postText.match(/\[size=\d+\]\s*([^|\r\n\[]+?)\s*\|\s*(?:Дискография|Discography)\b/i);
         return heading ? heading[1].trim() : '';
