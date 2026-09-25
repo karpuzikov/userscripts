@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MusicBrainz - Barcode and Catalog Number Search
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.1.0
+// @version      1.1.1
 // @description  Adds Barcode and Catalog number release search fields beside the native MusicBrainz search and opens unique matches directly.
 // @author       karpuzikov
 // @license      MIT
@@ -172,12 +172,17 @@
         return url;
     };
 
-    const openUniqueReleaseOrResults = async (query) => {
+    const normalizeCatalogNumber = (value) => String(value ?? '')
+        .normalize('NFKC')
+        .toLocaleLowerCase('en-US')
+        .replace(/[\p{P}\p{S}\s]+/gu, '');
+
+    const openUniqueReleaseOrResults = async (query, catalogNumber = null) => {
         const resultsUrl = buildSearchUrl(query);
         const apiUrl = new URL('/ws/2/release/', location.origin);
         apiUrl.searchParams.set('query', query);
         apiUrl.searchParams.set('fmt', 'json');
-        apiUrl.searchParams.set('limit', '2');
+        apiUrl.searchParams.set('limit', catalogNumber ? '100' : '2');
 
         try {
             const response = await fetch(apiUrl, {
@@ -191,7 +196,28 @@
                 const data = await response.json();
                 const releases = Array.isArray(data.releases) ? data.releases : [];
 
-                if (Number(data.count) === 1 && releases.length === 1 && releases[0]?.id) {
+                if (catalogNumber) {
+                    const wanted = normalizeCatalogNumber(catalogNumber);
+                    const exactMatches = releases.filter((release) =>
+                        Array.isArray(release['label-info']) &&
+                        release['label-info'].some((labelInfo) =>
+                            normalizeCatalogNumber(labelInfo?.['catalog-number']) === wanted
+                        )
+                    );
+
+                    const uniqueExactMatches = [
+                        ...new Map(
+                            exactMatches
+                                .filter((release) => release?.id)
+                                .map((release) => [release.id, release])
+                        ).values()
+                    ];
+
+                    if (uniqueExactMatches.length === 1) {
+                        location.assign('/release/' + uniqueExactMatches[0].id);
+                        return;
+                    }
+                } else if (Number(data.count) === 1 && releases.length === 1 && releases[0]?.id) {
                     location.assign('/release/' + releases[0].id);
                     return;
                 }
@@ -230,6 +256,9 @@
             .replace(/\\/g, '\\\\')
             .replace(/"/g, '\\"');
 
-        openUniqueReleaseOrResults('catno:"' + escapedCatalogNumber + '"');
+        openUniqueReleaseOrResults(
+            'catno:"' + escapedCatalogNumber + '"',
+            catalogNumber
+        );
     });
 })();
