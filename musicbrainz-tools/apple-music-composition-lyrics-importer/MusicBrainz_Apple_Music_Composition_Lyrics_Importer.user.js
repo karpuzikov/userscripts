@@ -1,11 +1,11 @@
 // ==UserScript==
 // @name         Apple Music Credits -> MusicBrainz
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      2.3.2
+// @version      2.3.3
 // @description  Resolve the correct Apple Music release and import supported Apple Music credits to the proper MusicBrainz Recording, Work, or Release relationships.
 // @author       karpuzikov
 // @license      MIT
-// @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/tampermonkey-apple-music-credits-v2.3.2/musicbrainz-tools/apple-music-composition-lyrics-importer/MusicBrainz_Apple_Music_Composition_Lyrics_Importer.user.js
+// @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/tampermonkey-apple-music-credits-v2.3.3/musicbrainz-tools/apple-music-composition-lyrics-importer/MusicBrainz_Apple_Music_Composition_Lyrics_Importer.user.js
 // @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/refs/heads/main/musicbrainz-tools/apple-music-composition-lyrics-importer/MusicBrainz_Apple_Music_Composition_Lyrics_Importer.user.js
 // @supportURL   https://github.com/karpuzikov/userscripts
 // @match        https://musicbrainz.org/release/*/edit-relationships
@@ -896,44 +896,49 @@
         });
     }
 
-    function setReactTextareaValue(input, value) {
-        const descriptor = Object.getOwnPropertyDescriptor(
-            HTMLTextAreaElement.prototype,
-            'value'
-        );
-        descriptor.set.call(input, value);
-        input.dispatchEvent(new Event('input', { bubbles: true }));
-    }
-
-    function addEditNote() {
+    async function addEditNote() {
         if (state.applied) return;
 
-        const note =
-            document.getElementById('edit-note-text') ||
-            document.querySelector('textarea.edit-note') ||
-            document.querySelector('textarea[name="edit_note"]') ||
-            document.querySelector('textarea[name$=".edit_note"]') ||
-            document.querySelector('textarea[name*="edit_note"]');
+        await ensureMusicBrainzEditorReady();
 
-        if (!note) {
-            throw new Error('Required MusicBrainz Edit Note field was not found.');
+        const editorState = MB?.relationshipEditor?.state;
+        const dispatch = MB?.relationshipEditor?.dispatch;
+
+        if (!editorState?.editNoteField || typeof dispatch !== 'function') {
+            throw new Error('MusicBrainz relationship editor Edit Note state is unavailable.');
         }
 
         const sourceLine = `Apple Music credits: ${state.appleUrl}`;
         const scriptLine =
             'Imported with Apple Music Credits -> MusicBrainz; missing Works were searched first, and newly created Works use Work type Song with a user-selected lyrics language.' +
             `\nScript: ${SCRIPT_URL}`;
-        const current = String(note.value || '').trimEnd();
+        const current = String(editorState.editNoteField.value || '').trimEnd();
         const addition = `${sourceLine}\n${scriptLine}`;
         const nextValue = current ? `${current}\n\n${addition}` : addition;
 
-        setReactTextareaValue(note, nextValue);
+        dispatch({
+            editNote: nextValue,
+            type: 'update-edit-note',
+        });
 
-        if (!String(note.value || '').includes(SCRIPT_URL)) {
-            throw new Error('Required GitHub script link could not be added to the MusicBrainz Edit Note.');
+        const started = Date.now();
+        while (Date.now() - started < 3000) {
+            MB = PAGE.MB || MB;
+            const stored = String(
+                MB?.relationshipEditor?.state?.editNoteField?.value || ''
+            );
+
+            if (stored === nextValue && stored.includes(SCRIPT_URL)) {
+                state.applied = true;
+                return;
+            }
+
+            await wait(50);
         }
 
-        state.applied = true;
+        throw new Error(
+            'MusicBrainz did not store the required Edit Note in relationship-editor state.'
+        );
     }
 
     async function searchArtists(name) {
@@ -1862,6 +1867,10 @@
                 await ensureCreditAlias(person, mbid);
             }
 
+            // Edit Note is mandatory. Populate MusicBrainz's internal React
+            // relationship-editor state before staging any relationship edits.
+            await addEditNote();
+
             let added = 0;
             let addedRecording = 0;
             let addedWork = 0;
@@ -1911,8 +1920,6 @@
                     else if (credit.target === 'release') addedRelease++;
                 }
             }
-
-            addEditNote();
 
             setStatus(
                 `Applied ${added} relationship(s): ${addedRecording} Recording, ${addedWork} Work, ${addedRelease} Release. ` +
