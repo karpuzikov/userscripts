@@ -1,15 +1,12 @@
 // ==UserScript==
 // @name         Harmony - Link External IDs in One Click
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.1.0
-// @description  Adds all-in-one and per-type one-click submission of Harmony MusicBrainz external-ID edits for artists, labels, and recordings.
+// @version      1.2.0
+// @description  Adds all-in-one and per-type fast submission of Harmony MusicBrainz external-ID edits without opening one edit tab per entity.
 // @author       karpuzikov
 // @license      MIT
 // @match        https://harmony.pulsewidth.org.uk/release/actions*
-// @match        https://musicbrainz.org/artist/*
-// @match        https://musicbrainz.org/label/*
-// @match        https://musicbrainz.org/recording/*
-// @match        https://musicbrainz.org/login*
+// @match        https://musicbrainz.org/*
 // @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/harmony-link-external-ids-one-click/Harmony_Link_External_IDs_in_One_Click.user.js
 // @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/harmony-link-external-ids-one-click/Harmony_Link_External_IDs_in_One_Click.user.js
 // @grant        GM_getValue
@@ -21,21 +18,18 @@
 (() => {
     'use strict';
 
-    const QUEUE_KEY = 'harmony-link-external-ids-one-click.queue.v1';
-    const WORKER_KEY = 'harmony-link-external-ids-one-click.worker.v1';
-    const WORKER_HASH = 'harmony-link-external-ids-one-click';
-    const NEXT_EDIT_DELAY_MS = 1200;
-    const FORM_WAIT_TIMEOUT_MS = 15000;
+    const QUEUE_KEY = 'harmony-link-external-ids-one-click.queue.v2';
+    const BRIDGE_PARAM = 'harmony_external_id_bridge';
+    const MAX_CONCURRENT_SUBMISSIONS = 4;
     const ALLOWED_ENTITY_TYPES = new Set(['artist', 'label', 'recording']);
     const SCRIPT_GITHUB_URL = 'https://github.com/karpuzikov/userscripts/blob/main/musicbrainz-tools/harmony-link-external-ids-one-click/Harmony_Link_External_IDs_in_One_Click.user.js';
-
-    const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
     function readQueue() {
         return GM_getValue(QUEUE_KEY, null);
     }
 
     function writeQueue(queue) {
+        queue.updatedAt = Date.now();
         GM_setValue(QUEUE_KEY, queue);
     }
 
@@ -52,15 +46,25 @@
 
             const editNoteKey = [...url.searchParams.keys()]
                 .find((key) => key.endsWith('.edit_note'));
+
             if (editNoteKey) {
                 const currentNote = url.searchParams.get(editNoteKey) || '';
                 if (!currentNote.includes(SCRIPT_GITHUB_URL)) {
                     const suffix = `Harmony one-click script: ${SCRIPT_GITHUB_URL}`;
-                    url.searchParams.set(editNoteKey, currentNote ? `${currentNote}\n\n${suffix}` : suffix);
+                    url.searchParams.set(
+                        editNoteKey,
+                        currentNote ? `${currentNote}\n\n${suffix}` : suffix
+                    );
                 }
             }
 
-            return { url: url.href, type, mbid: match[2] };
+            return {
+                url: url.href,
+                type,
+                mbid: match[2],
+                state: 'pending',
+                error: ''
+            };
         } catch {
             return null;
         }
@@ -74,9 +78,12 @@
             if (anchor.textContent.trim() !== 'Link external IDs') continue;
 
             const parsed = classifyMusicBrainzEditUrl(anchor.href);
-            if (!parsed || seen.has(parsed.url)) continue;
+            if (!parsed) continue;
 
-            seen.add(parsed.url);
+            const dedupeKey = `${parsed.type}:${parsed.mbid}:${parsed.url}`;
+            if (seen.has(dedupeKey)) continue;
+
+            seen.add(dedupeKey);
             items.push(parsed);
         }
 
@@ -94,9 +101,9 @@
         return parts.join(', ');
     }
 
-    function makeWorkerUrl(rawUrl, jobId) {
-        const url = new URL(rawUrl);
-        url.hash = `${WORKER_HASH}=${encodeURIComponent(jobId)}`;
+    function bridgeUrl(jobId) {
+        const url = new URL('https://musicbrainz.org/');
+        url.searchParams.set(BRIDGE_PARAM, jobId);
         return url.href;
     }
 
@@ -175,7 +182,12 @@
         function startQueue(config) {
             const items = currentItemsFor(config);
             if (!items.length) {
-                status.textContent = `No ${config.scope === 'recording' ? 'song' : config.scope === 'all' ? 'supported' : config.scope} external-ID edits found.`;
+                const typeName = config.scope === 'recording'
+                    ? 'song'
+                    : config.scope === 'all'
+                        ? 'supported'
+                        : config.scope;
+                status.textContent = `No ${typeName} external-ID edits found.`;
                 return;
             }
 
@@ -183,22 +195,22 @@
             const queue = {
                 id: jobId,
                 status: 'running',
-                phase: 'loading',
                 scope: config.scope,
                 items,
-                index: 0,
                 completed: 0,
+                succeeded: 0,
+                failed: 0,
                 sourcePage: `${location.origin}${location.pathname}${location.search}`,
                 startedAt: Date.now(),
                 updatedAt: Date.now(),
-                error: ''
+                fatalError: ''
             };
 
             writeQueue(queue);
             setButtonsDisabled(true);
-            status.textContent = `0/${items.length} submitted - ${config.scope === 'all' ? 'all' : config.scope === 'recording' ? 'songs' : config.scope + 's'}...`;
+            status.textContent = `0/${items.length} submitted - using fast MusicBrainz background submission...`;
 
-            GM_openInTab(makeWorkerUrl(items[0].url, jobId), {
+            GM_openInTab(bridgeUrl(jobId), {
                 active: false,
                 insert: true,
                 setParent: true
@@ -225,223 +237,299 @@
 
         setInterval(() => {
             const queue = readQueue();
-            if (!queue || !queue.items) return;
+            if (!queue || queue.sourcePage !== `${location.origin}${location.pathname}${location.search}`) {
+                return;
+            }
 
-            const sourcePage = `${location.origin}${location.pathname}${location.search}`;
-            if (queue.sourcePage !== sourcePage) return;
-
-            const total = queue.items.length;
-            const scopeName = queue.scope === 'recording'
-                ? 'songs'
-                : queue.scope === 'all'
-                    ? 'all'
-                    : `${queue.scope}s`;
+            const total = queue.items?.length || 0;
 
             if (queue.status === 'running') {
                 setButtonsDisabled(true);
-                status.textContent = `${queue.completed}/${total} submitted - ${scopeName}...`;
+                status.textContent = `${queue.completed}/${total} processed - ${queue.succeeded} submitted, ${queue.failed} failed...`;
             } else if (queue.status === 'complete') {
                 setButtonsDisabled(false);
-                status.textContent = `Done: ${queue.completed}/${total} submitted - ${scopeName}.`;
+                status.textContent = queue.failed
+                    ? `Done: ${queue.succeeded}/${total} submitted, ${queue.failed} failed.`
+                    : `Done: ${queue.succeeded}/${total} submitted.`;
             } else if (queue.status === 'failed') {
                 setButtonsDisabled(false);
-                status.textContent = `Stopped at ${queue.completed}/${total}: ${queue.error || 'unknown error'}`;
+                status.textContent = `Stopped: ${queue.fatalError || 'MusicBrainz submission failed.'}`;
             }
-        }, 500);
+        }, 350);
     }
 
-    function getSubmitButton(root = document) {
-        const candidates = root.querySelectorAll('button[type="submit"], input[type="submit"]');
-        return [...candidates].find((element) => {
-            const text = element.tagName === 'INPUT' ? element.value : element.textContent;
-            return String(text || '').trim().toLowerCase() === 'enter edit';
-        }) || null;
+    function getBridgeJobId() {
+        return new URL(location.href).searchParams.get(BRIDGE_PARAM) || '';
     }
 
-    function visibleFormError(root = document) {
-        const selectors = [
-            '.error',
-            '.errors',
-            '.error-message',
-            '.field-error',
-            '.message.error'
-        ];
+    function setBridgeStatus(text, isError = false) {
+        document.title = `Harmony External IDs - ${text}`;
 
-        for (const selector of selectors) {
-            for (const element of root.querySelectorAll(selector)) {
-                const text = element.textContent.trim();
-                if (text && element.getClientRects().length) return text.replace(/\s+/g, ' ');
-            }
-        }
-        return '';
-    }
-
-    async function waitForEnterEditButton(timeoutMs = FORM_WAIT_TIMEOUT_MS) {
-        const started = Date.now();
-        while (Date.now() - started < timeoutMs) {
-            const button = getSubmitButton();
-            if (button) return button;
-            await sleep(200);
-        }
-        return null;
-    }
-
-    function failQueue(queue, message) {
-        queue.status = 'failed';
-        queue.error = message;
-        queue.updatedAt = Date.now();
-        writeQueue(queue);
-
-        let box = document.getElementById('harmony-one-click-worker-status');
+        let box = document.getElementById('harmony-external-id-bridge-status');
         if (!box) {
             box = document.createElement('div');
-            box.id = 'harmony-one-click-worker-status';
+            box.id = 'harmony-external-id-bridge-status';
             box.style.cssText = [
                 'position:fixed',
                 'top:12px',
                 'right:12px',
                 'z-index:2147483647',
-                'max-width:520px',
+                'max-width:620px',
                 'padding:12px 14px',
-                'background:#fff3cd',
-                'color:#332701',
-                'border:1px solid #d6b656',
                 'border-radius:6px',
-                'font:14px/1.4 sans-serif',
-                'box-shadow:0 2px 12px rgba(0,0,0,.25)'
+                'font:14px/1.45 sans-serif',
+                'box-shadow:0 2px 12px rgba(0,0,0,.25)',
+                'white-space:pre-wrap'
             ].join(';');
             document.documentElement.appendChild(box);
         }
-        box.textContent = `Harmony one-click linking stopped: ${message}`;
+
+        box.style.background = isError ? '#f8d7da' : '#d1e7dd';
+        box.style.color = isError ? '#58151c' : '#0a3622';
+        box.style.border = `1px solid ${isError ? '#f1aeb5' : '#a3cfbb'}`;
+        box.textContent = text;
     }
 
-    function installWorkerMarker() {
-        const hash = location.hash.startsWith('#') ? location.hash.slice(1) : location.hash;
-        const prefix = `${WORKER_HASH}=`;
-        if (!hash.startsWith(prefix)) return;
+    function findEditForm(doc, item) {
+        const prefix = `edit-${item.type}.`;
+        const forms = [...doc.querySelectorAll('form')];
 
-        const jobId = decodeURIComponent(hash.slice(prefix.length));
-        if (!jobId) return;
-
-        sessionStorage.setItem(WORKER_KEY, jobId);
-        history.replaceState(null, '', `${location.pathname}${location.search}`);
+        return forms.find((form) => {
+            const method = (form.getAttribute('method') || 'get').toLowerCase();
+            return method === 'post' && [...form.elements].some((element) =>
+                typeof element.name === 'string' && element.name.startsWith(prefix)
+            );
+        }) || null;
     }
 
-    function isCurrentEditPage(item) {
+    function formToUrlEncoded(form) {
+        const formData = new FormData(form);
+        const params = new URLSearchParams();
+
+        for (const [key, value] of formData.entries()) {
+            if (typeof value === 'string') {
+                params.append(key, value);
+            }
+        }
+
+        return params;
+    }
+
+    function extractErrors(doc) {
+        const selectors = [
+            '.error',
+            '.errors',
+            '.error-message',
+            '.field-error',
+            '.field-error-message',
+            '.message.error'
+        ];
+
+        const found = [];
+        const seen = new Set();
+
+        for (const selector of selectors) {
+            for (const element of doc.querySelectorAll(selector)) {
+                const text = element.textContent.replace(/\s+/g, ' ').trim();
+                if (!text || seen.has(text)) continue;
+                seen.add(text);
+                found.push(text);
+                if (found.length >= 4) return found.join(' | ');
+            }
+        }
+
+        return found.join(' | ');
+    }
+
+    function loginRequired(response) {
         try {
-            const target = new URL(item.url);
-            return location.origin === target.origin && location.pathname === target.pathname;
+            const url = new URL(response.url);
+            return url.pathname.startsWith('/login');
         } catch {
             return false;
         }
     }
 
-    async function runMusicBrainzWorker() {
-        installWorkerMarker();
-
-        const workerId = sessionStorage.getItem(WORKER_KEY);
-        if (!workerId) return;
-
-        let queue = readQueue();
-        if (!queue || queue.id !== workerId) {
-            sessionStorage.removeItem(WORKER_KEY);
-            return;
-        }
-
-        if (queue.status !== 'running') {
-            sessionStorage.removeItem(WORKER_KEY);
-            return;
-        }
-
-        if (location.pathname.startsWith('/login')) {
-            failQueue(queue, 'MusicBrainz login is required. Log in, then run the Harmony button again.');
-            return;
-        }
-
-        const item = queue.items[queue.index];
-        if (!item) {
-            queue.status = 'complete';
-            queue.phase = 'done';
-            queue.updatedAt = Date.now();
-            writeQueue(queue);
-            sessionStorage.removeItem(WORKER_KEY);
-            setTimeout(() => window.close(), 600);
-            return;
-        }
-
-        if (queue.phase === 'submitted') {
-            if (isCurrentEditPage(item)) {
-                await sleep(500);
-                const formStillPresent = getSubmitButton();
-                const error = visibleFormError();
-                if (formStillPresent) {
-                    failQueue(queue, error || `MusicBrainz did not accept the ${item.type} edit.`);
-                    return;
-                }
+    async function submitItem(item) {
+        const getResponse = await fetch(item.url, {
+            method: 'GET',
+            credentials: 'include',
+            cache: 'no-store',
+            redirect: 'follow',
+            headers: {
+                'Accept': 'text/html,application/xhtml+xml'
             }
+        });
 
-            queue.completed += 1;
-            queue.index += 1;
-            queue.phase = 'loading';
-            queue.updatedAt = Date.now();
-            queue.error = '';
-            writeQueue(queue);
-
-            const nextItem = queue.items[queue.index];
-            if (!nextItem) {
-                queue.status = 'complete';
-                queue.phase = 'done';
-                queue.updatedAt = Date.now();
-                writeQueue(queue);
-                sessionStorage.removeItem(WORKER_KEY);
-                setTimeout(() => window.close(), 600);
-                return;
-            }
-
-            await sleep(NEXT_EDIT_DELAY_MS);
-            location.replace(nextItem.url);
-            return;
+        if (getResponse.status === 401 || getResponse.status === 403 || loginRequired(getResponse)) {
+            const error = new Error('MusicBrainz login is required.');
+            error.fatal = true;
+            throw error;
         }
 
-        if (!isCurrentEditPage(item)) {
-            location.replace(item.url);
-            return;
+        if (!getResponse.ok) {
+            throw new Error(`MusicBrainz GET failed with HTTP ${getResponse.status}.`);
         }
 
-        const enterEditButton = await waitForEnterEditButton();
-        if (!enterEditButton) {
-            failQueue(queue, `Could not find MusicBrainz's "Enter edit" button for the ${item.type} edit.`);
-            return;
-        }
+        const getHtml = await getResponse.text();
+        const getDoc = new DOMParser().parseFromString(getHtml, 'text/html');
+        const form = findEditForm(getDoc, item);
 
-        const form = enterEditButton.closest('form');
         if (!form) {
-            failQueue(queue, `Could not find the MusicBrainz edit form for the ${item.type} edit.`);
+            const pageError = extractErrors(getDoc);
+            throw new Error(pageError || `Could not find the MusicBrainz ${item.type} edit form.`);
+        }
+
+        const body = formToUrlEncoded(form);
+        if (![...body.keys()].some((key) => key.startsWith(`edit-${item.type}.`))) {
+            throw new Error(`MusicBrainz ${item.type} form did not contain expected edit fields.`);
+        }
+
+        const action = new URL(form.getAttribute('action') || getResponse.url, getResponse.url);
+        action.hash = '';
+
+        const postResponse = await fetch(action.href, {
+            method: 'POST',
+            credentials: 'include',
+            cache: 'no-store',
+            redirect: 'follow',
+            headers: {
+                'Accept': 'text/html,application/xhtml+xml',
+                'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
+            },
+            body: body.toString()
+        });
+
+        if (postResponse.status === 401 || postResponse.status === 403 || loginRequired(postResponse)) {
+            const error = new Error('MusicBrainz login is required.');
+            error.fatal = true;
+            throw error;
+        }
+
+        const postHtml = await postResponse.text();
+        const postDoc = new DOMParser().parseFromString(postHtml, 'text/html');
+        const finalUrl = new URL(postResponse.url);
+        const stillOnEditPage = /^\/(artist|label|recording)\/[0-9a-f-]{36}\/edit$/i.test(finalUrl.pathname);
+
+        if (!postResponse.ok || stillOnEditPage || !postResponse.redirected) {
+            const pageError = extractErrors(postDoc);
+            throw new Error(
+                pageError ||
+                `MusicBrainz did not confirm the ${item.type} edit submission (HTTP ${postResponse.status}).`
+            );
+        }
+
+        return true;
+    }
+
+    async function runBridge() {
+        const jobId = getBridgeJobId();
+        if (!jobId) return;
+
+        const queue = readQueue();
+        if (!queue || queue.id !== jobId || queue.status !== 'running') {
+            setBridgeStatus('No active Harmony submission job was found.', true);
             return;
         }
 
-        const pageError = visibleFormError();
-        if (pageError) {
-            failQueue(queue, pageError);
+        setBridgeStatus(`Starting: 0/${queue.items.length} processed`);
+
+        let cursor = 0;
+        let fatalError = null;
+
+        const saveProgress = () => {
+            queue.completed = queue.succeeded + queue.failed;
+            writeQueue(queue);
+            setBridgeStatus(
+                `${queue.completed}/${queue.items.length} processed - ${queue.succeeded} submitted, ${queue.failed} failed`
+            );
+        };
+
+        async function worker() {
+            while (!fatalError) {
+                const index = cursor++;
+                if (index >= queue.items.length) return;
+
+                const item = queue.items[index];
+                item.state = 'submitting';
+                writeQueue(queue);
+
+                try {
+                    await submitItem(item);
+                    item.state = 'submitted';
+                    item.error = '';
+                    queue.succeeded += 1;
+                } catch (error) {
+                    item.state = 'failed';
+                    item.error = error?.message || String(error);
+                    queue.failed += 1;
+
+                    if (error?.fatal) {
+                        fatalError = item.error;
+                    }
+                }
+
+                saveProgress();
+            }
+        }
+
+        const workerCount = Math.min(MAX_CONCURRENT_SUBMISSIONS, queue.items.length);
+        await Promise.all(Array.from({ length: workerCount }, () => worker()));
+
+        if (fatalError) {
+            queue.status = 'failed';
+            queue.fatalError = fatalError;
+            writeQueue(queue);
+
+            const failures = queue.items
+                .filter((item) => item.state === 'failed')
+                .map((item) => `${item.type} ${item.mbid}: ${item.error}`)
+                .join('\n');
+
+            setBridgeStatus(
+                `Stopped: ${fatalError}${failures ? `\n\n${failures}` : ''}`,
+                true
+            );
             return;
         }
 
-        queue.phase = 'submitted';
-        queue.updatedAt = Date.now();
+        queue.status = 'complete';
         writeQueue(queue);
 
-        await sleep(250);
-        enterEditButton.click();
+        if (queue.failed) {
+            const failures = queue.items
+                .filter((item) => item.state === 'failed')
+                .map((item) => `${item.type} ${item.mbid}: ${item.error}`)
+                .join('\n');
+
+            setBridgeStatus(
+                `Finished: ${queue.succeeded}/${queue.items.length} submitted, ${queue.failed} failed.\n\n${failures}`,
+                true
+            );
+            return;
+        }
+
+        setBridgeStatus(`Finished: ${queue.succeeded}/${queue.items.length} submitted.`);
+        setTimeout(() => window.close(), 750);
     }
 
     if (location.hostname === 'harmony.pulsewidth.org.uk') {
         renderHarmonyControls();
+
         const observer = new MutationObserver(renderHarmonyControls);
-        observer.observe(document.documentElement, { childList: true, subtree: true });
-    } else if (location.hostname === 'musicbrainz.org') {
-        runMusicBrainzWorker().catch((error) => {
+        observer.observe(document.documentElement, {
+            childList: true,
+            subtree: true
+        });
+    } else if (location.hostname === 'musicbrainz.org' && getBridgeJobId()) {
+        runBridge().catch((error) => {
             const queue = readQueue();
-            if (queue) failQueue(queue, error?.message || String(error));
+            if (queue) {
+                queue.status = 'failed';
+                queue.fatalError = error?.message || String(error);
+                writeQueue(queue);
+            }
+            setBridgeStatus(error?.message || String(error), true);
         });
     }
 })();
