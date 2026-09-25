@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MusicBrainz - Barcode vs Linked Releases Checker
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.2.1
+// @version      1.3.0
 // @description  Checks Digital Media release barcodes against linked provider release pages through Harmony and stages MusicBrainz correction edits.
 // @author       karpuzikov
 // @license      MIT
@@ -740,6 +740,7 @@
             removeUrls: [],
             reasons: [],
             notes: [],
+            linkActions: [],
             evidence: checks,
             reverse,
             ambiguous: false,
@@ -781,11 +782,10 @@
         }
 
         if (matches.length) {
-            correction.removeUrls = mismatches.map(check => check.sourceUrl);
             const mismatchFamilies = new Set(mismatches.map(check => check.provider).filter(Boolean));
             correction.addLinks = selectReverseLinks(reverse, existingUrls, mismatchFamilies);
-            correction.reasons.push(
-                `${matches.length} linked page(s) confirm MusicBrainz barcode ${mbBarcode}; ${mismatches.length} linked page(s) resolve to a different GTIN and are staged for removal.`,
+            correction.notes.push(
+                `${mismatches.length} linked page(s) resolve to a different GTIN. They will only be removed automatically if the checker can identify the correct MusicBrainz release and preserve the link there.`,
             );
             return correction;
         }
@@ -795,10 +795,9 @@
             const distinctProviders = new Set(successful.map(check => check.provider).filter(Boolean));
 
             if (reverseLinks.length) {
-                correction.removeUrls = mismatches.map(check => check.sourceUrl);
                 correction.addLinks = selectReverseLinks(reverse, existingUrls);
-                correction.reasons.push(
-                    `All readable linked pages disagree with MusicBrainz barcode ${mbBarcode}, but the barcode lookup resolves ${mbBarcode} to other provider page(s); current mismatching links are staged for removal and barcode-matched links for addition.`,
+                correction.notes.push(
+                    `All readable linked pages disagree with MusicBrainz barcode ${mbBarcode}. Barcode-matched provider links can be added, but mismatching links will only be removed if their correct MusicBrainz release is identified.`,
                 );
                 return correction;
             }
@@ -827,8 +826,19 @@
 
     function reconcileAcrossReleaseGroup(results) {
         const byBarcode = results.filter(result => result.release.barcode);
+        const safeRemovalKeys = new Map();
 
-        const findByGtin = gtin => byBarcode.find(result => equalGtin(result.release.barcode, gtin));
+        const safeSetFor = mbid => {
+            let set = safeRemovalKeys.get(mbid);
+            if (!set) {
+                set = new Set();
+                safeRemovalKeys.set(mbid, set);
+            }
+            return set;
+        };
+
+        const findByGtin = gtin =>
+            byBarcode.find(result => equalGtin(result.release.barcode, gtin));
 
         for (const source of results) {
             for (const check of source.checks || []) {
@@ -840,41 +850,93 @@
                 const sourceCorrection = source.correction;
                 const targetCorrection = target.correction;
                 const sourceKey = providerEntityKey(check.sourceUrl);
+                const targetReleaseUrl = `https://musicbrainz.org/release/${target.release.id}`;
+                const sourceReleaseUrl = `https://musicbrainz.org/release/${source.release.id}`;
+                const provider = providerLabel(check.sourceUrl);
+
+                const alreadyOnTarget = releaseRelations(target.release)
+                    .some(url => providerEntityKey(url) === sourceKey);
+
+                if (alreadyOnTarget) {
+                    safeSetFor(source.release.id).add(sourceKey);
+
+                    if (!sourceCorrection.removeUrls.some(url => providerEntityKey(url) === sourceKey)) {
+                        sourceCorrection.removeUrls.push(check.sourceUrl);
+                    }
+
+                    sourceCorrection.linkActions.push({
+                        type: 'remove-duplicate-wrong-link',
+                        provider,
+                        url: check.sourceUrl,
+                        targetMbid: target.release.id,
+                        targetReleaseUrl,
+                    });
+                    continue;
+                }
+
+                // Preserve the information by staging the same URL on the correct release
+                // before allowing it to be removed from the wrong one.
+                const alreadyStagedOnTarget = targetCorrection.addLinks
+                    .some(link => providerEntityKey(link.url) === sourceKey);
+
+                if (!alreadyStagedOnTarget) {
+                    const providerLink = (check.externalLinks || []).find(
+                        link => providerEntityKey(link.url) === sourceKey
+                    );
+                    targetCorrection.addLinks.push({
+                        url: check.sourceUrl,
+                        types: providerLink?.types || [],
+                    });
+                }
+
+                const preservedOnTarget = releaseRelations(target.release)
+                    .some(url => providerEntityKey(url) === sourceKey) ||
+                    targetCorrection.addLinks
+                        .some(link => providerEntityKey(link.url) === sourceKey);
+
+                if (!preservedOnTarget) continue;
+
+                safeSetFor(source.release.id).add(sourceKey);
 
                 if (!sourceCorrection.removeUrls.some(url => providerEntityKey(url) === sourceKey)) {
                     sourceCorrection.removeUrls.push(check.sourceUrl);
                 }
 
-                const existingTargetUrls = [
-                    ...releaseRelations(target.release),
-                    ...targetCorrection.addLinks.map(link => link.url),
-                ];
-                if (!existingTargetUrls.some(url => providerEntityKey(url) === sourceKey)) {
-                    const harmonyLink = (check.externalLinks || []).find(
-                        link => providerEntityKey(link.url) === sourceKey
-                    );
-                    targetCorrection.addLinks.push({
-                        url: check.sourceUrl,
-                        types: harmonyLink?.types || [],
-                    });
-                }
+                sourceCorrection.linkActions.push({
+                    type: 'move-out',
+                    provider,
+                    url: check.sourceUrl,
+                    targetMbid: target.release.id,
+                    targetReleaseUrl,
+                });
 
-                const moveReason =
-                    `${providerLabel(check.sourceUrl)} resolves to GTIN ${check.gtin}, which matches release ${target.release.id}; move this URL from ${source.release.id} to that release.`;
-
-                if (!sourceCorrection.reasons.includes(moveReason)) {
-                    sourceCorrection.reasons.push(moveReason);
-                }
-                if (!targetCorrection.reasons.includes(moveReason)) {
-                    targetCorrection.reasons.push(moveReason);
-                }
+                targetCorrection.linkActions.push({
+                    type: 'move-in',
+                    provider,
+                    url: check.sourceUrl,
+                    sourceMbid: source.release.id,
+                    sourceReleaseUrl,
+                });
             }
         }
 
         for (const result of results) {
-            result.correction.addLinks = dedupeExternalLinks(result.correction.addLinks);
+            const safeKeys = safeRemovalKeys.get(result.release.id) || new Set();
+
+            // Destructive safety rule: no link removal survives unless the same
+            // provider release is already present on, or staged onto, the correct MB release.
             result.correction.removeUrls = [...new Map(
-                result.correction.removeUrls.map(url => [providerEntityKey(url), url])
+                result.correction.removeUrls
+                    .filter(url => safeKeys.has(providerEntityKey(url)))
+                    .map(url => [providerEntityKey(url), url])
+            ).values()];
+
+            result.correction.addLinks = dedupeExternalLinks(result.correction.addLinks);
+            result.correction.linkActions = [...new Map(
+                result.correction.linkActions.map(action => [
+                    [action.type, providerEntityKey(action.url), action.targetMbid || action.sourceMbid || ''].join('|'),
+                    action,
+                ])
             ).values()];
         }
     }
@@ -918,32 +980,47 @@
     }
 
     function makeEditNote(correction) {
-        const lines = [
-            'Checked Digital Media release barcode against linked provider release pages using Harmony; Apple Music uses direct Apple Music API barcode data via the ToadKing method.',
-            `MusicBrainz release: https://musicbrainz.org/release/${correction.mbid}`,
-            `MusicBrainz barcode before check: ${correction.oldBarcode}`,
-        ];
+        const lines = [];
 
-        if (correction.evidence.length) {
-            lines.push('', 'Linked-page evidence:');
-            for (const item of correction.evidence) {
-                const sourceMethod = item.method === 'url-embedded-gtin'
-                    ? 'barcode extracted directly from provider URL'
-                    : item.lookupUrl;
-                lines.push(`- ${providerLabel(item.sourceUrl)}: ${item.sourceUrl} -> ${item.gtin || '[no GTIN returned]'} (${sourceMethod})`);
+        for (const action of correction.linkActions || []) {
+            if (action.type === 'remove-duplicate-wrong-link') {
+                lines.push(
+                    `Removed a wrongly linked ${action.provider} release URL. The same URL is already correctly linked to: ${action.targetReleaseUrl}`
+                );
+            } else if (action.type === 'move-out') {
+                lines.push(
+                    `Moved a wrongly linked ${action.provider} release URL to the correct MusicBrainz release: ${action.targetReleaseUrl}`
+                );
+            } else if (action.type === 'move-in') {
+                lines.push(
+                    `Added a ${action.provider} release URL that was wrongly linked to another MusicBrainz release: ${action.sourceReleaseUrl}`
+                );
             }
         }
 
-        if (correction.reverse) {
-            lines.push('', `Barcode lookup: ${correction.reverse.lookupUrl}`);
+        if (correction.newBarcode) {
+            lines.push(
+                `Corrected barcode from ${correction.oldBarcode} to ${correction.newBarcode} based on matching linked release metadata.`
+            );
         }
 
-        if (correction.reasons.length) {
-            lines.push('', 'Prepared correction:');
-            for (const reason of correction.reasons) lines.push(`- ${reason}`);
+        if (correction.addLinks.length && !(correction.linkActions || []).some(action => action.type === 'move-in')) {
+            lines.push(
+                `Added ${correction.addLinks.length} provider release link(s) found from barcode ${correction.oldBarcode}.`
+            );
         }
 
-        lines.push('', `Script: ${SCRIPT_URL}`, 'Harmony: https://github.com/kellnerd/harmony', 'Apple Music barcode method: https://github.com/ToadKing/apple-music-barcode-isrc');
+        if (!lines.length) {
+            lines.push('Checked the Digital Media release barcode against linked provider release pages.');
+        }
+
+        lines.push(
+            '',
+            `Script: ${SCRIPT_URL}`,
+            'Harmony: https://github.com/kellnerd/harmony',
+            'Apple Music barcode method: https://github.com/ToadKing/apple-music-barcode-isrc',
+        );
+
         return lines.join('\n');
     }
 
@@ -1119,76 +1196,86 @@
         const correction = result.correction;
         if (hasCorrection(correction)) return 'Correction prepared';
         if (correction.ambiguous) return 'Manual review required';
+
         const readable = result.checks.filter(check => check.gtin);
-        if (readable.length && readable.every(check => equalGtin(check.gtin, result.release.barcode))) return 'OK';
-        return correction.notes[0] || 'No correction';
+        const allReadableMatch = readable.length &&
+            readable.every(check => equalGtin(check.gtin, result.release.barcode));
+        const hasUnreadable = result.checks.some(check => !check.gtin);
+
+        if (allReadableMatch && !hasUnreadable) return 'OK';
+        return correction.notes[0] || 'Manual review required';
     }
 
-    function resultDetails(result) {
-        const rows = [];
-        for (const check of result.checks) {
-            const status = check.gtin
-                ? (equalGtin(check.gtin, result.release.barcode) ? 'MATCH' : 'MISMATCH')
-                : (check.state === 'failed' ? 'UNREADABLE' : 'NO GTIN');
-            rows.push(`
-                <li>
-                    <strong>${escapeHtml(providerLabel(check.sourceUrl))}</strong>: 
-                    <a href="${escapeHtml(check.sourceUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(check.sourceUrl)}</a>
-                    -> <code>${escapeHtml(check.gtin || '[none]')}</code> - ${status}
-                </li>
-            `);
+    function problemSummary(result) {
+        const c = result.correction;
+        const action = c.linkActions?.[0];
+
+        if (action?.type === 'remove-duplicate-wrong-link') {
+            return `${action.provider} URL is linked to the wrong release; it already exists on the correct release.`;
         }
-        if (!rows.length) rows.push('<li>No Harmony-supported linked release pages.</li>');
-        return rows.join('');
+        if (action?.type === 'move-out') {
+            return `${action.provider} URL is linked to the wrong release and will be moved to the correct release.`;
+        }
+        if (action?.type === 'move-in') {
+            return `${action.provider} URL will be added here because it belongs to this barcode.`;
+        }
+        if (c.newBarcode) {
+            return `Barcode should be ${c.newBarcode} instead of ${c.oldBarcode}.`;
+        }
+        if (c.addLinks.length) {
+            return `${c.addLinks.length} missing provider link(s) found by barcode.`;
+        }
+        if (c.ambiguous) {
+            return c.notes[0] || 'Barcode/link mismatch needs manual review.';
+        }
+        return c.notes[0] || c.reasons[0] || 'Needs manual review.';
     }
 
     function showResults(results) {
         document.getElementById('mb-barcode-checker-results')?.remove();
-        const corrections = results.filter(result => hasCorrection(result.correction));
+
+        const problematic = results
+            .map((result, index) => ({ result, index }))
+            .filter(({ result }) => resultStatus(result) !== 'OK');
+        const corrections = problematic
+            .filter(({ result }) => hasCorrection(result.correction));
+
         const overlay = document.createElement('div');
         overlay.id = 'mb-barcode-checker-results';
         overlay.innerHTML = `
             <div class="mb-bc-dialog">
                 <div class="mb-bc-header">
-                    <h2>Barcode vs linked releases</h2>
+                    <h2>Barcode/link problems</h2>
                     <button type="button" class="mb-bc-close">Close</button>
                 </div>
-                <p>Only releases whose every medium is <strong>Digital Media</strong> are checked. No MusicBrainz edit is submitted automatically.</p>
                 <div class="mb-bc-list">
-                    ${results.map((result, index) => {
-                        const c = result.correction;
-                        return `
+                    ${problematic.length
+                        ? problematic.map(({ result, index }) => `
                             <section class="mb-bc-release">
                                 <h3><a href="/release/${escapeHtml(result.release.id)}" target="_blank">${escapeHtml(result.release.title)}</a></h3>
-                                <div><strong>MusicBrainz barcode:</strong> <code>${escapeHtml(result.release.barcode)}</code></div>
-                                <div><strong>Status:</strong> ${escapeHtml(resultStatus(result))}</div>
-                                <ul>${resultDetails(result)}</ul>
-                                ${c.reasons.length ? `<div><strong>Prepared:</strong><ul>${c.reasons.map(x => `<li>${escapeHtml(x)}</li>`).join('')}</ul></div>` : ''}
-                                ${c.notes.length ? `<div><strong>Notes:</strong><ul>${c.notes.map(x => `<li>${escapeHtml(x)}</li>`).join('')}</ul></div>` : ''}
-                                ${c.newBarcode ? `<div><strong>New barcode:</strong> <code>${escapeHtml(c.newBarcode)}</code></div>` : ''}
-                                ${c.removeUrls.length ? `<div><strong>Remove wrong links:</strong><ul>${c.removeUrls.map(x => `<li>${escapeHtml(x)}</li>`).join('')}</ul></div>` : ''}
-                                ${c.addLinks.length ? `<div><strong>Add barcode-matched links:</strong><ul>${c.addLinks.map(x => `<li>${escapeHtml(x.url)}</li>`).join('')}</ul></div>` : ''}
-                                ${hasCorrection(c) ? `<button type="button" class="mb-bc-open-one positive" data-result-index="${index}">Open correcting edit</button>` : ''}
+                                <div>${escapeHtml(problemSummary(result))}</div>
+                                ${hasCorrection(result.correction)
+                                    ? `<button type="button" class="mb-bc-open-one positive" data-result-index="${index}">Open correcting edit</button>`
+                                    : ''}
                             </section>
-                        `;
-                    }).join('')}
+                        `).join('')
+                        : '<strong>No problems found.</strong>'}
                 </div>
-                <div class="mb-bc-actions">
-                    ${corrections.length ? `<button type="button" class="mb-bc-open-all positive">Open correcting edits (${corrections.length})</button>` : '<strong>No correcting edits are needed/prepared.</strong>'}
-                </div>
+                ${corrections.length
+                    ? `<div class="mb-bc-actions"><button type="button" class="mb-bc-open-all positive">Open correcting edits (${corrections.length})</button></div>`
+                    : ''}
             </div>
         `;
 
         const style = document.createElement('style');
         style.textContent = `
             #mb-barcode-checker-results { position:fixed; inset:0; z-index:100000; background:rgba(0,0,0,.55); display:flex; align-items:flex-start; justify-content:center; padding:4vh 18px; overflow:auto; }
-            #mb-barcode-checker-results .mb-bc-dialog { background:#fff; color:#222; width:min(980px, 96vw); max-height:92vh; overflow:auto; border-radius:7px; padding:16px; box-shadow:0 12px 40px rgba(0,0,0,.35); }
+            #mb-barcode-checker-results .mb-bc-dialog { background:#fff; color:#222; width:min(720px, 96vw); max-height:92vh; overflow:auto; border-radius:7px; padding:16px; box-shadow:0 12px 40px rgba(0,0,0,.35); }
             #mb-barcode-checker-results .mb-bc-header { display:flex; align-items:center; justify-content:space-between; gap:15px; border-bottom:1px solid #ccc; margin-bottom:12px; }
             #mb-barcode-checker-results .mb-bc-header h2 { margin:0 0 10px; }
-            #mb-barcode-checker-results .mb-bc-release { border:1px solid #ccc; border-radius:5px; margin:12px 0; padding:12px; }
-            #mb-barcode-checker-results .mb-bc-release h3 { margin:0 0 8px; }
-            #mb-barcode-checker-results .mb-bc-release ul { margin:5px 0 8px 20px; }
-            #mb-barcode-checker-results .mb-bc-release code { user-select:all; }
+            #mb-barcode-checker-results .mb-bc-release { border:1px solid #ccc; border-radius:5px; margin:10px 0; padding:10px; }
+            #mb-barcode-checker-results .mb-bc-release h3 { margin:0 0 6px; }
+            #mb-barcode-checker-results .mb-bc-release button { margin-top:8px; }
             #mb-barcode-checker-results .mb-bc-actions { position:sticky; bottom:0; background:#fff; border-top:1px solid #ccc; padding:12px 0 2px; text-align:right; }
         `;
         document.head.appendChild(style);
@@ -1198,14 +1285,16 @@
         overlay.addEventListener('click', event => {
             if (event.target === overlay) overlay.remove();
         });
+
         for (const button of overlay.querySelectorAll('.mb-bc-open-one')) {
             button.addEventListener('click', () => {
                 const result = results[Number(button.dataset.resultIndex)];
                 openCorrection(result.correction);
             });
         }
+
         overlay.querySelector('.mb-bc-open-all')?.addEventListener('click', () => {
-            for (const result of corrections) openCorrection(result.correction);
+            for (const { result } of corrections) openCorrection(result.correction);
         });
     }
 
