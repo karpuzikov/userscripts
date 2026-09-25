@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         RuTracker Digital Release Linker
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.1.2
+// @version      1.1.3
 // @description  Links exact digital release pages in RuTracker BBCode, falls back from Deezer to MusicBrainz-linked Beatport releases, and adds country flag emoji.
 // @author       karpuzikov
 // @match        https://rutracker.org/forum/posting.php*
@@ -99,7 +99,7 @@
             return gmJson(url, {
                 retries: 2,
                 headers: {
-                    'User-Agent': `${SCRIPT_NAME}/1.1.2 (Tampermonkey userscript)`,
+                    'User-Agent': `${SCRIPT_NAME}/1.1.3 (Tampermonkey userscript)`,
                 },
             });
         });
@@ -506,6 +506,18 @@
         return '';
     }
 
+    function deezerReleaseUrl(release) {
+        const relations = Array.isArray(release?.relations) ? release.relations : [];
+        for (const relation of relations) {
+            const resource = String(relation?.url?.resource || '').trim();
+            const match = resource.match(
+                /^https?:\/\/(?:www\.)?deezer\.com\/(?:[^/]+\/)?album\/(\d+)(?:[/?#]|$)/i,
+            );
+            if (match) return `https://www.deezer.com/album/${match[1]}`;
+        }
+        return '';
+    }
+
     async function musicBrainzReleasesByIdentifier(identifier, meta) {
         if (!identifier?.type || !identifier?.value) return [];
 
@@ -564,6 +576,18 @@
 
         caches.musicBrainzIdentifier.set(cacheKey, promise);
         return promise;
+    }
+
+    async function resolveDeezerFromMusicBrainz(meta) {
+        if (!meta.identifier) return null;
+
+        const releases = await musicBrainzReleasesByIdentifier(meta.identifier, meta);
+        for (const release of releases) {
+            const url = deezerReleaseUrl(release);
+            if (url) return { kind: 'deezer', url };
+        }
+
+        return null;
     }
 
     async function resolveBeatportFromMusicBrainz(meta) {
@@ -706,6 +730,9 @@
             const album = await deezerAlbumByBarcode(meta.identifier.value);
             if (album) return { kind: 'deezer', url: `https://www.deezer.com/album/${album.id}` };
 
+            const musicBrainzDeezer = await resolveDeezerFromMusicBrainz(meta);
+            if (musicBrainzDeezer) return musicBrainzDeezer;
+
             // Deezer can use a different regional barcode for the same digital
             // release. Use MusicBrainz only to bridge to equivalent barcodes
             // from the same release group/version, then retry Deezer by barcode.
@@ -728,6 +755,9 @@
         }
 
         if (meta.identifier?.type === 'catalog') {
+            const musicBrainzDeezer = await resolveDeezerFromMusicBrainz(meta);
+            if (musicBrainzDeezer) return musicBrainzDeezer;
+
             const barcodes = await musicBrainzBarcodesByCatalog(meta.identifier.value, meta);
             for (const barcode of barcodes) {
                 const album = await deezerAlbumByBarcode(barcode);
@@ -757,20 +787,21 @@
         {
             key: 'digital-release',
             label: 'Digital release',
-            sourceRegex: /(\[b\]Носитель\|Источник\[\/b\]\s*:\s*)(?:(WEB)\|(?:Deezer|\[url=(?:"([^"]+)"|([^\]]+))\]Deezer\[\/url\]|(redacted\.(?:sh|ch)))|\[url=(?:"([^"]+)"|([^\]]+))\]WEB\[\/url\]\|(redacted\.(?:sh|ch)))(\[hr\])/i,
+            sourceRegex: /(\[b\]Носитель\|Источник\[\/b\]\s*:\s*)(?:(WEB)\|(?:Deezer|\[url=(?:"([^"]+)"|([^\]]+))\]Deezer\[\/url\]|(redacted\.(?:sh|ch)))|\[url=(?:"([^"]+)"|([^\]]+))\]WEB\[\/url\]\|(redacted\.(?:sh|ch)))(\[hr\])?/i,
             isReleaseUrl: isResolvedDigitalReleaseUrl,
             resolve: resolveDeezer,
             makeLinkedSource(match, resolution) {
                 const originalRedacted = (match[5] || match[8] || '').trim();
+                const hr = match[9] || '';
                 if (originalRedacted) {
-                    return `${match[1]}[url=${resolution.url}]WEB[/url]|${originalRedacted}${match[9]}`;
+                    return `${match[1]}[url=${resolution.url}]WEB[/url]|${originalRedacted}${hr}`;
                 }
 
                 if (resolution.kind === 'beatport') {
-                    return `${match[1]}[url=${resolution.url}]WEB[/url]|redacted.sh${match[9]}`;
+                    return `${match[1]}[url=${resolution.url}]WEB[/url]|redacted.sh${hr}`;
                 }
 
-                return `${match[1]}WEB|[url=${resolution.url}]Deezer[/url]${match[9]}`;
+                return `${match[1]}WEB|[url=${resolution.url}]Deezer[/url]${hr}`;
             },
             getCurrentUrl(match) {
                 return (match[3] || match[4] || match[6] || match[7] || '').trim();
