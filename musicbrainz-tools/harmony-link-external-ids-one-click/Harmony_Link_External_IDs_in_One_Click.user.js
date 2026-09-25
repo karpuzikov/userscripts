@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         Harmony - Link External IDs in One Click
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.0.0
-// @description  NOT TESTED - Submit Harmony's MusicBrainz "Link external IDs" edits for artists, labels, and recordings with one click.
+// @version      1.1.0
+// @description  Adds all-in-one and per-type one-click submission of Harmony MusicBrainz external-ID edits for artists, labels, and recordings.
 // @author       karpuzikov
 // @license      MIT
 // @match        https://harmony.pulsewidth.org.uk/release/actions*
@@ -100,11 +100,11 @@
         return url.href;
     }
 
-    function renderHarmonyButton() {
+    function renderHarmonyControls() {
         if (document.getElementById('harmony-link-external-ids-one-click')) return;
 
-        const items = getHarmonyLinks();
-        if (!items.length) return;
+        const allItems = getHarmonyLinks();
+        if (!allItems.length) return;
 
         const heading = [...document.querySelectorAll('h2')]
             .find((element) => element.textContent.trim() === 'Release Actions');
@@ -113,28 +113,69 @@
         const wrapper = document.createElement('div');
         wrapper.id = 'harmony-link-external-ids-one-click';
         wrapper.className = 'action';
-        wrapper.style.alignItems = 'center';
+        wrapper.style.alignItems = 'flex-start';
         wrapper.style.gap = '0.75rem';
 
-        const button = document.createElement('button');
-        button.type = 'button';
-        button.className = 'open-all-links';
-        button.textContent = 'Link external IDs in one click';
-        button.title = summarizeItems(items);
+        const panel = document.createElement('div');
+        panel.style.display = 'flex';
+        panel.style.flexDirection = 'column';
+        panel.style.gap = '0.5rem';
 
-        const status = document.createElement('span');
-        status.style.marginLeft = '0.5rem';
+        const buttonRow = document.createElement('div');
+        buttonRow.style.display = 'flex';
+        buttonRow.style.flexWrap = 'wrap';
+        buttonRow.style.gap = '0.5rem';
+
+        const status = document.createElement('div');
         status.style.fontSize = '0.9em';
         status.style.opacity = '0.85';
-        status.textContent = summarizeItems(items);
+        status.textContent = summarizeItems(allItems);
 
-        wrapper.append(button, status);
-        heading.insertAdjacentElement('afterend', wrapper);
+        const buttonConfigs = [
+            {
+                label: 'Link external IDs in one click',
+                scope: 'all',
+                filter: () => true
+            },
+            {
+                label: 'Link artist external IDs in one click',
+                scope: 'artist',
+                filter: (item) => item.type === 'artist'
+            },
+            {
+                label: 'Link label external IDs in one click',
+                scope: 'label',
+                filter: (item) => item.type === 'label'
+            },
+            {
+                label: 'Link song external IDs in one click',
+                scope: 'recording',
+                filter: (item) => item.type === 'recording'
+            }
+        ];
 
-        button.addEventListener('click', () => {
-            const currentItems = getHarmonyLinks();
-            if (!currentItems.length) {
-                status.textContent = 'No supported external-ID edits found.';
+        const buttons = [];
+
+        function currentItemsFor(config) {
+            return getHarmonyLinks().filter(config.filter);
+        }
+
+        function setButtonsDisabled(disabled) {
+            for (const button of buttons) {
+                if (disabled) {
+                    button.disabled = true;
+                    continue;
+                }
+
+                const config = buttonConfigs.find((entry) => entry.scope === button.dataset.scope);
+                button.disabled = !config || currentItemsFor(config).length === 0;
+            }
+        }
+
+        function startQueue(config) {
+            const items = currentItemsFor(config);
+            if (!items.length) {
+                status.textContent = `No ${config.scope === 'recording' ? 'song' : config.scope === 'all' ? 'supported' : config.scope} external-ID edits found.`;
                 return;
             }
 
@@ -143,7 +184,8 @@
                 id: jobId,
                 status: 'running',
                 phase: 'loading',
-                items: currentItems,
+                scope: config.scope,
+                items,
                 index: 0,
                 completed: 0,
                 sourcePage: `${location.origin}${location.pathname}${location.search}`,
@@ -153,15 +195,33 @@
             };
 
             writeQueue(queue);
-            button.disabled = true;
-            status.textContent = `0/${currentItems.length} submitted...`;
+            setButtonsDisabled(true);
+            status.textContent = `0/${items.length} submitted - ${config.scope === 'all' ? 'all' : config.scope === 'recording' ? 'songs' : config.scope + 's'}...`;
 
-            GM_openInTab(makeWorkerUrl(currentItems[0].url, jobId), {
+            GM_openInTab(makeWorkerUrl(items[0].url, jobId), {
                 active: false,
                 insert: true,
                 setParent: true
             });
-        });
+        }
+
+        for (const config of buttonConfigs) {
+            const items = allItems.filter(config.filter);
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'open-all-links';
+            button.dataset.scope = config.scope;
+            button.textContent = config.label;
+            button.title = items.length ? summarizeItems(items) : 'No matching external-ID edits found.';
+            button.disabled = items.length === 0;
+            button.addEventListener('click', () => startQueue(config));
+            buttons.push(button);
+            buttonRow.appendChild(button);
+        }
+
+        panel.append(buttonRow, status);
+        wrapper.appendChild(panel);
+        heading.insertAdjacentElement('afterend', wrapper);
 
         setInterval(() => {
             const queue = readQueue();
@@ -171,14 +231,20 @@
             if (queue.sourcePage !== sourcePage) return;
 
             const total = queue.items.length;
+            const scopeName = queue.scope === 'recording'
+                ? 'songs'
+                : queue.scope === 'all'
+                    ? 'all'
+                    : `${queue.scope}s`;
+
             if (queue.status === 'running') {
-                button.disabled = true;
-                status.textContent = `${queue.completed}/${total} submitted...`;
+                setButtonsDisabled(true);
+                status.textContent = `${queue.completed}/${total} submitted - ${scopeName}...`;
             } else if (queue.status === 'complete') {
-                button.disabled = false;
-                status.textContent = `Done: ${queue.completed}/${total} submitted.`;
+                setButtonsDisabled(false);
+                status.textContent = `Done: ${queue.completed}/${total} submitted - ${scopeName}.`;
             } else if (queue.status === 'failed') {
-                button.disabled = false;
+                setButtonsDisabled(false);
                 status.textContent = `Stopped at ${queue.completed}/${total}: ${queue.error || 'unknown error'}`;
             }
         }, 500);
@@ -369,8 +435,8 @@
     }
 
     if (location.hostname === 'harmony.pulsewidth.org.uk') {
-        renderHarmonyButton();
-        const observer = new MutationObserver(renderHarmonyButton);
+        renderHarmonyControls();
+        const observer = new MutationObserver(renderHarmonyControls);
         observer.observe(document.documentElement, { childList: true, subtree: true });
     } else if (location.hostname === 'musicbrainz.org') {
         runMusicBrainzWorker().catch((error) => {
