@@ -749,4 +749,98 @@
 
     function showResults(results) {
         document.getElementById('mb-barcode-checker-results')?.remove();
-        const corrections = results.filter(result =
+        const corrections = results.filter(result => hasCorrection(result.correction));
+        const overlay = document.createElement('div');
+        overlay.id = 'mb-barcode-checker-results';
+        overlay.innerHTML = `
+            <div class="mb-bc-dialog">
+                <div class="mb-bc-header">
+                    <h2>Barcode vs linked releases</h2>
+                    <button type="button" class="mb-bc-close">Close</button>
+                </div>
+                <p>Only releases whose every medium is <strong>Digital Media</strong> are checked. No MusicBrainz edit is submitted automatically.</p>
+                <div class="mb-bc-list">
+                    ${results.map((result, index) => {
+                        const c = result.correction;
+                        return `
+                            <section class="mb-bc-release">
+                                <h3><a href="/release/${escapeHtml(result.release.id)}" target="_blank">${escapeHtml(result.release.title)}</a></h3>
+                                <div><strong>MusicBrainz barcode:</strong> <code>${escapeHtml(result.release.barcode)}</code></div>
+                                <div><strong>Status:</strong> ${escapeHtml(resultStatus(result))}</div>
+                                <ul>${resultDetails(result)}</ul>
+                                ${c.reasons.length ? `<div><strong>Prepared:</strong><ul>${c.reasons.map(x => `<li>${escapeHtml(x)}</li>`).join('')}</ul></div>` : ''}
+                                ${c.notes.length ? `<div><strong>Notes:</strong><ul>${c.notes.map(x => `<li>${escapeHtml(x)}</li>`).join('')}</ul></div>` : ''}
+                                ${c.newBarcode ? `<div><strong>New barcode:</strong> <code>${escapeHtml(c.newBarcode)}</code></div>` : ''}
+                                ${c.removeUrls.length ? `<div><strong>Remove wrong links:</strong><ul>${c.removeUrls.map(x => `<li>${escapeHtml(x)}</li>`).join('')}</ul></div>` : ''}
+                                ${c.addLinks.length ? `<div><strong>Add barcode-matched links:</strong><ul>${c.addLinks.map(x => `<li>${escapeHtml(x.url)}</li>`).join('')}</ul></div>` : ''}
+                                ${hasCorrection(c) ? `<button type="button" class="mb-bc-open-one positive" data-result-index="${index}">Open correcting edit</button>` : ''}
+                            </section>
+                        `;
+                    }).join('')}
+                </div>
+                <div class="mb-bc-actions">
+                    ${corrections.length ? `<button type="button" class="mb-bc-open-all positive">Open correcting edits (${corrections.length})</button>` : '<strong>No correcting edits are needed/prepared.</strong>'}
+                </div>
+            </div>
+        `;
+
+        const style = document.createElement('style');
+        style.textContent = `
+            #mb-barcode-checker-results { position:fixed; inset:0; z-index:100000; background:rgba(0,0,0,.55); display:flex; align-items:flex-start; justify-content:center; padding:4vh 18px; overflow:auto; }
+            #mb-barcode-checker-results .mb-bc-dialog { background:#fff; color:#222; width:min(980px, 96vw); max-height:92vh; overflow:auto; border-radius:7px; padding:16px; box-shadow:0 12px 40px rgba(0,0,0,.35); }
+            #mb-barcode-checker-results .mb-bc-header { display:flex; align-items:center; justify-content:space-between; gap:15px; border-bottom:1px solid #ccc; margin-bottom:12px; }
+            #mb-barcode-checker-results .mb-bc-header h2 { margin:0 0 10px; }
+            #mb-barcode-checker-results .mb-bc-release { border:1px solid #ccc; border-radius:5px; margin:12px 0; padding:12px; }
+            #mb-barcode-checker-results .mb-bc-release h3 { margin:0 0 8px; }
+            #mb-barcode-checker-results .mb-bc-release ul { margin:5px 0 8px 20px; }
+            #mb-barcode-checker-results .mb-bc-release code { user-select:all; }
+            #mb-barcode-checker-results .mb-bc-actions { position:sticky; bottom:0; background:#fff; border-top:1px solid #ccc; padding:12px 0 2px; text-align:right; }
+        `;
+        document.head.appendChild(style);
+        document.body.appendChild(overlay);
+
+        overlay.querySelector('.mb-bc-close').addEventListener('click', () => overlay.remove());
+        overlay.addEventListener('click', event => {
+            if (event.target === overlay) overlay.remove();
+        });
+        for (const button of overlay.querySelectorAll('.mb-bc-open-one')) {
+            button.addEventListener('click', () => {
+                const result = results[Number(button.dataset.resultIndex)];
+                openCorrection(result.correction);
+            });
+        }
+        overlay.querySelector('.mb-bc-open-all')?.addEventListener('click', () => {
+            for (const result of corrections) openCorrection(result.correction);
+        });
+    }
+
+    function setSidebarStatus(text, kind = '') {
+        const node = document.getElementById('mb-barcode-checker-status');
+        if (!node) return;
+        node.textContent = text;
+        node.dataset.kind = kind;
+    }
+
+    async function runCheck() {
+        const button = document.getElementById('mb-barcode-checker-button');
+        if (!button) return;
+        button.disabled = true;
+
+        try {
+            const rgid = extractMbid(location.pathname);
+            if (!rgid) throw new Error('Could not determine release-group MBID.');
+
+            setSidebarStatus('Loading MusicBrainz releases...');
+            const releases = await fetchReleaseGroupReleases(rgid);
+            const eligible = releases.filter(release => isDigitalRelease(release) && release.barcode);
+
+            if (!eligible.length) {
+                setSidebarStatus('No Digital Media releases with barcodes found.', 'ok');
+                showResults([]);
+                return;
+            }
+
+            const results = [];
+            for (let i = 0; i < eligible.length; i++) {
+                const release = eligible[i];
+                setSidebarStatus(`Checking release ${i + 1}/${eligible.length}
