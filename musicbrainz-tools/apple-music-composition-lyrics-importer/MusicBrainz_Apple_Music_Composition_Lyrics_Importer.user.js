@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Apple Music Credits -> MusicBrainz
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      2.3.4
+// @version      2.3.5
 // @description  Resolve the correct Apple Music release and import supported Apple Music credits to the proper MusicBrainz Recording, Work, or Release relationships.
 // @author       karpuzikov
 // @license      MIT
@@ -224,6 +224,24 @@
             .replace(/[^\p{L}\p{N}]+/gu, ' ')
             .trim()
             .replace(/\s+/g, ' ');
+    }
+
+    function normalizeTrackTitleForMatch(value) {
+        let title = String(value || '').trim();
+
+        // Apple Music commonly appends featured artists to the displayed track
+        // title, while MusicBrainz stores them in the artist credit instead.
+        // Ignore only terminal featured-artist suffixes for comparison.
+        let previous;
+        do {
+            previous = title;
+            title = title
+                .replace(/\s*\(\s*(?:feat(?:uring)?|ft)\.?\s+[^)]*\)\s*$/i, '')
+                .replace(/\s*\[\s*(?:feat(?:uring)?|ft)\.?\s+[^\]]*\]\s*$/i, '')
+                .trim();
+        } while (title !== previous);
+
+        return normalizeText(title);
     }
 
     function escapeHtml(value) {
@@ -1729,6 +1747,10 @@
             state.appleUrl = resolved.url;
             setSourceInfo(resolved);
 
+            // Populate the required source/script edit note as soon as the
+            // Apple Music source has been verified.
+            await addEditNote();
+
             setStatus('Loading resolved Apple Music release...');
             const albumHtml = await gmGet(state.appleUrl);
             const albumData = parseAppleServerData(albumHtml);
@@ -1771,7 +1793,7 @@
                     mbTitle,
                     works,
                     workResolution: '',
-                    titleMatch: !!mbTrack && normalizeText(appleTrack.title) === normalizeText(mbTitle),
+                    titleMatch: !!mbTrack && normalizeTrackTitleForMatch(appleTrack.title) === normalizeTrackTitleForMatch(mbTitle),
                     error: result?.error ? result.error.message : '',
                 };
             });
