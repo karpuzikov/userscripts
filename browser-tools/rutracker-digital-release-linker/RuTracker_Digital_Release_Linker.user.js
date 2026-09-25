@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         RuTracker Digital Release Linker
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.1.5
+// @version      1.1.6
 // @description  Links exact digital release pages in RuTracker BBCode, falls back from Deezer to MusicBrainz-linked Beatport releases, and adds country flag emoji.
 // @author       karpuzikov
 // @match        https://rutracker.org/forum/posting.php*
@@ -99,7 +99,7 @@
             return gmJson(url, {
                 retries: 2,
                 headers: {
-                    'User-Agent': `${SCRIPT_NAME}/1.1.5 (Tampermonkey userscript)`,
+                    'User-Agent': `${SCRIPT_NAME}/1.1.6 (Tampermonkey userscript)`,
                 },
             });
         });
@@ -289,17 +289,27 @@
         const match = cleaned.match(/\[([^\[\]]+)\]\s*$/);
         if (!match) return null;
 
-        let value = match[1].trim();
-        if (/\s+-\s+/.test(value)) {
-            value = value.split(/\s+-\s+/).pop().trim();
+        const raw = match[1].trim();
+        let value = raw;
+        let reissueYear = '';
+
+        const parts = raw.split(/\s+-\s+/).map((part) => part.trim()).filter(Boolean);
+        if (parts.length > 1) {
+            const last = parts[parts.length - 1];
+            if (/^(?:19|20)\d{2}$/.test(last)) {
+                reissueYear = last;
+                value = parts.slice(0, -1).join(' - ').trim();
+            } else {
+                value = last;
+            }
         }
 
         if (/^\d{8,14}$/.test(value)) {
-            return { type: 'barcode', value };
+            return { type: 'barcode', value, reissueYear };
         }
 
         if (/^(?=.*\d)[A-Za-z0-9][A-Za-z0-9._/+\-]{3,}$/.test(value)) {
-            return { type: 'catalog', value };
+            return { type: 'catalog', value, reissueYear };
         }
 
         return null;
@@ -488,9 +498,15 @@
         let score = 0;
         score += tokenSimilarity(meta.title, release.title) * 10;
 
-        if (meta.date && release.date) {
-            if (release.date === meta.date) score += 5;
-            else if (release.date.slice(0, 4) === meta.date.slice(0, 4)) score += 1.5;
+        const targetYear = meta.identifier?.reissueYear || meta.date?.slice(0, 4) || '';
+        if (release.date && targetYear) {
+            if (meta.identifier?.reissueYear && release.date.slice(0, 4) === targetYear) {
+                score += 5;
+            } else if (!meta.identifier?.reissueYear && release.date === meta.date) {
+                score += 5;
+            } else if (release.date.slice(0, 4) === targetYear) {
+                score += 1.5;
+            }
         }
 
         if (release.barcode) score += 1;
@@ -528,7 +544,7 @@
     async function musicBrainzReleasesByIdentifier(identifier, meta) {
         if (!identifier?.type || !identifier?.value) return [];
 
-        const cacheKey = `${identifier.type}|${identifier.value}|${normalizeText(meta.title)}|${meta.date}|${meta.trackCount}`;
+        const cacheKey = `${identifier.type}|${identifier.value}|${identifier.reissueYear || ''}|${normalizeText(meta.title)}|${meta.date}|${meta.trackCount}`;
         if (caches.musicBrainzIdentifier.has(cacheKey)) {
             return caches.musicBrainzIdentifier.get(cacheKey);
         }
