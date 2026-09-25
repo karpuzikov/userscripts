@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Apple Music Credits -> MusicBrainz
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      2.1.0
+// @version      2.1.1
 // @description  Resolve the correct Apple Music release and import supported Apple Music credits to the proper MusicBrainz Recording, Work, or Release relationships.
 // @author       karpuzikov
 // @license      MIT
@@ -30,6 +30,12 @@
     const RECORDING_OF_LINK_TYPE_ID = 278;
     const FALLBACK_STOREFRONTS = ['us', 'gb', 'de', 'fr', 'ca', 'au', 'jp', 'ua'];
     let appleToken = '';
+
+    const MB_WS_MIN_INTERVAL = 1200;
+    const MB_WS_MAX_RETRIES = 5;
+    let mbWsLastRequestAt = 0;
+    let mbWsQueue = Promise.resolve();
+    const mbWsCache = new Map();
 
     const ROLE_TYPES = {
         // Work-level authorship. These describe the composition itself.
@@ -100,6 +106,86 @@
 
     function wait(ms) {
         return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    function musicBrainzRetryDelay(response, attempt) {
+        const retryAfter = response?.headers?.get?.('Retry-After') || '';
+        if (/^\d+$/.test(retryAfter)) {
+            return Math.max(1000, Number(retryAfter) * 1000);
+        }
+
+        const retryDate = Date.parse(retryAfter);
+        if (Number.isFinite(retryDate)) {
+            return Math.max(1000, retryDate - Date.now());
+        }
+
+        return Math.min(16000, 1500 * (2 ** (attempt - 1)));
+    }
+
+    async function runMusicBrainzWsRequest(url, label) {
+        let lastError = null;
+
+        for (let attempt = 1; attempt <= MB_WS_MAX_RETRIES; attempt++) {
+            const spacing = MB_WS_MIN_INTERVAL - (Date.now() - mbWsLastRequestAt);
+            if (spacing > 0) await wait(spacing);
+
+            let response;
+            try {
+                mbWsLastRequestAt = Date.now();
+                response = await fetch(url, {
+                    credentials: 'same-origin',
+                    headers: { Accept: 'application/json' },
+                });
+            } catch (error) {
+                lastError = error;
+                if (attempt === MB_WS_MAX_RETRIES) break;
+
+                const delay = Math.min(16000, 1500 * (2 ** (attempt - 1)));
+                setStatus(`${label}: network error. Retrying in ${Math.ceil(delay / 1000)}s...`, 'warn');
+                await wait(delay);
+                continue;
+            }
+
+            if (response.ok) {
+                try {
+                    return await response.json();
+                } catch {
+                    throw new Error(`${label}: MusicBrainz returned invalid JSON.`);
+                }
+            }
+
+            const retryable = [429, 502, 503, 504].includes(response.status);
+            if (!retryable || attempt === MB_WS_MAX_RETRIES) {
+                throw new Error(`${label} failed: HTTP ${response.status}`);
+            }
+
+            const delay = musicBrainzRetryDelay(response, attempt);
+            setStatus(
+                `${label}: MusicBrainz returned HTTP ${response.status}. Retrying ${attempt}/${MB_WS_MAX_RETRIES} in ${Math.ceil(delay / 1000)}s...`,
+                'warn'
+            );
+            await wait(delay);
+        }
+
+        throw new Error(
+            `${label} failed after ${MB_WS_MAX_RETRIES} attempts${lastError ? `: ${lastError.message}` : ''}.`
+        );
+    }
+
+    function musicBrainzWsJson(url, label, cacheKey = '') {
+        if (cacheKey && mbWsCache.has(cacheKey)) {
+            return Promise.resolve(mbWsCache.get(cacheKey));
+        }
+
+        const task = async () => {
+            const json = await runMusicBrainzWsRequest(url, label);
+            if (cacheKey) mbWsCache.set(cacheKey, json);
+            return json;
+        };
+
+        const queued = mbWsQueue.then(task, task);
+        mbWsQueue = queued.catch(() => {});
+        return queued;
     }
 
     function normalizeText(value) {
@@ -326,15 +412,12 @@
         const mbid = releaseMbidFromLocation();
         if (!mbid) throw new Error('Cannot determine the MusicBrainz release MBID.');
 
-        const response = await fetch(`/ws/2/release/${encodeURIComponent(mbid)}?inc=url-rels&fmt=json`, {
-            credentials: 'same-origin',
-            headers: { Accept: 'application/json' },
-        });
-        if (!response.ok) {
-            throw new Error(`Cannot load MusicBrainz release data: HTTP ${response.status}`);
-        }
-
-        const release = await response.json();
+        const releaseUrl = `/ws/2/release/${encodeURIComponent(mbid)}?inc=url-rels&fmt=json`;
+        const release = await musicBrainzWsJson(
+            releaseUrl,
+            'MusicBrainz release lookup',
+            `release:${mbid}:url-rels`
+        );
         const barcode = normalizeBarcode(release.barcode);
         const links = [...new Set(
             (release.relations || [])
@@ -770,16 +853,11 @@
     async function searchArtists(name) {
         const query = `artist:"${escapeLucene(name)}" OR alias:"${escapeLucene(name)}"`;
         const url = `/ws/2/artist/?query=${encodeURIComponent(query)}&fmt=json&limit=10`;
-        const response = await fetch(url, {
-            credentials: 'same-origin',
-            headers: { Accept: 'application/json' },
-        });
-
-        if (!response.ok) {
-            throw new Error(`MusicBrainz artist search failed: HTTP ${response.status}`);
-        }
-
-        const json = await response.json();
+        const json = await musicBrainzWsJson(
+            url,
+            `MusicBrainz artist search for "${name}"`,
+            `artist-search:${normalizeText(name)}`
+        );
         return (json.artists || []).map(artist => ({
             mbid: artist.id,
             name: artist.name || '',
@@ -820,16 +898,11 @@
     async function searchWorks(title) {
         const query = `work:"${escapeLucene(title)}"`;
         const url = `/ws/2/work/?query=${encodeURIComponent(query)}&fmt=json&limit=25`;
-        const response = await fetch(url, {
-            credentials: 'same-origin',
-            headers: { Accept: 'application/json' },
-        });
-
-        if (!response.ok) {
-            throw new Error(`MusicBrainz Work search failed: HTTP ${response.status}`);
-        }
-
-        const json = await response.json();
+        const json = await musicBrainzWsJson(
+            url,
+            `MusicBrainz Work search for "${title}"`,
+            `work-search:${normalizeText(title)}`
+        );
         return (json.works || []).map(work => ({
             mbid: work.id,
             title: work.title || '',
@@ -1230,7 +1303,6 @@
                         row.workResolution = error.message;
                         console.warn('[Apple Music -> MusicBrainz] Work resolution failed:', error);
                     }
-                    if (index < state.rows.length - 1) await wait(1100);
                 } else if (hasWorkCredits) {
                     await ensureWorkForRow(row);
                 }
@@ -1277,7 +1349,6 @@
                     `Searching MusicBrainz artists ${index + 1}/${people.length}: ${person.name}`
                 );
                 person.candidates = await searchArtists(person.name);
-                if (index < people.length - 1) await wait(1100);
             }
 
             renderPeople();
