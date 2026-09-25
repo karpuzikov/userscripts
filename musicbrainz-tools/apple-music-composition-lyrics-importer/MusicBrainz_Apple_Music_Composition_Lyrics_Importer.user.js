@@ -986,12 +986,31 @@
                 const related = relation?.artist;
                 if (!related?.id) continue;
 
-                if (artistNameMatches(creditName, related)) {
+                const relationshipCredits = [
+                    relation?.['source-credit'],
+                    relation?.['target-credit'],
+                ].filter(Boolean);
+
+                const relationshipCreditMatches = relationshipCredits.some(
+                    value => normalizeText(value) === normalizeText(creditName)
+                );
+
+                if (artistNameMatches(creditName, related) || relationshipCreditMatches) {
                     const full = await getArtistDetails(related.id);
-                    addIfMatch(
-                        full,
-                        `${relation.type || 'artist relationship'} with ${details.name}`
-                    );
+                    if (relationshipCreditMatches && !artistNameMatches(creditName, full)) {
+                        matches.set(
+                            full.id,
+                            candidateFromArtistData(
+                                full,
+                                `${relation.type || 'artist relationship'} with ${details.name}; relationship credit "${creditName}"`
+                            )
+                        );
+                    } else {
+                        addIfMatch(
+                            full,
+                            `${relation.type || 'artist relationship'} with ${details.name}`
+                        );
+                    }
                     continue;
                 }
 
