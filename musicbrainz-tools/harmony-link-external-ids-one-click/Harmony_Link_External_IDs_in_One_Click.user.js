@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Harmony - Link External IDs in One Click
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.2.2
+// @version      1.2.3
 // @description  Adds all-in-one and per-type fast submission of Harmony MusicBrainz external-ID edits without opening one edit tab per entity.
 // @author       karpuzikov
 // @license      MIT
@@ -246,7 +246,14 @@
         }
 
         const allConfig = buttonConfigs[0];
-        const firstLinkAction = findHarmonyLinkAnchor(allItems[0].type)?.closest('.action') || null;
+        const firstLinkAnchor = [...document.querySelectorAll('a[href]')]
+            .find((anchor) => {
+                if (anchor.textContent.trim() !== 'Link external IDs') return false;
+                return Boolean(classifyMusicBrainzEditUrl(anchor.href));
+            });
+        const firstLinkAction = firstLinkAnchor?.closest('.action') || null;
+        if (!firstLinkAction) return;
+
         const allButton = makeButton(allConfig, allItems);
         const allControl = makeActionControl(
             'harmony-link-external-ids-one-click',
@@ -254,7 +261,17 @@
             status,
             firstLinkAction
         );
-        heading.insertAdjacentElement('afterend', allControl);
+
+        // The global button belongs with the external-ID actions themselves,
+        // not directly after the Release Actions heading. This keeps it
+        // visible in Harmony's action layout and places it immediately before
+        // the first available external-ID section.
+        const firstActionGroup = firstLinkAction.closest('.action-group');
+        if (firstActionGroup) {
+            firstActionGroup.insertBefore(allControl, firstLinkAction);
+        } else {
+            firstLinkAction.insertAdjacentElement('beforebegin', allControl);
+        }
 
         for (const config of buttonConfigs.slice(1)) {
             const items = allItems.filter(config.filter);
