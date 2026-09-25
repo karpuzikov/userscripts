@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         BPTopTracker -> MusicBrainz Importer
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.0.1
+// @version      1.1.0
 // @description  Seed BPTopTracker Beatport release data into the MusicBrainz release editor.
 // @author       karpuzikov
 // @license      MIT
@@ -10,7 +10,7 @@
 // @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/bptoptracker-musicbrainz-importer/BPTopTracker_MusicBrainz_Importer.user.js
 // @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/bptoptracker-musicbrainz-importer/BPTopTracker_MusicBrainz_Importer.user.js
 // @grant        none
-// @run-at       document-end
+// @run-at       document-start
 // ==/UserScript==
 
 (() => {
@@ -82,9 +82,10 @@
         const heading = document.querySelector('h1');
 
         return (
-            beatportLink?.closest('section') ||
-            heading?.closest('section') ||
-            heading?.closest('.container') ||
+            beatportLink?.closest('main, article, section, .container, [class*="container"]') ||
+            heading?.closest('main, article, section, .container, [class*="container"]') ||
+            document.querySelector('main') ||
+            document.body ||
             document
         );
     }
@@ -122,7 +123,7 @@
         };
     }
 
-    function parseTracks() {
+    function parseTracksFromTable() {
         const table =
             document.querySelector('table.table-tracks') ||
             [...document.querySelectorAll('table')].find((candidate) => {
@@ -193,6 +194,57 @@
             .filter(Boolean);
     }
 
+    function parseTracksFromLinks() {
+        const links = [...document.querySelectorAll('a[href*="/track/"]')];
+        const seen = new Set();
+        const tracks = [];
+
+        for (const link of links) {
+            const href = absoluteUrl(link.getAttribute('href'));
+            if (!href || seen.has(href)) continue;
+            seen.add(href);
+
+            const row =
+                link.closest(
+                    'tr, li, [data-track-id], [data-track], .track, .track-row, .release-track, [class*="track-item"]'
+                ) ||
+                link.parentElement?.parentElement ||
+                link.parentElement;
+
+            if (!row) continue;
+
+            const rawTitle = normalizeWhitespace(link.textContent);
+            if (!rawTitle) continue;
+
+            const artists = artistNamesFrom(row);
+            const rowText = normalizeWhitespace(row.textContent);
+            const duration =
+                rowText.match(/\b\d{1,3}:\d{2}(?::\d{2})?\b/)?.[0] || '';
+
+            const explicitNumber = normalizeWhitespace(
+                row.querySelector(
+                    '.position, .track-position, .track-number, .number, [data-position], [data-track-number]'
+                )?.textContent
+            );
+
+            tracks.push({
+                number:
+                    explicitNumber.match(/\b\d+\b/)?.[0] ||
+                    String(tracks.length + 1),
+                title: normalizeTrackTitle(rawTitle),
+                artists,
+                duration,
+            });
+        }
+
+        return tracks;
+    }
+
+    function parseTracks() {
+        const tableTracks = parseTracksFromTable();
+        return tableTracks.length ? tableTracks : parseTracksFromLinks();
+    }
+
     function parsePage() {
         const section = findReleaseSection();
 
@@ -201,11 +253,34 @@
                 document.querySelector('h1')?.textContent
         );
 
-        const releaseArtistContainer =
-            section.querySelector('h1 + .g-font-size-18') ||
-            section.querySelector('.g-font-size-18');
+        const heading = section.querySelector('h1') || document.querySelector('h1');
+        const artistContainers = [
+            section.querySelector('h1 + .g-font-size-18'),
+            section.querySelector('.g-font-size-18'),
+            heading?.nextElementSibling,
+            heading?.parentElement,
+        ].filter(Boolean);
 
-        const releaseArtists = artistNamesFrom(releaseArtistContainer);
+        let releaseArtists = [];
+        for (const container of artistContainers) {
+            const artists = artistNamesFrom(container);
+            if (artists.length && artists.length <= 8) {
+                releaseArtists = artists;
+                break;
+            }
+        }
+
+        if (!releaseArtists.length) {
+            const firstArtist = [...section.querySelectorAll('a[href*="/artist/"]')].find(
+                (link) =>
+                    !link.closest(
+                        'table, [data-track-id], [data-track], .track, .track-row, .release-track'
+                    )
+            );
+            if (firstArtist) {
+                releaseArtists = [normalizeWhitespace(firstArtist.textContent)];
+            }
+        }
 
         const labelLink = section.querySelector('a[href*="/label/"]');
         const label = normalizeWhitespace(labelLink?.textContent);
@@ -386,16 +461,41 @@
     }
 
     function addImporterUI(release) {
-        if (document.getElementById('bpt-mb-importer')) return;
+        if (!document.querySelector('h1')) return;
+
+        const existing = document.getElementById('bpt-mb-importer');
+        if (existing) {
+            const importButton = existing.querySelector('button');
+            const status = existing.querySelector('span');
+            const current = parsePage();
+            const ready = Boolean(current.title && current.tracks.length);
+
+            if (importButton) {
+                importButton.disabled = !ready;
+                importButton.title = ready
+                    ? 'Open the MusicBrainz Add Release editor with BPTopTracker data pre-filled'
+                    : 'Waiting for BPTopTracker release/track data';
+            }
+
+            if (status) {
+                const text = current.tracks.length
+                    ? `${current.tracks.length} track${current.tracks.length === 1 ? '' : 's'} ready`
+                    : 'Waiting for track data...';
+                if (status.textContent !== text) status.textContent = text;
+            }
+            return;
+        }
 
         const beatportButton = document.querySelector(
             'a[href*="beatport.com/release/"]'
         );
 
+        const section = findReleaseSection();
         const host =
             beatportButton?.parentElement ||
-            findReleaseSection().querySelector('.col-lg-4') ||
-            findReleaseSection();
+            section.querySelector('.col-lg-4') ||
+            section.querySelector('h1')?.parentElement ||
+            section;
 
         const wrapper = document.createElement('div');
         wrapper.id = 'bpt-mb-importer';
@@ -440,12 +540,40 @@
         host.appendChild(wrapper);
     }
 
-    try {
-        const release = parsePage();
+    let refreshTimer = null;
 
-        console.info('[BPTopTracker -> MusicBrainz]', release);
-        addImporterUI(release);
-    } catch (error) {
-        console.error('[BPTopTracker -> MusicBrainz] Importer failed:', error);
+    function refreshImporter() {
+        clearTimeout(refreshTimer);
+        refreshTimer = setTimeout(() => {
+            try {
+                const release = parsePage();
+                console.info('[BPTopTracker -> MusicBrainz]', release);
+                addImporterUI(release);
+            } catch (error) {
+                console.error('[BPTopTracker -> MusicBrainz] Importer failed:', error);
+            }
+        }, 100);
+    }
+
+    function start() {
+        refreshImporter();
+
+        const observer = new MutationObserver(refreshImporter);
+        observer.observe(document.documentElement, {
+            childList: true,
+            subtree: true,
+        });
+
+        window.addEventListener('load', refreshImporter, { once: true });
+        window.addEventListener('popstate', refreshImporter);
+
+        setTimeout(refreshImporter, 1000);
+        setTimeout(refreshImporter, 3000);
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', start, { once: true });
+    } else {
+        start();
     }
 })();
