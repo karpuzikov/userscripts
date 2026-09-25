@@ -1,11 +1,11 @@
 // ==UserScript==
 // @name         Apple Music Credits -> MusicBrainz
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      2.2.1
+// @version      2.3.0
 // @description  Resolve the correct Apple Music release and import supported Apple Music credits to the proper MusicBrainz Recording, Work, or Release relationships.
 // @author       karpuzikov
 // @license      MIT
-// @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/tampermonkey-apple-music-credits-v2.2.1/musicbrainz-tools/apple-music-composition-lyrics-importer/MusicBrainz_Apple_Music_Composition_Lyrics_Importer.user.js
+// @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/tampermonkey-apple-music-credits-v2.3.0/musicbrainz-tools/apple-music-composition-lyrics-importer/MusicBrainz_Apple_Music_Composition_Lyrics_Importer.user.js
 // @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/refs/heads/main/musicbrainz-tools/apple-music-composition-lyrics-importer/MusicBrainz_Apple_Music_Composition_Lyrics_Importer.user.js
 // @supportURL   https://github.com/karpuzikov/userscripts
 // @match        https://musicbrainz.org/release/*/edit-relationships
@@ -101,7 +101,7 @@
         appleTracks: [],
         rows: [],
         people: new Map(),
-        releaseArtists: [],
+        creditedArtists: [],
         aliasEdits: 0,
         applied: false,
     };
@@ -432,22 +432,56 @@
         return countries;
     }
 
+    function collectCreditedArtists(release) {
+        const artists = new Map();
+
+        const addCredit = (credit, scope) => {
+            for (const entry of credit || []) {
+                const artist = entry?.artist;
+                if (!artist?.id) continue;
+
+                let item = artists.get(artist.id);
+                if (!item) {
+                    item = {
+                        id: artist.id,
+                        name: artist.name || '',
+                        sortName: artist['sort-name'] || '',
+                        creditedNames: new Set(),
+                        scopes: new Set(),
+                    };
+                    artists.set(artist.id, item);
+                }
+
+                if (entry?.name) item.creditedNames.add(String(entry.name));
+                if (artist?.name) item.creditedNames.add(String(artist.name));
+                item.scopes.add(scope);
+            }
+        };
+
+        addCredit(release?.['artist-credit'], 'release');
+
+        for (const medium of release?.media || []) {
+            for (const track of medium?.tracks || []) {
+                addCredit(track?.['artist-credit'], 'track');
+                addCredit(track?.recording?.['artist-credit'], 'recording');
+            }
+        }
+
+        return [...artists.values()];
+    }
+
     async function getMusicBrainzReleaseSourceData() {
         const mbid = releaseMbidFromLocation();
         if (!mbid) throw new Error('Cannot determine the MusicBrainz release MBID.');
 
-        const releaseUrl = `/ws/2/release/${encodeURIComponent(mbid)}?inc=url-rels+artist-credits&fmt=json`;
+        const releaseUrl = `/ws/2/release/${encodeURIComponent(mbid)}?inc=url-rels+artist-credits+recordings&fmt=json`;
         const release = await musicBrainzWsJson(
             releaseUrl,
             'MusicBrainz release lookup',
-            `release:${mbid}:url-rels+artist-credits`
+            `release:${mbid}:url-rels+artist-credits+recordings`
         );
-        state.releaseArtists = [...new Map(
-            (release['artist-credit'] || [])
-                .map(entry => entry?.artist)
-                .filter(artist => artist?.id)
-                .map(artist => [artist.id, artist])
-        ).values()];
+
+        state.creditedArtists = collectCreditedArtists(release);
 
         const barcode = normalizeBarcode(release.barcode);
         const links = [...new Set(
@@ -919,16 +953,30 @@
         };
     }
 
-    function artistNameMatches(creditName, artist) {
-        const wanted = normalizeText(creditName);
-        const names = [
+    function sameArtistName(left, right) {
+        return normalizeText(left) === normalizeText(right);
+    }
+
+    function artistCanonicalNameMatches(creditName, artist) {
+        return [
             artist?.name,
             artist?.['sort-name'],
-            ...(artist?.aliases || []).map(alias =>
+            artist?.sortName,
+        ].filter(Boolean).some(value => sameArtistName(creditName, value));
+    }
+
+    function artistAliasMatches(creditName, artist) {
+        return (artist?.aliases || []).some(alias =>
+            sameArtistName(
+                creditName,
                 typeof alias === 'string' ? alias : alias?.name
-            ),
-        ].filter(Boolean).map(normalizeText);
-        return names.includes(wanted);
+            )
+        );
+    }
+
+    function artistNameMatches(creditName, artist) {
+        return artistCanonicalNameMatches(creditName, artist) ||
+            artistAliasMatches(creditName, artist);
     }
 
     async function getArtistDetails(mbid) {
@@ -958,73 +1006,117 @@
         return [...merged.values()];
     }
 
-    function isUsefulArtistRelation(relation) {
-        const type = normalizeText(relation?.type || '');
-        return (
-            type.includes('member') ||
-            type.includes('subgroup') ||
-            type.includes('collaboration')
-        );
+    function dedupeContextCandidates(candidates) {
+        return [...new Map(
+            candidates
+                .filter(candidate => candidate?.mbid)
+                .map(candidate => [candidate.mbid, candidate])
+        ).values()];
+    }
+
+    async function relatedArtistsForCreditedArtist(creditedArtist) {
+        const details = await getArtistDetails(creditedArtist.id);
+        const output = [];
+
+        for (const relation of details.relations || []) {
+            const related = relation?.artist;
+            if (!related?.id) continue;
+
+            output.push({
+                root: details,
+                relation,
+                related,
+            });
+        }
+
+        return output;
     }
 
     async function findContextArtistCandidates(creditName) {
-        const matches = new Map();
+        const creditedArtists = state.creditedArtists || [];
 
-        const addIfMatch = (artist, reason) => {
-            if (!artist?.id || !artistNameMatches(creditName, artist)) return;
-            matches.set(
-                artist.id,
-                candidateFromArtistData(artist, reason)
-            );
-        };
+        // Circle 1: artists directly credited on this release/recording/track.
+        const circle1 = [];
+        for (const artist of creditedArtists) {
+            const creditedNameMatch = [...(artist.creditedNames || [])]
+                .some(name => sameArtistName(creditName, name));
 
-        for (const releaseArtist of state.releaseArtists || []) {
-            const details = await getArtistDetails(releaseArtist.id);
-            addIfMatch(details, 'artist credited on this MusicBrainz release');
-
-            for (const relation of details.relations || []) {
-                const related = relation?.artist;
-                if (!related?.id) continue;
-
-                const relationshipCredits = [
-                    relation?.['source-credit'],
-                    relation?.['target-credit'],
-                ].filter(Boolean);
-
-                const relationshipCreditMatches = relationshipCredits.some(
-                    value => normalizeText(value) === normalizeText(creditName)
-                );
-
-                if (artistNameMatches(creditName, related) || relationshipCreditMatches) {
-                    const full = await getArtistDetails(related.id);
-                    if (relationshipCreditMatches && !artistNameMatches(creditName, full)) {
-                        matches.set(
-                            full.id,
-                            candidateFromArtistData(
-                                full,
-                                `${relation.type || 'artist relationship'} with ${details.name}; relationship credit "${creditName}"`
-                            )
-                        );
-                    } else {
-                        addIfMatch(
-                            full,
-                            `${relation.type || 'artist relationship'} with ${details.name}`
-                        );
-                    }
-                    continue;
-                }
-
-                if (!isUsefulArtistRelation(relation)) continue;
-
-                const full = await getArtistDetails(related.id);
-                addIfMatch(
-                    full,
-                    `${relation.type || 'artist relationship'} with ${details.name}`
-                );
+            if (creditedNameMatch || artistCanonicalNameMatches(creditName, artist)) {
+                const details = await getArtistDetails(artist.id);
+                circle1.push(candidateFromArtistData(
+                    details,
+                    'Circle 1: artist directly credited on this release/recording'
+                ));
             }
         }
+        if (circle1.length) {
+            return { circle: 1, candidates: dedupeContextCandidates(circle1) };
+        }
 
-        return [...matches.values()];
+        // Circle 2: aliases of the directly credited artists.
+        const circle2 = [];
+        for (const artist of creditedArtists) {
+            const details = await getArtistDetails(artist.id);
+            if (artistAliasMatches(creditName, details)) {
+                circle2.push(candidateFromArtistData(
+                    details,
+                    'Circle 2: alias of an artist directly credited on this release/recording'
+                ));
+            }
+        }
+        if (circle2.length) {
+            return { circle: 2, candidates: dedupeContextCandidates(circle2) };
+        }
+
+        // Build the relationship neighborhood only after direct artists/aliases fail.
+        const relatedContexts = [];
+        for (const artist of creditedArtists) {
+            relatedContexts.push(...await relatedArtistsForCreditedArtist(artist));
+        }
+
+        // Circle 3: artists connected through artist-to-artist relationships.
+        // Relationship credits are treated as names for that related artist too.
+        const circle3 = [];
+        for (const context of relatedContexts) {
+            const relationshipCredits = [
+                context.relation?.['source-credit'],
+                context.relation?.['target-credit'],
+            ].filter(Boolean);
+
+            const relationCreditMatch = relationshipCredits
+                .some(value => sameArtistName(creditName, value));
+
+            if (
+                artistCanonicalNameMatches(creditName, context.related) ||
+                relationCreditMatch
+            ) {
+                const full = await getArtistDetails(context.related.id);
+                circle3.push(candidateFromArtistData(
+                    full,
+                    `Circle 3: ${context.relation?.type || 'artist relationship'} with ${context.root?.name || 'credited artist'}`
+                ));
+            }
+        }
+        if (circle3.length) {
+            return { circle: 3, candidates: dedupeContextCandidates(circle3) };
+        }
+
+        // Circle 4: aliases of artists found through those relationships.
+        const circle4 = [];
+        for (const context of relatedContexts) {
+            const full = await getArtistDetails(context.related.id);
+            if (artistAliasMatches(creditName, full)) {
+                circle4.push(candidateFromArtistData(
+                    full,
+                    `Circle 4: alias of artist connected by ${context.relation?.type || 'artist relationship'} to ${context.root?.name || 'credited artist'}`
+                ));
+            }
+        }
+        if (circle4.length) {
+            return { circle: 4, candidates: dedupeContextCandidates(circle4) };
+        }
+
+        return { circle: 0, candidates: [] };
     }
 
     function aliasAlreadyPresent(creditName, artist) {
@@ -1056,6 +1148,7 @@
 
         params.set('edit-alias.name', aliasName);
         params.set('edit-alias.sort_name', aliasName);
+        params.set('edit-alias.type_id', '1');
 
         const noteField = form.querySelector(
             'textarea[name*="edit_note"], textarea[name*="edit-note"], textarea[name*="editnote"]'
@@ -1375,6 +1468,7 @@
                 '<option value="">-- choose MusicBrainz artist --</option>',
                 ...person.candidates.map(candidate => {
                     const details = [
+                        candidate.contextReason,
                         candidate.disambiguation,
                         candidate.type,
                         candidate.country,
@@ -1422,7 +1516,7 @@
         container.innerHTML = `
             <h3>Artist mapping</h3>
             <p class="am2mb-hint">
-                Release artists and their artist relationships are checked before global search.
+                Artist matching uses four priority circles: credited artists, their aliases, their artist relationships, then aliases of those related artists. Global search is only a fallback.
                 Recording credits go to Recordings, songwriting/composition to Works, and mastering to the Release.
                 When you manually map a different Apple credit name, a MusicBrainz artist alias is added for future matching.
             </p>
@@ -1470,7 +1564,7 @@
             state.appleTracks = [];
             state.rows = [];
             state.people.clear();
-            state.releaseArtists = [];
+            state.creditedArtists = [];
             state.aliasEdits = 0;
             state.applied = false;
 
@@ -1589,27 +1683,29 @@
                 const person = people[index];
 
                 setStatus(
-                    `Checking release artist context ${index + 1}/${people.length}: ${person.name}`
+                    `Checking artist context circles ${index + 1}/${people.length}: ${person.name}`
                 );
-                const contextCandidates = await findContextArtistCandidates(person.name);
+                const context = await findContextArtistCandidates(person.name);
+                const contextCandidates = context.candidates;
 
-                if (contextCandidates.length === 1) {
+                if (contextCandidates.length) {
+                    // Stop at the first circle which has matches. Lower-priority
+                    // circles and global search must not override a local match.
                     person.candidates = contextCandidates;
-                    person.preferredMbid = contextCandidates[0].mbid;
-                    person.preferredReason = contextCandidates[0].contextReason;
+                    if (contextCandidates.length === 1) {
+                        person.preferredMbid = contextCandidates[0].mbid;
+                        person.preferredReason = contextCandidates[0].contextReason;
+                    } else {
+                        person.preferredMbid = '';
+                        person.preferredReason = `Circle ${context.circle} has multiple matching artists`;
+                    }
                     continue;
                 }
 
                 setStatus(
-                    `Searching MusicBrainz artists ${index + 1}/${people.length}: ${person.name}`
+                    `Searching all MusicBrainz artists ${index + 1}/${people.length}: ${person.name}`
                 );
-                const searchCandidates = await searchArtists(person.name);
-                person.candidates = mergeCandidates(contextCandidates, searchCandidates);
-
-                if (contextCandidates.length === 1) {
-                    person.preferredMbid = contextCandidates[0].mbid;
-                    person.preferredReason = contextCandidates[0].contextReason;
-                }
+                person.candidates = await searchArtists(person.name);
             }
 
             renderPeople();
