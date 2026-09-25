@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         RuTracker Digital Release Linker
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.1.0
+// @version      1.1.1
 // @description  Links exact digital release pages in RuTracker BBCode, falls back from Deezer to MusicBrainz-linked Beatport releases, and adds country flag emoji.
 // @author       karpuzikov
 // @match        https://rutracker.org/forum/posting.php*
@@ -99,7 +99,7 @@
             return gmJson(url, {
                 retries: 2,
                 headers: {
-                    'User-Agent': `${SCRIPT_NAME}/1.1.0 (Tampermonkey userscript)`,
+                    'User-Agent': `${SCRIPT_NAME}/1.1.1 (Tampermonkey userscript)`,
                 },
             });
         });
@@ -309,6 +309,14 @@
 
     function isDeezerAlbumUrl(url) {
         return /https?:\/\/(?:www\.)?deezer\.com\/(?:[^/]+\/)?album\/\d+(?:[/?#]|$)/i.test(String(url || ''));
+    }
+
+    function isBeatportReleaseUrl(url) {
+        return /https?:\/\/(?:www\.)?beatport\.com\/release\/[^?#\s]+/i.test(String(url || ''));
+    }
+
+    function isResolvedDigitalReleaseUrl(url) {
+        return isDeezerAlbumUrl(url) || isBeatportReleaseUrl(url);
     }
 
     async function deezerAlbumById(id) {
@@ -746,19 +754,25 @@
 
     const PROVIDERS = [
         {
-            key: 'deezer',
-            label: 'Deezer',
-            sourceRegex: /(\[b\]Носитель\|Источник\[\/b\]\s*:\s*WEB\|)(?:Deezer|\[url=(?:"([^"]+)"|([^\]]+))\]Deezer\[\/url\])(\[hr\])/i,
-            isReleaseUrl: isDeezerAlbumUrl,
+            key: 'digital-release',
+            label: 'Digital release',
+            sourceRegex: /(\[b\]Носитель\|Источник\[\/b\]\s*:\s*)(?:(WEB)\|(?:Deezer|\[url=(?:"([^"]+)"|([^\]]+))\]Deezer\[\/url\]|(redacted\.(?:sh|ch)))|\[url=(?:"([^"]+)"|([^\]]+))\]WEB\[\/url\]\|(redacted\.(?:sh|ch)))(\[hr\])/i,
+            isReleaseUrl: isResolvedDigitalReleaseUrl,
             resolve: resolveDeezer,
             makeLinkedSource(match, resolution) {
-                if (resolution.kind === 'beatport') {
-                    return `[b]Носитель|Источник[/b]: [url=${resolution.url}]WEB[/url]|redacted.sh${match[4]}`;
+                const originalRedacted = (match[5] || match[8] || '').trim();
+                if (originalRedacted) {
+                    return `${match[1]}[url=${resolution.url}]WEB[/url]|${originalRedacted}${match[9]}`;
                 }
-                return `${match[1]}[url=${resolution.url}]Deezer[/url]${match[4]}`;
+
+                if (resolution.kind === 'beatport') {
+                    return `${match[1]}[url=${resolution.url}]WEB[/url]|redacted.sh${match[9]}`;
+                }
+
+                return `${match[1]}WEB|[url=${resolution.url}]Deezer[/url]${match[9]}`;
             },
             getCurrentUrl(match) {
-                return (match[2] || match[3] || '').trim();
+                return (match[3] || match[4] || match[6] || match[7] || '').trim();
             },
         },
     ];
