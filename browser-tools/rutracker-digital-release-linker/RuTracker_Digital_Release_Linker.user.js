@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         RuTracker Digital Release Linker
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.1.6
+// @version      1.1.7
 // @description  Links exact digital release pages in RuTracker BBCode, falls back from Deezer to MusicBrainz-linked Beatport releases, and adds country flag emoji.
 // @author       karpuzikov
 // @match        https://rutracker.org/forum/posting.php*
@@ -99,7 +99,7 @@
             return gmJson(url, {
                 retries: 2,
                 headers: {
-                    'User-Agent': `${SCRIPT_NAME}/1.1.6 (Tampermonkey userscript)`,
+                    'User-Agent': `${SCRIPT_NAME}/1.1.7 (Tampermonkey userscript)`,
                 },
             });
         });
@@ -883,17 +883,43 @@
         const status = document.createElement('span');
         status.style.cssText = 'font-size:11px;';
 
-        wrapper.append(button, status);
+        const notFoundDetails = document.createElement('details');
+        notFoundDetails.style.cssText = 'display:none;flex-basis:100%;margin-top:2px;font-size:11px;';
+        notFoundDetails.open = true;
+
+        const notFoundSummary = document.createElement('summary');
+        notFoundSummary.style.cssText = 'cursor:pointer;font-weight:bold;';
+
+        const notFoundList = document.createElement('div');
+        notFoundList.style.cssText = 'white-space:pre-wrap;margin:4px 0 0 16px;line-height:1.4;';
+
+        notFoundDetails.append(notFoundSummary, notFoundList);
+        wrapper.append(button, status, notFoundDetails);
         textarea.parentNode.insertBefore(wrapper, textarea);
-        return { wrapper, button, status };
+        return { wrapper, button, status, notFoundDetails, notFoundSummary, notFoundList };
     }
 
     function setStatus(statusNode, text) {
         statusNode.textContent = text;
     }
 
+    function showNotFound(ui, titles) {
+        if (!titles.length) {
+            ui.notFoundDetails.style.display = 'none';
+            ui.notFoundSummary.textContent = '';
+            ui.notFoundList.textContent = '';
+            return;
+        }
+
+        ui.notFoundSummary.textContent = `Not found (${titles.length})`;
+        ui.notFoundList.textContent = titles.map((title) => `- ${title}`).join('\n');
+        ui.notFoundDetails.style.display = 'block';
+        ui.notFoundDetails.open = true;
+    }
+
     async function runLinker(textarea, ui) {
         const originalText = textarea.value;
+        showNotFound(ui, []);
         const countryResult = addCountryFlags(originalText);
         const workingText = countryResult.text;
         const topicArtist = getTopicArtist(workingText);
@@ -961,13 +987,13 @@
             });
 
             const replacements = [];
+            const notFoundTitles = [];
             let linked = 0;
             let beatportFallbacks = 0;
-            let notFound = 0;
 
             for (const result of results) {
                 if (!result.resolution?.url) {
-                    notFound += 1;
+                    notFoundTitles.push(result.candidate.meta.spoilerTitle);
                     console.warn(`[${SCRIPT_NAME}] Release not resolved: ${result.candidate.meta.spoilerTitle}`);
                     continue;
                 }
@@ -1005,8 +1031,9 @@
             if (beatportFallbacks) parts.push(`Beatport fallback: ${beatportFallbacks}`);
             if (countryResult.changed) parts.push(`country flags: ${countryResult.changed}`);
             if (alreadyLinked) parts.push(`already linked: ${alreadyLinked}`);
-            if (notFound) parts.push(`not found: ${notFound}`);
+            if (notFoundTitles.length) parts.push(`not found: ${notFoundTitles.length}`);
             setStatus(ui.status, parts.join(' | '));
+            showNotFound(ui, notFoundTitles);
         } finally {
             ui.button.disabled = false;
         }
