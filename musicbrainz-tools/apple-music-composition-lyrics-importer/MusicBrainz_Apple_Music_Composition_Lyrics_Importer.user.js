@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         Apple Music works credits -> MusicBrainz
+// @name         Apple Music Credits -> MusicBrainz
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.1.1
-// @description  Automatically resolve the correct Apple Music release by MusicBrainz barcode/link and import Composition & Lyrics credits into Work relationships.
+// @version      2.0.0
+// @description  Resolve the correct Apple Music release and import supported Apple Music credits to the proper MusicBrainz Recording, Work, or Release relationships.
 // @author       karpuzikov
 // @license      MIT
 // @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/apple-music-composition-lyrics-importer/MusicBrainz_Apple_Music_Composition_Lyrics_Importer.user.js
@@ -30,18 +30,44 @@
     const FALLBACK_STOREFRONTS = ['us', 'gb', 'de', 'fr', 'ca', 'au', 'jp', 'ua'];
     let appleToken = '';
 
-    const LINK_TYPES = {
-        songwriter: { id: 167, label: 'writer' },
-        writer: { id: 167, label: 'writer' },
-        composer: { id: 168, label: 'composer' },
-        lyrics: { id: 165, label: 'lyricist' },
-        lyricist: { id: 165, label: 'lyricist' },
-        librettist: { id: 169, label: 'librettist' },
-        translator: { id: 872, label: 'translator' },
-        arranger: { id: 293, label: 'arranger' },
-        'instrument arranger': { id: 282, label: 'instrument arranger' },
-        orchestrator: { id: 164, label: 'orchestrator' },
-        'vocal arranger': { id: 294, label: 'vocal arranger' },
+    const ROLE_TYPES = {
+        // Work-level authorship. These describe the composition itself.
+        songwriter: { target: 'work', id: 167, label: 'writer' },
+        writer: { target: 'work', id: 167, label: 'writer' },
+        composer: { target: 'work', id: 168, label: 'composer' },
+        lyrics: { target: 'work', id: 165, label: 'lyricist' },
+        lyricist: { target: 'work', id: 165, label: 'lyricist' },
+        librettist: { target: 'work', id: 169, label: 'librettist' },
+        translator: { target: 'work', id: 872, label: 'translator' },
+
+        // Recording-level performance / production.
+        programming: { target: 'recording', id: 132, label: 'programming' },
+        programmer: { target: 'recording', id: 132, label: 'programming' },
+        producer: { target: 'recording', id: 141, label: 'producer' },
+        engineer: { target: 'recording', id: 138, label: 'engineer' },
+        'audio engineer': { target: 'recording', id: 140, label: 'audio engineer' },
+        'sound engineer': { target: 'recording', id: 133, label: 'sound engineer' },
+        mixer: { target: 'recording', id: 143, label: 'mixer' },
+        'mix engineer': { target: 'recording', id: 143, label: 'mixer' },
+        'mixing engineer': { target: 'recording', id: 143, label: 'mixer' },
+        'recording engineer': { target: 'recording', id: 139, label: 'recording engineer' },
+        editor: { target: 'recording', id: 144, label: 'editor' },
+        remixer: { target: 'recording', id: 153, label: 'remixer' },
+        'dj mixer': { target: 'recording', id: 155, label: 'DJ-mixer' },
+        performer: { target: 'recording', id: 156, label: 'performer' },
+        vocal: { target: 'recording', id: 149, label: 'vocal' },
+        vocals: { target: 'recording', id: 149, label: 'vocal' },
+        conductor: { target: 'recording', id: 151, label: 'conductor' },
+        orchestra: { target: 'recording', id: 150, label: 'performing orchestra' },
+        arranger: { target: 'recording', id: 297, label: 'arranger' },
+        'vocal arranger': { target: 'recording', id: 298, label: 'vocal arranger' },
+        orchestrator: { target: 'recording', id: 300, label: 'orchestrator' },
+        'balance engineer': { target: 'recording', id: 726, label: 'balance engineer' },
+        'field recordist': { target: 'recording', id: 1011, label: 'field recordist' },
+
+        // MusicBrainz explicitly keeps mastering at release level.
+        mastering: { target: 'release', id: 42, label: 'mastering' },
+        'mastering engineer': { target: 'release', id: 42, label: 'mastering' },
     };
 
     const REL_DEFAULTS = {
@@ -161,29 +187,38 @@
         );
     }
 
-    function getCompositionLyrics(serverData) {
-        let section = null;
+    function getAppleCredits(serverData) {
+        const credits = [];
+        const seen = new Set();
 
         walk(serverData, object => {
-            if (
-                !section &&
-                Array.isArray(object?.items) &&
-                (object.id === 'composer-and-lyrics' || object.title === 'Composition & Lyrics')
-            ) {
-                section = object;
+            if (!Array.isArray(object?.items)) return;
+
+            const section = String(object.title || object.id || '').trim();
+            for (const item of object.items) {
+                const name = String(item?.name || '').trim();
+                const roles = Array.isArray(item?.roleNames)
+                    ? item.roleNames.map(role => String(role).trim()).filter(Boolean)
+                    : [];
+                if (!name || !roles.length) continue;
+
+                for (const role of roles) {
+                    const key = [
+                        normalizeText(name),
+                        normalizeText(role),
+                    ].join('|');
+                    if (seen.has(key)) continue;
+                    seen.add(key);
+
+                    credits.push({
+                        name,
+                        role,
+                        section,
+                    });
+                }
             }
         });
 
-        if (!section) return [];
-
-        const credits = [];
-        for (const item of section.items || []) {
-            const name = String(item?.name || '').trim();
-            const roles = Array.isArray(item?.roleNames)
-                ? item.roleNames.map(role => String(role).trim()).filter(Boolean)
-                : [];
-            if (name && roles.length) credits.push({ name, roles });
-        }
         return credits;
     }
 
@@ -628,31 +663,44 @@
 
     function classifyRole(role) {
         const normalized = normalizeText(role);
-        return LINK_TYPES[normalized] || null;
+        return ROLE_TYPES[normalized] || null;
     }
 
     function flattenSupportedCredits(credits) {
         const output = [];
 
         for (const credit of credits) {
-            for (const role of credit.roles) {
-                const link = classifyRole(role);
-                if (link) {
-                    output.push({
-                        appleName: credit.name,
-                        appleRole: role,
-                        linkTypeID: link.id,
-                        mbRole: link.label,
-                    });
-                }
-            }
+            const link = classifyRole(credit.role);
+            if (!link) continue;
+
+            output.push({
+                appleName: credit.name,
+                appleRole: credit.role,
+                appleSection: credit.section,
+                target: link.target,
+                linkTypeID: link.id,
+                mbRole: link.label,
+            });
         }
 
         return output;
     }
 
-    function existingRelationship(work, artist, linkTypeID) {
-        const relationships = work?.relationships || [];
+    function targetEntityForCredit(row, credit) {
+        if (credit.target === 'recording') {
+            return row.mbTrack?.recording || null;
+        }
+        if (credit.target === 'work') {
+            return row.works.length === 1 ? row.works[0] : null;
+        }
+        if (credit.target === 'release') {
+            return MB?.relationshipEditor?.state?.entity || null;
+        }
+        return null;
+    }
+
+    function existingRelationship(sourceEntity, artist, linkTypeID) {
+        const relationships = sourceEntity?.relationships || [];
         const artistGid = artist?.gid;
 
         return relationships.some(rel => {
@@ -668,18 +716,18 @@
         });
     }
 
-    function addRelationship(work, artist, linkTypeID, creditedAs) {
+    function addRelationship(sourceEntity, artist, linkTypeID, creditedAs) {
         const backward =
-            work.entityType === artist.entityType
+            sourceEntity.entityType === artist.entityType
                 ? false
-                : work.entityType > artist.entityType;
+                : sourceEntity.entityType > artist.entityType;
 
-        const entity0 = backward ? artist : work;
-        const entity1 = backward ? work : artist;
+        const entity0 = backward ? artist : sourceEntity;
+        const entity1 = backward ? sourceEntity : artist;
 
         MB.relationshipEditor.dispatch({
             type: 'update-relationship-state',
-            sourceEntity: work,
+            sourceEntity,
             batchSelectionCount: null,
             creditsToChangeForSource: '',
             creditsToChangeForTarget: '',
@@ -709,8 +757,8 @@
         const note = document.getElementById('edit-note-text');
         if (!note || state.applied) return;
 
-        const sourceLine = `Apple Music Composition & Lyrics: ${state.appleUrl}`;
-        const scriptLine = 'Imported with Apple Music works credits -> MusicBrainz\nScript: https://github.com/karpuzikov/userscripts/blob/main/musicbrainz-tools/apple-music-composition-lyrics-importer/MusicBrainz_Apple_Music_Composition_Lyrics_Importer.user.js';
+        const sourceLine = `Apple Music credits: ${state.appleUrl}`;
+        const scriptLine = 'Imported with Apple Music Credits -> MusicBrainz\nScript: https://github.com/karpuzikov/userscripts/blob/main/musicbrainz-tools/apple-music-composition-lyrics-importer/MusicBrainz_Apple_Music_Composition_Lyrics_Importer.user.js';
         const current = note.value.trimEnd();
         const addition = `${sourceLine}\n${scriptLine}`;
 
@@ -790,18 +838,24 @@
         if (!container) return;
 
         const rows = state.rows.map(row => {
+            const importable = row.supportedCredits.filter(credit => targetEntityForCredit(row, credit));
+            const unsupported = row.credits.filter(credit => !classifyRole(credit.role));
+            const blockedWork = row.supportedCredits.filter(
+                credit => credit.target === 'work' && !targetEntityForCredit(row, credit)
+            );
+
             const creditsText = row.supportedCredits.length
                 ? row.supportedCredits
-                    .map(item => `${item.appleName} (${item.appleRole} -> ${item.mbRole})`)
+                    .map(item =>
+                        `${item.appleName} (${item.appleRole} -> ${item.target}: ${item.mbRole})`
+                    )
                     .join(', ')
                 : row.credits.length
-                    ? row.credits
-                        .map(item => `${item.name} (${item.roles.join(', ')})`)
-                        .join(', ')
-                    : 'No Composition & Lyrics credits';
+                    ? row.credits.map(item => `${item.name} (${item.role})`).join(', ')
+                    : 'No Apple Music credits found';
 
-            let status = 'Ready';
-            let css = 'ok';
+            let status = `${importable.length} importable`;
+            let css = importable.length ? 'ok' : 'warn';
 
             if (row.error) {
                 status = row.error;
@@ -812,22 +866,26 @@
             } else if (!row.titleMatch) {
                 status = `Title mismatch: MusicBrainz "${row.mbTitle}"`;
                 css = 'bad';
-            } else if (row.works.length === 0) {
-                status = 'No Work linked to this recording';
-                css = 'bad';
-            } else if (row.works.length > 1) {
-                status = `Multiple Works linked (${row.works.length}) - skipped`;
-                css = 'bad';
-            } else if (!row.supportedCredits.length) {
-                status = 'No supported Composition & Lyrics roles';
-                css = 'warn';
+            } else {
+                const details = [];
+                if (blockedWork.length) {
+                    details.push(
+                        row.works.length === 0
+                            ? `${blockedWork.length} Work credit(s) skipped - no Work linked`
+                            : `${blockedWork.length} Work credit(s) skipped - multiple Works linked`
+                    );
+                }
+                if (unsupported.length) {
+                    const roles = [...new Set(unsupported.map(item => item.role))];
+                    details.push(`unsupported: ${roles.join(', ')}`);
+                }
+                if (details.length) status += `; ${details.join('; ')}`;
             }
 
             return `
                 <tr>
                     <td>${row.appleTrack.discNumber}.${row.appleTrack.trackNumber}</td>
                     <td>${escapeHtml(row.appleTrack.title)}</td>
-                    <td>${escapeHtml(row.works[0]?.name || '')}</td>
                     <td>${escapeHtml(creditsText)}</td>
                     <td class="${css}">${escapeHtml(status)}</td>
                 </tr>
@@ -841,9 +899,8 @@
                     <thead>
                         <tr>
                             <th>#</th>
-                            <th>Apple Music</th>
-                            <th>MusicBrainz Work</th>
-                            <th>Composition & Lyrics</th>
+                            <th>Apple Music track</th>
+                            <th>Credits -> MusicBrainz target</th>
                             <th>Status</th>
                         </tr>
                     </thead>
@@ -901,15 +958,15 @@
         container.innerHTML = `
             <h3>Artist mapping</h3>
             <p class="am2mb-hint">
-                Exact unique MusicBrainz name/alias matches are selected automatically.
-                Review every mapping before applying.
+                Recording credits are added to Recordings. Songwriting/composition credits are added to Works.
+                Mastering is added at Release level. Review every artist match before applying.
             </p>
             <div class="am2mb-scroll">
                 <table class="tbl">
                     <thead>
                         <tr>
                             <th>Apple Music credit</th>
-                            <th>Role(s)</th>
+                            <th>Role(s) -> target</th>
                             <th>MusicBrainz candidate</th>
                             <th>Manual MBID / URL</th>
                             <th>Match</th>
@@ -920,7 +977,7 @@
             </div>
             <p>
                 <button type="button" id="am2mb-apply" class="positive">
-                    Apply credits to Works
+                    Apply supported credits
                 </button>
             </p>
         `;
@@ -971,7 +1028,7 @@
             }
 
             state.appleTracks = appleTracks;
-            setStatus(`Found ${appleTracks.length} tracks. Loading Composition & Lyrics credits...`);
+            setStatus(`Found ${appleTracks.length} tracks. Loading all Apple Music credits...`);
 
             const creditResults = await mapPool(appleTracks, 4, async (track, index) => {
                 setStatus(
@@ -982,7 +1039,7 @@
                 const data = parseAppleServerData(html);
                 return {
                     creditsUrl,
-                    credits: getCompositionLyrics(data),
+                    credits: getAppleCredits(data),
                 };
             });
 
@@ -1008,16 +1065,11 @@
             });
 
             for (const row of state.rows) {
-                if (
-                    row.error ||
-                    !row.mbTrack ||
-                    !row.titleMatch ||
-                    row.works.length !== 1
-                ) {
-                    continue;
-                }
+                if (row.error || !row.mbTrack || !row.titleMatch) continue;
 
                 for (const credit of row.supportedCredits) {
+                    if (!targetEntityForCredit(row, credit)) continue;
+
                     const key = normalizeText(credit.appleName);
                     if (!state.people.has(key)) {
                         state.people.set(key, {
@@ -1027,14 +1079,23 @@
                             candidates: [],
                         });
                     }
-                    state.people.get(key).roles.add(credit.appleRole);
+                    state.people.get(key).roles.add(
+                        `${credit.appleRole} -> ${credit.target}`
+                    );
                 }
             }
 
             renderTracks();
 
             if (!state.people.size) {
-                throw new Error('No importable Apple Music Composition & Lyrics credits were found.');
+                const allRoles = [...new Set(
+                    state.rows.flatMap(row => row.credits.map(credit => credit.role))
+                )];
+                throw new Error(
+                    allRoles.length
+                        ? `Apple Music credits were found, but none currently map to a supported MusicBrainz relationship: ${allRoles.join(', ')}`
+                        : 'No Apple Music credits were found.'
+                );
             }
 
             const people = [...state.people.values()];
@@ -1049,16 +1110,18 @@
 
             renderPeople();
 
-            const readyTracks = state.rows.filter(row =>
-                !row.error &&
-                row.mbTrack &&
-                row.titleMatch &&
-                row.works.length === 1 &&
-                row.supportedCredits.length
-            ).length;
+            const importableCount = state.rows.reduce(
+                (sum, row) => sum + row.supportedCredits.filter(
+                    credit =>
+                        row.mbTrack &&
+                        row.titleMatch &&
+                        targetEntityForCredit(row, credit)
+                ).length,
+                0
+            );
 
             setStatus(
-                `Loaded ${appleTracks.length} Apple Music tracks. ${readyTracks} track(s) are ready for review.`,
+                `Loaded ${appleTracks.length} Apple Music tracks. ${importableCount} relationship credit(s) are ready for review.`,
                 'ok'
             );
         } catch (error) {
@@ -1098,48 +1161,60 @@
             }
 
             let added = 0;
+            let addedRecording = 0;
+            let addedWork = 0;
+            let addedRelease = 0;
             let skippedExisting = 0;
-            let skippedTracks = 0;
+            let skippedUnavailable = 0;
+            const created = new Set();
 
             for (const row of state.rows) {
-                if (
-                    row.error ||
-                    !row.mbTrack ||
-                    !row.titleMatch ||
-                    row.works.length !== 1 ||
-                    !row.supportedCredits.length
-                ) {
-                    skippedTracks++;
+                if (row.error || !row.mbTrack || !row.titleMatch || !row.supportedCredits.length) {
                     continue;
                 }
 
-                const work = row.works[0];
-
                 for (const credit of row.supportedCredits) {
+                    const sourceEntity = targetEntityForCredit(row, credit);
+                    if (!sourceEntity) {
+                        skippedUnavailable++;
+                        continue;
+                    }
+
                     const artist = mapping.get(normalizeText(credit.appleName));
                     if (!artist) continue;
 
-                    if (existingRelationship(work, artist, credit.linkTypeID)) {
+                    const sourceId = sourceEntity.gid || sourceEntity.id || sourceEntity.name;
+                    const artistId = artist.gid || artist.id || artist.name;
+                    const key = [sourceId, artistId, credit.linkTypeID].join('|');
+
+                    if (
+                        created.has(key) ||
+                        existingRelationship(sourceEntity, artist, credit.linkTypeID)
+                    ) {
                         skippedExisting++;
                         continue;
                     }
 
                     addRelationship(
-                        work,
+                        sourceEntity,
                         artist,
                         credit.linkTypeID,
                         credit.appleName
                     );
+                    created.add(key);
                     added++;
+
+                    if (credit.target === 'recording') addedRecording++;
+                    else if (credit.target === 'work') addedWork++;
+                    else if (credit.target === 'release') addedRelease++;
                 }
             }
 
             addEditNote();
 
             setStatus(
-                `Applied ${added} Work relationship(s). ` +
-                `${skippedExisting} existing relationship(s) skipped. ` +
-                `${skippedTracks} track(s) skipped. Review the green edits, then submit normally.`,
+                `Applied ${added} relationship(s): ${addedRecording} Recording, ${addedWork} Work, ${addedRelease} Release. ` +
+                `${skippedExisting} existing/duplicate relationship(s) skipped, ${skippedUnavailable} unavailable target(s) skipped. Review the green edits, then submit normally.`,
                 'ok'
             );
         } catch (error) {
@@ -1225,7 +1300,7 @@
                 }
             </style>
 
-            <h2>Apple Music works credits -> MusicBrainz</h2>
+            <h2>Apple Music Credits -> MusicBrainz</h2>
             <div class="am2mb-controls">
                 <button type="button" id="am2mb-load">Find Apple Music & Load Credits</button>
             </div>
