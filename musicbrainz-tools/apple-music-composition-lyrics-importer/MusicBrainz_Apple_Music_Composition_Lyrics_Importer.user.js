@@ -1,11 +1,11 @@
 // ==UserScript==
 // @name         Apple Music Credits -> MusicBrainz
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      2.1.2
+// @version      2.1.3
 // @description  Resolve the correct Apple Music release and import supported Apple Music credits to the proper MusicBrainz Recording, Work, or Release relationships.
 // @author       karpuzikov
 // @license      MIT
-// @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/apple-music-composition-lyrics-importer/MusicBrainz_Apple_Music_Composition_Lyrics_Importer.user.js?v=2.1.2
+// @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/apple-music-composition-lyrics-importer/MusicBrainz_Apple_Music_Composition_Lyrics_Importer.user.js?v=2.1.3
 // @updateURL    https://github.com/karpuzikov/userscripts/raw/refs/heads/main/musicbrainz-tools/apple-music-composition-lyrics-importer/MusicBrainz_Apple_Music_Composition_Lyrics_Importer.user.js
 // @supportURL   https://github.com/karpuzikov/userscripts
 // @match        https://musicbrainz.org/release/*/edit-relationships
@@ -24,7 +24,7 @@
     'use strict';
 
     const PAGE = typeof unsafeWindow !== 'undefined' ? unsafeWindow : window;
-    const MB = PAGE.MB;
+    let MB = PAGE.MB;
     const APPLE_API_BASE = 'https://amp-api.music.apple.com/v1';
     const APPLE_TOKEN_BOOTSTRAP_URL = 'https://music.apple.com/us/browse';
     const RECORDING_OF_LINK_TYPE_ID = 278;
@@ -106,6 +106,28 @@
 
     function wait(ms) {
         return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    async function ensureMusicBrainzEditorReady(timeout = 30000) {
+        const started = Date.now();
+
+        while (Date.now() - started < timeout) {
+            const liveMb = PAGE.MB;
+            if (
+                liveMb?.relationshipEditor?.state?.entity &&
+                typeof liveMb.relationshipEditor.dispatch === 'function'
+            ) {
+                MB = liveMb;
+                return MB;
+            }
+
+            setStatus('Waiting for MusicBrainz relationship editor...');
+            await wait(250);
+        }
+
+        throw new Error(
+            'MusicBrainz relationship editor did not become ready within 30 seconds. Reload the page and try again.'
+        );
     }
 
     function musicBrainzRetryDelay(response, attempt) {
@@ -705,6 +727,7 @@
     }
 
     function getMbTrack(discNumber, trackNumber) {
+        MB = PAGE.MB || MB;
         const mediums = MB?.relationshipEditor?.state?.entity?.mediums || [];
         const medium =
             mediums.find(item => Number(item.position) === Number(discNumber)) ||
@@ -1219,9 +1242,7 @@
         const button = document.getElementById('am2mb-load');
 
         try {
-            if (!MB?.relationshipEditor?.state?.entity) {
-                throw new Error('MusicBrainz relationship editor is not ready.');
-            }
+            await ensureMusicBrainzEditorReady();
 
             state.appleUrl = '';
             state.mbBarcode = '';
@@ -1381,6 +1402,7 @@
 
         try {
             button.disabled = true;
+            await ensureMusicBrainzEditorReady();
 
             const entityCache = new Map();
             const mapping = new Map();
