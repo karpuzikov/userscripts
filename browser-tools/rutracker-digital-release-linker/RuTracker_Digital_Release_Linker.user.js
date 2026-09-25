@@ -1,11 +1,11 @@
 // ==UserScript==
 // @name         RuTracker Digital Release Linker
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.1.10
+// @version      1.1.11
 // @description  Links exact digital release pages in RuTracker BBCode, falls back from Deezer to MusicBrainz-linked Beatport releases, and adds country flag emoji.
 // @author       karpuzikov
-// @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/browser-tools/rutracker-digital-release-linker/RuTracker_Digital_Release_Linker.user.js?v=1.1.10
-// @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/browser-tools/rutracker-digital-release-linker/RuTracker_Digital_Release_Linker.user.js?v=1.1.10
+// @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/browser-tools/rutracker-digital-release-linker/RuTracker_Digital_Release_Linker.user.js?v=1.1.11
+// @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/browser-tools/rutracker-digital-release-linker/RuTracker_Digital_Release_Linker.user.js?v=1.1.11
 // @match        https://rutracker.org/forum/posting.php*
 // @grant        GM_xmlhttpRequest
 // @connect      api.deezer.com
@@ -28,7 +28,7 @@
         musicBrainzCatalog: new Map(),
         musicBrainzBarcode: new Map(),
         musicBrainzIdentifier: new Map(),
-        musicBrainzReleaseGroup: new Map(),
+        musicBrainzReleasePage: new Map(),
     };
 
     let mbQueue = Promise.resolve();
@@ -102,7 +102,7 @@
             return gmJson(url, {
                 retries: 2,
                 headers: {
-                    'User-Agent': `${SCRIPT_NAME}/1.1.10 (Tampermonkey userscript)`,
+                    'User-Agent': `${SCRIPT_NAME}/1.1.11 (Tampermonkey userscript)`,
                 },
             });
         });
@@ -110,6 +110,50 @@
         mbQueue = task.catch(() => undefined);
         return task;
     }
+
+    async function musicBrainzReleasePageStoreUrl(mbid, store) {
+        if (!mbid) return '';
+
+        const cacheKey = `${mbid}|${store}`;
+        if (caches.musicBrainzReleasePage.has(cacheKey)) {
+            return caches.musicBrainzReleasePage.get(cacheKey);
+        }
+
+        const promise = new Promise((resolve) => {
+            GM_xmlhttpRequest({
+                method: 'GET',
+                url: `https://musicbrainz.org/release/${encodeURIComponent(mbid)}`,
+                headers: {
+                    Accept: 'text/html',
+                    'User-Agent': `${SCRIPT_NAME}/1.1.11 (Tampermonkey userscript)`,
+                },
+                timeout: 20000,
+                onload(response) {
+                    const html = String(response.responseText || '').replace(/&amp;/g, '&');
+                    let regex = null;
+
+                    if (store === 'deezer') {
+                        regex = /https?:\/\/(?:www\.)?deezer\.com\/(?:[^/"'<>]+\/)?album\/\d+(?:[^"'<>\s]*)?/i;
+                    } else if (store === 'beatport') {
+                        regex = /https?:\/\/(?:www\.)?beatport\.com\/release\/[^"'<>\s]+/i;
+                    }
+
+                    const match = regex ? html.match(regex) : null;
+                    resolve(match ? match[0] : '');
+                },
+                onerror() {
+                    resolve('');
+                },
+                ontimeout() {
+                    resolve('');
+                },
+            });
+        });
+
+        caches.musicBrainzReleasePage.set(cacheKey, promise);
+        return promise;
+    }
+
 
 
     const COUNTRY_ALIASES = new Map(Object.entries({
@@ -563,20 +607,6 @@
         return mbJson(url).catch(() => null);
     }
 
-    async function musicBrainzReleaseGroupDetails(mbid) {
-        if (!mbid) return null;
-        if (caches.musicBrainzReleaseGroup.has(mbid)) {
-            return caches.musicBrainzReleaseGroup.get(mbid);
-        }
-
-        const promise = mbJson(
-            `https://musicbrainz.org/ws/2/release-group/${encodeURIComponent(mbid)}?inc=url-rels&fmt=json`,
-        ).catch(() => null);
-
-        caches.musicBrainzReleaseGroup.set(mbid, promise);
-        return promise;
-    }
-
     function beatportReleaseUrl(release) {
         const relations = Array.isArray(release?.relations) ? release.relations : [];
         for (const relation of relations) {
@@ -665,15 +695,13 @@
 
         const releases = await musicBrainzReleasesByIdentifier(meta.identifier, meta);
         for (const release of releases) {
-            const releaseUrl = deezerReleaseUrl(release);
-            if (releaseUrl) return { kind: 'deezer', url: releaseUrl };
+            const relationUrl = deezerReleaseUrl(release);
+            if (relationUrl) return { kind: 'deezer', url: relationUrl };
 
-            const releaseGroupId = release?.['release-group']?.id;
-            if (!releaseGroupId) continue;
-
-            const releaseGroup = await musicBrainzReleaseGroupDetails(releaseGroupId);
-            const groupUrl = deezerReleaseUrl(releaseGroup);
-            if (groupUrl) return { kind: 'deezer', url: groupUrl };
+            // Use only the exact MusicBrainz release page. Do not traverse
+            // release groups or guess by metadata.
+            const pageUrl = await musicBrainzReleasePageStoreUrl(release.id, 'deezer');
+            if (pageUrl) return { kind: 'deezer', url: pageUrl };
         }
 
         return null;
@@ -684,15 +712,12 @@
 
         const releases = await musicBrainzReleasesByIdentifier(meta.identifier, meta);
         for (const release of releases) {
-            const releaseUrl = beatportReleaseUrl(release);
-            if (releaseUrl) return { kind: 'beatport', url: releaseUrl };
+            const relationUrl = beatportReleaseUrl(release);
+            if (relationUrl) return { kind: 'beatport', url: relationUrl };
 
-            const releaseGroupId = release?.['release-group']?.id;
-            if (!releaseGroupId) continue;
-
-            const releaseGroup = await musicBrainzReleaseGroupDetails(releaseGroupId);
-            const groupUrl = beatportReleaseUrl(releaseGroup);
-            if (groupUrl) return { kind: 'beatport', url: groupUrl };
+            // Same rule as Deezer: only links present on the exact release page.
+            const pageUrl = await musicBrainzReleasePageStoreUrl(release.id, 'beatport');
+            if (pageUrl) return { kind: 'beatport', url: pageUrl };
         }
 
         return null;
