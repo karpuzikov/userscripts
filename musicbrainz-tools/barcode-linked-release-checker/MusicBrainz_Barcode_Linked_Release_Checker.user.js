@@ -158,4 +158,168 @@
                 match = path.match(/\/album\/[^/]+\/([^/]+)$/i) || path.match(/\/album\/([^/]+)$/i);
                 break;
             case 'beatport':
-                match = path
+                match = path.match(/\/release\/[^/]+\/(\d+)/i) || path.match(/\/release\/(\d+)/i);
+                break;
+            case 'discogs':
+                match = path.match(/\/release\/(\d+)/i);
+                break;
+            default:
+                break;
+        }
+
+        if (match) return `${family}:${match[1].toLowerCase()}`;
+
+        const clean = new URL(url.href);
+        clean.hash = '';
+        clean.search = '';
+        clean.hostname = clean.hostname.toLowerCase().replace(/^www\./, '');
+        clean.pathname = clean.pathname.replace(/\/+$/, '');
+        return `${family || clean.hostname}:${clean.href.toLowerCase()}`;
+    }
+
+    function isDigitalRelease(release) {
+        return Array.isArray(release.media) &&
+            release.media.length > 0 &&
+            release.media.every(medium => medium?.format === 'Digital Media');
+    }
+
+    function releaseRelations(release) {
+        return (release.relations || [])
+            .filter(rel => rel?.['target-type'] === 'url' && !rel?.ended && rel?.url?.resource)
+            .map(rel => rel.url.resource);
+    }
+
+    function harmonyRequest(url) {
+        return new Promise((resolve, reject) => {
+            GM_xmlhttpRequest({
+                method: 'GET',
+                url,
+                headers: { Accept: 'text/html,application/xhtml+xml' },
+                timeout: 60000,
+                onload(response) {
+                    if (response.status >= 200 && response.status < 400) {
+                        resolve({ html: response.responseText, finalUrl: response.finalUrl || url });
+                    } else {
+                        reject(new Error(`Harmony HTTP ${response.status}`));
+                    }
+                },
+                ontimeout() {
+                    reject(new Error('Harmony request timed out'));
+                },
+                onerror() {
+                    reject(new Error('Harmony request failed'));
+                },
+            });
+        });
+    }
+
+    function findReleaseInfoRow(doc, label) {
+        const wanted = label.toLowerCase();
+        return [...doc.querySelectorAll('table.release-info tr')].find(row => {
+            const th = row.querySelector('th');
+            return th && normalizeSpace(th.textContent).toLowerCase() === wanted;
+        });
+    }
+
+    function parseHarmony(html, lookupUrl) {
+        const doc = new DOMParser().parseFromString(html, 'text/html');
+        const release = doc.querySelector('.release');
+        const gtinRow = findReleaseInfoRow(doc, 'GTIN');
+        const linksRow = findReleaseInfoRow(doc, 'External links');
+        const errors = [...doc.querySelectorAll('.message-box.error, .error-message, .page-error')]
+            .map(node => normalizeSpace(node.textContent))
+            .filter(Boolean);
+
+        let gtin = '';
+        if (gtinRow) {
+            const text = normalizeSpace(gtinRow.querySelector('td')?.textContent || '');
+            gtin = text.match(/\b(?:\d{14}|\d{13}|\d{12}|\d{8})\b/)?.[0] || '';
+        }
+
+        const externalLinks = [];
+        if (linksRow) {
+            for (const item of linksRow.querySelectorAll('li')) {
+                const anchor = item.querySelector('a[href]');
+                if (!anchor) continue;
+                const labels = [...item.querySelectorAll('.label')]
+                    .map(node => normalizeSpace(node.textContent).toLowerCase())
+                    .filter(Boolean);
+                externalLinks.push({
+                    url: anchor.href,
+                    types: labels,
+                });
+            }
+        }
+
+        const providers = [...doc.querySelectorAll('.provider-list li[data-provider]')]
+            .map(node => node.dataset.provider || normalizeSpace(node.textContent).split(':')[0])
+            .filter(Boolean);
+
+        return {
+            found: Boolean(release || gtinRow || linksRow),
+            gtin,
+            externalLinks,
+            providers,
+            errors,
+            lookupUrl,
+        };
+    }
+
+    async function lookupHarmonyByUrl(url) {
+        const lookupUrl = `${HARMONY_URL}release?url=${encodeURIComponent(url)}`;
+        try {
+            const response = await harmonyRequest(lookupUrl);
+            const parsed = parseHarmony(response.html, lookupUrl);
+            return {
+                sourceUrl: url,
+                provider: providerFamily(url),
+                ...parsed,
+                state: parsed.gtin ? 'ok' : (parsed.found ? 'no-gtin' : 'failed'),
+            };
+        } catch (error) {
+            return {
+                sourceUrl: url,
+                provider: providerFamily(url),
+                found: false,
+                gtin: '',
+                externalLinks: [],
+                providers: [],
+                errors: [error.message],
+                lookupUrl,
+                state: 'failed',
+            };
+        }
+    }
+
+    async function lookupHarmonyByBarcode(barcode) {
+        const lookupUrl = `${HARMONY_URL}release?gtin=${encodeURIComponent(barcode)}&category=default`;
+        try {
+            const response = await harmonyRequest(lookupUrl);
+            const parsed = parseHarmony(response.html, lookupUrl);
+            parsed.externalLinks = parsed.externalLinks.filter(link => providerFamily(link.url));
+            return parsed;
+        } catch (error) {
+            return {
+                found: false,
+                gtin: '',
+                externalLinks: [],
+                providers: [],
+                errors: [error.message],
+                lookupUrl,
+            };
+        }
+    }
+
+    async function mapPool(items, concurrency, worker) {
+        const results = new Array(items.length);
+        let next = 0;
+
+        async function run() {
+            while (true) {
+                const index = next++;
+                if (index >= items.length) return;
+                results[index] = await worker(items[index], index);
+            }
+        }
+
+        await Promise.all(Array.from({ length: Math.min(concurren
