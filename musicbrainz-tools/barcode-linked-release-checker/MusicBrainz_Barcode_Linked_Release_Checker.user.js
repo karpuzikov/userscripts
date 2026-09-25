@@ -598,4 +598,155 @@
             form.appendChild(input);
         };
 
-        if (correction.newBarcode
+        if (correction.newBarcode) addField('barcode', correction.newBarcode);
+
+        const seedLinks = flattenSeedLinks(correction.addLinks);
+        seedLinks.forEach((link, index) => {
+            addField(`urls.${index}.url`, link.url);
+            if (link.linkTypeId) addField(`urls.${index}.link_type`, link.linkTypeId);
+        });
+
+        addField('edit_note', makeEditNote(correction));
+        document.body.appendChild(form);
+        form.submit();
+        form.remove();
+    }
+
+    function cleanupExpiredTasks() {
+        const maxAge = 60 * 60 * 1000;
+        for (let i = localStorage.length - 1; i >= 0; i--) {
+            const key = localStorage.key(i);
+            if (!key?.startsWith(TASK_PREFIX)) continue;
+            try {
+                const task = JSON.parse(localStorage.getItem(key));
+                if (!task?.created || Date.now() - task.created > maxAge) localStorage.removeItem(key);
+            } catch {
+                localStorage.removeItem(key);
+            }
+        }
+    }
+
+    function findExistingUrlRow(url) {
+        const wantedKey = providerEntityKey(url);
+        const rows = [...document.querySelectorAll('#external-links-editor tr.external-link-item')];
+        return rows.find(row => {
+            const anchors = [...row.querySelectorAll('a[href]')];
+            return anchors.some(anchor => {
+                try {
+                    return providerEntityKey(anchor.href) === wantedKey;
+                } catch {
+                    return false;
+                }
+            });
+        }) || null;
+    }
+
+    async function waitFor(predicate, timeout = 20000, interval = 250) {
+        const started = Date.now();
+        while (Date.now() - started < timeout) {
+            const value = predicate();
+            if (value) return value;
+            await sleep(interval);
+        }
+        return null;
+    }
+
+    function showEditBanner(task, removed, missing) {
+        const banner = document.createElement('div');
+        banner.id = 'mb-barcode-link-checker-edit-banner';
+        banner.style.cssText = [
+            'margin:10px 0',
+            'padding:10px 12px',
+            'border:1px solid #b58b00',
+            'border-radius:5px',
+            'background:#fff7cf',
+            'color:#222',
+            'font-weight:600',
+        ].join(';');
+
+        const parts = ['Barcode/link checker staged this correction. Review every change before submitting.'];
+        if (task.newBarcode) parts.push(`Barcode staged: ${task.newBarcode}.`);
+        if (task.addLinks?.length) parts.push(`Added link seeds: ${task.addLinks.length}.`);
+        if (task.removeUrls?.length) parts.push(`Wrong links removed from editor: ${removed}/${task.removeUrls.length}.`);
+        if (missing.length) parts.push(`Could not locate for automatic removal: ${missing.join(', ')}.`);
+        banner.textContent = parts.join(' ');
+
+        const editor = document.getElementById('release-editor');
+        if (editor?.parentElement) editor.parentElement.insertBefore(banner, editor);
+        else document.body.prepend(banner);
+    }
+
+    async function applyPendingEditTask() {
+        cleanupExpiredTasks();
+        const taskId = new URL(location.href).searchParams.get('barcode-link-checker');
+        if (!taskId) return false;
+
+        const key = `${TASK_PREFIX}${taskId}`;
+        let task;
+        try {
+            task = JSON.parse(localStorage.getItem(key));
+        } catch {
+            task = null;
+        }
+        if (!task) return false;
+
+        await waitFor(() => document.querySelector('#external-links-editor'));
+        await waitFor(() => document.querySelectorAll('#external-links-editor tr.external-link-item').length > 0, 20000);
+
+        let removed = 0;
+        const missing = [];
+        for (const url of task.removeUrls || []) {
+            let row = null;
+            for (let attempt = 0; attempt < 20 && !row; attempt++) {
+                row = findExistingUrlRow(url);
+                if (!row) await sleep(250);
+            }
+            const button = row?.querySelector('button.remove-item');
+            if (button) {
+                button.click();
+                removed++;
+                await sleep(100);
+            } else {
+                missing.push(url);
+            }
+        }
+
+        localStorage.removeItem(key);
+        showEditBanner(task, removed, missing);
+
+        const cleanUrl = new URL(location.href);
+        cleanUrl.searchParams.delete('barcode-link-checker');
+        history.replaceState(null, '', cleanUrl.href);
+        return true;
+    }
+
+    function resultStatus(result) {
+        const correction = result.correction;
+        if (hasCorrection(correction)) return 'Correction prepared';
+        if (correction.ambiguous) return 'Manual review required';
+        const readable = result.checks.filter(check => check.gtin);
+        if (readable.length && readable.every(check => equalGtin(check.gtin, result.release.barcode))) return 'OK';
+        return correction.notes[0] || 'No correction';
+    }
+
+    function resultDetails(result) {
+        const rows = [];
+        for (const check of result.checks) {
+            const status = check.gtin
+                ? (equalGtin(check.gtin, result.release.barcode) ? 'MATCH' : 'MISMATCH')
+                : (check.state === 'failed' ? 'UNREADABLE' : 'NO GTIN');
+            rows.push(`
+                <li>
+                    <strong>${escapeHtml(providerLabel(check.sourceUrl))}</strong>: 
+                    <a href="${escapeHtml(check.sourceUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(check.sourceUrl)}</a>
+                    -> <code>${escapeHtml(check.gtin || '[none]')}</code> - ${status}
+                </li>
+            `);
+        }
+        if (!rows.length) rows.push('<li>No Harmony-supported linked release pages.</li>');
+        return rows.join('');
+    }
+
+    function showResults(results) {
+        document.getElementById('mb-barcode-checker-results')?.remove();
+        const corrections = results.filter(result =
