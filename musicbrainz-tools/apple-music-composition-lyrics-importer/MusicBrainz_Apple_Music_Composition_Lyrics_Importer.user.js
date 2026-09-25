@@ -1,11 +1,11 @@
 // ==UserScript==
 // @name         Apple Music Credits -> MusicBrainz
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      2.1.4
+// @version      2.2.0
 // @description  Resolve the correct Apple Music release and import supported Apple Music credits to the proper MusicBrainz Recording, Work, or Release relationships.
 // @author       karpuzikov
 // @license      MIT
-// @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/tampermonkey-apple-music-credits-v2.1.4/musicbrainz-tools/apple-music-composition-lyrics-importer/MusicBrainz_Apple_Music_Composition_Lyrics_Importer.user.js
+// @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/tampermonkey-apple-music-credits-v2.2.0/musicbrainz-tools/apple-music-composition-lyrics-importer/MusicBrainz_Apple_Music_Composition_Lyrics_Importer.user.js
 // @updateURL    https://github.com/karpuzikov/userscripts/raw/refs/heads/main/musicbrainz-tools/apple-music-composition-lyrics-importer/MusicBrainz_Apple_Music_Composition_Lyrics_Importer.user.js
 // @supportURL   https://github.com/karpuzikov/userscripts
 // @match        https://musicbrainz.org/release/*/edit-relationships
@@ -101,6 +101,8 @@
         appleTracks: [],
         rows: [],
         people: new Map(),
+        releaseArtists: [],
+        aliasEdits: 0,
         applied: false,
     };
 
@@ -434,12 +436,19 @@
         const mbid = releaseMbidFromLocation();
         if (!mbid) throw new Error('Cannot determine the MusicBrainz release MBID.');
 
-        const releaseUrl = `/ws/2/release/${encodeURIComponent(mbid)}?inc=url-rels&fmt=json`;
+        const releaseUrl = `/ws/2/release/${encodeURIComponent(mbid)}?inc=url-rels+artist-credits&fmt=json`;
         const release = await musicBrainzWsJson(
             releaseUrl,
             'MusicBrainz release lookup',
-            `release:${mbid}:url-rels`
+            `release:${mbid}:url-rels+artist-credits`
         );
+        state.releaseArtists = [...new Map(
+            (release['artist-credit'] || [])
+                .map(entry => entry?.artist)
+                .filter(artist => artist?.id)
+                .map(artist => [artist.id, artist])
+        ).values()];
+
         const barcode = normalizeBarcode(release.barcode);
         const links = [...new Set(
             (release.relations || [])
@@ -892,6 +901,188 @@
         }));
     }
 
+
+    const artistDetailsCache = new Map();
+
+    function candidateFromArtistData(artist, contextReason = '') {
+        return {
+            mbid: artist.id || artist.mbid || '',
+            name: artist.name || '',
+            disambiguation: artist.disambiguation || '',
+            country: artist.country || '',
+            type: artist.type || '',
+            score: Number(artist.score ?? 100),
+            aliases: (artist.aliases || []).map(alias =>
+                typeof alias === 'string' ? alias : alias?.name
+            ).filter(Boolean),
+            contextReason,
+        };
+    }
+
+    function artistNameMatches(creditName, artist) {
+        const wanted = normalizeText(creditName);
+        const names = [
+            artist?.name,
+            artist?.['sort-name'],
+            ...(artist?.aliases || []).map(alias =>
+                typeof alias === 'string' ? alias : alias?.name
+            ),
+        ].filter(Boolean).map(normalizeText);
+        return names.includes(wanted);
+    }
+
+    async function getArtistDetails(mbid) {
+        if (artistDetailsCache.has(mbid)) return artistDetailsCache.get(mbid);
+
+        const url = `/ws/2/artist/${encodeURIComponent(mbid)}?inc=aliases+artist-rels&fmt=json`;
+        const json = await musicBrainzWsJson(
+            url,
+            `MusicBrainz artist context lookup ${mbid}`,
+            `artist-context:${mbid}`
+        );
+        artistDetailsCache.set(mbid, json);
+        return json;
+    }
+
+    function mergeCandidates(...groups) {
+        const merged = new Map();
+        for (const group of groups) {
+            for (const candidate of group || []) {
+                if (!candidate?.mbid) continue;
+                const current = merged.get(candidate.mbid);
+                if (!current || (!current.contextReason && candidate.contextReason)) {
+                    merged.set(candidate.mbid, candidate);
+                }
+            }
+        }
+        return [...merged.values()];
+    }
+
+    function isUsefulArtistRelation(relation) {
+        const type = normalizeText(relation?.type || '');
+        return (
+            type.includes('member') ||
+            type.includes('subgroup') ||
+            type.includes('collaboration')
+        );
+    }
+
+    async function findContextArtistCandidates(creditName) {
+        const matches = new Map();
+
+        const addIfMatch = (artist, reason) => {
+            if (!artist?.id || !artistNameMatches(creditName, artist)) return;
+            matches.set(
+                artist.id,
+                candidateFromArtistData(artist, reason)
+            );
+        };
+
+        for (const releaseArtist of state.releaseArtists || []) {
+            const details = await getArtistDetails(releaseArtist.id);
+            addIfMatch(details, 'artist credited on this MusicBrainz release');
+
+            for (const relation of details.relations || []) {
+                const related = relation?.artist;
+                if (!related?.id) continue;
+
+                if (artistNameMatches(creditName, related)) {
+                    const full = await getArtistDetails(related.id);
+                    addIfMatch(
+                        full,
+                        `${relation.type || 'artist relationship'} with ${details.name}`
+                    );
+                    continue;
+                }
+
+                if (!isUsefulArtistRelation(relation)) continue;
+
+                const full = await getArtistDetails(related.id);
+                addIfMatch(
+                    full,
+                    `${relation.type || 'artist relationship'} with ${details.name}`
+                );
+            }
+        }
+
+        return [...matches.values()];
+    }
+
+    function aliasAlreadyPresent(creditName, artist) {
+        return artistNameMatches(creditName, artist);
+    }
+
+    async function submitArtistAliasEdit(mbid, aliasName, artistName) {
+        const addAliasUrl = `/artist/${encodeURIComponent(mbid)}/add-alias`;
+        const page = await fetch(addAliasUrl, {
+            credentials: 'same-origin',
+            headers: { Accept: 'text/html,application/xhtml+xml' },
+        });
+        if (!page.ok) {
+            throw new Error(`Cannot open MusicBrainz alias editor for "${artistName}": HTTP ${page.status}`);
+        }
+
+        const doc = new DOMParser().parseFromString(await page.text(), 'text/html');
+        const form = [...doc.forms].find(item =>
+            item.querySelector('[name="edit-alias.name"]')
+        );
+        if (!form) {
+            throw new Error(`Cannot find the MusicBrainz add-alias form for "${artistName}".`);
+        }
+
+        const params = new URLSearchParams();
+        for (const [key, value] of new FormData(form).entries()) {
+            if (typeof value === 'string') params.append(key, value);
+        }
+
+        params.set('edit-alias.name', aliasName);
+        params.set('edit-alias.sort_name', aliasName);
+
+        const noteField = form.querySelector(
+            'textarea[name*="edit_note"], textarea[name*="edit-note"], textarea[name*="editnote"]'
+        );
+        if (noteField?.name) {
+            params.set(
+                noteField.name,
+                `Apple Music credits list "${aliasName}" for ${artistName}. Adding the alias so this credit resolves correctly in future imports.\nSource: ${state.appleUrl}\nScript: https://github.com/karpuzikov/userscripts/blob/main/musicbrainz-tools/apple-music-composition-lyrics-importer/MusicBrainz_Apple_Music_Composition_Lyrics_Importer.user.js`
+            );
+        }
+
+        const action = new URL(form.getAttribute('action') || addAliasUrl, location.origin).href;
+        const response = await fetch(action, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+            },
+            body: params,
+        });
+
+        if (!response.ok) {
+            throw new Error(`Adding alias "${aliasName}" failed: HTTP ${response.status}`);
+        }
+
+        const finalPath = new URL(response.url).pathname;
+        if (finalPath.endsWith('/add-alias')) {
+            throw new Error(`MusicBrainz did not accept alias "${aliasName}" for ${artistName}.`);
+        }
+
+        const cached = artistDetailsCache.get(mbid);
+        if (cached) {
+            cached.aliases = [...(cached.aliases || []), { name: aliasName }];
+        }
+        state.aliasEdits++;
+    }
+
+    async function ensureCreditAlias(person, mbid) {
+        const artist = await getArtistDetails(mbid);
+        if (aliasAlreadyPresent(person.name, artist)) return false;
+
+        setStatus(`Adding MusicBrainz alias "${person.name}" to ${artist.name}...`);
+        await submitArtistAliasEdit(mbid, person.name, artist.name || mbid);
+        return true;
+    }
+
     function exactCandidateIndexes(name, candidates) {
         const wanted = normalizeText(name);
         const indexes = [];
@@ -1178,7 +1369,15 @@
             ];
 
             const exact = exactCandidateIndexes(person.name, person.candidates);
-            const autoIndex = exact.length === 1 ? exact[0] : -1;
+            const preferredIndex = person.preferredMbid
+                ? person.candidates.findIndex(candidate => candidate.mbid === person.preferredMbid)
+                : -1;
+            const autoIndex = preferredIndex >= 0
+                ? preferredIndex
+                : (exact.length === 1 ? exact[0] : -1);
+            const autoLabel = preferredIndex >= 0
+                ? `Auto: ${person.preferredReason}`
+                : (autoIndex >= 0 ? 'Exact name/alias match' : 'Review required');
 
             return `
                 <tr data-person-key="${escapeHtml(person.key)}">
@@ -1195,7 +1394,7 @@
                     </td>
                     <td class="am2mb-auto"
                         data-auto-index="${autoIndex}">
-                        ${autoIndex >= 0 ? 'Exact name/alias match' : 'Review required'}
+                        ${escapeHtml(autoLabel)}
                     </td>
                 </tr>
             `;
@@ -1204,8 +1403,9 @@
         container.innerHTML = `
             <h3>Artist mapping</h3>
             <p class="am2mb-hint">
-                Recording credits are added to Recordings. Songwriting/composition credits are added to Works.
-                Mastering is added at Release level. Review every artist match before applying.
+                Release artists and their artist relationships are checked before global search.
+                Recording credits go to Recordings, songwriting/composition to Works, and mastering to the Release.
+                When you manually map a different Apple credit name, a MusicBrainz artist alias is added for future matching.
             </p>
             <div class="am2mb-scroll">
                 <table class="tbl">
@@ -1251,6 +1451,8 @@
             state.appleTracks = [];
             state.rows = [];
             state.people.clear();
+            state.releaseArtists = [];
+            state.aliasEdits = 0;
             state.applied = false;
 
             button.disabled = true;
@@ -1366,10 +1568,29 @@
             const people = [...state.people.values()];
             for (let index = 0; index < people.length; index++) {
                 const person = people[index];
+
+                setStatus(
+                    `Checking release artist context ${index + 1}/${people.length}: ${person.name}`
+                );
+                const contextCandidates = await findContextArtistCandidates(person.name);
+
+                if (contextCandidates.length === 1) {
+                    person.candidates = contextCandidates;
+                    person.preferredMbid = contextCandidates[0].mbid;
+                    person.preferredReason = contextCandidates[0].contextReason;
+                    continue;
+                }
+
                 setStatus(
                     `Searching MusicBrainz artists ${index + 1}/${people.length}: ${person.name}`
                 );
-                person.candidates = await searchArtists(person.name);
+                const searchCandidates = await searchArtists(person.name);
+                person.candidates = mergeCandidates(contextCandidates, searchCandidates);
+
+                if (contextCandidates.length === 1) {
+                    person.preferredMbid = contextCandidates[0].mbid;
+                    person.preferredReason = contextCandidates[0].contextReason;
+                }
             }
 
             renderPeople();
@@ -1423,6 +1644,12 @@
                 }
 
                 mapping.set(person.key, entityCache.get(mbid));
+            }
+
+            for (const person of state.people.values()) {
+                const mbid = selectedMbid(person);
+                if (!mbid) continue;
+                await ensureCreditAlias(person, mbid);
             }
 
             let added = 0;
@@ -1479,7 +1706,8 @@
 
             setStatus(
                 `Applied ${added} relationship(s): ${addedRecording} Recording, ${addedWork} Work, ${addedRelease} Release. ` +
-                `${skippedExisting} existing/duplicate relationship(s) skipped, ${skippedUnavailable} unavailable target(s) skipped. Review the green edits, then submit normally.`,
+                `${skippedExisting} existing/duplicate relationship(s) skipped, ${skippedUnavailable} unavailable target(s) skipped. ` +
+                `${state.aliasEdits} artist alias edit(s) entered. Review the green relationship edits, then submit normally.`,
                 'ok'
             );
         } catch (error) {
