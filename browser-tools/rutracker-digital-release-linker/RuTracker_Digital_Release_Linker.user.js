@@ -1,11 +1,11 @@
 // ==UserScript==
 // @name         RuTracker Digital Release Linker
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.1.12
+// @version      1.1.13
 // @description  Links exact digital release pages in RuTracker BBCode, falls back from Deezer to MusicBrainz-linked Beatport releases, and adds country flag emoji.
 // @author       karpuzikov
-// @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/browser-tools/rutracker-digital-release-linker/RuTracker_Digital_Release_Linker.user.js?v=1.1.12
-// @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/browser-tools/rutracker-digital-release-linker/RuTracker_Digital_Release_Linker.user.js?v=1.1.12
+// @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/browser-tools/rutracker-digital-release-linker/RuTracker_Digital_Release_Linker.user.js?v=1.1.13
+// @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/browser-tools/rutracker-digital-release-linker/RuTracker_Digital_Release_Linker.user.js?v=1.1.13
 // @match        https://rutracker.org/forum/posting.php*
 // @grant        GM_xmlhttpRequest
 // @connect      api.deezer.com
@@ -102,7 +102,7 @@
             return gmJson(url, {
                 retries: 2,
                 headers: {
-                    'User-Agent': `${SCRIPT_NAME}/1.1.12 (Tampermonkey userscript)`,
+                    'User-Agent': `${SCRIPT_NAME}/1.1.13 (Tampermonkey userscript)`,
                 },
             });
         });
@@ -127,7 +127,7 @@
                         url,
                         headers: {
                             Accept: 'text/html',
-                            'User-Agent': `${SCRIPT_NAME}/1.1.12 (Tampermonkey userscript)`,
+                            'User-Agent': `${SCRIPT_NAME}/1.1.13 (Tampermonkey userscript)`,
                         },
                         timeout: 20000,
                         onload(response) {
@@ -691,7 +691,7 @@
     }
 
     async function musicBrainzReleaseDetails(mbid) {
-        const url = `https://musicbrainz.org/ws/2/release/${encodeURIComponent(mbid)}?inc=labels+url-rels&fmt=json`;
+        const url = `https://musicbrainz.org/ws/2/release/${encodeURIComponent(mbid)}?inc=labels+recordings+recording-level-rels+url-rels&fmt=json`;
         return mbJson(url).catch(() => null);
     }
 
@@ -716,6 +716,43 @@
             if (match) return `https://www.deezer.com/album/${match[1]}`;
         }
         return '';
+    }
+
+    function deezerTrackUrlFromReleaseRecordings(release) {
+        const media = Array.isArray(release?.media) ? release.media : [];
+
+        for (const medium of media) {
+            const tracks = Array.isArray(medium?.tracks) ? medium.tracks : [];
+
+            for (const track of tracks) {
+                const relations = Array.isArray(track?.recording?.relations)
+                    ? track.recording.relations
+                    : [];
+
+                for (const relation of relations) {
+                    const resource = String(relation?.url?.resource || '').trim();
+                    if (/^https?:\/\/(?:www\.)?deezer\.com\/(?:[^/]+\/)?track\/\d+(?:[/?#]|$)/i.test(resource)) {
+                        return resource;
+                    }
+                }
+            }
+        }
+
+        return '';
+    }
+
+    async function deezerAlbumUrlFromTrackUrl(trackUrl) {
+        const match = String(trackUrl || '').match(
+            /deezer\.com\/(?:[^/]+\/)?track\/(\d+)/i,
+        );
+        if (!match) return '';
+
+        const data = await gmJson(
+            `https://api.deezer.com/track/${encodeURIComponent(match[1])}`,
+        ).catch(() => null);
+
+        const albumId = data?.album?.id;
+        return albumId ? `https://www.deezer.com/album/${albumId}` : '';
     }
 
     async function musicBrainzReleasesByIdentifier(identifier, meta) {
@@ -785,6 +822,14 @@
         for (const release of releases) {
             const relationUrl = deezerReleaseUrl(release);
             if (relationUrl) return { kind: 'deezer', url: relationUrl };
+
+            // Some exact MusicBrainz releases only expose Deezer on one of the
+            // linked recordings. Convert that exact Deezer track to its album.
+            const trackUrl = deezerTrackUrlFromReleaseRecordings(release);
+            if (trackUrl) {
+                const albumUrl = await deezerAlbumUrlFromTrackUrl(trackUrl);
+                if (albumUrl) return { kind: 'deezer', url: albumUrl };
+            }
 
             // Use only the exact MusicBrainz release page. Do not traverse
             // release groups or guess by metadata.
