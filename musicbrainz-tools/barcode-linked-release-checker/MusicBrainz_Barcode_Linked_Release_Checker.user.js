@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MusicBrainz - Barcode vs Linked Releases Checker
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.0.0
+// @version      1.1.0
 // @description  Checks Digital Media release barcodes against linked provider release pages through Harmony and stages MusicBrainz correction edits.
 // @author       karpuzikov
 // @license      MIT
@@ -292,7 +292,7 @@
     }
 
     async function lookupHarmonyByBarcode(barcode) {
-        const lookupUrl = `${HARMONY_URL}release?gtin=${encodeURIComponent(barcode)}&category=default`;
+        const lookupUrl = `${HARMONY_URL}release?gtin=${encodeURIComponent(barcode)}&category=digital`;
         try {
             const response = await harmonyRequest(lookupUrl);
             const parsed = parseHarmony(response.html, lookupUrl);
@@ -490,6 +490,60 @@
             `Linked providers disagree with each other (${gtinGroups.map(group => group.gtin).join(', ')}) and none confirms MusicBrainz barcode ${mbBarcode}; no automatic edit was prepared.`,
         );
         return correction;
+    }
+
+    function reconcileAcrossReleaseGroup(results) {
+        const byBarcode = results.filter(result => result.release.barcode);
+
+        const findByGtin = gtin => byBarcode.find(result => equalGtin(result.release.barcode, gtin));
+
+        for (const source of results) {
+            for (const check of source.checks || []) {
+                if (!check.gtin || equalGtin(check.gtin, source.release.barcode)) continue;
+
+                const target = findByGtin(check.gtin);
+                if (!target || target.release.id === source.release.id) continue;
+
+                const sourceCorrection = source.correction;
+                const targetCorrection = target.correction;
+                const sourceKey = providerEntityKey(check.sourceUrl);
+
+                if (!sourceCorrection.removeUrls.some(url => providerEntityKey(url) === sourceKey)) {
+                    sourceCorrection.removeUrls.push(check.sourceUrl);
+                }
+
+                const existingTargetUrls = [
+                    ...releaseRelations(target.release),
+                    ...targetCorrection.addLinks.map(link => link.url),
+                ];
+                if (!existingTargetUrls.some(url => providerEntityKey(url) === sourceKey)) {
+                    const harmonyLink = (check.externalLinks || []).find(
+                        link => providerEntityKey(link.url) === sourceKey
+                    );
+                    targetCorrection.addLinks.push({
+                        url: check.sourceUrl,
+                        types: harmonyLink?.types || [],
+                    });
+                }
+
+                const moveReason =
+                    `${providerLabel(check.sourceUrl)} resolves to GTIN ${check.gtin}, which matches release ${target.release.id}; move this URL from ${source.release.id} to that release.`;
+
+                if (!sourceCorrection.reasons.includes(moveReason)) {
+                    sourceCorrection.reasons.push(moveReason);
+                }
+                if (!targetCorrection.reasons.includes(moveReason)) {
+                    targetCorrection.reasons.push(moveReason);
+                }
+            }
+        }
+
+        for (const result of results) {
+            result.correction.addLinks = dedupeExternalLinks(result.correction.addLinks);
+            result.correction.removeUrls = [...new Map(
+                result.correction.removeUrls.map(url => [providerEntityKey(url), url])
+            ).values()];
+        }
     }
 
     function hasCorrection(correction) {
@@ -847,6 +901,8 @@
                 results.push(await checkRelease(release, message => setSidebarStatus(message)));
             }
 
+            reconcileAcrossReleaseGroup(results);
+
             const corrections = results.filter(result => hasCorrection(result.correction)).length;
             const ambiguous = results.filter(result => result.correction.ambiguous).length;
             setSidebarStatus(
@@ -871,8 +927,9 @@
         `;
         const style = document.createElement('style');
         style.textContent = `
-            #mb-barcode-checker-block { margin:8px 0 14px; display:flex; flex-direction:column; align-items:flex-end; }
-            #mb-barcode-checker-status { margin-top:5px; max-width:48em; text-align:right; font-size:90%; line-height:1.3; }
+            #mb-barcode-checker-block { margin:8px 0 14px; }
+            #mb-barcode-checker-button { width:100%; }
+            #mb-barcode-checker-status { margin-top:5px; text-align:left; font-size:90%; line-height:1.3; overflow-wrap:anywhere; }
             #mb-barcode-checker-status[data-kind="bad"] { color:#b00020; }
             #mb-barcode-checker-status[data-kind="warn"] { color:#8a5a00; }
             #mb-barcode-checker-status[data-kind="ok"] { color:#087a28; }
@@ -884,6 +941,26 @@
 
     function insertReleaseGroupButton() {
         if (document.getElementById('mb-barcode-checker-block')) return;
+
+        const sidebar = document.getElementById('sidebar');
+        if (sidebar) {
+            const headings = [...sidebar.querySelectorAll('h2, h3')];
+            const barcodeHeading = headings.find(heading =>
+                /^barcodes?$/i.test(normalizeSpace(heading.textContent))
+            );
+
+            if (barcodeHeading) {
+                let anchor = barcodeHeading;
+                while (
+                    anchor.nextElementSibling &&
+                    !/^H[23]$/i.test(anchor.nextElementSibling.tagName)
+                ) {
+                    anchor = anchor.nextElementSibling;
+                }
+                anchor.insertAdjacentElement('afterend', makeReleaseTableBlock());
+                return;
+            }
+        }
 
         const releaseTable = [...document.querySelectorAll('table.tbl.mergeable-table')].find(table =>
             [...table.querySelectorAll('thead th')].some(th => /^barcode$/i.test(normalizeSpace(th.textContent)))
