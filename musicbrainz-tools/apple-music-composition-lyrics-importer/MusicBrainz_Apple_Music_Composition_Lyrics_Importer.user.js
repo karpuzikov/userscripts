@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         MusicBrainz - Import Apple Music Composition & Lyrics
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.0.0
-// @description  Import Apple Music Composition & Lyrics credits into MusicBrainz work relationships.
+// @version      1.1.0
+// @description  Automatically resolve the correct Apple Music release by MusicBrainz barcode/link and import Composition & Lyrics credits into Work relationships.
 // @author       karpuzikov
 // @license      MIT
 // @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/apple-music-composition-lyrics-importer/MusicBrainz_Apple_Music_Composition_Lyrics_Importer.user.js
@@ -11,6 +11,10 @@
 // @match        https://musicbrainz.org/release/*/edit-relationships
 // @match        https://beta.musicbrainz.org/release/*/edit-relationships
 // @connect      music.apple.com
+// @connect      itunes.apple.com
+// @connect      geo.itunes.apple.com
+// @connect      amp-api.music.apple.com
+// @connect      *.mzstatic.com
 // @grant        GM_xmlhttpRequest
 // @grant        unsafeWindow
 // @run-at       document-end
@@ -21,6 +25,10 @@
 
     const PAGE = typeof unsafeWindow !== 'undefined' ? unsafeWindow : window;
     const MB = PAGE.MB;
+    const APPLE_API_BASE = 'https://amp-api.music.apple.com/v1';
+    const APPLE_TOKEN_BOOTSTRAP_URL = 'https://music.apple.com/us/browse';
+    const FALLBACK_STOREFRONTS = ['us', 'gb', 'de', 'fr', 'ca', 'au', 'jp', 'ua'];
+    let appleToken = '';
 
     const LINK_TYPES = {
         songwriter: { id: 167, label: 'writer' },
@@ -54,6 +62,9 @@
 
     const state = {
         appleUrl: '',
+        mbBarcode: '',
+        appleBarcode: '',
+        sourceMode: '',
         appleTracks: [],
         rows: [],
         people: new Map(),
@@ -187,30 +198,369 @@
         return `${source.origin}/${storefront}/song/${slug}/${encodeURIComponent(track.id)}`;
     }
 
-    function gmGet(url) {
+    function normalizeBarcode(value) {
+        return String(value || '').replace(/\D+/g, '');
+    }
+
+    function barcodeVariants(value) {
+        const barcode = normalizeBarcode(value);
+        const variants = new Set();
+        if (!barcode) return variants;
+        variants.add(barcode);
+        if (barcode.length === 13 && barcode.startsWith('0')) variants.add(barcode.slice(1));
+        if (barcode.length === 12) variants.add(\`0\${barcode}\`);
+        return variants;
+    }
+
+    function barcodesEqual(a, b) {
+        const left = barcodeVariants(a);
+        const right = barcodeVariants(b);
+        for (const value of left) {
+            if (right.has(value)) return true;
+        }
+        return false;
+    }
+
+    function releaseMbidFromLocation() {
+        const match = location.pathname.match(/^\/release\/([0-9a-f-]{36})\/edit-relationships/i);
+        return match ? match[1].toLowerCase() : '';
+    }
+
+    function isAppleReleaseUrl(value) {
+        try {
+            const url = new URL(value);
+            const host = url.hostname.toLowerCase();
+            const appleHost =
+                host === 'music.apple.com' ||
+                host === 'itunes.apple.com' ||
+                host === 'geo.itunes.apple.com' ||
+                host.endsWith('.itunes.apple.com');
+            return appleHost && url.pathname.toLowerCase().includes('/album/');
+        } catch {
+            return false;
+        }
+    }
+
+    function appleStorefrontFromUrl(value) {
+        try {
+            const url = new URL(value);
+            const first = url.pathname.split('/').filter(Boolean)[0] || '';
+            return /^[a-z]{2}$/i.test(first) ? first.toLowerCase() : '';
+        } catch {
+            return '';
+        }
+    }
+
+    function appleAlbumIdFromUrl(value) {
+        try {
+            const url = new URL(value);
+            const parts = url.pathname.split('/').filter(Boolean);
+            const albumIndex = parts.findIndex(part => part.toLowerCase() === 'album');
+            if (albumIndex < 0) return '';
+            for (let index = parts.length - 1; index > albumIndex; index--) {
+                const match = parts[index].match(/^(?:id)?(\d+)$/i);
+                if (match) return match[1];
+            }
+            return '';
+        } catch {
+            return '';
+        }
+    }
+
+    function canonicalAppleAlbumUrl(value) {
+        try {
+            const url = new URL(value);
+            url.searchParams.delete('i');
+            return url.href;
+        } catch {
+            return value;
+        }
+    }
+
+    function getReleaseCountries(release) {
+        const countries = [];
+        for (const event of release?.['release-events'] || []) {
+            const code = String(event?.area?.['iso-3166-1-codes']?.[0] || '').toLowerCase();
+            if (/^[a-z]{2}$/.test(code) && !countries.includes(code)) countries.push(code);
+        }
+        return countries;
+    }
+
+    async function getMusicBrainzReleaseSourceData() {
+        const mbid = releaseMbidFromLocation();
+        if (!mbid) throw new Error('Cannot determine the MusicBrainz release MBID.');
+
+        const response = await fetch(\`/ws/2/release/\${encodeURIComponent(mbid)}?inc=url-rels&fmt=json\`, {
+            credentials: 'same-origin',
+            headers: { Accept: 'application/json' },
+        });
+        if (!response.ok) {
+            throw new Error(\`Cannot load MusicBrainz release data: HTTP \${response.status}\`);
+        }
+
+        const release = await response.json();
+        const barcode = normalizeBarcode(release.barcode);
+        const links = [...new Set(
+            (release.relations || [])
+                .map(relation => relation?.url?.resource || '')
+                .filter(isAppleReleaseUrl)
+        )];
+
+        return {
+            mbid,
+            release,
+            barcode,
+            links,
+            countries: getReleaseCountries(release),
+        };
+    }
+
+    function gmRequest(url, options = {}) {
         return new Promise((resolve, reject) => {
             GM_xmlhttpRequest({
-                method: 'GET',
+                method: options.method || 'GET',
                 url,
-                headers: {
-                    Accept: 'text/html,application/xhtml+xml',
-                },
-                timeout: 60000,
+                headers: options.headers || {},
+                timeout: options.timeout || 60000,
                 onload(response) {
                     if (response.status >= 200 && response.status < 400) {
-                        resolve(response.responseText);
+                        resolve(response);
                     } else {
-                        reject(new Error(`HTTP ${response.status} for ${url}`));
+                        const error = new Error(\`HTTP \${response.status} for \${url}\`);
+                        error.status = response.status;
+                        reject(error);
                     }
                 },
                 ontimeout() {
-                    reject(new Error(`Timed out while loading ${url}`));
+                    reject(new Error(\`Timed out while loading \${url}\`));
                 },
                 onerror() {
-                    reject(new Error(`Failed to load ${url}`));
+                    reject(new Error(\`Failed to load \${url}\`));
                 },
             });
         });
+    }
+
+    async function gmGet(url) {
+        const response = await gmRequest(url, {
+            headers: { Accept: 'text/html,application/xhtml+xml' },
+        });
+        return response.responseText;
+    }
+
+    async function getAppleTokenFromHtml(html, pageUrl) {
+        const doc = new DOMParser().parseFromString(html, 'text/html');
+        const scripts = [...doc.querySelectorAll('script[src][crossorigin], script[src]')]
+            .map(node => {
+                try {
+                    return new URL(node.getAttribute('src'), pageUrl).href;
+                } catch {
+                    return '';
+                }
+            })
+            .filter(Boolean);
+
+        const prioritized = [
+            ...scripts.filter(url => /music|index|config|app/i.test(url)),
+            ...scripts.filter(url => !/music|index|config|app/i.test(url)),
+        ];
+
+        for (const scriptUrl of [...new Set(prioritized)]) {
+            try {
+                const script = await gmRequest(scriptUrl, {
+                    headers: { Accept: '*/*' },
+                    timeout: 30000,
+                });
+                const match = script.responseText.match(/["'](eyJ[A-Za-z0-9._-]+)["']/) ||
+                    script.responseText.match(/(["'])(ey[^"']+)\1/);
+                if (match) return match[2] || match[1];
+            } catch {
+                // Try the next script asset.
+            }
+        }
+        return '';
+    }
+
+    async function ensureAppleToken(pageHtml = '', pageUrl = '') {
+        if (appleToken) return appleToken;
+
+        if (pageHtml && pageUrl) {
+            appleToken = await getAppleTokenFromHtml(pageHtml, pageUrl);
+            if (appleToken) return appleToken;
+        }
+
+        const bootstrap = await gmRequest(APPLE_TOKEN_BOOTSTRAP_URL, {
+            headers: { Accept: 'text/html,application/xhtml+xml' },
+        });
+        const bootstrapUrl = bootstrap.finalUrl || APPLE_TOKEN_BOOTSTRAP_URL;
+        appleToken = await getAppleTokenFromHtml(bootstrap.responseText, bootstrapUrl);
+        if (!appleToken) {
+            throw new Error('Could not obtain the current Apple Music API token.');
+        }
+        return appleToken;
+    }
+
+    async function appleApiGet(path, token) {
+        const response = await gmRequest(\`\${APPLE_API_BASE}\${path}\`, {
+            headers: {
+                Accept: 'application/json',
+                Authorization: \`Bearer \${token}\`,
+                Origin: 'https://music.apple.com',
+            },
+        });
+        try {
+            return JSON.parse(response.responseText);
+        } catch {
+            throw new Error('Apple Music API returned invalid JSON.');
+        }
+    }
+
+    async function getAppleAlbumById(albumId, storefront, token) {
+        const json = await appleApiGet(
+            \`/catalog/\${encodeURIComponent(storefront)}/albums/\${encodeURIComponent(albumId)}\`,
+            token
+        );
+        return json?.data?.find(item => item?.type === 'albums') || null;
+    }
+
+    async function inspectAppleReleaseLink(link) {
+        const page = await gmRequest(link, {
+            headers: { Accept: 'text/html,application/xhtml+xml' },
+        });
+        const finalUrl = page.finalUrl || link;
+        const albumId = appleAlbumIdFromUrl(finalUrl) || appleAlbumIdFromUrl(link);
+        const storefront = appleStorefrontFromUrl(finalUrl) || appleStorefrontFromUrl(link) || 'us';
+        if (!albumId) throw new Error('The Apple/iTunes URL does not identify an album.');
+
+        const token = await ensureAppleToken(page.responseText, finalUrl);
+        const album = await getAppleAlbumById(albumId, storefront, token);
+        if (!album) throw new Error('Apple Music album is unavailable.');
+
+        const upc = normalizeBarcode(album?.attributes?.upc);
+        const albumUrl = canonicalAppleAlbumUrl(album?.attributes?.url || finalUrl);
+        if (!isAppleReleaseUrl(albumUrl)) {
+            throw new Error('Apple Music API did not return a usable album URL.');
+        }
+
+        return {
+            url: albumUrl,
+            upc,
+            storefront,
+            albumId,
+        };
+    }
+
+    function storefrontCandidates(sourceData) {
+        const list = [];
+        for (const link of sourceData.links) {
+            const storefront = appleStorefrontFromUrl(link);
+            if (storefront && !list.includes(storefront)) list.push(storefront);
+        }
+        for (const country of sourceData.countries || []) {
+            if (country && !list.includes(country)) list.push(country);
+        }
+        for (const storefront of FALLBACK_STOREFRONTS) {
+            if (!list.includes(storefront)) list.push(storefront);
+        }
+        return list;
+    }
+
+    async function findAppleReleaseByBarcode(barcode, sourceData) {
+        const token = await ensureAppleToken();
+        const wanted = normalizeBarcode(barcode);
+        if (!wanted) return null;
+
+        for (const storefront of storefrontCandidates(sourceData)) {
+            setStatus(\`Searching Apple Music by barcode \${wanted} in \${storefront.toUpperCase()}...\`);
+            try {
+                const json = await appleApiGet(
+                    \`/catalog/\${encodeURIComponent(storefront)}/albums?filter%5Bupc%5D=\${encodeURIComponent(wanted)}&limit=25\`,
+                    token
+                );
+                const albums = (json?.data || []).filter(item => item?.type === 'albums');
+                const match = albums.find(album => barcodesEqual(album?.attributes?.upc, wanted));
+                if (!match) continue;
+
+                const url = canonicalAppleAlbumUrl(match?.attributes?.url || '');
+                if (!isAppleReleaseUrl(url)) continue;
+
+                return {
+                    url,
+                    upc: normalizeBarcode(match?.attributes?.upc),
+                    storefront,
+                    albumId: String(match?.id || ''),
+                };
+            } catch (error) {
+                console.warn(\`[Apple Music UPC lookup] \${storefront}:\`, error);
+            }
+        }
+        return null;
+    }
+
+    async function resolveAppleRelease() {
+        setStatus('Checking MusicBrainz barcode and Apple/iTunes links...');
+        const sourceData = await getMusicBrainzReleaseSourceData();
+        state.mbBarcode = sourceData.barcode;
+
+        if (!sourceData.barcode && !sourceData.links.length) {
+            throw new Error('No barcode and no Apple Music/iTunes link are present on this MusicBrainz release.');
+        }
+
+        if (sourceData.links.length) {
+            for (let index = 0; index < sourceData.links.length; index++) {
+                const link = sourceData.links[index];
+                setStatus(\`Checking Apple/iTunes link \${index + 1}/\${sourceData.links.length}...\`);
+                try {
+                    const candidate = await inspectAppleReleaseLink(link);
+                    if (!sourceData.barcode || barcodesEqual(sourceData.barcode, candidate.upc)) {
+                        state.appleBarcode = candidate.upc;
+                        state.sourceMode = sourceData.barcode
+                            ? 'verified existing Apple Music/iTunes link'
+                            : 'existing Apple Music/iTunes link (MusicBrainz has no barcode)';
+                        return candidate;
+                    }
+                    console.warn(
+                        \`[Apple Music source] Barcode mismatch: MusicBrainz \${sourceData.barcode}, Apple \${candidate.upc || '(none)'}\`
+                    );
+                } catch (error) {
+                    console.warn(\`[Apple Music source] Dead/unusable link: \${link}\`, error);
+                }
+            }
+        }
+
+        if (sourceData.barcode) {
+            const found = await findAppleReleaseByBarcode(sourceData.barcode, sourceData);
+            if (found) {
+                state.appleBarcode = found.upc;
+                state.sourceMode = 'barcode search fallback';
+                return found;
+            }
+            throw new Error(\`No Apple Music release was found for MusicBrainz barcode \${sourceData.barcode}.\`);
+        }
+
+        throw new Error('The Apple Music/iTunes link is dead or unusable, and this MusicBrainz release has no barcode for fallback search.');
+    }
+
+    function setSourceInfo(resolved) {
+        const target = document.getElementById('am2mb-source');
+        if (!target) return;
+        target.innerHTML = '';
+
+        const parts = [];
+        if (state.mbBarcode) parts.push(\`MusicBrainz barcode: \${state.mbBarcode}\`);
+        if (state.appleBarcode) parts.push(\`Apple UPC: \${state.appleBarcode}\`);
+        if (state.sourceMode) parts.push(\`Source: \${state.sourceMode}\`);
+        target.append(document.createTextNode(parts.join(' | ')));
+
+        if (resolved?.url) {
+            target.append(document.createTextNode(' | '));
+            const link = document.createElement('a');
+            link.href = resolved.url;
+            link.target = '_blank';
+            link.rel = 'noopener noreferrer';
+            link.textContent = 'Apple Music';
+            target.append(link);
+        }
     }
 
     async function mapPool(items, concurrency, worker) {
@@ -586,21 +936,17 @@
     }
 
     async function loadAppleCredits() {
-        const input = document.getElementById('am2mb-url');
         const button = document.getElementById('am2mb-load');
-        const urlText = input.value.trim();
 
         try {
-            const url = new URL(urlText);
-            if (url.hostname !== 'music.apple.com' || !url.pathname.includes('/album/')) {
-                throw new Error('Paste an Apple Music album/release URL.');
-            }
-
             if (!MB?.relationshipEditor?.state?.entity) {
                 throw new Error('MusicBrainz relationship editor is not ready.');
             }
 
-            state.appleUrl = url.href;
+            state.appleUrl = '';
+            state.mbBarcode = '';
+            state.appleBarcode = '';
+            state.sourceMode = '';
             state.appleTracks = [];
             state.rows = [];
             state.people.clear();
@@ -609,22 +955,27 @@
             button.disabled = true;
             document.getElementById('am2mb-tracks').innerHTML = '';
             document.getElementById('am2mb-people').innerHTML = '';
+            document.getElementById('am2mb-source').innerHTML = '';
 
-            setStatus('Loading Apple Music release...');
+            const resolved = await resolveAppleRelease();
+            state.appleUrl = resolved.url;
+            setSourceInfo(resolved);
+
+            setStatus('Loading resolved Apple Music release...');
             const albumHtml = await gmGet(state.appleUrl);
             const albumData = parseAppleServerData(albumHtml);
             const appleTracks = getAppleTracks(albumData);
 
             if (!appleTracks.length) {
-                throw new Error('No Apple Music tracks were found on this page.');
+                throw new Error('No Apple Music tracks were found on the resolved release page.');
             }
 
             state.appleTracks = appleTracks;
-            setStatus(`Found ${appleTracks.length} tracks. Loading Composition & Lyrics credits...`);
+            setStatus(\`Found \${appleTracks.length} tracks. Loading Composition & Lyrics credits...\`);
 
             const creditResults = await mapPool(appleTracks, 4, async (track, index) => {
                 setStatus(
-                    `Loading Apple Music credits ${index + 1}/${appleTracks.length}: ${track.title}`
+                    \`Loading Apple Music credits \${index + 1}/\${appleTracks.length}: \${track.title}\`
                 );
                 const creditsUrl = songCreditsUrl(track, state.appleUrl);
                 const html = await gmGet(creditsUrl);
@@ -690,7 +1041,7 @@
             for (let index = 0; index < people.length; index++) {
                 const person = people[index];
                 setStatus(
-                    `Searching MusicBrainz artists ${index + 1}/${people.length}: ${person.name}`
+                    \`Searching MusicBrainz artists \${index + 1}/\${people.length}: \${person.name}\`
                 );
                 person.candidates = await searchArtists(person.name);
                 if (index < people.length - 1) await wait(1100);
@@ -707,7 +1058,7 @@
             ).length;
 
             setStatus(
-                `Loaded ${appleTracks.length} Apple Music tracks. ${readyTracks} track(s) are ready for review.`,
+                \`Loaded \${appleTracks.length} Apple Music tracks. \${readyTracks} track(s) are ready for review.\`,
                 'ok'
             );
         } catch (error) {
@@ -830,10 +1181,6 @@
                     align-items: center;
                     flex-wrap: wrap;
                 }
-                #am2mb-panel #am2mb-url {
-                    flex: 1 1 620px;
-                    min-width: 260px;
-                }
                 #am2mb-panel #am2mb-status {
                     margin: 10px 0 0;
                     font-weight: 600;
@@ -876,13 +1223,12 @@
 
             <h2>Import Apple Music Composition & Lyrics</h2>
             <div class="am2mb-controls">
-                <input id="am2mb-url" type="url"
-                    placeholder="https://music.apple.com/.../album/...">
-                <button type="button" id="am2mb-load">Load credits</button>
+                <button type="button" id="am2mb-load">Find Apple Music & Load Credits</button>
             </div>
             <p id="am2mb-status">
-                Paste the Apple Music release URL for this MusicBrainz release.
+                Ready to verify the MusicBrainz barcode and Apple/iTunes links.
             </p>
+            <p id="am2mb-source"></p>
             <div id="am2mb-tracks"></div>
             <div id="am2mb-people"></div>
         `;
