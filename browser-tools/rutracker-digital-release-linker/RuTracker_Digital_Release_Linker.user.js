@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         RuTracker Digital Release Linker
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.1.1
+// @version      1.1.2
 // @description  Links exact digital release pages in RuTracker BBCode, falls back from Deezer to MusicBrainz-linked Beatport releases, and adds country flag emoji.
 // @author       karpuzikov
 // @match        https://rutracker.org/forum/posting.php*
@@ -99,7 +99,7 @@
             return gmJson(url, {
                 retries: 2,
                 headers: {
-                    'User-Agent': `${SCRIPT_NAME}/1.1.1 (Tampermonkey userscript)`,
+                    'User-Agent': `${SCRIPT_NAME}/1.1.2 (Tampermonkey userscript)`,
                 },
             });
         });
@@ -114,6 +114,7 @@
         'united states': 'US',
         'united states of america': 'US',
         uk: 'GB',
+        england: 'GB',
         'great britain': 'GB',
         russia: 'RU',
         'south korea': 'KR',
