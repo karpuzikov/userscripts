@@ -1,12 +1,12 @@
 // ==UserScript==
-// @name         Apple Music Credits -> MusicBrainz
+// @name         Apple Music works credits -> MusicBrainz
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      2.3.5
+// @version      2.3.6
 // @description  Resolve the correct Apple Music release and import supported Apple Music credits to the proper MusicBrainz Recording, Work, or Release relationships.
 // @author       karpuzikov
 // @license      MIT
-// @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/tampermonkey-apple-music-credits-v2.3.4/musicbrainz-tools/apple-music-composition-lyrics-importer/MusicBrainz_Apple_Music_Composition_Lyrics_Importer.user.js
-// @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/refs/heads/main/musicbrainz-tools/apple-music-composition-lyrics-importer/MusicBrainz_Apple_Music_Composition_Lyrics_Importer.user.js
+// @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/apple-music-composition-lyrics-importer/MusicBrainz_Apple_Music_Composition_Lyrics_Importer.user.js
+// @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/apple-music-composition-lyrics-importer/MusicBrainz_Apple_Music_Composition_Lyrics_Importer.user.js
 // @supportURL   https://github.com/karpuzikov/userscripts
 // @match        https://musicbrainz.org/release/*/edit-relationships
 // @match        https://beta.musicbrainz.org/release/*/edit-relationships
@@ -929,7 +929,7 @@
 
         const sourceLine = `Apple Music credits: ${state.appleUrl}`;
         const scriptLine =
-            'Imported with Apple Music Credits -> MusicBrainz; missing Works were searched first, and newly created Works use Work type Song with a user-selected lyrics language.' +
+            'Imported with Apple Music works credits -> MusicBrainz; missing Works were searched first, and newly created Works use Work type Song with a user-selected lyrics language.' +
             `\nScript: ${SCRIPT_URL}`;
         const current = String(editorState.editNoteField.value || '').trimEnd();
         const addition = `${sourceLine}\n${scriptLine}`;
@@ -2084,7 +2084,7 @@
                 }
             </style>
 
-            <h2>Apple Music Credits -> MusicBrainz</h2>
+            <h2>Apple Music works credits -> MusicBrainz</h2>
             <div class="am2mb-controls">
                 <button type="button" id="am2mb-load">Find Apple Music & Load Credits</button>
             </div>
