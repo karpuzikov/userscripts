@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Harmony - Link External IDs in One Click
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.2.1
+// @version      1.2.2
 // @description  Adds all-in-one and per-type fast submission of Harmony MusicBrainz external-ID edits without opening one edit tab per entity.
 // @author       karpuzikov
 // @license      MIT
@@ -107,6 +107,41 @@
         return url.href;
     }
 
+    function findHarmonyLinkAnchor(type) {
+        for (const anchor of document.querySelectorAll('a[href]')) {
+            if (anchor.textContent.trim() !== 'Link external IDs') continue;
+            const parsed = classifyMusicBrainzEditUrl(anchor.href);
+            if (parsed?.type === type) return anchor;
+        }
+        return null;
+    }
+
+    function makeActionControl(id, button, status, referenceAction) {
+        const wrapper = document.createElement('div');
+        wrapper.id = id;
+        wrapper.className = 'action';
+
+        const sourceIcon = referenceAction?.querySelector(':scope > svg.icon');
+        if (sourceIcon) {
+            wrapper.appendChild(sourceIcon.cloneNode(true));
+        }
+
+        const body = document.createElement('div');
+        const paragraph = document.createElement('p');
+        paragraph.appendChild(button);
+        body.appendChild(paragraph);
+
+        if (status) {
+            status.style.fontSize = '0.9em';
+            status.style.opacity = '0.85';
+            status.style.marginTop = '0.35rem';
+            body.appendChild(status);
+        }
+
+        wrapper.appendChild(body);
+        return wrapper;
+    }
+
     function renderHarmonyControls() {
         if (document.getElementById('harmony-link-external-ids-one-click')) return;
 
@@ -116,27 +151,6 @@
         const heading = [...document.querySelectorAll('h2')]
             .find((element) => element.textContent.trim() === 'Release Actions');
         if (!heading) return;
-
-        const wrapper = document.createElement('div');
-        wrapper.id = 'harmony-link-external-ids-one-click';
-        wrapper.className = 'action';
-        wrapper.style.alignItems = 'flex-start';
-        wrapper.style.gap = '0.75rem';
-
-        const panel = document.createElement('div');
-        panel.style.display = 'flex';
-        panel.style.flexDirection = 'column';
-        panel.style.gap = '0.5rem';
-
-        const buttonRow = document.createElement('div');
-        buttonRow.style.display = 'flex';
-        buttonRow.style.flexWrap = 'wrap';
-        buttonRow.style.gap = '0.5rem';
-
-        const status = document.createElement('div');
-        status.style.fontSize = '0.9em';
-        status.style.opacity = '0.85';
-        status.textContent = summarizeItems(allItems);
 
         const buttonConfigs = [
             {
@@ -162,6 +176,8 @@
         ];
 
         const buttons = [];
+        const status = document.createElement('div');
+        status.textContent = summarizeItems(allItems);
 
         function currentItemsFor(config) {
             return getHarmonyLinks().filter(config.filter);
@@ -217,23 +233,58 @@
             });
         }
 
-        for (const config of buttonConfigs) {
-            const items = allItems.filter(config.filter);
+        function makeButton(config, items) {
             const button = document.createElement('button');
             button.type = 'button';
             button.className = 'open-all-links';
             button.dataset.scope = config.scope;
             button.textContent = config.label;
-            button.title = items.length ? summarizeItems(items) : 'No matching external-ID edits found.';
-            button.disabled = items.length === 0;
+            button.title = summarizeItems(items);
             button.addEventListener('click', () => startQueue(config));
             buttons.push(button);
-            buttonRow.appendChild(button);
+            return button;
         }
 
-        panel.append(buttonRow, status);
-        wrapper.appendChild(panel);
-        heading.insertAdjacentElement('afterend', wrapper);
+        const allConfig = buttonConfigs[0];
+        const firstLinkAction = findHarmonyLinkAnchor(allItems[0].type)?.closest('.action') || null;
+        const allButton = makeButton(allConfig, allItems);
+        const allControl = makeActionControl(
+            'harmony-link-external-ids-one-click',
+            allButton,
+            status,
+            firstLinkAction
+        );
+        heading.insertAdjacentElement('afterend', allControl);
+
+        for (const config of buttonConfigs.slice(1)) {
+            const items = allItems.filter(config.filter);
+
+            // Do not show a type-specific button unless Harmony actually has
+            // at least one "Link external IDs" edit of that type on this page.
+            if (!items.length) continue;
+
+            const anchor = findHarmonyLinkAnchor(config.scope);
+            const referenceAction = anchor?.closest('.action');
+            if (!referenceAction) continue;
+
+            const button = makeButton(config, items);
+            const control = makeActionControl(
+                `harmony-link-external-ids-${config.scope}`,
+                button,
+                null,
+                referenceAction
+            );
+
+            // Keep the aggregate button under "Release Actions", while each
+            // type-specific button lives inside its own Harmony section,
+            // directly before that section's first existing link action.
+            const actionGroup = referenceAction.closest('.action-group');
+            if (actionGroup) {
+                actionGroup.insertBefore(control, referenceAction);
+            } else {
+                referenceAction.insertAdjacentElement('beforebegin', control);
+            }
+        }
 
         setInterval(() => {
             const queue = readQueue();
