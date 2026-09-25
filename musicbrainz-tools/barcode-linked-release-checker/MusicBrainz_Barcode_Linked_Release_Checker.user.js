@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MusicBrainz - Barcode vs Linked Releases Checker
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.3.0
+// @version      1.3.1
 // @description  Checks Digital Media release barcodes against linked provider release pages through Harmony and stages MusicBrainz correction edits.
 // @author       karpuzikov
 // @license      MIT
@@ -9,9 +9,11 @@
 // @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/barcode-linked-release-checker/MusicBrainz_Barcode_Linked_Release_Checker.user.js
 // @supportURL   https://github.com/karpuzikov/userscripts
 // @match        https://musicbrainz.org/release-group/*
+// @exclude      https://musicbrainz.org/release-group/*/*
 // @match        https://beta.musicbrainz.org/release-group/*
-// @match        https://musicbrainz.org/release/*/edit*
-// @match        https://beta.musicbrainz.org/release/*/edit*
+// @exclude      https://beta.musicbrainz.org/release-group/*/*
+// @match        https://musicbrainz.org/release/*/edit
+// @match        https://beta.musicbrainz.org/release/*/edit
 // @connect      harmony.pulsewidth.org.uk
 // @connect      music.apple.com
 // @connect      amp-api.music.apple.com
@@ -1432,7 +1434,7 @@
 
     cleanupExpiredTasks();
 
-    if (/^\/release-group\/[0-9a-f-]+/i.test(location.pathname)) {
+    if (/^\/release-group\/[0-9a-f-]{36}\/?$/i.test(location.pathname)) {
         insertReleaseGroupButton();
     } else if (/^\/release\/[0-9a-f-]+\/edit\/?$/i.test(location.pathname)) {
         applyPendingEditTask().catch(error => console.error(`[${SCRIPT_NAME}]`, error));
