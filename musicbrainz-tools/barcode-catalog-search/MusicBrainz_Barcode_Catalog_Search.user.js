@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         MusicBrainz - Barcode and Catalog Number Search
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.0.0
-// @description  Adds always-visible Barcode and Catalog number release search fields to MusicBrainz.
+// @version      1.1.0
+// @description  Adds Barcode and Catalog number release search fields beside the native MusicBrainz search and opens unique matches directly.
 // @author       karpuzikov
 // @license      MIT
 // @match        https://musicbrainz.org/*
@@ -17,148 +17,212 @@
 (() => {
     'use strict';
 
-    if (window.top !== window.self || document.getElementById('mb-quick-release-search')) {
+    const GROUP_ID = 'mb-quick-release-search';
+
+    if (window.top !== window.self || document.getElementById(GROUP_ID)) {
         return;
     }
 
+    const nativeInput = document.getElementById('headerid-query');
+    const nativeForm = nativeInput?.closest('form[action="/search"]');
+    const searchContainer = nativeForm?.parentElement;
+    const nativeButton = nativeForm?.querySelector('button[type="submit"]');
+
+    if (!nativeInput || !nativeForm || !searchContainer || !nativeButton) {
+        return;
+    }
+
+    searchContainer.classList.add('mb-quick-release-search-enabled');
+
     const style = document.createElement('style');
     style.textContent = `
-        #mb-quick-release-search {
-            position: sticky;
-            top: 0;
-            z-index: 1000;
-            width: 100%;
-            box-sizing: border-box;
-            padding: 6px 12px;
-            border-bottom: 1px solid rgba(127, 127, 127, 0.35);
-            background: Canvas;
-            color: CanvasText;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
-        }
-
-        #mb-quick-release-search .mb-qrs-inner {
+        .search-container.mb-quick-release-search-enabled {
             display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-            max-width: 1200px;
-            margin: 0 auto;
+            align-items: flex-start;
         }
 
-        #mb-quick-release-search form {
+        #${GROUP_ID} {
             display: flex;
-            align-items: center;
-            gap: 5px;
-            min-width: 0;
+            align-items: flex-start;
+            gap: 4px;
+            margin-right: 6px;
         }
 
-        #mb-quick-release-search input {
-            width: 240px;
-            max-width: 38vw;
-            box-sizing: border-box;
-            padding: 5px 8px;
-            border: 1px solid #aaa;
-            border-radius: 3px;
-            background: Field;
-            color: FieldText;
-            font: inherit;
+        #${GROUP_ID} form {
+            width: 180px !important;
+            height: 25px;
+            margin-top: 5px !important;
+            position: relative;
+            flex: 0 0 180px;
         }
 
-        #mb-quick-release-search button {
-            box-sizing: border-box;
-            padding: 5px 9px;
-            border: 1px solid #999;
-            border-radius: 3px;
-            background: ButtonFace;
-            color: ButtonText;
-            font: inherit;
-            cursor: pointer;
+        #${GROUP_ID} input {
+            width: 150px !important;
+            height: 25px !important;
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
         }
 
-        #mb-quick-release-search button:hover {
-            filter: brightness(0.96);
-        }
-
-        @media (max-width: 720px) {
-            #mb-quick-release-search .mb-qrs-inner {
-                align-items: stretch;
-                flex-direction: column;
-                gap: 6px;
-            }
-
-            #mb-quick-release-search form {
-                width: 100%;
-            }
-
-            #mb-quick-release-search input {
-                width: 100%;
-                max-width: none;
-                flex: 1;
-            }
+        #${GROUP_ID} button {
+            width: 30px !important;
+            height: 25px !important;
+            position: absolute !important;
+            left: 149px !important;
+            top: 0 !important;
         }
     `;
     document.head.appendChild(style);
 
-    const bar = document.createElement('div');
-    bar.id = 'mb-quick-release-search';
-    bar.innerHTML = `
-        <div class="mb-qrs-inner">
-            <form data-search="barcode" autocomplete="off">
-                <input
-                    type="search"
-                    name="barcode"
-                    inputmode="numeric"
-                    placeholder="Barcode"
-                    aria-label="Search MusicBrainz releases by barcode"
-                >
-                <button type="submit">Search</button>
-            </form>
+    const visualProperties = [
+        'boxSizing',
+        'paddingTop',
+        'paddingRight',
+        'paddingBottom',
+        'paddingLeft',
+        'fontFamily',
+        'fontSize',
+        'fontWeight',
+        'fontStyle',
+        'lineHeight',
+        'letterSpacing',
+        'color',
+        'backgroundColor',
+        'backgroundImage',
+        'backgroundPosition',
+        'backgroundRepeat',
+        'borderTopWidth',
+        'borderRightWidth',
+        'borderBottomWidth',
+        'borderLeftWidth',
+        'borderTopStyle',
+        'borderRightStyle',
+        'borderBottomStyle',
+        'borderLeftStyle',
+        'borderTopColor',
+        'borderRightColor',
+        'borderBottomColor',
+        'borderLeftColor',
+        'borderTopLeftRadius',
+        'borderTopRightRadius',
+        'borderBottomRightRadius',
+        'borderBottomLeftRadius'
+    ];
 
-            <form data-search="catno" autocomplete="off">
-                <input
-                    type="search"
-                    name="catno"
-                    placeholder="Catalog number"
-                    aria-label="Search MusicBrainz releases by catalog number"
-                >
-                <button type="submit">Search</button>
-            </form>
-        </div>
-    `;
+    const copyVisualStyle = (source, target) => {
+        const computed = getComputedStyle(source);
+        for (const property of visualProperties) {
+            target.style[property] = computed[property];
+        }
+    };
 
-    document.body.prepend(bar);
+    const group = document.createElement('div');
+    group.id = GROUP_ID;
 
-    const openReleaseSearch = (query) => {
+    const makeSearchForm = (type, placeholder, ariaLabel, numeric = false) => {
+        const form = document.createElement('form');
+        form.dataset.search = type;
+        form.autocomplete = 'off';
+
+        const input = nativeInput.cloneNode(false);
+        input.removeAttribute('id');
+        input.name = type;
+        input.value = '';
+        input.placeholder = placeholder;
+        input.setAttribute('aria-label', ariaLabel);
+        input.type = 'text';
+        if (numeric) {
+            input.inputMode = 'numeric';
+        } else {
+            input.removeAttribute('inputmode');
+        }
+        copyVisualStyle(nativeInput, input);
+
+        const button = nativeButton.cloneNode(true);
+        button.removeAttribute('id');
+        button.type = 'submit';
+
+        form.append(input, ' ', button);
+        group.appendChild(form);
+
+        return {form, input};
+    };
+
+    const barcodeSearch = makeSearchForm(
+        'barcode',
+        'Barcode',
+        'Search MusicBrainz releases by barcode',
+        true
+    );
+
+    const catnoSearch = makeSearchForm(
+        'catno',
+        'Catalog number',
+        'Search MusicBrainz releases by catalog number'
+    );
+
+    searchContainer.insertBefore(group, nativeForm);
+
+    const buildSearchUrl = (query) => {
         const url = new URL('/search', location.origin);
         url.searchParams.set('query', query);
         url.searchParams.set('type', 'release');
         url.searchParams.set('limit', '100');
         url.searchParams.set('method', 'advanced');
-        location.assign(url.toString());
+        return url;
     };
 
-    bar.querySelector('[data-search="barcode"]').addEventListener('submit', (event) => {
+    const openUniqueReleaseOrResults = async (query) => {
+        const resultsUrl = buildSearchUrl(query);
+        const apiUrl = new URL('/ws/2/release/', location.origin);
+        apiUrl.searchParams.set('query', query);
+        apiUrl.searchParams.set('fmt', 'json');
+        apiUrl.searchParams.set('limit', '2');
+
+        try {
+            const response = await fetch(apiUrl, {
+                credentials: 'same-origin',
+                headers: {
+                    Accept: 'application/json'
+                }
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                const releases = Array.isArray(data.releases) ? data.releases : [];
+
+                if (Number(data.count) === 1 && releases.length === 1 && releases[0]?.id) {
+                    location.assign('/release/' + releases[0].id);
+                    return;
+                }
+            }
+        } catch {
+            // Fall back to the normal MusicBrainz results page.
+        }
+
+        location.assign(resultsUrl.toString());
+    };
+
+    barcodeSearch.form.addEventListener('submit', (event) => {
         event.preventDefault();
 
-        const input = event.currentTarget.elements.barcode;
-        const barcode = input.value.replace(/\D/g, '');
+        const barcode = barcodeSearch.input.value.replace(/\D/g, '');
 
         if (!barcode) {
-            input.focus();
+            barcodeSearch.input.focus();
             return;
         }
 
-        openReleaseSearch(`barcode:${barcode}`);
+        openUniqueReleaseOrResults('barcode:' + barcode);
     });
 
-    bar.querySelector('[data-search="catno"]').addEventListener('submit', (event) => {
+    catnoSearch.form.addEventListener('submit', (event) => {
         event.preventDefault();
 
-        const input = event.currentTarget.elements.catno;
-        const catalogNumber = input.value.trim();
+        const catalogNumber = catnoSearch.input.value.trim();
 
         if (!catalogNumber) {
-            input.focus();
+            catnoSearch.input.focus();
             return;
         }
 
@@ -166,6 +230,6 @@
             .replace(/\\/g, '\\\\')
             .replace(/"/g, '\\"');
 
-        openReleaseSearch(`catno:"${escapedCatalogNumber}"`);
+        openUniqueReleaseOrResults('catno:"' + escapedCatalogNumber + '"');
     });
 })();
