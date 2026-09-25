@@ -1,11 +1,11 @@
 // ==UserScript==
 // @name         RuTracker Digital Release Linker
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.1.11
+// @version      1.1.12
 // @description  Links exact digital release pages in RuTracker BBCode, falls back from Deezer to MusicBrainz-linked Beatport releases, and adds country flag emoji.
 // @author       karpuzikov
-// @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/browser-tools/rutracker-digital-release-linker/RuTracker_Digital_Release_Linker.user.js?v=1.1.11
-// @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/browser-tools/rutracker-digital-release-linker/RuTracker_Digital_Release_Linker.user.js?v=1.1.11
+// @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/browser-tools/rutracker-digital-release-linker/RuTracker_Digital_Release_Linker.user.js?v=1.1.12
+// @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/browser-tools/rutracker-digital-release-linker/RuTracker_Digital_Release_Linker.user.js?v=1.1.12
 // @match        https://rutracker.org/forum/posting.php*
 // @grant        GM_xmlhttpRequest
 // @connect      api.deezer.com
@@ -102,13 +102,126 @@
             return gmJson(url, {
                 retries: 2,
                 headers: {
-                    'User-Agent': `${SCRIPT_NAME}/1.1.11 (Tampermonkey userscript)`,
+                    'User-Agent': `${SCRIPT_NAME}/1.1.12 (Tampermonkey userscript)`,
                 },
             });
         });
 
         mbQueue = task.catch(() => undefined);
         return task;
+    }
+
+    function mbText(url) {
+        const task = mbQueue.then(async () => {
+            const elapsed = Date.now() - lastMbRequestAt;
+            if (elapsed < MB_MIN_INTERVAL_MS) {
+                await sleep(MB_MIN_INTERVAL_MS - elapsed);
+            }
+
+            lastMbRequestAt = Date.now();
+
+            return new Promise((resolve, reject) => {
+                const attempt = (number) => {
+                    GM_xmlhttpRequest({
+                        method: 'GET',
+                        url,
+                        headers: {
+                            Accept: 'text/html',
+                            'User-Agent': `${SCRIPT_NAME}/1.1.12 (Tampermonkey userscript)`,
+                        },
+                        timeout: 20000,
+                        onload(response) {
+                            const status = response.status || 0;
+                            if ((status === 429 || status >= 500) && number < 2) {
+                                setTimeout(() => attempt(number + 1), 1000 * (number + 1));
+                                return;
+                            }
+
+                            if (status < 200 || status >= 300) {
+                                reject(new Error(`HTTP ${status} for ${url}`));
+                                return;
+                            }
+
+                            resolve(String(response.responseText || ''));
+                        },
+                        ontimeout() {
+                            if (number < 2) {
+                                setTimeout(() => attempt(number + 1), 1000 * (number + 1));
+                            } else {
+                                reject(new Error(`Timeout for ${url}`));
+                            }
+                        },
+                        onerror() {
+                            if (number < 2) {
+                                setTimeout(() => attempt(number + 1), 1000 * (number + 1));
+                            } else {
+                                reject(new Error(`Network error for ${url}`));
+                            }
+                        },
+                    });
+                };
+
+                attempt(0);
+            });
+        });
+
+        mbQueue = task.catch(() => undefined);
+        return task;
+    }
+
+    function extractStoreUrlFromMusicBrainzHtml(html, store) {
+        const source = String(html || '')
+            .replace(/&amp;/gi, '&')
+            .replace(/\\\//g, '/')
+            .replace(/\\u002f/gi, '/')
+            .replace(/\\u003a/gi, ':');
+
+        let matcher = null;
+        if (store === 'deezer') {
+            matcher = /^https?:\/\/(?:www\.)?deezer\.com\/(?:[^/]+\/)?album\/\d+(?:[/?#].*)?$/i;
+        } else if (store === 'beatport') {
+            matcher = /^https?:\/\/(?:www\.)?beatport\.com\/release\/[^?#\s]+(?:[?#].*)?$/i;
+        }
+
+        if (!matcher) return '';
+
+        try {
+            const doc = new DOMParser().parseFromString(source, 'text/html');
+            for (const anchor of doc.querySelectorAll('a[href]')) {
+                let href = String(anchor.getAttribute('href') || '').trim();
+                if (!href) continue;
+
+                try {
+                    href = decodeURIComponent(href);
+                } catch {
+                    // Keep the original href when it is not percent-encoded.
+                }
+
+                if (matcher.test(href)) return href;
+            }
+        } catch {
+            // Fall through to raw HTML matching.
+        }
+
+        const rawRegex = store === 'deezer'
+            ? /https?:\/\/(?:www\.)?deezer\.com\/(?:[^/"'<>\s]+\/)?album\/\d+(?:[^"'<>\s]*)?/i
+            : /https?:\/\/(?:www\.)?beatport\.com\/release\/[^"'<>\s]+/i;
+
+        const direct = source.match(rawRegex);
+        if (direct) return direct[0];
+
+        const encodedRegex = store === 'deezer'
+            ? /https?%3A%2F%2F(?:www\.)?deezer\.com%2F(?:[^"'<>\s%]+%2F)?album%2F\d+(?:[^"'<>\s]*)?/i
+            : /https?%3A%2F%2F(?:www\.)?beatport\.com%2Frelease%2F[^"'<>\s]+/i;
+
+        const encoded = source.match(encodedRegex);
+        if (!encoded) return '';
+
+        try {
+            return decodeURIComponent(encoded[0]);
+        } catch {
+            return '';
+        }
     }
 
     async function musicBrainzReleasePageStoreUrl(mbid, store) {
@@ -119,36 +232,11 @@
             return caches.musicBrainzReleasePage.get(cacheKey);
         }
 
-        const promise = new Promise((resolve) => {
-            GM_xmlhttpRequest({
-                method: 'GET',
-                url: `https://musicbrainz.org/release/${encodeURIComponent(mbid)}`,
-                headers: {
-                    Accept: 'text/html',
-                    'User-Agent': `${SCRIPT_NAME}/1.1.11 (Tampermonkey userscript)`,
-                },
-                timeout: 20000,
-                onload(response) {
-                    const html = String(response.responseText || '').replace(/&amp;/g, '&');
-                    let regex = null;
-
-                    if (store === 'deezer') {
-                        regex = /https?:\/\/(?:www\.)?deezer\.com\/(?:[^/"'<>]+\/)?album\/\d+(?:[^"'<>\s]*)?/i;
-                    } else if (store === 'beatport') {
-                        regex = /https?:\/\/(?:www\.)?beatport\.com\/release\/[^"'<>\s]+/i;
-                    }
-
-                    const match = regex ? html.match(regex) : null;
-                    resolve(match ? match[0] : '');
-                },
-                onerror() {
-                    resolve('');
-                },
-                ontimeout() {
-                    resolve('');
-                },
-            });
-        });
+        const promise = mbText(
+            `https://musicbrainz.org/release/${encodeURIComponent(mbid)}`,
+        )
+            .then((html) => extractStoreUrlFromMusicBrainzHtml(html, store))
+            .catch(() => '');
 
         caches.musicBrainzReleasePage.set(cacheKey, promise);
         return promise;
@@ -355,7 +443,7 @@
             return { type: 'barcode', value, reissueYear };
         }
 
-        if (/^(?=.*\d)[A-Za-z0-9][A-Za-z0-9._/+\-]{3,}$/.test(value)) {
+        if (/^(?=.*\d)[A-Za-z0-9][A-Za-z0-9 ._/+\-]{2,}$/.test(value)) {
             return { type: 'catalog', value, reissueYear };
         }
 
