@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Apple Music works credits -> MusicBrainz
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.1.0
+// @version      1.1.1
 // @description  Automatically resolve the correct Apple Music release by MusicBrainz barcode/link and import Composition & Lyrics credits into Work relationships.
 // @author       karpuzikov
 // @license      MIT
@@ -208,7 +208,7 @@
         if (!barcode) return variants;
         variants.add(barcode);
         if (barcode.length === 13 && barcode.startsWith('0')) variants.add(barcode.slice(1));
-        if (barcode.length === 12) variants.add(\`0\${barcode}\`);
+        if (barcode.length === 12) variants.add(`0${barcode}`);
         return variants;
     }
 
@@ -290,12 +290,12 @@
         const mbid = releaseMbidFromLocation();
         if (!mbid) throw new Error('Cannot determine the MusicBrainz release MBID.');
 
-        const response = await fetch(\`/ws/2/release/\${encodeURIComponent(mbid)}?inc=url-rels&fmt=json\`, {
+        const response = await fetch(`/ws/2/release/${encodeURIComponent(mbid)}?inc=url-rels&fmt=json`, {
             credentials: 'same-origin',
             headers: { Accept: 'application/json' },
         });
         if (!response.ok) {
-            throw new Error(\`Cannot load MusicBrainz release data: HTTP \${response.status}\`);
+            throw new Error(`Cannot load MusicBrainz release data: HTTP ${response.status}`);
         }
 
         const release = await response.json();
@@ -326,16 +326,16 @@
                     if (response.status >= 200 && response.status < 400) {
                         resolve(response);
                     } else {
-                        const error = new Error(\`HTTP \${response.status} for \${url}\`);
+                        const error = new Error(`HTTP ${response.status} for ${url}`);
                         error.status = response.status;
                         reject(error);
                     }
                 },
                 ontimeout() {
-                    reject(new Error(\`Timed out while loading \${url}\`));
+                    reject(new Error(`Timed out while loading ${url}`));
                 },
                 onerror() {
-                    reject(new Error(\`Failed to load \${url}\`));
+                    reject(new Error(`Failed to load ${url}`));
                 },
             });
         });
@@ -401,10 +401,10 @@
     }
 
     async function appleApiGet(path, token) {
-        const response = await gmRequest(\`\${APPLE_API_BASE}\${path}\`, {
+        const response = await gmRequest(`${APPLE_API_BASE}${path}`, {
             headers: {
                 Accept: 'application/json',
-                Authorization: \`Bearer \${token}\`,
+                Authorization: `Bearer ${token}`,
                 Origin: 'https://music.apple.com',
             },
         });
@@ -417,7 +417,7 @@
 
     async function getAppleAlbumById(albumId, storefront, token) {
         const json = await appleApiGet(
-            \`/catalog/\${encodeURIComponent(storefront)}/albums/\${encodeURIComponent(albumId)}\`,
+            `/catalog/${encodeURIComponent(storefront)}/albums/${encodeURIComponent(albumId)}`,
             token
         );
         return json?.data?.find(item => item?.type === 'albums') || null;
@@ -471,10 +471,10 @@
         if (!wanted) return null;
 
         for (const storefront of storefrontCandidates(sourceData)) {
-            setStatus(\`Searching Apple Music by barcode \${wanted} in \${storefront.toUpperCase()}...\`);
+            setStatus(`Searching Apple Music by barcode ${wanted} in ${storefront.toUpperCase()}...`);
             try {
                 const json = await appleApiGet(
-                    \`/catalog/\${encodeURIComponent(storefront)}/albums?filter%5Bupc%5D=\${encodeURIComponent(wanted)}&limit=25\`,
+                    `/catalog/${encodeURIComponent(storefront)}/albums?filter%5Bupc%5D=${encodeURIComponent(wanted)}&limit=25`,
                     token
                 );
                 const albums = (json?.data || []).filter(item => item?.type === 'albums');
@@ -491,7 +491,7 @@
                     albumId: String(match?.id || ''),
                 };
             } catch (error) {
-                console.warn(\`[Apple Music UPC lookup] \${storefront}:\`, error);
+                console.warn(`[Apple Music UPC lookup] ${storefront}:`, error);
             }
         }
         return null;
@@ -509,7 +509,7 @@
         if (sourceData.links.length) {
             for (let index = 0; index < sourceData.links.length; index++) {
                 const link = sourceData.links[index];
-                setStatus(\`Checking Apple/iTunes link \${index + 1}/\${sourceData.links.length}...\`);
+                setStatus(`Checking Apple/iTunes link ${index + 1}/${sourceData.links.length}...`);
                 try {
                     const candidate = await inspectAppleReleaseLink(link);
                     if (!sourceData.barcode || barcodesEqual(sourceData.barcode, candidate.upc)) {
@@ -520,10 +520,10 @@
                         return candidate;
                     }
                     console.warn(
-                        \`[Apple Music source] Barcode mismatch: MusicBrainz \${sourceData.barcode}, Apple \${candidate.upc || '(none)'}\`
+                        `[Apple Music source] Barcode mismatch: MusicBrainz ${sourceData.barcode}, Apple ${candidate.upc || '(none)'}`
                     );
                 } catch (error) {
-                    console.warn(\`[Apple Music source] Dead/unusable link: \${link}\`, error);
+                    console.warn(`[Apple Music source] Dead/unusable link: ${link}`, error);
                 }
             }
         }
@@ -535,7 +535,7 @@
                 state.sourceMode = 'barcode search fallback';
                 return found;
             }
-            throw new Error(\`No Apple Music release was found for MusicBrainz barcode \${sourceData.barcode}.\`);
+            throw new Error(`No Apple Music release was found for MusicBrainz barcode ${sourceData.barcode}.`);
         }
 
         throw new Error('The Apple Music/iTunes link is dead or unusable, and this MusicBrainz release has no barcode for fallback search.');
@@ -547,9 +547,9 @@
         target.innerHTML = '';
 
         const parts = [];
-        if (state.mbBarcode) parts.push(\`MusicBrainz barcode: \${state.mbBarcode}\`);
-        if (state.appleBarcode) parts.push(\`Apple UPC: \${state.appleBarcode}\`);
-        if (state.sourceMode) parts.push(\`Source: \${state.sourceMode}\`);
+        if (state.mbBarcode) parts.push(`MusicBrainz barcode: ${state.mbBarcode}`);
+        if (state.appleBarcode) parts.push(`Apple UPC: ${state.appleBarcode}`);
+        if (state.sourceMode) parts.push(`Source: ${state.sourceMode}`);
         target.append(document.createTextNode(parts.join(' | ')));
 
         if (resolved?.url) {
@@ -971,11 +971,11 @@
             }
 
             state.appleTracks = appleTracks;
-            setStatus(\`Found \${appleTracks.length} tracks. Loading Composition & Lyrics credits...\`);
+            setStatus(`Found ${appleTracks.length} tracks. Loading Composition & Lyrics credits...`);
 
             const creditResults = await mapPool(appleTracks, 4, async (track, index) => {
                 setStatus(
-                    \`Loading Apple Music credits \${index + 1}/\${appleTracks.length}: \${track.title}\`
+                    `Loading Apple Music credits ${index + 1}/${appleTracks.length}: ${track.title}`
                 );
                 const creditsUrl = songCreditsUrl(track, state.appleUrl);
                 const html = await gmGet(creditsUrl);
@@ -1041,7 +1041,7 @@
             for (let index = 0; index < people.length; index++) {
                 const person = people[index];
                 setStatus(
-                    \`Searching MusicBrainz artists \${index + 1}/\${people.length}: \${person.name}\`
+                    `Searching MusicBrainz artists ${index + 1}/${people.length}: ${person.name}`
                 );
                 person.candidates = await searchArtists(person.name);
                 if (index < people.length - 1) await wait(1100);
@@ -1058,7 +1058,7 @@
             ).length;
 
             setStatus(
-                \`Loaded \${appleTracks.length} Apple Music tracks. \${readyTracks} track(s) are ready for review.\`,
+                `Loaded ${appleTracks.length} Apple Music tracks. ${readyTracks} track(s) are ready for review.`,
                 'ok'
             );
         } catch (error) {
@@ -1153,9 +1153,13 @@
     function injectUi() {
         if (document.getElementById('am2mb-panel')) return;
 
-        const tabs = document.querySelector('div.tabs');
-        const form = document.getElementById('relationship-editor-form');
-        if (!tabs || !form) {
+        const form =
+            document.getElementById('relationship-editor-form') ||
+            document.querySelector('form[action*="/edit-relationships"]') ||
+            document.getElementById('edit-note-text')?.closest('form') ||
+            document.querySelector('textarea[name="edit_note"]')?.closest('form');
+
+        if (!form) {
             setTimeout(injectUi, 500);
             return;
         }
@@ -1221,7 +1225,7 @@
                 }
             </style>
 
-            <h2>Import Apple Music Composition & Lyrics</h2>
+            <h2>Apple Music works credits -> MusicBrainz</h2>
             <div class="am2mb-controls">
                 <button type="button" id="am2mb-load">Find Apple Music & Load Credits</button>
             </div>
@@ -1233,7 +1237,7 @@
             <div id="am2mb-people"></div>
         `;
 
-        tabs.insertAdjacentElement('afterend', panel);
+        form.insertAdjacentElement('beforebegin', panel);
         document.getElementById('am2mb-load').addEventListener('click', loadAppleCredits);
     }
 
