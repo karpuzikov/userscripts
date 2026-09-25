@@ -457,4 +457,145 @@
             return correction;
         }
 
-        if (gtinGroups.length === 1)
+        if (gtinGroups.length === 1) {
+            const externalGtin = gtinGroups[0].gtin;
+            const distinctProviders = new Set(successful.map(check => check.provider).filter(Boolean));
+
+            if (reverseLinks.length) {
+                correction.removeUrls = mismatches.map(check => check.sourceUrl);
+                correction.addLinks = selectReverseLinks(reverse, existingUrls);
+                correction.reasons.push(
+                    `All readable linked pages disagree with MusicBrainz barcode ${mbBarcode}, but Harmony resolves ${mbBarcode} to other provider page(s); current mismatching links are staged for removal and barcode-matched links for addition.`,
+                );
+                return correction;
+            }
+
+            if (distinctProviders.size >= 2) {
+                correction.newBarcode = externalGtin;
+                correction.reasons.push(
+                    `${distinctProviders.size} independent linked providers agree on GTIN ${externalGtin}, while Harmony found no provider pages for MusicBrainz barcode ${mbBarcode}; barcode ${externalGtin} is staged.`,
+                );
+                return correction;
+            }
+
+            correction.ambiguous = true;
+            correction.notes.push(
+                `The only readable linked provider reports GTIN ${externalGtin}, not ${mbBarcode}. One provider is not enough to choose automatically between a wrong barcode and a wrong link.`,
+            );
+            return correction;
+        }
+
+        correction.ambiguous = true;
+        correction.notes.push(
+            `Linked providers disagree with each other (${gtinGroups.map(group => group.gtin).join(', ')}) and none confirms MusicBrainz barcode ${mbBarcode}; no automatic edit was prepared.`,
+        );
+        return correction;
+    }
+
+    function hasCorrection(correction) {
+        return Boolean(correction.newBarcode || correction.addLinks.length || correction.removeUrls.length);
+    }
+
+    async function checkRelease(release, progress) {
+        const allUrls = releaseRelations(release);
+        const supportedUrls = allUrls.filter(providerFamily);
+
+        const checks = await mapPool(supportedUrls, 3, async (url, index) => {
+            progress(`Checking ${release.title}: ${index + 1}/${supportedUrls.length} ${providerLabel(url)}`);
+            return lookupHarmonyByUrl(url);
+        });
+
+        const successful = checks.filter(check => check.gtin);
+        const mismatches = successful.filter(check => !equalGtin(check.gtin, release.barcode));
+        const unreadable = checks.filter(check => !check.gtin);
+        const needsReverse = supportedUrls.length === 0 || successful.length === 0 || mismatches.length > 0 || unreadable.length > 0;
+
+        let reverse = null;
+        if (needsReverse) {
+            progress(`Looking up barcode ${release.barcode} with Harmony...`);
+            reverse = await lookupHarmonyByBarcode(release.barcode);
+        }
+
+        return {
+            release,
+            allUrls,
+            supportedUrls,
+            checks,
+            correction: buildCorrection(release, checks, reverse),
+        };
+    }
+
+    function makeEditNote(correction) {
+        const lines = [
+            'Checked Digital Media release barcode against linked provider release pages using Harmony.',
+            `MusicBrainz release: https://musicbrainz.org/release/${correction.mbid}`,
+            `MusicBrainz barcode before check: ${correction.oldBarcode}`,
+        ];
+
+        if (correction.evidence.length) {
+            lines.push('', 'Linked-page evidence:');
+            for (const item of correction.evidence) {
+                lines.push(`- ${providerLabel(item.sourceUrl)}: ${item.sourceUrl} -> ${item.gtin || '[no GTIN returned]'} (${item.lookupUrl})`);
+            }
+        }
+
+        if (correction.reverse) {
+            lines.push('', `Barcode lookup: ${correction.reverse.lookupUrl}`);
+        }
+
+        if (correction.reasons.length) {
+            lines.push('', 'Prepared correction:');
+            for (const reason of correction.reasons) lines.push(`- ${reason}`);
+        }
+
+        lines.push('', `Script: ${SCRIPT_URL}`, 'Harmony: https://github.com/kellnerd/harmony');
+        return lines.join('\n');
+    }
+
+    function flattenSeedLinks(links) {
+        const output = [];
+        for (const link of links) {
+            const typeIds = [...new Set((link.types || []).map(type => RELEASE_LINK_TYPE_IDS.get(type)).filter(Boolean))];
+            if (!typeIds.length) {
+                output.push({ url: link.url, linkTypeId: '' });
+            } else {
+                for (const linkTypeId of typeIds) output.push({ url: link.url, linkTypeId });
+            }
+        }
+        return output;
+    }
+
+    function storeTask(correction) {
+        const id = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+        const task = {
+            created: Date.now(),
+            mbid: correction.mbid,
+            removeUrls: correction.removeUrls,
+            newBarcode: correction.newBarcode,
+            addLinks: correction.addLinks,
+            summary: correction.reasons,
+        };
+        localStorage.setItem(`${TASK_PREFIX}${id}`, JSON.stringify(task));
+        return id;
+    }
+
+    function openCorrection(correction) {
+        if (!hasCorrection(correction)) return;
+
+        const taskId = storeTask(correction);
+        const targetName = `mb-barcode-link-check-${correction.mbid}`;
+        const form = document.createElement('form');
+        form.method = 'post';
+        form.target = targetName;
+        form.action = `/release/${encodeURIComponent(correction.mbid)}/edit?barcode-link-checker=${encodeURIComponent(taskId)}`;
+        form.style.display = 'none';
+
+        const addField = (name, value) => {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = name;
+            input.value = String(value);
+            form.appendChild(input);
+        };
+
+        if (correction.newBarcode
