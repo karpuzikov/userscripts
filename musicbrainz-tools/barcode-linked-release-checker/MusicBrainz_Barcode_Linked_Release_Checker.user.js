@@ -843,4 +843,64 @@
             const results = [];
             for (let i = 0; i < eligible.length; i++) {
                 const release = eligible[i];
-                setSidebarStatus(`Checking release ${i + 1}/${eligible.length}
+                setSidebarStatus(`Checking release ${i + 1}/${eligible.length}: ${release.title}`);
+                results.push(await checkRelease(release, message => setSidebarStatus(message)));
+            }
+
+            const corrections = results.filter(result => hasCorrection(result.correction)).length;
+            const ambiguous = results.filter(result => result.correction.ambiguous).length;
+            setSidebarStatus(
+                `Checked ${eligible.length} Digital Media release(s): ${corrections} correction(s), ${ambiguous} manual review.`,
+                corrections || ambiguous ? 'warn' : 'ok',
+            );
+            showResults(results);
+        } catch (error) {
+            console.error(`[${SCRIPT_NAME}]`, error);
+            setSidebarStatus(error.message, 'bad');
+        } finally {
+            button.disabled = false;
+        }
+    }
+
+    function makeReleaseTableBlock() {
+        const block = document.createElement('div');
+        block.id = 'mb-barcode-checker-block';
+        block.innerHTML = `
+            <button type="button" id="mb-barcode-checker-button">Check barcodes against links</button>
+            <div id="mb-barcode-checker-status"></div>
+        `;
+        const style = document.createElement('style');
+        style.textContent = `
+            #mb-barcode-checker-block { margin:8px 0 14px; display:flex; flex-direction:column; align-items:flex-end; }
+            #mb-barcode-checker-status { margin-top:5px; max-width:48em; text-align:right; font-size:90%; line-height:1.3; }
+            #mb-barcode-checker-status[data-kind="bad"] { color:#b00020; }
+            #mb-barcode-checker-status[data-kind="warn"] { color:#8a5a00; }
+            #mb-barcode-checker-status[data-kind="ok"] { color:#087a28; }
+        `;
+        document.head.appendChild(style);
+        block.querySelector('button').addEventListener('click', runCheck);
+        return block;
+    }
+
+    function insertReleaseGroupButton() {
+        if (document.getElementById('mb-barcode-checker-block')) return;
+
+        const releaseTable = [...document.querySelectorAll('table.tbl.mergeable-table')].find(table =>
+            [...table.querySelectorAll('thead th')].some(th => /^barcode$/i.test(normalizeSpace(th.textContent)))
+        );
+        if (!releaseTable) {
+            setTimeout(insertReleaseGroupButton, 500);
+            return;
+        }
+
+        releaseTable.insertAdjacentElement('afterend', makeReleaseTableBlock());
+    }
+
+    cleanupExpiredTasks();
+
+    if (/^\/release-group\/[0-9a-f-]+/i.test(location.pathname)) {
+        insertReleaseGroupButton();
+    } else if (/^\/release\/[0-9a-f-]+\/edit\/?$/i.test(location.pathname)) {
+        applyPendingEditTask().catch(error => console.error(`[${SCRIPT_NAME}]`, error));
+    }
+})();
