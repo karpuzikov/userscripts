@@ -1,17 +1,21 @@
 // ==UserScript==
 // @name         Harmony - Link External IDs in One Click
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.2.3
+// @version      1.2.4
 // @description  Adds all-in-one and per-type fast submission of Harmony MusicBrainz external-ID edits without opening one edit tab per entity.
 // @author       karpuzikov
 // @license      MIT
-// @match        https://harmony.pulsewidth.org.uk/release/actions*
-// @match        https://musicbrainz.org/*
+// @match        https://harmony.pulsewidth.org.uk/release/actions
+// @match        https://harmony.pulsewidth.org.uk/release/actions/
+// @match        https://musicbrainz.org/release-group/*
+// @exclude      https://musicbrainz.org/release-group/*/*
+// @connect      musicbrainz.org
 // @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/harmony-link-external-ids-one-click/Harmony_Link_External_IDs_in_One_Click.user.js
 // @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/harmony-link-external-ids-one-click/Harmony_Link_External_IDs_in_One_Click.user.js
 // @grant        GM_getValue
 // @grant        GM_setValue
 // @grant        GM_openInTab
+// @grant        GM_xmlhttpRequest
 // @run-at       document-idle
 // ==/UserScript==
 
@@ -101,10 +105,64 @@
         return parts.join(', ');
     }
 
-    function bridgeUrl(jobId) {
-        const url = new URL('https://musicbrainz.org/');
+    function bridgeUrl(jobId, releaseGroupMbid) {
+        const url = new URL(
+            `https://musicbrainz.org/release-group/${encodeURIComponent(releaseGroupMbid)}`
+        );
         url.searchParams.set(BRIDGE_PARAM, jobId);
         return url.href;
+    }
+
+    function extractMbid(value) {
+        return String(value || '').match(
+            /[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/i
+        )?.[0]?.toLowerCase() || '';
+    }
+
+    function gmJson(url) {
+        return new Promise((resolve, reject) => {
+            GM_xmlhttpRequest({
+                method: 'GET',
+                url,
+                headers: { Accept: 'application/json' },
+                timeout: 30000,
+                onload(response) {
+                    if (response.status < 200 || response.status >= 300) {
+                        reject(new Error(`MusicBrainz lookup failed with HTTP ${response.status}.`));
+                        return;
+                    }
+                    try {
+                        resolve(JSON.parse(response.responseText));
+                    } catch {
+                        reject(new Error('MusicBrainz lookup returned invalid JSON.'));
+                    }
+                },
+                ontimeout() {
+                    reject(new Error('MusicBrainz release-group lookup timed out.'));
+                },
+                onerror() {
+                    reject(new Error('MusicBrainz release-group lookup failed.'));
+                }
+            });
+        });
+    }
+
+    async function resolveReleaseGroupMbid() {
+        const releaseMbid = extractMbid(
+            new URL(location.href).searchParams.get('release_mbid')
+        );
+        if (!releaseMbid) {
+            throw new Error('Harmony page does not contain a MusicBrainz release MBID.');
+        }
+
+        const data = await gmJson(
+            `https://musicbrainz.org/ws/2/release/${encodeURIComponent(releaseMbid)}?inc=release-groups&fmt=json`
+        );
+        const releaseGroupMbid = extractMbid(data?.['release-group']?.id);
+        if (!releaseGroupMbid) {
+            throw new Error('Could not determine the MusicBrainz release group.');
+        }
+        return releaseGroupMbid;
     }
 
     function findHarmonyLinkAnchor(type) {
@@ -195,7 +253,7 @@
             }
         }
 
-        function startQueue(config) {
+        async function startQueue(config) {
             const items = currentItemsFor(config);
             if (!items.length) {
                 const typeName = config.scope === 'recording'
@@ -204,6 +262,18 @@
                         ? 'supported'
                         : config.scope;
                 status.textContent = `No ${typeName} external-ID edits found.`;
+                return;
+            }
+
+            setButtonsDisabled(true);
+            status.textContent = 'Resolving MusicBrainz release group...';
+
+            let releaseGroupMbid;
+            try {
+                releaseGroupMbid = await resolveReleaseGroupMbid();
+            } catch (error) {
+                setButtonsDisabled(false);
+                status.textContent = error?.message || String(error);
                 return;
             }
 
@@ -217,16 +287,16 @@
                 succeeded: 0,
                 failed: 0,
                 sourcePage: `${location.origin}${location.pathname}${location.search}`,
+                releaseGroupMbid,
                 startedAt: Date.now(),
                 updatedAt: Date.now(),
                 fatalError: ''
             };
 
             writeQueue(queue);
-            setButtonsDisabled(true);
             status.textContent = `0/${items.length} submitted - using fast MusicBrainz background submission...`;
 
-            GM_openInTab(bridgeUrl(jobId), {
+            GM_openInTab(bridgeUrl(jobId, releaseGroupMbid), {
                 active: false,
                 insert: true,
                 setParent: true
@@ -240,7 +310,7 @@
             button.dataset.scope = config.scope;
             button.textContent = config.label;
             button.title = summarizeItems(items);
-            button.addEventListener('click', () => startQueue(config));
+            button.addEventListener('click', () => { void startQueue(config); });
             buttons.push(button);
             return button;
         }
@@ -607,7 +677,10 @@
         setTimeout(() => window.close(), 750);
     }
 
-    if (location.hostname === 'harmony.pulsewidth.org.uk') {
+    if (
+        location.hostname === 'harmony.pulsewidth.org.uk' &&
+        /^\/release\/actions\/?$/.test(location.pathname)
+    ) {
         renderHarmonyControls();
 
         const observer = new MutationObserver(renderHarmonyControls);
@@ -615,7 +688,11 @@
             childList: true,
             subtree: true
         });
-    } else if (location.hostname === 'musicbrainz.org' && getBridgeJobId()) {
+    } else if (
+        location.hostname === 'musicbrainz.org' &&
+        /^\/release-group\/[0-9a-f-]{36}\/?$/i.test(location.pathname) &&
+        getBridgeJobId()
+    ) {
         runBridge().catch((error) => {
             const queue = readQueue();
             if (queue) {
