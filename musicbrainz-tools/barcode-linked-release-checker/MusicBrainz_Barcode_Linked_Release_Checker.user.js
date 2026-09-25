@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MusicBrainz - Barcode vs Linked Releases Checker
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.2.0
+// @version      1.2.1
 // @description  Checks Digital Media release barcodes against linked provider release pages through Harmony and stages MusicBrainz correction edits.
 // @author       karpuzikov
 // @license      MIT
@@ -102,6 +102,91 @@
         const left = gtinNumber(a);
         const right = gtinNumber(b);
         return left !== null && right !== null && left === right;
+    }
+
+    function gtinChecksum(value) {
+        const digits = String(value).split('').map(Number);
+        const length = digits.length;
+        return digits.reduce(
+            (sum, digit, index) => sum + digit * ((length - index) % 2 ? 1 : 3),
+            0,
+        );
+    }
+
+    function isValidGtin(value) {
+        const gtin = String(value || '');
+        return /^(?:\d{8}|\d{12}|\d{13}|\d{14})$/.test(gtin) &&
+            gtinChecksum(gtin) % 10 === 0;
+    }
+
+    function qobuzNormalizedGtin(value) {
+        const gtin = String(value || '');
+        if (isValidGtin(gtin)) return gtin;
+
+        // Harmony/Qobuz compatibility: some older 13-digit Qobuz IDs omit
+        // the GTIN-14 check digit. Append it only when that produces a valid GTIN.
+        if (/^\d{13}$/.test(gtin)) {
+            const provisional = `${gtin}0`;
+            const checkDigit = (10 - (gtinChecksum(provisional) % 10)) % 10;
+            const normalized = `${gtin}${checkDigit}`;
+            if (isValidGtin(normalized)) return normalized;
+        }
+
+        return '';
+    }
+
+    function extractGtinFromProviderUrl(value) {
+        let url;
+        try {
+            url = value instanceof URL ? value : new URL(value);
+        } catch {
+            return '';
+        }
+
+        const family = providerFamily(url);
+        const parts = url.pathname.split('/').filter(Boolean);
+
+        if (family === 'mora') {
+            // Example:
+            // /package/43000174/093624949107_48/
+            // 093624949107 = UPC, _48 = Mora Hi-Res package suffix.
+            const packageId = parts.at(-1) || '';
+            const candidate = packageId.match(/^(\d{8}|\d{12}|\d{13}|\d{14})(?:_[^/]+)?$/)?.[1] || '';
+            return isValidGtin(candidate) ? candidate : '';
+        }
+
+        if (family === 'qobuz') {
+            // Many Qobuz album URLs use the barcode itself as the final album ID.
+            // Example: /album/.../0093624447061
+            const candidate = parts.at(-1) || '';
+            if (!/^\d{8,14}$/.test(candidate)) return '';
+            return qobuzNormalizedGtin(candidate);
+        }
+
+        return '';
+    }
+
+    function lookupUrlEmbeddedGtin(url) {
+        const gtin = extractGtinFromProviderUrl(url);
+        if (!gtin) return null;
+
+        return {
+            sourceUrl: url,
+            provider: providerFamily(url),
+            found: true,
+            gtin,
+            externalLinks: [{
+                url,
+                types: providerFamily(url) === 'mora'
+                    ? ['paid download']
+                    : ['paid streaming', 'paid download'],
+            }],
+            providers: [providerLabel(url)],
+            errors: [],
+            lookupUrl: url,
+            state: 'ok',
+            method: 'url-embedded-gtin',
+        };
     }
 
     function providerFamily(value) {
@@ -402,6 +487,9 @@
     }
 
     async function lookupLinkedUrl(url) {
+        const embedded = lookupUrlEmbeddedGtin(url);
+        if (embedded) return embedded;
+
         return providerFamily(url) === 'apple'
             ? lookupAppleByUrl(url)
             : lookupHarmonyByUrl(url);
@@ -839,7 +927,10 @@
         if (correction.evidence.length) {
             lines.push('', 'Linked-page evidence:');
             for (const item of correction.evidence) {
-                lines.push(`- ${providerLabel(item.sourceUrl)}: ${item.sourceUrl} -> ${item.gtin || '[no GTIN returned]'} (${item.lookupUrl})`);
+                const sourceMethod = item.method === 'url-embedded-gtin'
+                    ? 'barcode extracted directly from provider URL'
+                    : item.lookupUrl;
+                lines.push(`- ${providerLabel(item.sourceUrl)}: ${item.sourceUrl} -> ${item.gtin || '[no GTIN returned]'} (${sourceMethod})`);
             }
         }
 
