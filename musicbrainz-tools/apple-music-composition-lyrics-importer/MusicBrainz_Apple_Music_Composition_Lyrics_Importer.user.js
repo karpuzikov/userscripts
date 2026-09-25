@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         MusicBrainz - Import Apple Music Composition & Lyrics
+// @name         Apple Music works credits -> MusicBrainz
 // @namespace    https://github.com/karpuzikov/userscripts
 // @version      1.1.0
 // @description  Automatically resolve the correct Apple Music release by MusicBrainz barcode/link and import Composition & Lyrics credits into Work relationships.
@@ -710,7 +710,7 @@
         if (!note || state.applied) return;
 
         const sourceLine = `Apple Music Composition & Lyrics: ${state.appleUrl}`;
-        const scriptLine = 'Imported with MusicBrainz - Import Apple Music Composition & Lyrics\nScript: https://github.com/karpuzikov/userscripts/blob/main/musicbrainz-tools/apple-music-composition-lyrics-importer/MusicBrainz_Apple_Music_Composition_Lyrics_Importer.user.js';
+        const scriptLine = 'Imported with Apple Music works credits -> MusicBrainz\nScript: https://github.com/karpuzikov/userscripts/blob/main/musicbrainz-tools/apple-music-composition-lyrics-importer/MusicBrainz_Apple_Music_Composition_Lyrics_Importer.user.js';
         const current = note.value.trimEnd();
         const addition = `${sourceLine}\n${scriptLine}`;
 
