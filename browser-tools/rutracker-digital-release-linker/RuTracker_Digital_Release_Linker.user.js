@@ -1,11 +1,11 @@
 // ==UserScript==
 // @name         RuTracker Digital Release Linker
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.1.15
+// @version      1.1.16
 // @description  Links exact digital release pages in RuTracker BBCode, falls back from Deezer to MusicBrainz-linked Beatport releases, and adds country flag emoji.
 // @author       karpuzikov
-// @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/browser-tools/rutracker-digital-release-linker/RuTracker_Digital_Release_Linker.user.js?v=1.1.15
-// @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/browser-tools/rutracker-digital-release-linker/RuTracker_Digital_Release_Linker.user.js?v=1.1.15
+// @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/browser-tools/rutracker-digital-release-linker/RuTracker_Digital_Release_Linker.user.js?v=1.1.16
+// @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/browser-tools/rutracker-digital-release-linker/RuTracker_Digital_Release_Linker.user.js?v=1.1.16
 // @match        https://rutracker.org/forum/posting.php*
 // @grant        GM_xmlhttpRequest
 // @connect      api.deezer.com
@@ -102,7 +102,7 @@
             return gmJson(url, {
                 retries: 2,
                 headers: {
-                    'User-Agent': `${SCRIPT_NAME}/1.1.15 (Tampermonkey userscript)`,
+                    'User-Agent': `${SCRIPT_NAME}/1.1.16 (Tampermonkey userscript)`,
                 },
             });
         });
@@ -127,7 +127,7 @@
                         url,
                         headers: {
                             Accept: 'text/html',
-                            'User-Agent': `${SCRIPT_NAME}/1.1.15 (Tampermonkey userscript)`,
+                            'User-Agent': `${SCRIPT_NAME}/1.1.16 (Tampermonkey userscript)`,
                         },
                         timeout: 20000,
                         onload(response) {
@@ -463,7 +463,27 @@
             return { type: 'barcode', value, reissueYear };
         }
 
-        if (/^(?=.*\d)[A-Za-z0-9][A-Za-z0-9 ._/+\-]{2,}$/.test(value)) {
+        const placeholder = normalizeText(value);
+        if ([
+            'none',
+            'n a',
+            'na',
+            'unknown',
+            'no catalog',
+            'no catalogue',
+            'no cat',
+            'not available',
+        ].includes(placeholder)) {
+            return null;
+        }
+
+        const allowedCatalog = /^[A-Za-z0-9][A-Za-z0-9 ._/+\-]{2,}$/;
+        const hasDigit = /\d/.test(value);
+        const uppercaseLetterOnly =
+            /^[A-Z][A-Z._/+\-]{2,}$/.test(value) &&
+            /[A-Z]/.test(value);
+
+        if (allowedCatalog.test(value) && (hasDigit || uppercaseLetterOnly)) {
             return { type: 'catalog', value, reissueYear };
         }
 
