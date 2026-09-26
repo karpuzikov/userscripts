@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MusicBrainz - Safe Recording Matcher
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.1.1
+// @version      1.2.0
 // @description  Match recordings by title/artist or pasted ISRCs, with a strict seven-second duration limit.
 // @author       karpuzikov
 // @license      MIT
@@ -40,9 +40,47 @@
             .toLowerCase();
     }
 
+    function normalizeTitle(value) {
+        return normalize(value)
+            .replace(/\bremixed\s+by\b/gi, 'remix')
+            .replace(/\b(?:remix|rmx|mix)\b/gi, 'remix')
+            .replace(/ремикс/giu, 'remix')
+            .replace(/\b(?:featuring|feat|ft)\.?\b/gi, 'feat')
+            .replace(/\b(?:instrumental|inst)\.?\b/gi, 'instrumental')
+            .replace(/\b(?:a\s+cappella|acappella|acapella)\b/gi, 'acapella')
+            .replace(/\b(?:radio\s+version|radio\s+edit)\b/gi, 'radio')
+            .replace(/\b(?:acoustic\s+version|acoustic)\b/gi, 'acoustic')
+            .replace(/\b(?:live\s+version|live)\b/gi, 'live')
+            .replace(/[.'`´]/g, '')
+            .replace(/[^\p{L}\p{N}]+/gu, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+    }
+
+    function escapeLucene(value) {
+        return String(value ?? '').replace(/[+\-!(){}\[\]^"~*?:\\/|&]/g, char => '\\' + char);
+    }
+
+    function buildArtistIdQuery(track, artistIds) {
+        const ids = [...new Set((artistIds || []).filter(id => UUID.test(id)))];
+        if (!ids.length) return null;
+        const artist = ids.length === 1
+            ? 'arid:' + ids[0]
+            : '(' + ids.map(id => 'arid:' + id).join(' OR ') + ')';
+        return 'recording:"' + escapeLucene(track.title) + '" AND ' + artist;
+    }
+
+    function buildArtistNameQuery(track, names) {
+        const values = [...new Set((names || []).map(name => String(name ?? '').trim()).filter(Boolean))];
+        if (!values.length) return null;
+        const artist = values.length === 1
+            ? 'artist:"' + escapeLucene(values[0]) + '"'
+            : '(' + values.map(name => 'artist:"' + escapeLucene(name) + '"').join(' OR ') + ')';
+        return 'recording:"' + escapeLucene(track.title) + '" AND ' + artist;
+    }
+
     function buildQuery(track) {
-        const title = track.title.replace(/[+\-!(){}\[\]^"~*?:\\/|&]/g, char => '\\' + char);
-        return 'recording:"' + title + '" AND arid:' + track.artistIds[0];
+        return buildArtistIdQuery(track, [track.artistIds[0]]);
     }
 
     function candidateCredit(candidate) {
@@ -60,14 +98,13 @@
     function evaluateCandidate(track, candidate) {
         if (!UUID.test(candidate?.id || '')) return {ok: false, reason: 'Missing recording ID'};
         if (candidate.video) return {ok: false, reason: 'Video recording'};
-        if (!track.title || normalize(track.title) !== normalize(candidate.title ?? candidate.name)) {
+        if (!track.title || normalizeTitle(track.title) !== normalizeTitle(candidate.title ?? candidate.name)) {
             return {ok: false, reason: 'Different title'};
         }
         const credit = candidateCredit(candidate);
         if (!track.artistIds?.length || !credit.ids.length ||
             track.artistIds.length !== credit.ids.length ||
-            track.artistIds.some((id, index) => !UUID.test(id) || id.toLowerCase() !== credit.ids[index]?.toLowerCase()) ||
-            !normalize(track.credit) || normalize(track.credit) !== normalize(credit.text)) {
+            track.artistIds.some((id, index) => !UUID.test(id) || id.toLowerCase() !== credit.ids[index]?.toLowerCase())) {
             return {ok: false, reason: 'Different or unresolved artist credit'};
         }
         if (!Number.isInteger(track.length) || track.length <= 0 ||
@@ -84,13 +121,19 @@
     function chooseRecording(track, candidates) {
         const eligible = new Map();
         for (const candidate of candidates) {
-            if (evaluateCandidate(track, candidate).ok) eligible.set(candidate.id.toLowerCase(), candidate);
+            const result = evaluateCandidate(track, candidate);
+            if (!result.ok) continue;
+            const id = candidate.id.toLowerCase();
+            if (!eligible.has(id) || result.difference < eligible.get(id).difference) {
+                eligible.set(id, {candidate, difference: result.difference});
+            }
         }
-        if (eligible.size !== 1) {
-            return {reason: eligible.size ? 'Several valid recordings; review manually' : 'No exact recording found'};
+        const ranked = [...eligible.values()].sort((a, b) => a.difference - b.difference);
+        if (!ranked.length) return {reason: 'No safe recording found'};
+        if (ranked.length > 1 && ranked[0].difference === ranked[1].difference) {
+            return {reason: 'Two recordings are equally close; review manually'};
         }
-        const candidate = eligible.values().next().value;
-        return {id: candidate.id, candidate};
+        return {id: ranked[0].candidate.id, candidate: ranked[0].candidate};
     }
 
     function parseIsrcInput(text, expectedCount) {
@@ -205,6 +248,7 @@
 
     const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
     const resultCache = new Map();
+    const artistCache = new Map();
     let nextRequestAt = 0;
     let running = false;
     let stopRequested = false;
@@ -316,8 +360,86 @@
         throw new Error('MusicBrainz search did not complete');
     }
 
-    function searchRecordings(track) {
-        return searchQuery(buildQuery(track));
+    function releaseArtistIds() {
+        const release = window.MB?.releaseEditor?.rootField?.release?.();
+        const names = release?.artistCredit?.()?.names;
+        if (!Array.isArray(names)) return [];
+        return [...new Set(names.map(part => part?.artist?.gid).filter(id => UUID.test(id)))];
+    }
+
+    async function artistInfo(id) {
+        const key = String(id ?? '').toLowerCase();
+        if (!UUID.test(key)) return null;
+        if (artistCache.has(key)) return artistCache.get(key);
+
+        await throttle();
+        const response = await fetch('/ws/2/artist/' + key + '?fmt=json&inc=aliases', {
+            credentials: 'same-origin',
+            headers: {Accept: 'application/json'},
+        });
+        if (!response.ok) throw new Error('Artist lookup returned HTTP ' + response.status);
+        const data = await response.json();
+        const result = {
+            id: data.id,
+            name: String(data.name ?? '').trim(),
+            aliases: [...new Set((data.aliases || [])
+                .map(alias => String(alias?.name ?? '').trim())
+                .filter(Boolean))],
+        };
+        artistCache.set(key, result);
+        return result;
+    }
+
+    async function searchCircle(track, query, circle) {
+        if (!query) return null;
+        const search = await searchQuery(query);
+        if (search.reason) return {reason: search.reason, circle};
+        const chosen = chooseRecording(track, search.recordings);
+        return chosen.id ? {...chosen, circle} : {...chosen, circle};
+    }
+
+    async function searchRecordings(track) {
+        const mainIds = releaseArtistIds();
+        const effectiveMainIds = mainIds.length ? mainIds : track.artistIds.slice(0, 1);
+        const mainSet = new Set(effectiveMainIds.map(id => id.toLowerCase()));
+        const featuredIds = track.artistIds.filter(id => !mainSet.has(id.toLowerCase()));
+
+        const c1 = await searchCircle(
+            track,
+            buildArtistIdQuery(track, effectiveMainIds),
+            'C1 main release artist',
+        );
+        if (c1?.id || (c1?.reason && c1.reason.startsWith('Two recordings'))) return c1;
+
+        if (featuredIds.length) {
+            const c2 = await searchCircle(
+                track,
+                buildArtistIdQuery(track, featuredIds),
+                'C2 featured artist',
+            );
+            if (c2?.id || (c2?.reason && c2.reason.startsWith('Two recordings'))) return c2;
+        }
+
+        const relevantIds = [...new Set([...track.artistIds, ...effectiveMainIds])];
+        const info = (await Promise.all(relevantIds.map(artistInfo))).filter(Boolean);
+        const names = info.map(item => item.name).filter(Boolean);
+        const c3 = await searchCircle(
+            track,
+            buildArtistNameQuery(track, names),
+            'C3 exact artist name',
+        );
+        if (c3?.id || (c3?.reason && c3.reason.startsWith('Two recordings'))) return c3;
+
+        const aliases = [...new Set(info.flatMap(item => item.aliases))]
+            .filter(alias => !names.some(name => normalize(name) === normalize(alias)));
+        const c4 = await searchCircle(
+            track,
+            buildArtistNameQuery(track, aliases),
+            'C4 artist alias',
+        );
+        if (c4?.id || (c4?.reason && c4.reason.startsWith('Two recordings'))) return c4;
+
+        return {reason: 'No safe recording found in C1-C4'};
     }
 
     function searchByIsrc(code) {
@@ -489,9 +611,14 @@
                     continue;
                 }
 
-                let search;
+                let chosen;
                 try {
-                    search = isrc ? await searchByIsrc(isrc) : await searchRecordings(track);
+                    if (isrc) {
+                        const search = await searchByIsrc(isrc);
+                        chosen = search.reason ? {reason: search.reason} : chooseByIsrc(track, search.recordings);
+                    } else {
+                        chosen = await searchRecordings(track);
+                    }
                 } catch (error) {
                     review++;
                     showResult(list, row, 'Review', `${display} - ${error.message}`);
@@ -501,8 +628,6 @@
                     status.textContent = `Stopped: The track order changed. ${matched} matched, ${review} need review.`;
                     break;
                 }
-                const chosen = search.reason ? {reason: search.reason} :
-                    (isrc ? chooseByIsrc(track, search.recordings) : chooseRecording(track, search.recordings));
                 if (!chosen.id) {
                     review++;
                     showResult(list, row, 'Review', `${display} - ${chosen.reason}`);
@@ -514,7 +639,7 @@
                     matched++;
                     needsAttribution = true;
                     appendNoteIfPossible();
-                    showResult(list, row, 'Matched', display, chosen.id);
+                    showResult(list, row, 'Matched', display + (chosen.circle ? ' - ' + chosen.circle : ''), chosen.id);
                 } catch (error) {
                     review++;
                     showResult(list, row, 'Review', `${display} - ${error.message}`);
@@ -609,7 +734,7 @@
             '<button type="button" class="mb-safe-start">Match unlinked recordings</button> ' +
             '<button type="button" class="mb-safe-isrc">Match by ISRC</button> ' +
             '<button type="button" class="mb-safe-stop" hidden>Stop after current track</button> ' +
-            '<span class="mb-safe-status" role="status">Exact title and artist credit; maximum 7 seconds. ISRC ties and unsafe matches need manual review.</span>' +
+            '<span class="mb-safe-status" role="status">Artist-circle search; equivalent title wording; maximum 7 seconds. Unsafe ties need manual review.</span>' +
             '<ol class="mb-safe-results"></ol>';
         panel.querySelector('.mb-safe-start').addEventListener('click', () => runMatcher(panel));
         panel.querySelector('.mb-safe-isrc').addEventListener('click', () => openIsrcDialog(panel));
