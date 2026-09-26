@@ -1,11 +1,11 @@
 // ==UserScript==
 // @name         RuTracker Digital Release Linker
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.1.14
+// @version      1.1.15
 // @description  Links exact digital release pages in RuTracker BBCode, falls back from Deezer to MusicBrainz-linked Beatport releases, and adds country flag emoji.
 // @author       karpuzikov
-// @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/browser-tools/rutracker-digital-release-linker/RuTracker_Digital_Release_Linker.user.js?v=1.1.14
-// @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/browser-tools/rutracker-digital-release-linker/RuTracker_Digital_Release_Linker.user.js?v=1.1.14
+// @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/browser-tools/rutracker-digital-release-linker/RuTracker_Digital_Release_Linker.user.js?v=1.1.15
+// @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/browser-tools/rutracker-digital-release-linker/RuTracker_Digital_Release_Linker.user.js?v=1.1.15
 // @match        https://rutracker.org/forum/posting.php*
 // @grant        GM_xmlhttpRequest
 // @connect      api.deezer.com
@@ -102,7 +102,7 @@
             return gmJson(url, {
                 retries: 2,
                 headers: {
-                    'User-Agent': `${SCRIPT_NAME}/1.1.14 (Tampermonkey userscript)`,
+                    'User-Agent': `${SCRIPT_NAME}/1.1.15 (Tampermonkey userscript)`,
                 },
             });
         });
@@ -127,7 +127,7 @@
                         url,
                         headers: {
                             Accept: 'text/html',
-                            'User-Agent': `${SCRIPT_NAME}/1.1.14 (Tampermonkey userscript)`,
+                            'User-Agent': `${SCRIPT_NAME}/1.1.15 (Tampermonkey userscript)`,
                         },
                         timeout: 20000,
                         onload(response) {
@@ -273,9 +273,9 @@
     }));
 
     const SUBDIVISION_FLAGS = new Map(Object.entries({
-        england: 'gbeng',
-        scotland: 'gbsct',
-        wales: 'gbwls',
+        england: '🏴󠁧󠁢󠁥󠁮󠁧󠁿',
+        scotland: '🏴󠁧󠁢󠁳󠁣󠁴󠁿',
+        wales: '🏴󠁧󠁢󠁷󠁬󠁳󠁿',
     }));
 
     let countryNameIndex = null;
@@ -322,19 +322,10 @@
             .join('');
     }
 
-    function subdivisionFlagEmoji(tag) {
-        if (!/^[a-z]{5}$/.test(tag)) return '';
-        return String.fromCodePoint(
-            0x1F3F4,
-            ...[...tag].map((letter) => 0xE0061 + letter.charCodeAt(0) - 97),
-            0xE007F,
-        );
-    }
-
     function flagForCountryName(value) {
         const key = normalizeCountryName(value);
-        const subdivision = SUBDIVISION_FLAGS.get(key);
-        if (subdivision) return subdivisionFlagEmoji(subdivision);
+        const subdivisionFlag = SUBDIVISION_FLAGS.get(key);
+        if (subdivisionFlag) return subdivisionFlag;
 
         const code = countryCodeFromName(value);
         return flagEmoji(code);
