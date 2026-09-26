@@ -1,11 +1,11 @@
 // ==UserScript==
 // @name         RuTracker Digital Release Linker
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.1.13
+// @version      1.1.14
 // @description  Links exact digital release pages in RuTracker BBCode, falls back from Deezer to MusicBrainz-linked Beatport releases, and adds country flag emoji.
 // @author       karpuzikov
-// @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/browser-tools/rutracker-digital-release-linker/RuTracker_Digital_Release_Linker.user.js?v=1.1.13
-// @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/browser-tools/rutracker-digital-release-linker/RuTracker_Digital_Release_Linker.user.js?v=1.1.13
+// @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/browser-tools/rutracker-digital-release-linker/RuTracker_Digital_Release_Linker.user.js?v=1.1.14
+// @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/browser-tools/rutracker-digital-release-linker/RuTracker_Digital_Release_Linker.user.js?v=1.1.14
 // @match        https://rutracker.org/forum/posting.php*
 // @grant        GM_xmlhttpRequest
 // @connect      api.deezer.com
@@ -102,7 +102,7 @@
             return gmJson(url, {
                 retries: 2,
                 headers: {
-                    'User-Agent': `${SCRIPT_NAME}/1.1.13 (Tampermonkey userscript)`,
+                    'User-Agent': `${SCRIPT_NAME}/1.1.14 (Tampermonkey userscript)`,
                 },
             });
         });
@@ -127,7 +127,7 @@
                         url,
                         headers: {
                             Accept: 'text/html',
-                            'User-Agent': `${SCRIPT_NAME}/1.1.13 (Tampermonkey userscript)`,
+                            'User-Agent': `${SCRIPT_NAME}/1.1.14 (Tampermonkey userscript)`,
                         },
                         timeout: 20000,
                         onload(response) {
@@ -249,8 +249,10 @@
         'united states': 'US',
         'united states of america': 'US',
         uk: 'GB',
-        england: 'GB',
+        'united kingdom': 'GB',
         'great britain': 'GB',
+        britain: 'GB',
+        'northern ireland': 'GB',
         russia: 'RU',
         'south korea': 'KR',
         'north korea': 'KP',
@@ -268,6 +270,12 @@
         'ivory coast': 'CI',
         "cote d'ivoire": 'CI',
         taiwan: 'TW',
+    }));
+
+    const SUBDIVISION_FLAGS = new Map(Object.entries({
+        england: 'gbeng',
+        scotland: 'gbsct',
+        wales: 'gbwls',
     }));
 
     let countryNameIndex = null;
@@ -314,16 +322,37 @@
             .join('');
     }
 
+    function subdivisionFlagEmoji(tag) {
+        if (!/^[a-z]{5}$/.test(tag)) return '';
+        return String.fromCodePoint(
+            0x1F3F4,
+            ...[...tag].map((letter) => 0xE0061 + letter.charCodeAt(0) - 97),
+            0xE007F,
+        );
+    }
+
+    function flagForCountryName(value) {
+        const key = normalizeCountryName(value);
+        const subdivision = SUBDIVISION_FLAGS.get(key);
+        if (subdivision) return subdivisionFlagEmoji(subdivision);
+
+        const code = countryCodeFromName(value);
+        return flagEmoji(code);
+    }
+
+    function stripTrailingFlag(value) {
+        return String(value ?? '')
+            .replace(/\s*(?:[\u{1F1E6}-\u{1F1FF}]{2}|\u{1F3F4}[\u{E0061}-\u{E007A}]+\u{E007F})\s*$/u, '')
+            .trim();
+    }
+
     function addCountryFlags(text) {
         let changed = 0;
         const updated = text.replace(
             /(\[b\]Страна\[\/b\]\s*:\s*)([^|\r\n]+)/gi,
             (full, prefix, rawCountry) => {
-                const country = rawCountry
-                    .replace(/\s*[\u{1F1E6}-\u{1F1FF}]{2}\s*$/u, '')
-                    .trim();
-                const code = countryCodeFromName(country);
-                const flag = flagEmoji(code);
+                const country = stripTrailingFlag(rawCountry);
+                const flag = flagForCountryName(country);
                 if (!flag) return full;
 
                 const replacement = `${prefix}${country} ${flag}`;
