@@ -1,12 +1,11 @@
 // ==UserScript==
 // @name         Harmony - Copy ISRCs
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.0.1
+// @version      1.0.2
 // @description  Adds a one-click Copy ISRCs button to Harmony release tracklists.
 // @author       karpuzikov
 // @license      MIT
-// @match        https://harmony.pulsewidth.org.uk/release
-// @match        https://harmony.pulsewidth.org.uk/release/
+// @include      /^https:\/\/harmony\.pulsewidth\.org\.uk\/release\/?(?:\?[^#]*)?$/
 // @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/harmony-copy-isrcs/Harmony_Copy_ISRCs.user.js
 // @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/harmony-copy-isrcs/Harmony_Copy_ISRCs.user.js
 // @grant        GM_setClipboard
