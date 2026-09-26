@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MusicBrainz - Safe Recording Matcher
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.2.0
+// @version      1.2.1
 // @description  Match recordings by title/artist or pasted ISRCs, with a strict seven-second duration limit.
 // @author       karpuzikov
 // @license      MIT
@@ -558,9 +558,13 @@
         const button = panel.querySelector('.mb-safe-start');
         const isrcButton = panel.querySelector('.mb-safe-isrc');
         const stop = panel.querySelector('.mb-safe-stop');
+        const toggle = panel.querySelector('.mb-safe-toggle');
         const status = panel.querySelector('.mb-safe-status');
         const list = panel.querySelector('.mb-safe-results');
         list.replaceChildren();
+        list.hidden = true;
+        toggle.hidden = true;
+        toggle.textContent = 'Show results';
         if (!rows.length) {
             status.textContent = 'No loaded tracks. Open the Recordings tab and load the medium first.';
             return;
@@ -654,6 +658,7 @@
             button.disabled = false;
             isrcButton.disabled = false;
             stop.hidden = true;
+            toggle.hidden = list.children.length === 0;
             appendNoteIfPossible();
         }
     }
@@ -734,11 +739,17 @@
             '<button type="button" class="mb-safe-start">Match unlinked recordings</button> ' +
             '<button type="button" class="mb-safe-isrc">Match by ISRC</button> ' +
             '<button type="button" class="mb-safe-stop" hidden>Stop after current track</button> ' +
+            '<button type="button" class="mb-safe-toggle" hidden>Show results</button> ' +
             '<span class="mb-safe-status" role="status">Artist-circle search; equivalent title wording; maximum 7 seconds. Unsafe ties need manual review.</span>' +
-            '<ol class="mb-safe-results"></ol>';
+            '<ol class="mb-safe-results" hidden></ol>';
         panel.querySelector('.mb-safe-start').addEventListener('click', () => runMatcher(panel));
         panel.querySelector('.mb-safe-isrc').addEventListener('click', () => openIsrcDialog(panel));
         panel.querySelector('.mb-safe-stop').addEventListener('click', () => { stopRequested = true; });
+        panel.querySelector('.mb-safe-toggle').addEventListener('click', event => {
+            const list = panel.querySelector('.mb-safe-results');
+            list.hidden = !list.hidden;
+            event.currentTarget.textContent = list.hidden ? 'Show results' : 'Hide results';
+        });
         container.prepend(panel);
         return true;
     }
