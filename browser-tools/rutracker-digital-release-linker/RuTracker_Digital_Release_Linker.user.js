@@ -1,11 +1,11 @@
 // ==UserScript==
 // @name         RuTracker Digital Release Linker
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.1.16
+// @version      1.1.17
 // @description  Links exact digital release pages in RuTracker BBCode, falls back from Deezer to MusicBrainz-linked Beatport releases, and adds country flag emoji.
 // @author       karpuzikov
-// @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/browser-tools/rutracker-digital-release-linker/RuTracker_Digital_Release_Linker.user.js?v=1.1.16
-// @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/browser-tools/rutracker-digital-release-linker/RuTracker_Digital_Release_Linker.user.js?v=1.1.16
+// @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/browser-tools/rutracker-digital-release-linker/RuTracker_Digital_Release_Linker.user.js?v=1.1.17
+// @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/browser-tools/rutracker-digital-release-linker/RuTracker_Digital_Release_Linker.user.js?v=1.1.17
 // @match        https://rutracker.org/forum/posting.php*
 // @grant        GM_xmlhttpRequest
 // @connect      api.deezer.com
@@ -102,7 +102,7 @@
             return gmJson(url, {
                 retries: 2,
                 headers: {
-                    'User-Agent': `${SCRIPT_NAME}/1.1.16 (Tampermonkey userscript)`,
+                    'User-Agent': `${SCRIPT_NAME}/1.1.17 (Tampermonkey userscript)`,
                 },
             });
         });
@@ -127,7 +127,7 @@
                         url,
                         headers: {
                             Accept: 'text/html',
-                            'User-Agent': `${SCRIPT_NAME}/1.1.16 (Tampermonkey userscript)`,
+                            'User-Agent': `${SCRIPT_NAME}/1.1.17 (Tampermonkey userscript)`,
                         },
                         timeout: 20000,
                         onload(response) {
@@ -1103,18 +1103,55 @@
 
     function findSpoilers(text) {
         const spoilers = [];
-        const regex = /\[spoiler="([^"]*)"\]([\s\S]*?)\[\/spoiler\]/gi;
+        const stack = [];
+        const tokenRegex = /\[spoiler="([^"]*)"\]|\[\/spoiler\]/gi;
         let match;
-        while ((match = regex.exec(text))) {
-            spoilers.push({
-                start: match.index,
-                end: regex.lastIndex,
-                fullText: match[0],
-                title: match[1],
-                body: match[2],
-            });
+
+        while ((match = tokenRegex.exec(text))) {
+            if (match[1] !== undefined) {
+                stack.push({
+                    start: match.index,
+                    openEnd: tokenRegex.lastIndex,
+                    title: match[1],
+                    children: [],
+                });
+                continue;
+            }
+
+            const current = stack.pop();
+            if (!current) continue;
+
+            const end = tokenRegex.lastIndex;
+            const fullText = text.slice(current.start, end);
+            const body = text.slice(current.openEnd, match.index);
+            let ownText = fullText;
+
+            for (const child of current.children) {
+                const relativeStart = child.start - current.start;
+                const relativeEnd = child.end - current.start;
+                ownText =
+                    ownText.slice(0, relativeStart) +
+                    ' '.repeat(relativeEnd - relativeStart) +
+                    ownText.slice(relativeEnd);
+            }
+
+            const spoiler = {
+                start: current.start,
+                end,
+                fullText,
+                ownText,
+                title: current.title,
+                body,
+            };
+            spoilers.push(spoiler);
+
+            const parent = stack[stack.length - 1];
+            if (parent) {
+                parent.children.push({ start: current.start, end });
+            }
         }
-        return spoilers;
+
+        return spoilers.sort((a, b) => a.start - b.start || a.end - b.end);
     }
 
     function findProviderMatch(blockText) {
@@ -1199,7 +1236,7 @@
         let alreadyLinked = 0;
 
         for (const spoiler of spoilers) {
-            const found = findProviderMatch(spoiler.fullText);
+            const found = findProviderMatch(spoiler.ownText);
             if (!found) continue;
 
             const currentUrl = found.provider.getCurrentUrl(found.match);
@@ -1270,16 +1307,18 @@
                 }
 
                 const { candidate } = result;
-                const replacedBlock = candidate.spoiler.fullText.replace(
-                    candidate.provider.sourceRegex,
-                    (...args) => candidate.provider.makeLinkedSource(args, result.resolution),
+                const sourceMatch = candidate.sourceMatch;
+                const replacementSource = candidate.provider.makeLinkedSource(
+                    sourceMatch,
+                    result.resolution,
                 );
 
-                if (replacedBlock !== candidate.spoiler.fullText) {
+                if (replacementSource !== sourceMatch[0]) {
+                    const sourceStart = candidate.spoiler.start + sourceMatch.index;
                     replacements.push({
-                        start: candidate.spoiler.start,
-                        end: candidate.spoiler.end,
-                        text: replacedBlock,
+                        start: sourceStart,
+                        end: sourceStart + sourceMatch[0].length,
+                        text: replacementSource,
                     });
                     linked += 1;
                     if (result.resolution.kind === 'beatport') beatportFallbacks += 1;
