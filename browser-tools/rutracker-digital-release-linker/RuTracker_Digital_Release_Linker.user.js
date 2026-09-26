@@ -1,11 +1,11 @@
 // ==UserScript==
 // @name         RuTracker Digital Release Linker
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.1.17
+// @version      1.1.18
 // @description  Links exact digital release pages in RuTracker BBCode, falls back from Deezer to MusicBrainz-linked Beatport releases, and adds country flag emoji.
 // @author       karpuzikov
-// @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/browser-tools/rutracker-digital-release-linker/RuTracker_Digital_Release_Linker.user.js?v=1.1.17
-// @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/browser-tools/rutracker-digital-release-linker/RuTracker_Digital_Release_Linker.user.js?v=1.1.17
+// @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/browser-tools/rutracker-digital-release-linker/RuTracker_Digital_Release_Linker.user.js?v=1.1.18
+// @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/browser-tools/rutracker-digital-release-linker/RuTracker_Digital_Release_Linker.user.js?v=1.1.18
 // @match        https://rutracker.org/forum/posting.php*
 // @grant        GM_xmlhttpRequest
 // @connect      api.deezer.com
@@ -306,7 +306,9 @@
                         const code = String.fromCharCode(first, second);
                         const name = displayNames.of(code);
                         if (!name || name === code) continue;
-                        countryNameIndex.set(normalizeCountryName(name), code);
+                        if (!/^\p{RGI_Emoji}$/v.test(flagEmoji(code))) continue;
+                        const key = normalizeCountryName(name);
+                        if (!countryNameIndex.has(key)) countryNameIndex.set(key, code);
                     }
                 }
             }
