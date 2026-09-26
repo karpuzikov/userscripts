@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MusicBrainz - Safe Recording Matcher
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.1.0
+// @version      1.1.1
 // @description  Match recordings by title/artist or pasted ISRCs, with a strict seven-second duration limit.
 // @author       karpuzikov
 // @license      MIT
@@ -176,10 +176,24 @@
         return (note.trimEnd() ? note.trimEnd() + '\n\n' : '') + 'Script: ' + url;
     }
 
+    function bubbleTargetsRow(bubble, row) {
+        if (bubble?.visible?.() !== true || !row?.isConnected) return false;
+        return bubble.control?.closest?.('tr.track') === row;
+    }
+
     function readExactLength(bubble, button) {
-        if (bubble?.control !== button || bubble?.visible?.() !== true) return null;
+        if (bubble?.visible?.() !== true) return null;
+        if (button) {
+            const expectedRow = button.closest?.('tr.track');
+            const activeRow = bubble.control?.closest?.('tr.track');
+            if (expectedRow && activeRow && expectedRow !== activeRow) return null;
+        }
         const length = bubble.currentTrack?.()?.length?.();
         return Number.isInteger(length) && length > 0 ? length : null;
+    }
+
+    function readAvailableTrackLength(row, bubble, button) {
+        return readExactLength(bubble, button) || readTrack(row).length;
     }
 
     if (typeof document === 'undefined' && typeof module !== 'undefined' && module.exports) {
@@ -339,19 +353,22 @@
             // Opening the bubble can also start a native MusicBrainz suggestion request.
             nextRequestAt = Math.max(nextRequestAt, Date.now() + REQUEST_GAP_MS);
         }
-        const exactLength = await waitFor(() => readExactLength(model, button), 3000);
+        const trackLength = await waitFor(() => {
+            if (!bubbleTargetsRow(model, row)) return null;
+            return readAvailableTrackLength(row, model, button);
+        }, 3000);
+        if (!trackLength) throw new Error('Track length is unavailable');
         const input = element.querySelector('input.name');
-        if (!exactLength || !input) throw new Error('The exact track length or recording selector is unavailable');
         const suggestionsIdle = await waitFor(() => !element.querySelector('tr.loading-message'), 8000);
         if (!suggestionsIdle) throw new Error('MusicBrainz suggestions are still loading');
-        return {button, element, model, input, exactLength};
+        return {button, element, model, input, trackLength};
     }
 
     async function selectInEditor(row, track, candidate, editor) {
         const {button, element, model, input} = editor;
         const assertCurrentTarget = () => {
             const current = readTrack(row);
-            if (!row.isConnected || !maySelectUnlinkedRow(row) || readExactLength(model, button) !== track.length ||
+            if (!row.isConnected || !maySelectUnlinkedRow(row) || !bubbleTargetsRow(model, row) ||
                 normalize(current.title) !== normalize(track.title) ||
                 normalize(current.credit) !== normalize(track.credit) ||
                 JSON.stringify(current.artistIds) !== JSON.stringify(track.artistIds)) {
@@ -369,6 +386,7 @@
             assertCurrentTarget();
             suggested.click();
         } else {
+            if (!input) throw new Error('The recording search field is unavailable');
             await throttle();
             assertCurrentTarget();
             input.value = candidate.id;
@@ -378,16 +396,16 @@
             const current = readLinkedRecording(row);
             return current.id?.toLowerCase() === candidate.id.toLowerCase() ? current : null;
         }, 12000);
-        if (!linked) throw new Error('MusicBrainz did not confirm the recording lookup; stopped');
+        if (!linked) throw new Error('MusicBrainz did not confirm the recording lookup');
 
         // The rendered recording length is rounded; the API length is exact.
         const verified = evaluateCandidate(track, {...linked, length: candidate.length});
         if (!verified.ok || linked.length === null || Math.abs(linked.length - candidate.length) > 500) {
-            if (readExactLength(model, button) === track.length &&
+            if (bubbleTargetsRow(model, row) &&
                 readLinkedRecording(row).id?.toLowerCase() === candidate.id.toLowerCase()) {
                 element.querySelector('#add-new-recording')?.click();
             }
-            throw new Error('Editor linked a recording with different metadata; stopped');
+            throw new Error('Editor linked a recording with different metadata');
         }
         return linked;
     }
@@ -464,12 +482,11 @@
                 let editor;
                 try {
                     editor = await openEditor(row);
-                    track.length = editor.exactLength;
+                    track.length = editor.trackLength;
                 } catch (error) {
                     review++;
                     showResult(list, row, 'Review', `${display} - ${error.message}`);
-                    status.textContent = `Stopped: ${error.message}. ${matched} matched, ${review} need review.`;
-                    break;
+                    continue;
                 }
 
                 let search;
@@ -501,8 +518,7 @@
                 } catch (error) {
                     review++;
                     showResult(list, row, 'Review', `${display} - ${error.message}`);
-                    status.textContent = `Stopped: ${error.message}. ${matched} matched, ${review} need review.`;
-                    break;
+                    continue;
                 }
             }
             if (!status.textContent.startsWith('Stopped:')) {
