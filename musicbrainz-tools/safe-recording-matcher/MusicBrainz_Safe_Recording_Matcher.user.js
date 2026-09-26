@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         MusicBrainz - Safe Recording Matcher
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.0.0
-// @description  Select only unambiguous recording matches with the same title and artist credit within seven seconds.
+// @version      1.1.0
+// @description  Match recordings by title/artist or pasted ISRCs, with a strict seven-second duration limit.
 // @author       karpuzikov
 // @license      MIT
 // @match        https://musicbrainz.org/release/add*
@@ -93,6 +93,84 @@
         return {id: candidate.id, candidate};
     }
 
+    function parseIsrcInput(text, expectedCount) {
+        if (!Number.isInteger(expectedCount) || expectedCount < 1) {
+            throw new Error('Load the release tracks before matching ISRCs.');
+        }
+        const lines = String(text ?? '').split(/\r\n|\n|\r/);
+        const pattern = /(?:^|[^A-Z0-9])([A-Z]{2}-?[A-Z0-9]{3}-?\d{2}-?\d{5})(?![A-Z0-9])/gi;
+        const parsed = lines.map((line, index) => {
+            const visible = line.replace(/\]\([^)]*\)/g, ']').replace(/https?:\/\/[^\s|<>]+/gi, '');
+            const found = [...visible.matchAll(pattern)].map(match => match[1].replace(/-/g, '').toUpperCase());
+            if (found.length > 1) throw new Error(`Line ${index + 1} has more than one ISRC.`);
+            const table = line.includes('|');
+            const cells = table ? line.trim().replace(/^\|/, '').replace(/\|$/, '').split('|') : [];
+            return {
+                code: found[0],
+                number: Number(/^\s*\|?\s*(\d+)\s*\|/.exec(line)?.[1] ?? NaN),
+                table,
+                separator: cells.length > 0 && cells.every(cell => /^:?-+:?$/.test(cell.trim())),
+            };
+        });
+        let codes;
+        if (parsed.some(line => line.table)) {
+            const slots = [];
+            const numbered = parsed.some(line => Number.isInteger(line.number));
+            let previousNumber = null;
+            for (const [index, line] of parsed.entries()) {
+                const header = !line.code && !Number.isInteger(line.number) && parsed[index + 1]?.separator;
+                if (line.separator || header) continue;
+                if (!line.table) {
+                    if (line.code) throw new Error(`ISRC on line ${index + 1} is outside the table.`);
+                    continue;
+                }
+                if (numbered) {
+                    if (Number.isInteger(line.number)) {
+                        if ((previousNumber === null && line.number > 1) ||
+                            (previousNumber !== null && line.number !== previousNumber + 1 && line.number !== 1)) {
+                            throw new Error(`Unexpected track number ${line.number} on line ${index + 1}; check table order.`);
+                        }
+                        previousNumber = line.number;
+                        slots.push(line.code || null);
+                    } else if (line.code) {
+                        if (!slots.length) throw new Error(`ISRC on line ${index + 1} is outside a numbered table row.`);
+                        if (slots.at(-1)) throw new Error(`Table row ${slots.length} has more than one ISRC.`);
+                        slots[slots.length - 1] = line.code;
+                    }
+                } else {
+                    slots.push(line.code || null);
+                }
+            }
+            const missing = slots.indexOf(null);
+            if (missing !== -1) throw new Error(`Table row ${missing + 1} has no ISRC.`);
+            codes = slots;
+        } else {
+            codes = parsed.flatMap(line => line.code ? [line.code] : []);
+        }
+        if (codes.length !== expectedCount) {
+            throw new Error(`Expected ${expectedCount} ISRCs for ${expectedCount} tracks; found ${codes.length} ISRCs.`);
+        }
+        return codes;
+    }
+
+    function chooseByIsrc(track, candidates) {
+        const eligible = new Map();
+        for (const candidate of candidates) {
+            const result = evaluateCandidate(track, candidate);
+            if (!result.ok) continue;
+            const id = candidate.id.toLowerCase();
+            if (!eligible.has(id) || result.difference < eligible.get(id).difference) {
+                eligible.set(id, {candidate, difference: result.difference});
+            }
+        }
+        const ranked = [...eligible.values()].sort((a, b) => a.difference - b.difference);
+        if (!ranked.length) return {reason: 'No recording with matching title, artist and length within 7 seconds'};
+        if (ranked.length > 1 && ranked[0].difference === ranked[1].difference) {
+            return {reason: 'Two recordings are equally close; review manually'};
+        }
+        return {id: ranked[0].candidate.id, candidate: ranked[0].candidate};
+    }
+
     function appendAttribution(note, url) {
         if (note.includes(url)) return note;
         return (note.trimEnd() ? note.trimEnd() + '\n\n' : '') + 'Script: ' + url;
@@ -105,7 +183,7 @@
     }
 
     if (typeof document === 'undefined' && typeof module !== 'undefined' && module.exports) {
-        module.exports = {parseLength, buildQuery, evaluateCandidate, chooseRecording, appendAttribution, readExactLength, maySelectUnlinkedRow};
+        module.exports = {parseLength, buildQuery, evaluateCandidate, chooseRecording, parseIsrcInput, chooseByIsrc, appendAttribution, readExactLength, maySelectUnlinkedRow};
         return;
     }
 
@@ -186,8 +264,7 @@
         nextRequestAt = Date.now() + REQUEST_GAP_MS;
     }
 
-    async function searchRecordings(track) {
-        const query = buildQuery(track);
+    async function searchQuery(query) {
         if (resultCache.has(query)) return resultCache.get(query);
 
         const url = '/ws/2/recording?fmt=json&limit=100&query=' + encodeURIComponent(query);
@@ -225,6 +302,14 @@
         throw new Error('MusicBrainz search did not complete');
     }
 
+    function searchRecordings(track) {
+        return searchQuery(buildQuery(track));
+    }
+
+    function searchByIsrc(code) {
+        return searchQuery('isrc:' + code);
+    }
+
     function appendNoteIfPossible() {
         if (!needsAttribution) return;
         const textarea = document.querySelector('#edit-note-text, #edit-note textarea.edit-note');
@@ -247,6 +332,9 @@
         }
         if (model.control !== button || !model.visible()) {
             await throttle();
+            if (!row.isConnected || !maySelectUnlinkedRow(row)) {
+                throw new Error('The track changed or was linked while opening the editor');
+            }
             button.click();
             // Opening the bubble can also start a native MusicBrainz suggestion request.
             nextRequestAt = Math.max(nextRequestAt, Date.now() + REQUEST_GAP_MS);
@@ -261,24 +349,28 @@
 
     async function selectInEditor(row, track, candidate, editor) {
         const {button, element, model, input} = editor;
-        const current = readTrack(row);
-        if (!row.isConnected || !maySelectUnlinkedRow(row) || readExactLength(model, button) !== track.length ||
-            normalize(current.title) !== normalize(track.title) ||
-            normalize(current.credit) !== normalize(track.credit) ||
-            JSON.stringify(current.artistIds) !== JSON.stringify(track.artistIds)) {
-            throw new Error('The track changed or was linked during matching');
-        }
+        const assertCurrentTarget = () => {
+            const current = readTrack(row);
+            if (!row.isConnected || !maySelectUnlinkedRow(row) || readExactLength(model, button) !== track.length ||
+                normalize(current.title) !== normalize(track.title) ||
+                normalize(current.credit) !== normalize(track.credit) ||
+                JSON.stringify(current.artistIds) !== JSON.stringify(track.artistIds)) {
+                throw new Error('The track or recording selector changed during matching');
+            }
+        };
+        assertCurrentTarget();
 
         const suggestionsIdle = await waitFor(() => !element.querySelector('tr.loading-message'), 8000);
         if (!suggestionsIdle) throw new Error('MusicBrainz suggestions are still loading');
+        assertCurrentTarget();
         const suggested = [...element.querySelectorAll('input[data-change="recording"]')]
             .find(radio => radio.value.toLowerCase() === candidate.id.toLowerCase());
         if (suggested) {
-            if (!maySelectUnlinkedRow(row)) throw new Error('The track was linked during matching');
+            assertCurrentTarget();
             suggested.click();
         } else {
             await throttle();
-            if (!maySelectUnlinkedRow(row)) throw new Error('The track was linked during matching');
+            assertCurrentTarget();
             input.value = candidate.id;
             input.dispatchEvent(new Event('input', {bubbles: true}));
         }
@@ -291,7 +383,10 @@
         // The rendered recording length is rounded; the API length is exact.
         const verified = evaluateCandidate(track, {...linked, length: candidate.length});
         if (!verified.ok || linked.length === null || Math.abs(linked.length - candidate.length) > 500) {
-            element.querySelector('#add-new-recording')?.click();
+            if (readExactLength(model, button) === track.length &&
+                readLinkedRecording(row).id?.toLowerCase() === candidate.id.toLowerCase()) {
+                element.querySelector('#add-new-recording')?.click();
+            }
             throw new Error('Editor linked a recording with different metadata; stopped');
         }
         return linked;
@@ -312,10 +407,16 @@
         list.append(item);
     }
 
-    async function runMatcher(panel) {
+    function trackRowsUnchanged(rows) {
+        const current = document.querySelectorAll('#recordings tr.track');
+        return current.length === rows.length && rows.every((row, index) => row === current[index]);
+    }
+
+    async function runMatcher(panel, isrcs = null) {
         if (running) return;
         const rows = [...document.querySelectorAll('#recordings tr.track')];
         const button = panel.querySelector('.mb-safe-start');
+        const isrcButton = panel.querySelector('.mb-safe-isrc');
         const stop = panel.querySelector('.mb-safe-stop');
         const status = panel.querySelector('.mb-safe-status');
         const list = panel.querySelector('.mb-safe-results');
@@ -324,10 +425,15 @@
             status.textContent = 'No loaded tracks. Open the Recordings tab and load the medium first.';
             return;
         }
+        if (isrcs && (isrcs.length !== rows.length || document.querySelector('#recordings .edit-recording'))) {
+            status.textContent = 'The loaded track count changed or a medium is not loaded. Open all media and paste the ISRCs again.';
+            return;
+        }
 
         running = true;
         stopRequested = false;
         button.disabled = true;
+        isrcButton.disabled = true;
         stop.hidden = false;
         let matched = 0;
         let review = 0;
@@ -335,17 +441,23 @@
         try {
             for (const row of rows) {
                 if (stopRequested) break;
+                if (isrcs && !trackRowsUnchanged(rows)) {
+                    status.textContent = `Stopped: The track order changed. ${matched} matched, ${review} need review.`;
+                    break;
+                }
                 processed++;
                 const track = readTrack(row);
-                status.textContent = `Checking ${processed}/${rows.length}: ${track.title || '(untitled)'}`;
+                const isrc = isrcs?.[processed - 1];
+                const display = `${track.title || '(untitled)'}${isrc ? ' (' + isrc + ')' : ''}`;
+                status.textContent = `Checking ${processed}/${rows.length}: ${track.title || '(untitled)'}${isrc ? ' (' + isrc + ')' : ''}`;
 
                 if (!maySelectUnlinkedRow(row)) {
-                    showResult(list, row, 'Already linked', track.title);
+                    showResult(list, row, 'Already linked', display);
                     continue;
                 }
                 if (!track.title || !track.artistIds.length || track.artistIds.some(id => !UUID.test(id)) || !track.credit) {
                     review++;
-                    showResult(list, row, 'Review', `${track.title || '(untitled)'} - missing title or artist ID`);
+                    showResult(list, row, 'Review', `${display} - missing title or artist ID`);
                     continue;
                 }
 
@@ -355,23 +467,28 @@
                     track.length = editor.exactLength;
                 } catch (error) {
                     review++;
-                    showResult(list, row, 'Review', `${track.title} - ${error.message}`);
+                    showResult(list, row, 'Review', `${display} - ${error.message}`);
                     status.textContent = `Stopped: ${error.message}. ${matched} matched, ${review} need review.`;
                     break;
                 }
 
                 let search;
                 try {
-                    search = await searchRecordings(track);
+                    search = isrc ? await searchByIsrc(isrc) : await searchRecordings(track);
                 } catch (error) {
                     review++;
-                    showResult(list, row, 'Review', `${track.title} - ${error.message}`);
+                    showResult(list, row, 'Review', `${display} - ${error.message}`);
                     continue;
                 }
-                const chosen = search.reason ? {reason: search.reason} : chooseRecording(track, search.recordings);
+                if (isrcs && !trackRowsUnchanged(rows)) {
+                    status.textContent = `Stopped: The track order changed. ${matched} matched, ${review} need review.`;
+                    break;
+                }
+                const chosen = search.reason ? {reason: search.reason} :
+                    (isrc ? chooseByIsrc(track, search.recordings) : chooseRecording(track, search.recordings));
                 if (!chosen.id) {
                     review++;
-                    showResult(list, row, 'Review', `${track.title} - ${chosen.reason}`);
+                    showResult(list, row, 'Review', `${display} - ${chosen.reason}`);
                     continue;
                 }
 
@@ -380,10 +497,10 @@
                     matched++;
                     needsAttribution = true;
                     appendNoteIfPossible();
-                    showResult(list, row, 'Matched', track.title, chosen.id);
+                    showResult(list, row, 'Matched', display, chosen.id);
                 } catch (error) {
                     review++;
-                    showResult(list, row, 'Review', `${track.title} - ${error.message}`);
+                    showResult(list, row, 'Review', `${display} - ${error.message}`);
                     status.textContent = `Stopped: ${error.message}. ${matched} matched, ${review} need review.`;
                     break;
                 }
@@ -394,9 +511,76 @@
         } finally {
             running = false;
             button.disabled = false;
+            isrcButton.disabled = false;
             stop.hidden = true;
             appendNoteIfPossible();
         }
+    }
+
+    function openIsrcDialog(panel) {
+        if (running || document.getElementById('mb-safe-isrc-dialog')) return;
+        const rows = [...document.querySelectorAll('#recordings tr.track')];
+        const trigger = panel.querySelector('.mb-safe-isrc');
+        const backdrop = document.createElement('div');
+        backdrop.id = 'mb-safe-isrc-dialog';
+        backdrop.style.cssText = 'position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.65);display:flex;align-items:center;justify-content:center;padding:1rem';
+        const dialog = document.createElement('div');
+        dialog.setAttribute('role', 'dialog');
+        dialog.setAttribute('aria-modal', 'true');
+        dialog.setAttribute('aria-labelledby', 'mb-safe-isrc-title');
+        dialog.style.cssText = 'box-sizing:border-box;width:min(42rem,100%);max-height:90vh;overflow:auto;background:Canvas;color:CanvasText;padding:1.25rem;border:1px solid GrayText;border-radius:.4rem;box-shadow:0 .5rem 2rem #0008';
+        dialog.innerHTML = '<h2 id="mb-safe-isrc-title">Match by ISRC</h2>' +
+            '<p>Paste one ISRC per track in release order. A plain list or table works. Include tracks already linked.</p>' +
+            '<label for="mb-safe-isrc-input">ISRCs</label><br>' +
+            '<textarea id="mb-safe-isrc-input" rows="12" style="box-sizing:border-box;width:100%" spellcheck="false" placeholder="NLA321400132\nNLA321400141\nNLA321400142"></textarea>' +
+            '<p class="mb-safe-isrc-error" role="alert"></p>' +
+            '<button type="button" class="mb-safe-isrc-confirm">Match tracks</button> ' +
+            '<button type="button" class="mb-safe-isrc-cancel">Cancel</button>';
+        backdrop.append(dialog);
+        document.body.append(backdrop);
+        const input = dialog.querySelector('textarea');
+        const error = dialog.querySelector('.mb-safe-isrc-error');
+        const confirm = dialog.querySelector('.mb-safe-isrc-confirm');
+        const cancel = dialog.querySelector('.mb-safe-isrc-cancel');
+        const close = () => {
+            backdrop.remove();
+            trigger.focus();
+        };
+        const unavailable = !rows.length || Boolean(document.querySelector('#recordings .edit-recording'));
+        if (unavailable) {
+            error.textContent = 'Open the Recordings tab and load every medium before matching ISRCs.';
+            confirm.disabled = true;
+        } else {
+            dialog.querySelector('p').textContent += ` ${rows.length} tracks are loaded.`;
+        }
+        confirm.addEventListener('click', () => {
+            try {
+                if (document.querySelector('#recordings .edit-recording') || !trackRowsUnchanged(rows)) {
+                    throw new Error('The track list changed. Close this window and paste the ISRCs again.');
+                }
+                const codes = parseIsrcInput(input.value, rows.length);
+                close();
+                runMatcher(panel, codes);
+            } catch (cause) {
+                error.textContent = cause.message;
+            }
+        });
+        cancel.addEventListener('click', close);
+        backdrop.addEventListener('click', event => { if (event.target === backdrop) close(); });
+        backdrop.addEventListener('keydown', event => {
+            if (event.key === 'Escape') close();
+            if (event.key === 'Tab') {
+                const focusables = [input, confirm, cancel].filter(element => !element.disabled);
+                if (event.shiftKey && document.activeElement === focusables[0]) {
+                    event.preventDefault();
+                    focusables.at(-1).focus();
+                } else if (!event.shiftKey && document.activeElement === focusables.at(-1)) {
+                    event.preventDefault();
+                    focusables[0].focus();
+                }
+            }
+        });
+        input.focus();
     }
 
     function addControls() {
@@ -407,10 +591,12 @@
         panel.id = 'mb-safe-recording-matcher';
         panel.innerHTML = '<legend>Safe recording matcher</legend>' +
             '<button type="button" class="mb-safe-start">Match unlinked recordings</button> ' +
+            '<button type="button" class="mb-safe-isrc">Match by ISRC</button> ' +
             '<button type="button" class="mb-safe-stop" hidden>Stop after current track</button> ' +
-            '<span class="mb-safe-status" role="status">Exact title and artist credit; maximum 7 seconds. Multiple matches need manual review.</span>' +
+            '<span class="mb-safe-status" role="status">Exact title and artist credit; maximum 7 seconds. ISRC ties and unsafe matches need manual review.</span>' +
             '<ol class="mb-safe-results"></ol>';
         panel.querySelector('.mb-safe-start').addEventListener('click', () => runMatcher(panel));
+        panel.querySelector('.mb-safe-isrc').addEventListener('click', () => openIsrcDialog(panel));
         panel.querySelector('.mb-safe-stop').addEventListener('click', () => { stopRequested = true; });
         container.prepend(panel);
         return true;
