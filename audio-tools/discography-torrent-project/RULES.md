@@ -125,18 +125,20 @@ Do not decide uniqueness from filename/title alone.
 
 Use as many signals as available.
 
-Primary identity signal:
-1. AcoustID/Chromaprint fingerprint, together with compatible duration/version metadata.
+Track duplicate identity is audio-only.
 
-Supporting signals:
-2. MusicBrainz recording ID;
-3. ISRC;
-4. normalized title/version text;
-5. duration;
-6. artist credit;
-7. release/track metadata.
+Primary and decisive identity signal:
+1. Chromaprint fingerprint similarity from the decoded audio itself.
 
-Decoded PCM hash is NOT the primary duplicate detector. It is useful only as a secondary confirmation that two files contain effectively identical decoded PCM audio. Different mastering/remastering can change PCM while the underlying song/recording is still the one we want to treat as duplicate coverage.
+Rules:
+- filenames and track titles do not create or block duplicate matches;
+- MusicBrainz recording IDs, ISRCs, artist credits, and other tags do not create duplicate matches;
+- use strict fingerprint similarity thresholds; uncertain audio remains distinct and is retained;
+- fingerprint alignment must allow large offsets so leading/trailing silence or hidden-track padding does not prevent a match;
+- if total durations differ substantially, the unmatched fingerprint region must itself look like silence/padding before the tracks may be merged;
+- non-silent added/removed audio remains a distinct version.
+
+Decoded PCM hash is not the primary duplicate detector because different mastering/remastering can change PCM.
 
 Different versions must remain distinct, including when applicable:
 
@@ -155,9 +157,9 @@ Different versions must remain distinct, including when applicable:
 - remaster/master difference when intentionally distinct
 - explicit vs clean once reliable detection exists
 
-Named `(... Version)` labels are hard identity boundaries. Different labels, or a named version versus an unlabeled version, must remain distinct even when AcoustID/Chromaprint similarity is very strong.\n\nCompletely different titles are also a hard safety boundary for fingerprint-only matching. This protects translated/different-language recordings such as a localized song title versus its English title: strong AcoustID/Chromaprint similarity alone must not merge them. Fingerprint auto-merge requires the same normalized title or only a one-character metadata typo.
+Named `(... Version)` labels are hard identity boundaries. Different labels, or a named version versus an unlabeled version, must remain distinct even when AcoustID/Chromaprint similarity is very strong.\n\nDifferent-language, live, acoustic, extended, instrumental, edited, and other semantic versions must be distinguished by the audio analysis itself. Titles may describe those versions, but titles do not decide duplicate identity.
 
-For duplicate matching only, title formatting differences that do not define a wanted semantic version must be normalized away. This includes featured-artist credits written in the title on one source but only in artist metadata on another, generic advisory labels such as `Album Version Edited`, `Album Version Explicit`, `Explicit Version`, and `Clean Version`, and censorship masks such as `**` / `__`. These must not block same-album duplicate detection. Semantic variants such as Acoustic, Live, Radio Edit, Instrumental, language/region versions, etc. remain distinct.\n\nNear-title matches must not be collapsed automatically.
+Filename/title formatting is irrelevant to track duplicate identity. The analyzer compares the audio instead.\n\nNear-title matches must not be collapsed automatically.
 
 ## 7. Source preference
 
