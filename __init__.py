@@ -26,6 +26,33 @@ def _normalize_barcode(value):
     return barcode
 
 
+def _barcode_forms(value):
+    barcode = _normalize_barcode(value)
+    if not barcode:
+        return set()
+
+    forms = {barcode}
+    trimmed = barcode.lstrip("0")
+
+    if trimmed:
+        removed = len(barcode) - len(trimmed)
+        if 0 < removed <= 3:
+            forms.add(trimmed)
+
+        for zeros in range(1, 4):
+            candidate = ("0" * zeros) + trimmed
+            if 8 <= len(candidate) <= 14:
+                forms.add(candidate)
+
+    return forms
+
+
+def _barcodes_match(left, right):
+    left_forms = _barcode_forms(left)
+    right_forms = _barcode_forms(right)
+    return bool(left_forms and right_forms and left_forms.intersection(right_forms))
+
+
 def _metadata_tag_values(metadata, wanted_tag):
     if metadata is None:
         return []
@@ -127,7 +154,7 @@ def _barcode_lookup_finished(api, files, barcode, document, http, error):
     exact_matches = [
         release
         for release in releases
-        if _exact_release_barcode(release) == barcode
+        if _barcodes_match(barcode, _exact_release_barcode(release))
     ]
 
     if not exact_matches:
