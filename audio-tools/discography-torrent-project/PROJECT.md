@@ -249,9 +249,12 @@ run this logic automatically at the final torrent preparation stage and prepare/
 - The software performs the track-by-track duplicate/version analysis and release optimization itself.
 - Uncertain equivalence is resolved conservatively by keeping both tracks/releases.
 - After scanning, show one global confirmation containing summary counts only.
-- On confirmation, automatically move redundant release folders into a reversible timestamped backup.
+- On confirmation, automatically move redundant release folders as-is into `<artist>_duplicates`; never rename the release folders.
+- If the selected recycle artist folder is inside `!recycle`, create `<artist>_duplicates` outside that recycle parent.
+- Redundant folders containing remix material go under `<artist>_duplicates/!Remixes/`.
+- Remixes are excluded from wanted-discography coverage.
 - Leave required recycle releases in the recycle folder for the next processing stage.
-- Final UI should only show a short completion summary plus Open filtered recycle / Open backup / Undo.
+- Final UI should only show a short completion summary plus Open filtered recycle / Open duplicates / Undo.
 - Technical diagnostics are optional and must not be required for normal use.
 
 ## Proposed controller
