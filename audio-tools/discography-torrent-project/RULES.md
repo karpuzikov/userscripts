@@ -13,11 +13,11 @@ Priority order:
 
 1. Preserve ideally every unique song/recording/version that is available.
 2. Keep every album represented.
-3. Ignore unwanted remix tracks when comparing release coverage.
-4. Prefer explicit over equivalent clean material.
-5. Prefer CD / physical-media sources over equivalent WEB sources.
+3. Ignore excluded remix/live tracks when comparing release coverage when those options are enabled.
+4. Prefer CD / physical-media sources over equivalent WEB sources.
+5. Prefer the existing processed copy when source class and wanted audio are otherwise equivalent.
 6. Then minimize duplicated wanted tracks, total wanted audio files, and retained release count.
-7. Never automatically discard material when the match is uncertain.
+7. Never automatically discard material when the audio match is uncertain.
 
 The analyzer must optimize the collection as a whole, not judge each release independently.
 
@@ -78,7 +78,8 @@ Rules:
 
 - only an explicit `Remix`, `Remixes`, `Remixed`, or `Dub` marker classifies a track as remix material;
 - the word `Mix` by itself is NOT a remix marker;
-- `Original Mix`, `Extended Mix`, `12" Mix`, `7" Mix`, and similar non-club mix labels are wanted versions, not remixes;\n- `Club Mix` / `Club Mixes` are remix material;
+- `Original Mix`, `Extended Mix`, `12" Mix`, `7" Mix`, and similar non-club mix labels are wanted versions, not remixes;
+- `Club Mix` / `Club Mixes` are remix material;
 - `Instrumental` and `A Capella` / `Acapella` are wanted distinct versions, not remixes;
 - a release named `Remixes` does NOT automatically make every track inside it unwanted; classify the tracks individually;
 - the presence of remix tracks does NOT make the entire release unwanted;
@@ -127,50 +128,32 @@ Current behavior:
 - compare using wanted content, source medium, existing-vs-recycle precedence, and duplication minimization.
 
 Future behavior, once a reliable detector exists:
-- explicit should be preferred over an equivalent clean version;
-- genuinely different censored/edited recordings should remain distinct.
+- explicit/clean state may be used as a preference only after reliable detection is implemented;
+- genuinely different censored/edited recordings remain distinct when the audio analysis shows they are different.
 
 ## 6. Unique recording/version definition
-
-Do not decide uniqueness from filename/title alone.
-
-Use as many signals as available.
 
 Track duplicate identity is audio-only.
 
 Primary and decisive identity signal:
-1. Chromaprint fingerprint similarity from the decoded audio itself.
+1. Chromaprint fingerprint similarity calculated from the decoded audio itself.
 
 Rules:
-- filenames and track titles do not create or block duplicate matches;
-- MusicBrainz recording IDs, ISRCs, artist credits, and other tags do not create duplicate matches;
-- use strict fingerprint similarity thresholds; uncertain audio remains distinct and is retained;
-- fingerprint alignment must allow large offsets so leading/trailing silence or hidden-track padding does not prevent a match;
-- if total durations differ substantially, the unmatched fingerprint region must itself look like silence/padding before the tracks may be merged;
-- non-silent added/removed audio remains a distinct version.
 
-Decoded PCM hash is not the primary duplicate detector because different mastering/remastering can change PCM.
+- filenames and track titles do not create a duplicate match;
+- filenames and track titles do not block a duplicate match;
+- MusicBrainz recording IDs, ISRCs, artist credits, album names, and other tags do not create or block a duplicate match;
+- use strict fingerprint thresholds; uncertain audio remains distinct and is retained;
+- fingerprint alignment may compensate for leading/trailing silence or padding;
+- if durations differ substantially, the unmatched fingerprint region must behave like silence/padding before the tracks may be merged;
+- substantial unmatched non-silent audio means a distinct version;
+- release-level coverage is computed from these audio-derived track groups, not filename/title similarity.
 
-Different versions must remain distinct, including when applicable:
+Decoded PCM hash is not the primary detector because mastering/remastering can change PCM while the underlying recording remains equivalent for coverage.
 
-- remix
-- live
-- acoustic
-- radio edit
-- extended version / extended mix
-- instrumental
-- a cappella
-- dub
-- demo
-- alternate mix
-- 12" / 7" / club / VIP and other named mix variants
-- language/region versions such as `US Version`, `French Version`, `Spanish Version`, etc.
-- remaster/master difference when intentionally distinct
-- explicit vs clean once reliable detection exists
+Different performances/versions should remain distinct when their audio is materially different, including live, acoustic, radio edit, extended, instrumental, a cappella, remix/dub, demo, alternate mix, language performances, and similar variants.
 
-Named `(... Version)` labels are hard identity boundaries. Different labels, or a named version versus an unlabeled version, must remain distinct even when AcoustID/Chromaprint similarity is very strong.\n\nDifferent-language, live, acoustic, extended, instrumental, edited, and other semantic versions must be distinguished by the audio analysis itself. Titles may describe those versions, but titles do not decide duplicate identity.
-
-Filename/title formatting is irrelevant to track duplicate identity. The analyzer compares the audio instead. Release-level coverage must also be based on the resulting audio fingerprint groups; filename/title structural matching must not override the audio result.\n\nNear-title matches must not be collapsed automatically.
+Titles may describe those variants, but titles themselves are not evidence for or against duplicate identity.
 
 ## 7. Source preference
 
@@ -202,7 +185,7 @@ For equivalent WEB vs WEB content, keep the existing ALAC release and move/skip 
 
 For equivalent CD vs WEB content, keep the CD release regardless of whether it is in Existing or Recycle.
 
-Release-level equivalence must not depend only on internal fingerprint-group IDs. For related album editions, compare wanted non-remix tracks directly using Chromaprint/MBID/ISRC and, when needed, normalized title + compatible duration as a fallback.
+Release-level equivalence is based on audio-derived track groups and direct Chromaprint comparison. MBIDs, ISRCs, normalized titles, and filenames are not fallback identity tests.
 
 
 ### Optional existing-discography mode
@@ -235,21 +218,18 @@ Do not assume the existing discography is already optimal.
 
 
 
-### Release-structure matching
+### Release-level audio matching
 
-For related album editions, folder/file structure is an independent identity signal and must not be overridden by missing or inconsistent embedded tags.
+Release folders and filenames are containers/labels only. They must not establish track identity.
 
 Rules:
 
-- strip ordinary numeric track prefixes from filenames, including forms such as `01 Title`, `01 - Title`, `01. Title`, `01_Title`, and `01) Title`;
-- compare both embedded track titles and normalized filename titles;
-- exact folder barcode matches remain valid even when audio tags omit or disagree on barcode;
-- album-family matching must also use the normalized release folder name, not only the embedded ALBUM tag;
-- for related album editions only, tolerate a single-character metadata typo in an otherwise matching normalized track title, e.g. `PunkBtch` vs `PUNKBITCH`;
-- do not use this typo tolerance across unrelated releases.
-
-This structural pass exists so equivalent ALAC/FLAC editions cannot fail comparison merely because one copy has missing/different tags.
-
+- each direct child of the selected artist folder remains one release container;
+- multi-disc subfolders such as `CD1` / `CD2` remain part of that release container;
+- wanted track coverage is compared using audio-derived fingerprint groups;
+- a release covers another only when every wanted target track has a high-confidence audio match;
+- folder names, file names, title text, barcode text in folder names, MBIDs, ISRCs, and metadata typo tolerance must not override the audio result;
+- uncertain audio remains distinct and therefore keeps the material.
 
 ### Final existing-vs-recycle safeguard
 
@@ -257,7 +237,7 @@ The final action plan must independently enforce existing-vs-recycle precedence 
 
 Before a recycle release can be kept over an existing release:
 
-- compare folder-derived release identity;
+- compare release-container context;
 - compare normalized track filenames directly;
 - ignore unwanted remix tracks;
 - if the existing release covers all wanted recycle tracks and is equal or better on explicit/source quality, force:
