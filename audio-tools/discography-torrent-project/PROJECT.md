@@ -245,6 +245,8 @@ run this logic automatically at the final torrent preparation stage and prepare/
 
 ## Duplicate / Edition Analyzer UX
 
+- Source detection: `.cue` + any `.log` except `audiochecker.log` = CD. Equivalent existing ALAC content wins over equivalent recycle content unless recycle is objectively better (e.g. explicit vs clean or CD vs WEB).
+
 - Do not show a per-release review/results table as the normal workflow.
 - The software performs the track-by-track duplicate/version analysis and release optimization itself.
 - Uncertain equivalence is resolved conservatively by keeping both tracks/releases.
