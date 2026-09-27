@@ -245,14 +245,14 @@ run this logic automatically at the final torrent preparation stage and prepare/
 
 ## Duplicate / Edition Analyzer UX
 
-- The primary output must be an in-app action list, not a large text report.
-- Default view shows only actionable changes: ADD, REPLACE, REMOVE, SKIP.
-- Existing releases that remain unchanged (KEEP) are hidden by default and available under an All view.
-- Every action must have a short human-readable reason and identify the retained release(s) that cover redundant material.
-- The software performs track-by-track duplicate/version analysis itself. Uncertain equivalence is resolved conservatively by keeping both tracks/releases rather than asking the user to review line-by-line.
-- Double-click/open-folder actions should make it easy to act on a decision immediately.
-- The full technical text report is optional diagnostics/export only.
-- No files are changed or deleted automatically.
+- Do not show a per-release review/results table as the normal workflow.
+- The software performs the track-by-track duplicate/version analysis and release optimization itself.
+- Uncertain equivalence is resolved conservatively by keeping both tracks/releases.
+- After scanning, show one global confirmation containing summary counts only.
+- On confirmation, automatically move redundant release folders into a reversible timestamped backup.
+- Leave required recycle releases in the recycle folder for the next processing stage.
+- Final UI should only show a short completion summary plus Open filtered recycle / Open backup / Undo.
+- Technical diagnostics are optional and must not be required for normal use.
 
 ## Proposed controller
 
