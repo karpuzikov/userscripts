@@ -1,6 +1,6 @@
 uuid = "f25833be-e7f2-4d9b-938e-20f17ed32b92"
 name = "Karpuzikov Picard Scripts"
-version = "1.2.0"
+version = "1.2.1"
 description = "Git-updatable Picard 3 tagging scripts plus Barcode/UPC-first Lookup."
 api = ["3.0"]
 authors = ["karpuzikov"]
