@@ -277,7 +277,7 @@ def _start_barcode_lookup(api, files, barcode, fallback_objects, match_source=No
             error,
         )
 
-    query_limit = api.global_config.setting.get("query_limit", 25)
+    query_limit = api.global_config.setting["query_limit"]
     task = api.mb_api.find_releases(
         handler,
         barcode=barcode,
@@ -302,7 +302,7 @@ def _expand_lookup_objects(objects):
 def _barcode_first_autotag(api, objects):
     objects = _expand_lookup_objects(list(objects))
 
-    if not api.plugin_config.get(BARCODE_LOOKUP_OPTION, True):
+    if not api.plugin_config[BARCODE_LOOKUP_OPTION]:
         _fallback_lookup(objects)
         return
 
@@ -434,9 +434,9 @@ class ScriptsOptionsPage(OptionsPage):
 
     def load(self):
         for key, checkbox in self.checkboxes.items():
-            checkbox.setChecked(self.api.plugin_config.get(key, False))
+            checkbox.setChecked(self.api.plugin_config[key])
         self.barcode_lookup_checkbox.setChecked(
-            self.api.plugin_config.get(BARCODE_LOOKUP_OPTION, True)
+            self.api.plugin_config[BARCODE_LOOKUP_OPTION]
         )
 
     def save(self):
@@ -447,7 +447,7 @@ class ScriptsOptionsPage(OptionsPage):
 
 def _run_scripts(api, metadata):
     for key, label, script in SCRIPTS:
-        if not api.plugin_config.get(key, False):
+        if not api.plugin_config[key]:
             continue
 
         try:
