@@ -62,7 +62,7 @@ Primary automation targets:
 
 See the canonical rulebook: [`RULES.md`](RULES.md).
 
-The Duplicate / Edition Analyzer must implement those rules and report KEEP / REDUNDANT / REPLACE / REVIEW / NEW decisions with reasons. It must never silently delete material.
+The Duplicate / Edition Analyzer must implement those rules and report KEEP / REDUNDANT / REPLACE / NEW decisions with reasons. It must never silently delete material.
 
 ## CUE Corrector replacement subset
 
@@ -246,9 +246,10 @@ run this logic automatically at the final torrent preparation stage and prepare/
 ## Duplicate / Edition Analyzer UX
 
 - The primary output must be an in-app action list, not a large text report.
-- Default view shows only actionable changes: ADD, REPLACE, REMOVE, SKIP, REVIEW.
+- Default view shows only actionable changes: ADD, REPLACE, REMOVE, SKIP.
 - Existing releases that remain unchanged (KEEP) are hidden by default and available under an All view.
 - Every action must have a short human-readable reason and identify the retained release(s) that cover redundant material.
+- The software performs track-by-track duplicate/version analysis itself. Uncertain equivalence is resolved conservatively by keeping both tracks/releases rather than asking the user to review line-by-line.
 - Double-click/open-folder actions should make it easy to act on a decision immediately.
 - The full technical text report is optional diagnostics/export only.
 - No files are changed or deleted automatically.
