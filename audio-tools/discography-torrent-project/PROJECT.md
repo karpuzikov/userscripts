@@ -245,6 +245,8 @@ run this logic automatically at the final torrent preparation stage and prepare/
 
 ## Duplicate / Edition Analyzer UX
 
+- Release discovery is container-based: each direct child of the selected artist folder is one release, with audio scanned recursively through CD1/CD2/etc.; automatic filtering moves and verifies the whole release folder.
+
 - Existing discography is optional: when blank, the analyzer optimizes Recycle against itself; when supplied, it compares Existing + Recycle together.
 
 - Source detection: `.cue` + any `.log` except `audiochecker.log` = CD. Equivalent existing ALAC content wins over equivalent recycle content unless recycle is objectively better (e.g. explicit vs clean or CD vs WEB).
