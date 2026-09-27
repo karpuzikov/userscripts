@@ -259,7 +259,7 @@ run this logic automatically at the final torrent preparation stage and prepare/
 
 - Existing discography is optional: when blank, the analyzer optimizes Recycle against itself; when supplied, it compares Existing + Recycle together.
 
-- Source detection: `.cue` + any `.log` except `audiochecker.log` = CD. Equivalent existing ALAC content wins over equivalent recycle content unless recycle is objectively better (e.g. explicit vs clean or CD vs WEB).
+- Source detection: `.cue` + any `.log` except `audiochecker.log` = CD. Equivalent existing ALAC content wins over equivalent recycle content unless recycle is objectively better by current active rules (for example CD vs WEB) or adds unique wanted audio.
 
 - Do not show a per-release review/results table as the normal workflow.
 - The software performs the track-by-track duplicate/version analysis and release optimization itself.
@@ -270,8 +270,10 @@ run this logic automatically at the final torrent preparation stage and prepare/
 - Redundant folders containing remix material go under `<artist>_duplicates/!Remixes/`.
 - Remix exclusion and live-version exclusion are persistent UI checkboxes, both enabled by default; they affect wanted coverage only.
 - `Mix` alone is not a remix marker: Original/Extended/12-inch/7-inch mixes and Instrumental/A-Capella versions stay wanted unless redundant for other reasons; Club Mix is remix material.
-- Named `(... Version)` variants such as US Version vs French Version are hard identity boundaries and cannot be merged by fingerprint similarity.\n- Track duplicate identity is audio-only: strict Chromaprint similarity decides equivalence; titles/filenames/MBIDs/ISRCs do not create or block matches.
-- Duplicate decisions at both track and release-coverage levels are audio-first/audio-only: filenames and track titles cannot create or override a duplicate match.\n- Large fingerprint offsets are allowed so long silence/hidden-track padding can be ignored; substantial non-silent extra audio remains a distinct version.
+- Version/language labels are descriptive only for duplicate identity; the decoded audio decides whether recordings are equivalent.
+- Track duplicate identity is audio-only: strict Chromaprint similarity decides equivalence; titles/filenames/MBIDs/ISRCs do not create or block matches.
+- Duplicate decisions at both track and release-coverage levels are audio-first/audio-only: filenames and track titles cannot create or override a duplicate match.
+- Large fingerprint offsets are allowed so long silence/hidden-track padding can be ignored; substantial non-silent extra audio remains a distinct version.
 - Remix tracks are excluded from wanted coverage, but a release containing remixes is not automatically unwanted. For equivalent wanted album content, CD/physical media wins over WEB before file-count minimization. Explicit/clean is deferred until a reliable detector exists.
 - Leave required recycle releases in the recycle folder for the next processing stage.
 - Final UI should only show a short completion summary plus Open filtered recycle / Open duplicates / Undo.
