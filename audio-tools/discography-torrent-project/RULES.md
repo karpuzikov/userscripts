@@ -12,10 +12,12 @@ Build the most complete practical discography while minimizing redundant audio f
 Priority order:
 
 1. Preserve ideally every unique song/recording/version that is available.
-2. Keep the total number of audio files as low as possible.
-3. Keep every album represented.
-4. Prefer higher-quality / better-documented sources when the musical content is equivalent.
-5. Never automatically delete material when the match is uncertain.
+2. Keep every album represented.
+3. Ignore unwanted remix tracks when comparing release coverage.
+4. Prefer explicit over equivalent clean material.
+5. Prefer CD / physical-media sources over equivalent WEB sources.
+6. Then minimize duplicated wanted tracks, total wanted audio files, and retained release count.
+7. Never automatically discard material when the match is uncertain.
 
 The analyzer must optimize the collection as a whole, not judge each release independently.
 
@@ -74,11 +76,34 @@ Remixes are unwanted discography content and must not count toward unique-song c
 
 Rules:
 
-- remix/mix/dub tracks do not make a release worth keeping;
+- remix/mix/dub tracks do not count toward wanted coverage;
+- the presence of remix tracks does NOT make the entire release unwanted;
+- compare the release again after removing remix tracks from the coverage calculation;
+- if the remaining wanted tracks are equivalent to another release, choose between the releases using explicit/source-medium rules;
 - releases explicitly identified as remix/remixes packages are treated as remix material as a whole, including instrumental/a-capella tracks inside those remix packages;
-- a mixed release can still be retained when it contains unique non-remix material that would otherwise be lost;
+- a mixed release can still be retained when it contains wanted non-remix material;
 - if a redundant release contains any remix material, move the whole redundant release folder under `<artist>_duplicates/!Remixes/`;
 - do not delete remix releases permanently; archive them in `!Remixes`.
+
+
+### Equivalent album-source tie-break
+
+When two editions provide equivalent wanted non-remix album content:
+
+1. ignore remix tracks;
+2. compare the remaining wanted recording coverage;
+3. prefer explicit over clean;
+4. prefer CD / physical media over WEB;
+5. only then use duplicated wanted-track/file count as the tie-break.
+
+A CD edition must not lose to a WEB edition merely because the CD contains extra unwanted remix tracks.
+
+Example:
+
+- `Want (Deluxe Edition)` - CD + LOG/CUE, core album tracks plus remix extras
+- `WANT` - WEB, same wanted core album tracks
+
+After remix tracks are ignored, if wanted coverage is equivalent, keep the CD edition and move the WEB edition to duplicates.
 
 ## 5. Explicit vs clean
 
