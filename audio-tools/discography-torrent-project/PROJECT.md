@@ -245,6 +245,8 @@ run this logic automatically at the final torrent preparation stage and prepare/
 
 ## Duplicate / Edition Analyzer UX
 
+- Existing discography is optional: when blank, the analyzer optimizes Recycle against itself; when supplied, it compares Existing + Recycle together.
+
 - Source detection: `.cue` + any `.log` except `audiochecker.log` = CD. Equivalent existing ALAC content wins over equivalent recycle content unless recycle is objectively better (e.g. explicit vs clean or CD vs WEB).
 
 - Do not show a per-release review/results table as the normal workflow.
