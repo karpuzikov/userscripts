@@ -243,6 +243,16 @@ Existing `CUE LOG 4.1.pyw` behavior to preserve:
 Long-term integration:
 run this logic automatically at the final torrent preparation stage and prepare/copy the comment text.
 
+## Duplicate / Edition Analyzer UX
+
+- The primary output must be an in-app action list, not a large text report.
+- Default view shows only actionable changes: ADD, REPLACE, REMOVE, SKIP, REVIEW.
+- Existing releases that remain unchanged (KEEP) are hidden by default and available under an All view.
+- Every action must have a short human-readable reason and identify the retained release(s) that cover redundant material.
+- Double-click/open-folder actions should make it easy to act on a decision immediately.
+- The full technical text report is optional diagnostics/export only.
+- No files are changed or deleted automatically.
+
 ## Proposed controller
 
 Working concept: `Discography Builder.pyw`
