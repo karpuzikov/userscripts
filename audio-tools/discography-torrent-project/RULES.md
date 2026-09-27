@@ -360,7 +360,7 @@ If the same `Honeyflow` exists on a single, prefer keeping:
 and remove the Japanese album edition, because the album remains represented and all unique songs remain covered with fewer duplicated files.
 
 
-### Release container and move integrity
+### Release container and move integrity\n\n- Release folders may be nested under organizational folders such as `Albums`, `Other`, `Singles`, or per-title grouping folders. Discovery must recurse through those containers and identify the actual release folders. Multi-disc subfolders such as `CD1`, `CD 2`, `Disc 1`, etc. belong to one parent release and must not be treated as separate releases.
 
 - Each direct child folder of the selected artist/recycle root is one release container.
 - Audio may be stored recursively inside that release container, including `CD1`, `CD2`, `Disc 1`, etc.; those disc subfolders are not separate releases.
