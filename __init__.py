@@ -22,7 +22,7 @@ _PENDING_BARCODE_TASKS = []
 def _normalize_barcode(value):
     if value is None:
         return ""
-    barcode = re.sub(r"[\\s-]+", "", str(value).strip())
+    barcode = re.sub(r"[\s-]+", "", str(value).strip())
     if not barcode.isdigit():
         return ""
     if not 8 <= len(barcode) <= 14:
