@@ -279,6 +279,26 @@ Required behavior:
 9. If an existing `audiochecker.log` is stale/invalid, preserve it temporarily outside the release folder while regenerating it; restore it if generation fails.
 10. Normal UI is automatic: one folder, progress, final counts. No per-release review.
 
+## ALAC conversion automation
+
+Current stage after AudioChecker.
+
+Required behavior:
+
+1. Reuse the filtered recycle/update artist folder from the shared persistent settings.
+2. Convert supported lossless audio to ALAC in place.
+3. Use refalac for the ALAC encode.
+4. For normal track-based releases, preserve metadata/artwork and verify decoded PCM before removing the source file.
+5. For CD releases identified by `.cue` + real rip `.log`, use the CUE as the authoritative split input so image rips and file-per-track CUEs are handled correctly.
+6. Preserve CUE, LOG, artwork, and all other non-audio files.
+7. Skip files already encoded as ALAC.
+8. Refuse lossy/unknown codecs instead of wrapping them in ALAC.
+9. Remove/replace source audio only after verified output exists.
+10. Use up to four simultaneous conversion jobs.
+11. Reuse the shared Karpuzikov Tools settings store and remember all repeatable paths.
+12. Bootstrap required dependencies automatically: check/install winget first when needed, install FFmpeg through winget, and obtain refalac automatically when missing.
+13. Normal UI is automatic: choose/reuse one root folder, convert, then show only summary counts/errors.
+
 ## Proposed controller
 
 Working concept: `Discography Builder.pyw`
@@ -315,21 +335,23 @@ High-level stages:
 
 ## Current immediate work
 
-Duplicate / Edition Analyzer is complete enough for now.
+Duplicate / Edition Analyzer and AudioChecker automation are complete enough for now.
 
-Active implementation focus: AudioChecker automation.
+Active implementation focus: ALAC conversion automation.
 
 Current target:
 
 1. reuse the filtered recycle/update folder automatically;
-2. skip CD releases identified by `.cue` + real rip `.log`;
-3. skip already-valid `audiochecker.log` folders;
-4. automatically run existing `achkgui.exe` on every remaining supported audio folder;
-5. leave AudioChecker's own generated `audiochecker.log` in each release folder;
-6. remember all repeatable paths/settings;
-7. finish with counts only, not a per-release review workflow.
+2. convert lossless sources to ALAC in place with refalac;
+3. use CUE-aware conversion for CD releases;
+4. preserve tags/artwork and non-audio release files;
+5. verify output before deleting source audio;
+6. skip existing ALAC;
+7. refuse lossy sources;
+8. process up to four jobs concurrently;
+9. remember all repeatable paths/settings and bootstrap dependencies.
 
-Next stage after this: automatic ALAC conversion routing using CUETools/refalac/xrecode2.
+Next stage after this: metadata/tag normalization using the shared Picard rules.
 
 ## Important principles
 
