@@ -202,6 +202,25 @@ For each recycle release/track, determine whether it:
 
 Do not assume the existing discography is already optimal.
 
+
+### Pre-optimization dominance
+
+Resolve obvious same-album duplicates before running the global set-cover optimizer.
+
+For related album releases:
+
+- if both releases cover the same wanted non-remix content, choose by:
+  1. explicit over clean;
+  2. CD/physical over WEB;
+  3. existing ALAC over recycle when otherwise tied;
+- if one release is a wanted-content superset of the other, the superset makes the subset redundant when its explicit/source class is not worse;
+- remix tracks are ignored when determining this coverage;
+- dominated releases are excluded from the optimizer's wanted-group universe so stricter fingerprint grouping cannot force an inferior duplicate back into the retained set.
+
+Examples:
+- existing WEB Omens vs identical recycle WEB Omens -> keep existing, skip recycle;
+- existing CD Want Deluxe vs recycle WEB WANT subset -> keep existing CD, skip recycle WEB.
+
 ## 9. Optimization model
 
 Think of each release as a set of recordings.
