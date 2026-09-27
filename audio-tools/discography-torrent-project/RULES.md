@@ -203,6 +203,22 @@ For each recycle release/track, determine whether it:
 Do not assume the existing discography is already optimal.
 
 
+
+### Release-structure matching
+
+For related album editions, folder/file structure is an independent identity signal and must not be overridden by missing or inconsistent embedded tags.
+
+Rules:
+
+- strip ordinary numeric track prefixes from filenames, including forms such as `01 Title`, `01 - Title`, `01. Title`, `01_Title`, and `01) Title`;
+- compare both embedded track titles and normalized filename titles;
+- exact folder barcode matches remain valid even when audio tags omit or disagree on barcode;
+- album-family matching must also use the normalized release folder name, not only the embedded ALBUM tag;
+- for related album editions only, tolerate a single-character metadata typo in an otherwise matching normalized track title, e.g. `PunkBtch` vs `PUNKBITCH`;
+- do not use this typo tolerance across unrelated releases.
+
+This structural pass exists so equivalent ALAC/FLAC editions cannot fail comparison merely because one copy has missing/different tags.
+
 ### Pre-optimization dominance
 
 Resolve obvious same-album duplicates before running the global set-cover optimizer.
