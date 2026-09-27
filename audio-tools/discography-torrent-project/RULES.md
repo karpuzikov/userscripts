@@ -82,16 +82,20 @@ Rules:
 
 Do not decide uniqueness from filename/title alone.
 
-Use as many signals as available:
+Use as many signals as available.
 
-1. exact decoded-audio PCM hash when possible;
+Primary identity signal:
+1. AcoustID/Chromaprint fingerprint, together with compatible duration/version metadata.
+
+Supporting signals:
 2. MusicBrainz recording ID;
-3. AcoustID/Chromaprint;
-4. ISRC;
-5. normalized title/version text;
-6. duration;
-7. artist credit;
-8. release/track metadata.
+3. ISRC;
+4. normalized title/version text;
+5. duration;
+6. artist credit;
+7. release/track metadata.
+
+Decoded PCM hash is NOT the primary duplicate detector. It is useful only as a secondary confirmation that two files contain effectively identical decoded PCM audio. Different mastering/remastering can change PCM while the underlying song/recording is still the one we want to treat as duplicate coverage.
 
 Different versions must remain distinct, including when applicable:
 
@@ -179,9 +183,9 @@ Automatic decisions are allowed only for high-confidence equivalence.
 
 Examples of high confidence:
 
-- identical decoded PCM hash;
+- same AcoustID/Chromaprint match with compatible duration and no conflicting version markers;
 - same MusicBrainz recording ID plus compatible duration/version metadata;
-- same AcoustID/Chromaprint with compatible duration/version metadata.
+- identical decoded PCM hash can confirm identical audio, but must not be required for duplicate coverage.
 
 Use REVIEW when:
 
