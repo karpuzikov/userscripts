@@ -219,6 +219,22 @@ Rules:
 
 This structural pass exists so equivalent ALAC/FLAC editions cannot fail comparison merely because one copy has missing/different tags.
 
+
+### Final existing-vs-recycle safeguard
+
+The final action plan must independently enforce existing-vs-recycle precedence and must not rely only on optimizer/group IDs.
+
+Before a recycle release can be kept over an existing release:
+
+- compare folder-derived release identity;
+- compare normalized track filenames directly;
+- ignore unwanted remix tracks;
+- if the existing release covers all wanted recycle tracks and is equal or better on explicit/source quality, force:
+  - existing -> KEEP;
+  - recycle -> SKIP.
+
+This final safeguard must run even if fingerprint grouping or the global optimizer reached a different intermediate selection.
+
 ### Pre-optimization dominance
 
 Resolve obvious same-album duplicates before running the global set-cover optimizer.
