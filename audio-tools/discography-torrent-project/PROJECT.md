@@ -2,6 +2,16 @@
 
 Last updated: 2026-09-27
 
+## Repository source-of-truth rule
+
+The GitHub directory `audio-tools/discography-torrent-project/` is the canonical source of truth for the entire project.
+
+- Every current project-owned script must be stored here.
+- Every current workflow asset used by this project must be stored here.
+- Documentation and code must be updated together when behavior changes.
+- New versions must be committed to GitHub when they are produced, not left only as chat/download artifacts.
+- Third-party applications/binaries are dependencies and are not vendored unless redistribution is explicitly appropriate.
+
 ## Goal
 
 Reduce the manual work required to prepare complete discography torrents while preserving the user's existing quality-control decisions and preferred tools.
