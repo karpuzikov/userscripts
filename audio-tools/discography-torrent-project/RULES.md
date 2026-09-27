@@ -172,8 +172,9 @@ Use:
 - KEEP - required by current rules.
 - REDUNDANT - all useful content is preserved elsewhere by a preferred solution.
 - REPLACE - another source should replace the currently retained copy.
-- REVIEW - uncertainty remains.
 - NEW - candidate adds material not currently represented.
+
+There is no normal manual REVIEW state. The software must perform the track-by-track comparison itself. If equivalence cannot be established with enough confidence, treat the tracks as different and keep both.
 
 Every REDUNDANT/REPLACE decision must explain what retained release/track covers it.
 
@@ -187,13 +188,14 @@ Examples of high confidence:
 - same MusicBrainz recording ID plus compatible duration/version metadata;
 - identical decoded PCM hash can confirm identical audio, but must not be required for duplicate coverage.
 
-Use REVIEW when:
+When confidence is insufficient:
 
-- titles are similar but hashes/IDs disagree or are unavailable;
-- duration differs materially;
-- one title says remix/live/edit/version and the other does not;
-- explicit/clean status is unclear;
-- mastering/version differences may be intentional.
+- do not ask the user to review track-by-track;
+- treat the tracks as distinct;
+- keep both so unique material cannot be lost;
+- record the uncertainty only in optional diagnostics.
+
+Strong Chromaprint evidence can override filename/title differences because audio identity is the primary signal. Material duration differences or clearly incompatible fingerprints keep tracks separate.
 
 ## 11. Title normalization for comparison
 
