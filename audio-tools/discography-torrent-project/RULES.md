@@ -105,17 +105,18 @@ Example:
 
 After remix tracks are ignored, if wanted coverage is equivalent, keep the CD edition and move the WEB edition to duplicates.
 
-## 5. Explicit vs clean
+## 5. Explicit vs clean - future implementation
 
-Explicit is always preferred over clean when both represent the same recording/version.
+Explicit/clean preference is a future rule, not an active analyzer criterion yet.
 
-Rules:
+Current behavior:
+- do not detect or rank releases by explicit/clean status;
+- do not let explicit/clean metadata influence KEEP/SKIP/REPLACE decisions;
+- compare using wanted content, source medium, existing-vs-recycle precedence, and duplication minimization.
 
-- if explicit and clean versions are otherwise equivalent, keep explicit and mark clean redundant;
-- `unknown` explicitness is not better than `clean`; only a positively identified explicit release may win on explicitness;
-- when explicitness is `clean` vs `unknown`, treat them as tied and continue with source/existing-precedence rules;
-- a clean version is acceptable only when no proven explicit equivalent is available;
-- if clean and explicit are genuinely different recordings/edits beyond censorship, treat them as distinct and retain both unless another rule makes one redundant.
+Future behavior, once a reliable detector exists:
+- explicit should be preferred over an equivalent clean version;
+- genuinely different censored/edited recordings should remain distinct.
 
 ## 6. Unique recording/version definition
 
