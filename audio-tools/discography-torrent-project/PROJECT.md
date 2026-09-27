@@ -279,16 +279,24 @@ High-level stages:
 
 ## Current immediate work
 
-CUE Corrector subset is the current implementation focus.
+Duplicate / Edition Analyzer is now the active implementation focus.
 
-Next changes:
+Canonical behavior is defined in [`RULES.md`](RULES.md).
 
-1. derive `REM DISCNUMBER` and `REM TOTALDISCS` from MusicBrainz using CD media only;
-2. remove `REM COMMENT`;
-3. apply the repository's Picard title/artist normalization rules to the CUE;
-4. apply exactly the same rules to the audio file tags;
-5. keep CUE and file metadata synchronized;
-6. batch-mode the process after single-release parity is confirmed.
+Current analyzer requirements:
+
+1. scan the existing ALAC discography and recycle/update folder together;
+2. compare decoded audio hashes, MusicBrainz recording IDs, ISRCs, normalized titles and durations;
+3. preserve all unique recordings/versions;
+4. minimize retained audio-file count;
+5. keep every album represented while allowing redundant editions to be removed;
+6. prefer explicit over equivalent clean;
+7. prefer CD + LOG/CUE over equivalent WEB;
+8. treat album editions, singles and EPs as one collection-wide optimization problem;
+9. output KEEP / REDUNDANT / REPLACE / REVIEW / NEW with reasons;
+10. never delete automatically.
+
+The 3OH!3 existing-ALAC + recycle-WEB dataset is the first validation case.
 
 ## Important principles
 
