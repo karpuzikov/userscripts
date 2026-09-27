@@ -253,7 +253,9 @@ Existing `CUE LOG 4.1.pyw` behavior to preserve:
 Long-term integration:
 run this logic automatically at the final torrent preparation stage and prepare/copy the comment text.
 
-## Duplicate / Edition Analyzer UX\n\n- Analyzer UI uses a unified dark theme by default, including dark Windows title bars when supported.
+## Duplicate / Edition Analyzer UX
+
+- Remix exclusion exception: remixes with newly added featured performers remain wanted; if no matching non-remix base is present, an explicitly featured remix is kept conservatively.\n\n- Analyzer UI uses a unified dark theme by default, including dark Windows title bars when supported.
 
 - Release discovery is container-based: each direct child of the selected artist folder is one release, with audio scanned recursively through CD1/CD2/etc.; automatic filtering moves and verifies the whole release folder.
 
