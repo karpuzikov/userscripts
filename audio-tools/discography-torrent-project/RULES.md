@@ -268,7 +268,7 @@ Safety rules:
 - Do not permanently delete release folders.
 - Move redundant folders as-is; never rename release folders while archiving them.
 - The archive folder is named `<original recycle artist folder>_duplicates`, e.g. `3OH!3_duplicates`.
-- Do not create the duplicates folder inside `!recycle`; when the selected artist folder is under a recycle parent, create the duplicates folder beside that recycle parent.
+- Create `<artist>_duplicates` as a sibling of the selected artist folder. Example: `...\!recycle\3OH!3` -> `...\!recycle\3OH!3_duplicates`.
 - Redundant releases containing remix material go under `<artist>_duplicates/!Remixes/`.
 - Non-remix redundant releases go directly under `<artist>_duplicates/`.
 - Reuse the same duplicates folder across runs; do not create timestamped archive folder names.
