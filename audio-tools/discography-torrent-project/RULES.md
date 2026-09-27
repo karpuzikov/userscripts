@@ -112,7 +112,9 @@ Explicit is always preferred over clean when both represent the same recording/v
 Rules:
 
 - if explicit and clean versions are otherwise equivalent, keep explicit and mark clean redundant;
-- a clean version is acceptable only when no explicit equivalent is available;
+- `unknown` explicitness is not better than `clean`; only a positively identified explicit release may win on explicitness;
+- when explicitness is `clean` vs `unknown`, treat them as tied and continue with source/existing-precedence rules;
+- a clean version is acceptable only when no proven explicit equivalent is available;
 - if clean and explicit are genuinely different recordings/edits beyond censorship, treat them as distinct and retain both unless another rule makes one redundant.
 
 ## 6. Unique recording/version definition
