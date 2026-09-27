@@ -72,6 +72,8 @@ When several singles/EPs overlap:
 
 ## 4. Remixes
 
+- When `Exclude remixes` is enabled, a remix that adds featured performer(s) not present on the matching non-remix version remains wanted and is NOT excluded from coverage. If no matching non-remix version is present, a remix with an explicit featured credit is kept conservatively.
+
 Remix and live exclusion are user-selectable analyzer options. When the corresponding checkbox is enabled, those tracks do not count toward wanted coverage.
 
 Rules:
