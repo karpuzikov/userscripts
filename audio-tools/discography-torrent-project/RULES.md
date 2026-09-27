@@ -68,7 +68,19 @@ When several singles/EPs overlap:
 - if one release is a complete superset of another, the subset release is redundant unless it has a meaningful release-specific reason to keep;
 - if a 3-track release contains the unique song plus two songs also issued as separate one-track singles, prefer the 3-track release and remove the redundant one-track singles when the recordings are the same.
 
-## 4. Explicit vs clean
+## 4. Remixes
+
+Remixes are unwanted discography content and must not count toward unique-song coverage.
+
+Rules:
+
+- remix/mix/dub tracks do not make a release worth keeping;
+- releases explicitly identified as remix/remixes packages are treated as remix material as a whole, including instrumental/a-capella tracks inside those remix packages;
+- a mixed release can still be retained when it contains unique non-remix material that would otherwise be lost;
+- if a redundant release contains any remix material, move the whole redundant release folder under `<artist>_duplicates/!Remixes/`;
+- do not delete remix releases permanently; archive them in `!Remixes`.
+
+## 5. Explicit vs clean
 
 Explicit is always preferred over clean when both represent the same recording/version.
 
@@ -78,7 +90,7 @@ Rules:
 - a clean version is acceptable only when no explicit equivalent is available;
 - if clean and explicit are genuinely different recordings/edits beyond censorship, mark for review rather than assuming equivalence.
 
-## 5. Unique recording/version definition
+## 6. Unique recording/version definition
 
 Do not decide uniqueness from filename/title alone.
 
@@ -114,7 +126,7 @@ Different versions must remain distinct, including when applicable:
 
 Near-title matches must not be collapsed automatically.
 
-## 6. Source preference
+## 7. Source preference
 
 When the same recording/version exists in multiple sources, preference is:
 
@@ -126,7 +138,7 @@ A WEB copy can be removed when the same recording is already preserved from a pr
 
 Do not replace a unique WEB recording merely because another release is on CD if the actual recording/version is different.
 
-## 7. Existing discography vs recycle/update
+## 8. Existing discography vs recycle/update
 
 The existing ALAC discography is the current collection.
 
@@ -144,7 +156,7 @@ For each recycle release/track, determine whether it:
 
 Do not assume the existing discography is already optimal.
 
-## 8. Optimization model
+## 9. Optimization model
 
 Think of each release as a set of recordings.
 
@@ -163,7 +175,7 @@ Optimization target:
 
 This is effectively a constrained set-cover problem with mandatory album coverage and source-quality tie-breakers.
 
-## 9. Decision states
+## 10. Decision states
 
 The analyzer must never silently delete files.
 
@@ -178,7 +190,7 @@ There is no normal manual REVIEW state. The software must perform the track-by-t
 
 Every REDUNDANT/REPLACE decision must explain what retained release/track covers it.
 
-## 10. Confidence
+## 11. Confidence
 
 Automatic decisions are allowed only for high-confidence equivalence.
 
@@ -197,7 +209,7 @@ When confidence is insufficient:
 
 Strong Chromaprint evidence can override filename/title differences because audio identity is the primary signal. Material duration differences or clearly incompatible fingerprints keep tracks separate.
 
-## 11. Title normalization for comparison
+## 12. Title normalization for comparison
 
 Comparison may use normalized titles, but normalization must never erase version meaning.
 
@@ -216,7 +228,7 @@ Normalization can standardize spelling/case/punctuation/featured-artist placemen
 It must preserve semantic qualifiers such as:
 `Remix`, `Live`, `Acoustic`, `Radio Edit`, `Extended`, `Instrumental`, `A Capella`, `Dub`, etc.
 
-## 12. Album example: Queen of Time
+## 13. Album example: Queen of Time
 
 Given:
 
@@ -237,7 +249,7 @@ If the same `Honeyflow` exists on a single, prefer keeping:
 
 and remove the Japanese album edition, because the album remains represented and all unique songs remain covered with fewer duplicated files.
 
-## 13. Automatic filtering / safety
+## 14. Automatic filtering / safety
 
 The analyzer must do the filtering itself. It must not require the user to inspect release rows or make line-by-line duplicate decisions.
 
@@ -254,13 +266,19 @@ Normal flow:
 Safety rules:
 
 - Do not permanently delete release folders.
-- Move redundant folders into one timestamped reversible backup.
+- Move redundant folders as-is; never rename release folders while archiving them.
+- The archive folder is named `<original recycle artist folder>_duplicates`, e.g. `3OH!3_duplicates`.
+- Do not create the duplicates folder inside `!recycle`; when the selected artist folder is under a recycle parent, create the duplicates folder beside that recycle parent.
+- Redundant releases containing remix material go under `<artist>_duplicates/!Remixes/`.
+- Non-remix redundant releases go directly under `<artist>_duplicates/`.
+- Reuse the same duplicates folder across runs; do not create timestamped archive folder names.
 - Provide Undo for the last run.
 - A single global confirmation before moving folders is sufficient; do not require per-release approval.
 - If equivalence is uncertain, retain the material automatically.
+- If an archive destination already exists, abort instead of renaming or overwriting folders.
 - If folder structure makes an automatic move unsafe, abort the apply operation without changing anything.
 
-## 14. Current 3OH!3-specific test case
+## 15. Current 3OH!3-specific test case
 
 The current test dataset consists of:
 
