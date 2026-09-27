@@ -296,3 +296,18 @@ For this dataset:
 - minimize duplicated audio files across album editions/singles/EPs.
 
 This dataset is the first validation case for the Duplicate / Edition Analyzer.
+
+
+## Persistent user data
+
+This project follows the general software persistence rule:
+
+- Any repeatable user-supplied data should be saved and reused automatically across launches and versions.
+- This includes credentials/tokens, paths and folders, last-used locations, selected options, preferences, and other recurring inputs.
+- Use one common application-data location under the user's dynamically resolved Windows Documents library so redirected/moved Documents folders are handled correctly.
+- Updates must reuse the same stored data rather than making the user enter it again.
+- Sensitive values such as credentials/tokens must be protected appropriately, e.g. Windows DPAPI.
+- Ordinary non-sensitive settings such as folder paths can be stored as normal settings data.
+- For Duplicate / Edition Analyzer specifically, remember at minimum:
+  - Existing discography (ALAC)
+  - Recycle / update folder
