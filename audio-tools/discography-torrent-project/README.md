@@ -4,7 +4,7 @@ Complete project source and workflow assets for the discography torrent automati
 
 ## Current tools
 
-- `tools/Duplicate Edition Analyzer v0.6.14.pyw` - duplicate/edition filtering. Not tested! ⚠️
+- `tools/Duplicate Edition Analyzer v0.6.15.pyw` - duplicate/edition filtering. Not tested! ⚠️
 - `tools/AudioChecker Automation v0.1.pyw` - AudioChecker batch automation.
 - `tools/ALAC Conversion Automation v0.2.pyw` - lossless -> ALAC conversion. Not tested! ⚠️
 - `tools/CUE Corrector - MusicBrainz DiscID 1.3.pyw` - MusicBrainz DiscID/CUE workflow.
