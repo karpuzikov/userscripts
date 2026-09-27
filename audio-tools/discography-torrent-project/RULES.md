@@ -72,7 +72,7 @@ When several singles/EPs overlap:
 
 ## 4. Remixes
 
-Remixes are unwanted discography content and must not count toward unique-song coverage.
+Remix and live exclusion are user-selectable analyzer options. When the corresponding checkbox is enabled, those tracks do not count toward wanted coverage.
 
 Rules:
 
@@ -105,6 +105,17 @@ Example:
 - `WANT` - WEB, same wanted core album tracks
 
 After remix tracks are ignored, if wanted coverage is equivalent, keep the CD edition and move the WEB edition to duplicates.
+
+### Analyzer exclusion checkboxes
+
+The analyzer provides two persistent checkboxes, both enabled by default:
+
+- `Exclude remixes`
+- `Exclude live versions`
+
+These options affect wanted-content coverage only. They do not participate in duplicate identity. Track duplicate identity remains audio-only and is decided by strict Chromaprint analysis.
+
+When an exclusion is disabled, that category is treated as normal wanted audio. When enabled, tracks in that category are ignored for optimization; a release containing only excluded tracks is redundant/unwanted for that run.
 
 ## 5. Explicit vs clean - future implementation
 
@@ -159,7 +170,7 @@ Different versions must remain distinct, including when applicable:
 
 Named `(... Version)` labels are hard identity boundaries. Different labels, or a named version versus an unlabeled version, must remain distinct even when AcoustID/Chromaprint similarity is very strong.\n\nDifferent-language, live, acoustic, extended, instrumental, edited, and other semantic versions must be distinguished by the audio analysis itself. Titles may describe those versions, but titles do not decide duplicate identity.
 
-Filename/title formatting is irrelevant to track duplicate identity. The analyzer compares the audio instead.\n\nNear-title matches must not be collapsed automatically.
+Filename/title formatting is irrelevant to track duplicate identity. The analyzer compares the audio instead. Release-level coverage must also be based on the resulting audio fingerprint groups; filename/title structural matching must not override the audio result.\n\nNear-title matches must not be collapsed automatically.
 
 ## 7. Source preference
 
