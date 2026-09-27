@@ -260,6 +260,25 @@ run this logic automatically at the final torrent preparation stage and prepare/
 - Final UI should only show a short completion summary plus Open filtered recycle / Open duplicates / Undo.
 - Technical diagnostics are optional and must not be required for normal use.
 
+## AudioChecker automation
+
+Current stage after duplicate filtering.
+
+Required behavior:
+
+1. Use the filtered recycle/update artist folder from the shared persistent settings when available.
+2. Recursively find folders containing AudioChecker-supported lossless audio.
+3. Treat a folder as a CD release when it contains both:
+   - at least one `.cue`; and
+   - at least one `.log` other than `audiochecker.log`.
+4. Skip those CD folders.
+5. Skip folders that already contain a valid `audiochecker.log` covering all supported audio files in that folder.
+6. Run the existing Dester AudioChecker (`achkgui.exe`) automatically for the remaining folders.
+7. Reuse AudioChecker's own generated `audiochecker.log`; do not fabricate/rewrite the protected log format.
+8. Remember the selected `achkgui.exe` path across launches and versions in the shared Karpuzikov Tools settings store.
+9. If an existing `audiochecker.log` is stale/invalid, preserve it temporarily outside the release folder while regenerating it; restore it if generation fails.
+10. Normal UI is automatic: one folder, progress, final counts. No per-release review.
+
 ## Proposed controller
 
 Working concept: `Discography Builder.pyw`
@@ -296,24 +315,21 @@ High-level stages:
 
 ## Current immediate work
 
-Duplicate / Edition Analyzer is now the active implementation focus.
+Duplicate / Edition Analyzer is complete enough for now.
 
-Canonical behavior is defined in [`RULES.md`](RULES.md).
+Active implementation focus: AudioChecker automation.
 
-Current analyzer requirements:
+Current target:
 
-1. scan the existing ALAC discography and recycle/update folder together;
-2. compare decoded audio hashes, MusicBrainz recording IDs, ISRCs, normalized titles and durations;
-3. preserve all unique recordings/versions;
-4. minimize retained audio-file count;
-5. keep every album represented while allowing redundant editions to be removed;
-6. prefer explicit over equivalent clean;
-7. prefer CD + LOG/CUE over equivalent WEB;
-8. treat album editions, singles and EPs as one collection-wide optimization problem;
-9. output KEEP / REDUNDANT / REPLACE / REVIEW / NEW with reasons;
-10. never delete automatically.
+1. reuse the filtered recycle/update folder automatically;
+2. skip CD releases identified by `.cue` + real rip `.log`;
+3. skip already-valid `audiochecker.log` folders;
+4. automatically run existing `achkgui.exe` on every remaining supported audio folder;
+5. leave AudioChecker's own generated `audiochecker.log` in each release folder;
+6. remember all repeatable paths/settings;
+7. finish with counts only, not a per-release review workflow.
 
-The 3OH!3 existing-ALAC + recycle-WEB dataset is the first validation case.
+Next stage after this: automatic ALAC conversion routing using CUETools/refalac/xrecode2.
 
 ## Important principles
 
