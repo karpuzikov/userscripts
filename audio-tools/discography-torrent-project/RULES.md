@@ -237,13 +237,28 @@ If the same `Honeyflow` exists on a single, prefer keeping:
 
 and remove the Japanese album edition, because the album remains represented and all unique songs remain covered with fewer duplicated files.
 
-## 13. Safety / destructive actions
+## 13. Automatic filtering / safety
 
-- Never delete automatically.
-- Produce a proposed plan first.
-- Show exact reasons for every removal/replacement.
-- Allow the user to override every decision.
-- Only execute deletion/move operations after explicit user confirmation.
+The analyzer must do the filtering itself. It must not require the user to inspect release rows or make line-by-line duplicate decisions.
+
+Normal flow:
+
+1. Scan both folders.
+2. Compare tracks automatically.
+3. Optimize the retained release set automatically.
+4. Show one global confirmation with only summary counts.
+5. Move redundant release folders automatically.
+6. Leave required recycle releases in place for the next workflow stage.
+7. Show only a short completion summary.
+
+Safety rules:
+
+- Do not permanently delete release folders.
+- Move redundant folders into one timestamped reversible backup.
+- Provide Undo for the last run.
+- A single global confirmation before moving folders is sufficient; do not require per-release approval.
+- If equivalence is uncertain, retain the material automatically.
+- If folder structure makes an automatic move unsafe, abort the apply operation without changing anything.
 
 ## 14. Current 3OH!3-specific test case
 
