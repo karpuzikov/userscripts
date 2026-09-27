@@ -1,7 +1,6 @@
 # SPDX-License-Identifier: MIT
 """Karpuzikov Picard Scripts - Picard 3.0 Git-updatable script collection."""
 
-from collections import Counter
 import re
 
 from PyQt6 import QtCore, QtGui, QtWidgets
@@ -11,7 +10,6 @@ from picard.plugin3.api import OptionsPage, ScriptParser
 
 PLUGIN_PRIORITY = -10000
 
-_ORIGINAL_AUTOTAG = None
 _BARCODE_TOOLBAR_ACTION = None
 _LOOKUP_API = None
 _PENDING_BARCODE_TASKS = []
@@ -57,8 +55,7 @@ def _metadata_tag_values(metadata, wanted_tag):
 
 
 def _barcode_from_file(file_obj):
-    # Prefer the original file tags so a previously loaded release cannot
-    # accidentally become the source of the barcode-first lookup.
+    # Only use the file's own tags as the barcode source.
     metadata_sources = (
         getattr(file_obj, "orig_metadata", None),
         getattr(file_obj, "metadata", None),
@@ -103,106 +100,21 @@ def _common_barcode(files):
     return ""
 
 
-def _metadata_value(metadata, key):
-    if metadata is None:
+def _exact_release_barcode(release):
+    if not isinstance(release, dict):
         return ""
-
-    try:
-        value = metadata.get(key, "")
-    except Exception:
-        value = ""
-
-    if isinstance(value, (list, tuple)):
-        value = value[0] if value else ""
-
-    return str(value).strip()
+    return _normalize_barcode(release.get("barcode"))
 
 
-def _most_common_file_value(files, key):
-    values = []
-    for file_obj in files:
-        metadata = getattr(file_obj, "orig_metadata", None) or getattr(file_obj, "metadata", None)
-        value = _metadata_value(metadata, key)
-        if value:
-            values.append(value)
-
-    if not values:
-        return ""
-
-    return Counter(values).most_common(1)[0][0]
-
-
-def _release_artist(release):
-    credits = release.get("artist-credit") or []
-    parts = []
-    for credit in credits:
-        if not isinstance(credit, dict):
-            continue
-        name = credit.get("name")
-        if not name:
-            artist = credit.get("artist")
-            if isinstance(artist, dict):
-                name = artist.get("name")
-        if name:
-            parts.append(str(name))
-        joinphrase = credit.get("joinphrase")
-        if joinphrase:
-            parts.append(str(joinphrase))
-    return "".join(parts).strip()
-
-
-def _best_release_for_files(files, releases):
-    if not releases:
-        return None
-
-    track_count = len(files)
-    album = _most_common_file_value(files, "album").casefold()
-    albumartist = (
-        _most_common_file_value(files, "albumartist")
-        or _most_common_file_value(files, "artist")
-    ).casefold()
-    date = _most_common_file_value(files, "date")
-    year = date[:4] if len(date) >= 4 and date[:4].isdigit() else ""
-
-    scored = []
-    for release in releases:
-        score = 0
-
-        try:
-            if int(release.get("track-count") or 0) == track_count:
-                score += 4
-        except (TypeError, ValueError):
-            pass
-
-        if album and str(release.get("title") or "").strip().casefold() == album:
-            score += 4
-
-        if albumartist and _release_artist(release).casefold() == albumartist:
-            score += 3
-
-        release_date = str(release.get("date") or "")
-        if year and release_date.startswith(year):
-            score += 1
-
-        scored.append((score, release))
-
-    scored.sort(key=lambda item: item[0], reverse=True)
-    if len(scored) == 1:
-        return scored[0][1]
-    if scored[0][0] > scored[1][0]:
-        return scored[0][1]
-    return None
-
-
-def _fallback_lookup(objects):
-    if _ORIGINAL_AUTOTAG is not None and objects:
-        _ORIGINAL_AUTOTAG(objects)
-
-
-def _barcode_lookup_finished(api, files, fallback_objects, match_source, barcode, document, http, error):
+def _barcode_lookup_finished(api, files, barcode, document, http, error):
     if error:
-        api.logger.warning("Barcode lookup failed for %s; using normal Picard lookup", barcode)
-        _fallback_lookup(fallback_objects)
+        api.logger.warning("Barcode lookup failed for %s", barcode)
+        api.tagger.window.set_statusbar_message(
+            "Barcode %(barcode)s lookup failed",
+            {"barcode": barcode},
+            translate=None,
+            timeout=5000,
+        )
         return
 
     try:
@@ -210,50 +122,58 @@ def _barcode_lookup_finished(api, files, fallback_objects, match_source, barcode
     except Exception:
         releases = []
 
-    if not releases:
-        api.logger.debug("No MusicBrainz release found for barcode %s; using normal lookup", barcode)
-        _fallback_lookup(fallback_objects)
-        return
+    # Never trust the search result alone. Verify the actual barcode field on
+    # every candidate before Picard is allowed to link anything.
+    exact_matches = [
+        release
+        for release in releases
+        if _exact_release_barcode(release) == barcode
+    ]
 
-    release = None
-
-    if len(releases) == 1:
-        release = releases[0]
-    elif match_source is not None and not getattr(match_source, "special", False):
-        matcher = getattr(match_source, "_match_to_release", None)
-        if callable(matcher):
-            try:
-                release, _reason = matcher(releases, min_similarity=0, min_margin=0)
-            except Exception:
-                api.logger.exception("Could not select among barcode matches with Picard's release matcher")
-    if release is None:
-        release = _best_release_for_files(files, releases)
-
-    release_id = release.get("id") if isinstance(release, dict) else None
-    if not release_id:
-        api.logger.debug(
-            "Barcode %s returned multiple indistinguishable releases; using normal Picard lookup",
-            barcode,
+    if not exact_matches:
+        api.logger.info("No exact MusicBrainz barcode match for %s", barcode)
+        api.tagger.window.set_statusbar_message(
+            "No exact MusicBrainz release found for barcode %(barcode)s",
+            {"barcode": barcode},
+            translate=None,
+            timeout=5000,
         )
-        _fallback_lookup(fallback_objects)
         return
 
-    api.logger.info("Barcode %s matched MusicBrainz release %s", barcode, release_id)
+    if len(exact_matches) > 1:
+        api.logger.info(
+            "Barcode %s has %d exact MusicBrainz release matches; nothing linked",
+            barcode,
+            len(exact_matches),
+        )
+        api.tagger.window.set_statusbar_message(
+            "Barcode %(barcode)s has multiple exact matches - nothing linked",
+            {"barcode": barcode},
+            translate=None,
+            timeout=5000,
+        )
+        return
+
+    release_id = exact_matches[0].get("id")
+    if not release_id:
+        api.logger.warning("Exact barcode match for %s has no release ID", barcode)
+        return
+
+    api.logger.info("Barcode %s exactly matched MusicBrainz release %s", barcode, release_id)
     api.tagger.window.set_statusbar_message(
-        "Barcode %(barcode)s matched a MusicBrainz release",
+        "Barcode %(barcode)s exactly matched a MusicBrainz release",
         {"barcode": barcode},
         translate=None,
     )
     api.tagger.move_files_to_album(files, release_id)
 
 
-def _start_barcode_lookup(api, files, barcode, fallback_objects, match_source=None):
+def _start_barcode_lookup(api, files, barcode):
     if not files or not barcode:
-        _fallback_lookup(fallback_objects)
         return
 
     api.tagger.window.set_statusbar_message(
-        "Looking up barcode %(barcode)s...",
+        "Looking up exact barcode %(barcode)s...",
         {"barcode": barcode},
         translate=None,
     )
@@ -264,16 +184,7 @@ def _start_barcode_lookup(api, files, barcode, fallback_objects, match_source=No
         task = holder.get("task")
         if task in _PENDING_BARCODE_TASKS:
             _PENDING_BARCODE_TASKS.remove(task)
-        _barcode_lookup_finished(
-            api,
-            files,
-            fallback_objects,
-            match_source,
-            barcode,
-            document,
-            http,
-            error,
-        )
+        _barcode_lookup_finished(api, files, barcode, document, http, error)
 
     query_limit = api.global_config.setting["query_limit"]
     task = api.mb_api.find_releases(
@@ -288,8 +199,6 @@ def _start_barcode_lookup(api, files, barcode, fallback_objects, match_source=No
 def _expand_lookup_objects(objects):
     expanded = []
     for obj in objects:
-        # Picard's ClusterList is a list subclass. Expand it so each album
-        # cluster can use its own barcode independently.
         if isinstance(obj, list) and not hasattr(obj, "filename"):
             expanded.extend(list(obj))
         else:
@@ -297,11 +206,9 @@ def _expand_lookup_objects(objects):
     return expanded
 
 
-def _barcode_first_autotag(api, objects):
+def _barcode_only_lookup(api, objects):
     objects = _expand_lookup_objects(list(objects))
 
-    # When individual files are selected, group files sharing one barcode so
-    # a complete album lookup is performed once instead of once per track.
     direct_files = []
     other_objects = []
     for obj in objects:
@@ -310,39 +217,30 @@ def _barcode_first_autotag(api, objects):
         else:
             other_objects.append(obj)
 
-    fallback_objects = []
+    started = 0
     file_groups = {}
     for file_obj in direct_files:
         barcode = _barcode_from_file(file_obj)
         if barcode:
             file_groups.setdefault(barcode, []).append(file_obj)
-        else:
-            fallback_objects.append(file_obj)
 
     for barcode, files in file_groups.items():
-        _start_barcode_lookup(
-            api,
-            files,
-            barcode,
-            fallback_objects=list(files),
-        )
+        _start_barcode_lookup(api, files, barcode)
+        started += 1
 
     for obj in other_objects:
         files = _files_for_object(obj)
         barcode = _common_barcode(files)
         if barcode:
-            _start_barcode_lookup(
-                api,
-                files,
-                barcode,
-                fallback_objects=[obj],
-                match_source=obj,
-            )
-        else:
-            fallback_objects.append(obj)
+            _start_barcode_lookup(api, files, barcode)
+            started += 1
 
-    if fallback_objects:
-        _fallback_lookup(fallback_objects)
+    if not started:
+        api.tagger.window.set_statusbar_message(
+            "No usable Barcode / UPC tag found in the selection",
+            translate=None,
+            timeout=5000,
+        )
 
 
 def _run_barcode_lookup_button(api):
@@ -354,7 +252,7 @@ def _run_barcode_lookup_button(api):
             timeout=3000,
         )
         return
-    _barcode_first_autotag(api, objects)
+    _barcode_only_lookup(api, objects)
 
 
 def _make_barcode_icon(widget):
@@ -377,13 +275,12 @@ def _make_barcode_icon(widget):
 
 
 def _install_barcode_lookup_button(api):
-    global _ORIGINAL_AUTOTAG, _BARCODE_TOOLBAR_ACTION, _LOOKUP_API
+    global _BARCODE_TOOLBAR_ACTION, _LOOKUP_API
 
     if _BARCODE_TOOLBAR_ACTION is not None:
         return
 
     _LOOKUP_API = api
-    _ORIGINAL_AUTOTAG = api.tagger.autotag
 
     window = api.tagger.window
     action = QtGui.QAction(
@@ -392,8 +289,8 @@ def _install_barcode_lookup_button(api):
         window,
     )
     action.setIconText("Barcode Lookup")
-    action.setToolTip("Lookup selected items by Barcode or UPC first")
-    action.setStatusTip("Lookup selected items by Barcode or UPC first")
+    action.setToolTip("Lookup selected items by exact Barcode or UPC only")
+    action.setStatusTip("Lookup selected items by exact Barcode or UPC only")
     action.triggered.connect(lambda _checked=False: _run_barcode_lookup_button(api))
 
     toolbar_actions = window.toolbar.actions()
@@ -416,11 +313,11 @@ def _install_barcode_lookup_button(api):
         window.toolbar.addAction(action)
 
     _BARCODE_TOOLBAR_ACTION = action
-    api.logger.info("Separate Barcode / UPC Lookup toolbar button enabled")
+    api.logger.info("Strict Barcode / UPC Lookup toolbar button enabled")
 
 
 def disable():
-    global _ORIGINAL_AUTOTAG, _BARCODE_TOOLBAR_ACTION, _LOOKUP_API
+    global _BARCODE_TOOLBAR_ACTION, _LOOKUP_API
 
     api = _LOOKUP_API
 
@@ -439,7 +336,6 @@ def disable():
             except Exception:
                 pass
 
-    _ORIGINAL_AUTOTAG = None
     _BARCODE_TOOLBAR_ACTION = None
     _LOOKUP_API = None
 
