@@ -157,7 +157,7 @@ Different versions must remain distinct, including when applicable:
 
 Named `(... Version)` labels are hard identity boundaries. Different labels, or a named version versus an unlabeled version, must remain distinct even when AcoustID/Chromaprint similarity is very strong.\n\nCompletely different titles are also a hard safety boundary for fingerprint-only matching. This protects translated/different-language recordings such as a localized song title versus its English title: strong AcoustID/Chromaprint similarity alone must not merge them. Fingerprint auto-merge requires the same normalized title or only a one-character metadata typo.
 
-Near-title matches must not be collapsed automatically.
+For duplicate matching only, title formatting differences that do not define a wanted semantic version must be normalized away. This includes featured-artist credits written in the title on one source but only in artist metadata on another, generic advisory labels such as `Album Version Edited`, `Album Version Explicit`, `Explicit Version`, and `Clean Version`, and censorship masks such as `**` / `__`. These must not block same-album duplicate detection. Semantic variants such as Acoustic, Live, Radio Edit, Instrumental, language/region versions, etc. remain distinct.\n\nNear-title matches must not be collapsed automatically.
 
 ## 7. Source preference
 
