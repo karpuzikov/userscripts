@@ -76,24 +76,25 @@ Remixes are unwanted discography content and must not count toward unique-song c
 
 Rules:
 
-- remix/mix/dub tracks do not count toward wanted coverage;
+- only an explicit `Remix`, `Remixes`, `Remixed`, or `Dub` marker classifies a track as remix material;
+- the word `Mix` by itself is NOT a remix marker;
+- `Original Mix`, `Extended Mix`, `Club Mix`, `VIP Mix`, `12" Mix`, `7" Mix`, and similar mix labels are wanted versions, not remixes;
+- `Instrumental` and `A Capella` / `Acapella` are wanted distinct versions, not remixes;
+- a release named `Remixes` does NOT automatically make every track inside it unwanted; classify the tracks individually;
 - the presence of remix tracks does NOT make the entire release unwanted;
-- compare the release again after removing remix tracks from the coverage calculation;
-- if the remaining wanted tracks are equivalent to another release, choose between the releases using explicit/source-medium rules;
-- releases explicitly identified as remix/remixes packages are treated as remix material as a whole, including instrumental/a-capella tracks inside those remix packages;
+- compare the release again after removing only explicitly identified remix tracks from wanted coverage;
 - a mixed release can still be retained when it contains wanted non-remix material;
-- if a redundant release contains any remix material, move the whole redundant release folder under `<artist>_duplicates/!Remixes/`;
+- if a redundant release contains explicit remix material, or is itself explicitly titled as a remix package, move the whole redundant release folder under `<artist>_duplicates/!Remixes/`;
 - do not delete remix releases permanently; archive them in `!Remixes`.
-
 
 ### Equivalent album-source tie-break
 
 When two editions provide equivalent wanted non-remix album content:
 
-1. ignore remix tracks;
-2. compare the remaining wanted recording coverage;
-3. prefer explicit over clean;
-4. prefer CD / physical media over WEB;
+1. ignore explicitly identified remix tracks;
+2. compare the remaining wanted recording/version coverage;
+3. prefer CD / physical media over WEB;
+4. prefer the existing processed ALAC copy when source class is otherwise equivalent;
 5. only then use duplicated wanted-track/file count as the tie-break.
 
 A CD edition must not lose to a WEB edition merely because the CD contains extra unwanted remix tracks.
@@ -143,14 +144,18 @@ Different versions must remain distinct, including when applicable:
 - live
 - acoustic
 - radio edit
-- extended version
+- extended version / extended mix
 - instrumental
 - a cappella
 - dub
 - demo
 - alternate mix
+- 12" / 7" / club / VIP and other named mix variants
+- language/region versions such as `US Version`, `French Version`, `Spanish Version`, etc.
 - remaster/master difference when intentionally distinct
-- explicit vs clean, with explicit preferred when equivalent
+- explicit vs clean once reliable detection exists
+
+Named `(... Version)` labels are hard identity boundaries. Different labels, or a named version versus an unlabeled version, must remain distinct even when AcoustID/Chromaprint similarity is very strong.
 
 Near-title matches must not be collapsed automatically.
 
@@ -173,12 +178,11 @@ Do not replace a unique WEB recording merely because another release is on CD if
 
 ## Existing discography precedence
 
-The existing ALAC discography is already processed material and is preferred over an equivalent recycle/update copy when wanted content, explicit/clean state, and source class are equal.
+The existing ALAC discography is already processed material and is preferred over an equivalent recycle/update copy when wanted content/version and source class are equal.
 
 A recycle release should replace an existing release only when it is objectively better by the project rules, for example:
 
 - it preserves wanted unique material the existing release does not;
-- it is explicit while the existing equivalent is clean;
 - it is CD/physical while the existing equivalent is WEB.
 
 For equivalent WEB vs WEB content, keep the existing ALAC release and move/skip the recycle copy.
