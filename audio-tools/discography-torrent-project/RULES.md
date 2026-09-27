@@ -579,3 +579,6 @@ Implementation goal for later:
 - only fall back to unlogged lossless when no better logged rip exists.
 
 Do not implement this hierarchy as filename guessing. Parse/score the actual log contents.
+
+
+- `Original Mix` is an original-version label and must NOT be classified as a remix merely because it contains the word `Mix`.
