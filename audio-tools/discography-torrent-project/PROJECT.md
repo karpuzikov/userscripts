@@ -8,6 +8,8 @@ Reduce the manual work required to prepare complete discography torrents while p
 
 The long-term direction is one controller application that automates the glue between existing tools instead of replacing mature tools without a clear benefit.
 
+Canonical decision rules: [`RULES.md`](RULES.md). All duplicate/edition/source-selection rules belong there and should be updated there rather than duplicated in project notes.
+
 ## Current workflow
 
 1. Download every available release into a folder named `recycle`.
@@ -58,31 +60,9 @@ Primary automation targets:
 
 ## Duplicate / edition comparison rules
 
-The application should assist, not silently delete.
+See the canonical rulebook: [`RULES.md`](RULES.md).
 
-Signals can include:
-
-- MusicBrainz recording IDs;
-- AcoustID/Chromaprint;
-- duration;
-- normalized title;
-- artist;
-- track counts;
-- source type;
-- presence of LOG/CUE.
-
-Suggested states:
-
-- KEEP
-- REDUNDANT
-- REVIEW
-
-Decision priority:
-
-1. maximize unique useful original recordings;
-2. preserve unique bonus tracks and genuinely different versions;
-3. do not treat remixes/live tracks as automatically making an edition superior;
-4. CD rip with valid LOG+CUE is preferred over equivalent WEB material.
+The Duplicate / Edition Analyzer must implement those rules and report KEEP / REDUNDANT / REPLACE / REVIEW / NEW decisions with reasons. It must never silently delete material.
 
 ## CUE Corrector replacement subset
 
