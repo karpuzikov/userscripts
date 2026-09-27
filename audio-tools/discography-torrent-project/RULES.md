@@ -187,6 +187,17 @@ For equivalent CD vs WEB content, keep the CD release regardless of whether it i
 
 Release-level equivalence must not depend only on internal fingerprint-group IDs. For related album editions, compare wanted non-remix tracks directly using Chromaprint/MBID/ISRC and, when needed, normalized title + compatible duration as a fallback.
 
+
+### Optional existing-discography mode
+
+The Existing discography folder is optional.
+
+- If Existing is provided, compare Existing + Recycle together using all normal source/preference rules.
+- If Existing is blank, analyze and optimize Recycle against itself only.
+- Recycle-only mode must still remove redundant editions/singles/remix-only releases according to the same rules.
+- An empty Existing path is valid and must not trigger a folder-selection error.
+- The saved Existing path can be cleared and must remain cleared across launches until the user selects one again.
+
 ## 8. Existing discography vs recycle/update
 
 The existing ALAC discography is the current collection.
