@@ -253,6 +253,7 @@ run this logic automatically at the final torrent preparation stage and prepare/
 - Create `<artist>_duplicates` as a sibling of the selected artist folder, e.g. `...\!recycle\3OH!3_duplicates`.
 - Redundant folders containing remix material go under `<artist>_duplicates/!Remixes/`.
 - Remixes are excluded from wanted-discography coverage.
+- Remix tracks are excluded from wanted coverage, but a release containing remixes is not automatically unwanted. For equivalent wanted album content, explicit wins over clean and CD/physical media wins over WEB before file-count minimization.
 - Leave required recycle releases in the recycle folder for the next processing stage.
 - Final UI should only show a short completion summary plus Open filtered recycle / Open duplicates / Undo.
 - Technical diagnostics are optional and must not be required for normal use.
