@@ -250,7 +250,7 @@ run this logic automatically at the final torrent preparation stage and prepare/
 - Uncertain equivalence is resolved conservatively by keeping both tracks/releases.
 - After scanning, show one global confirmation containing summary counts only.
 - On confirmation, automatically move redundant release folders as-is into `<artist>_duplicates`; never rename the release folders.
-- If the selected recycle artist folder is inside `!recycle`, create `<artist>_duplicates` outside that recycle parent.
+- Create `<artist>_duplicates` as a sibling of the selected artist folder, e.g. `...\!recycle\3OH!3_duplicates`.
 - Redundant folders containing remix material go under `<artist>_duplicates/!Remixes/`.
 - Remixes are excluded from wanted-discography coverage.
 - Leave required recycle releases in the recycle folder for the next processing stage.
