@@ -4,17 +4,15 @@
 from collections import Counter
 import re
 
-from PyQt6 import QtWidgets
+from PyQt6 import QtGui, QtWidgets
 
 from picard.plugin3.api import OptionsPage, ScriptParser
 
 
 PLUGIN_PRIORITY = -10000
 
-BARCODE_LOOKUP_OPTION = "barcode_first_lookup"
-
 _ORIGINAL_AUTOTAG = None
-_BARCODE_AUTOTAG_HOOK = None
+_BARCODE_TOOLBAR_ACTION = None
 _LOOKUP_API = None
 _PENDING_BARCODE_TASKS = []
 
@@ -302,10 +300,6 @@ def _expand_lookup_objects(objects):
 def _barcode_first_autotag(api, objects):
     objects = _expand_lookup_objects(list(objects))
 
-    if not api.plugin_config[BARCODE_LOOKUP_OPTION]:
-        _fallback_lookup(objects)
-        return
-
     # When individual files are selected, group files sharing one barcode so
     # a complete album lookup is performed once instead of once per track.
     direct_files = []
@@ -351,25 +345,63 @@ def _barcode_first_autotag(api, objects):
         _fallback_lookup(fallback_objects)
 
 
-def _install_barcode_lookup_hook(api):
-    global _ORIGINAL_AUTOTAG, _BARCODE_AUTOTAG_HOOK, _LOOKUP_API
+def _run_barcode_lookup_button(api):
+    objects = list(api.tagger.window.selected_objects)
+    if not objects:
+        api.tagger.window.set_statusbar_message(
+            "Select files or clusters to look up by Barcode / UPC",
+            translate=None,
+            timeout=3000,
+        )
+        return
+    _barcode_first_autotag(api, objects)
 
-    if _ORIGINAL_AUTOTAG is not None:
+
+def _install_barcode_lookup_button(api):
+    global _ORIGINAL_AUTOTAG, _BARCODE_TOOLBAR_ACTION, _LOOKUP_API
+
+    if _BARCODE_TOOLBAR_ACTION is not None:
         return
 
     _LOOKUP_API = api
     _ORIGINAL_AUTOTAG = api.tagger.autotag
 
-    def barcode_autotag(objects):
-        return _barcode_first_autotag(api, objects)
+    window = api.tagger.window
+    action = QtGui.QAction(
+        QtGui.QIcon(":/images/22x22/lookup-musicbrainz.png"),
+        "Barcode / UPC Lookup",
+        window,
+    )
+    action.setIconText("Barcode Lookup")
+    action.setToolTip("Lookup selected items by Barcode or UPC first")
+    action.setStatusTip("Lookup selected items by Barcode or UPC first")
+    action.triggered.connect(lambda _checked=False: _run_barcode_lookup_button(api))
 
-    _BARCODE_AUTOTAG_HOOK = barcode_autotag
-    api.tagger.autotag = barcode_autotag
-    api.logger.info("Barcode/UPC-first Lookup enabled")
+    toolbar_actions = window.toolbar.actions()
+    native_lookup = next(
+        (
+            existing
+            for existing in toolbar_actions
+            if existing.text().replace("&", "").strip() == "Lookup"
+        ),
+        None,
+    )
+
+    if native_lookup is not None:
+        index = toolbar_actions.index(native_lookup)
+        if index + 1 < len(toolbar_actions):
+            window.toolbar.insertAction(toolbar_actions[index + 1], action)
+        else:
+            window.toolbar.addAction(action)
+    else:
+        window.toolbar.addAction(action)
+
+    _BARCODE_TOOLBAR_ACTION = action
+    api.logger.info("Separate Barcode / UPC Lookup toolbar button enabled")
 
 
 def disable():
-    global _ORIGINAL_AUTOTAG, _BARCODE_AUTOTAG_HOOK, _LOOKUP_API
+    global _ORIGINAL_AUTOTAG, _BARCODE_TOOLBAR_ACTION, _LOOKUP_API
 
     api = _LOOKUP_API
 
@@ -381,14 +413,15 @@ def disable():
                 pass
         _PENDING_BARCODE_TASKS.clear()
 
-        if (
-            _ORIGINAL_AUTOTAG is not None
-            and getattr(api.tagger, "autotag", None) is _BARCODE_AUTOTAG_HOOK
-        ):
-            api.tagger.autotag = _ORIGINAL_AUTOTAG
+        if _BARCODE_TOOLBAR_ACTION is not None:
+            try:
+                api.tagger.window.toolbar.removeAction(_BARCODE_TOOLBAR_ACTION)
+                _BARCODE_TOOLBAR_ACTION.deleteLater()
+            except Exception:
+                pass
 
     _ORIGINAL_AUTOTAG = None
-    _BARCODE_AUTOTAG_HOOK = None
+    _BARCODE_TOOLBAR_ACTION = None
     _LOOKUP_API = None
 
 
@@ -415,8 +448,7 @@ class ScriptsOptionsPage(OptionsPage):
         info = QtWidgets.QLabel(
             "Enable the tagging scripts you want this plugin to run. "
             "If you also imported the same .txt script under Options > Scripting, "
-            "disable one copy to avoid running it twice. The Lookup helper can "
-            "also try Barcode / UPC before Picard's normal metadata lookup."
+            "disable one copy to avoid running it twice."
         )
         info.setWordWrap(True)
         layout.addWidget(info)
@@ -427,22 +459,16 @@ class ScriptsOptionsPage(OptionsPage):
             self.checkboxes[key] = checkbox
             layout.addWidget(checkbox)
 
-        self.barcode_lookup_checkbox = QtWidgets.QCheckBox("Lookup by Barcode / UPC first")
-        layout.addWidget(self.barcode_lookup_checkbox)
 
         layout.addStretch()
 
     def load(self):
         for key, checkbox in self.checkboxes.items():
             checkbox.setChecked(self.api.plugin_config[key])
-        self.barcode_lookup_checkbox.setChecked(
-            self.api.plugin_config[BARCODE_LOOKUP_OPTION]
-        )
 
     def save(self):
         for key, checkbox in self.checkboxes.items():
             self.api.plugin_config[key] = checkbox.isChecked()
-        self.api.plugin_config[BARCODE_LOOKUP_OPTION] = self.barcode_lookup_checkbox.isChecked()
 
 
 def _run_scripts(api, metadata):
@@ -467,9 +493,7 @@ def process_track(api, track, metadata, track_node, release_node=None):
 def enable(api):
     for key, _label, _script in SCRIPTS:
         api.plugin_config.register_option(key, False)
-    api.plugin_config.register_option(BARCODE_LOOKUP_OPTION, True)
-
     api.register_options_page(ScriptsOptionsPage)
     api.register_album_metadata_processor(process_album, priority=PLUGIN_PRIORITY)
     api.register_track_metadata_processor(process_track, priority=PLUGIN_PRIORITY)
-    _install_barcode_lookup_hook(api)
+    _install_barcode_lookup_button(api)
