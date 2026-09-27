@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Harmony - Link External IDs in One Click
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.2.5
+// @version      1.2.6
 // @description  Adds all-in-one and per-type fast submission of Harmony MusicBrainz external-ID edits without opening one edit tab per entity.
 // @author       karpuzikov
 // @license      MIT
@@ -173,7 +173,7 @@
         return null;
     }
 
-    function makeActionControl(id, button, status, referenceAction) {
+    function makeActionControl(id, button, status, referenceAction, alignment = 'left') {
         const wrapper = document.createElement('div');
         wrapper.id = id;
         wrapper.className = 'action';
@@ -185,6 +185,13 @@
 
         const body = document.createElement('div');
         const paragraph = document.createElement('p');
+        body.style.flex = '1 1 auto';
+        paragraph.style.display = 'flex';
+        paragraph.style.justifyContent = alignment === 'center'
+            ? 'center'
+            : alignment === 'right'
+                ? 'flex-end'
+                : 'flex-start';
         paragraph.appendChild(button);
         body.appendChild(paragraph);
 
@@ -328,7 +335,8 @@
             'harmony-link-external-ids-one-click',
             allButton,
             status,
-            firstLinkAction
+            firstLinkAction,
+            'center'
         );
 
         // The global button belongs with the external-ID actions themselves,
@@ -358,7 +366,8 @@
                 `harmony-link-external-ids-${config.scope}`,
                 button,
                 null,
-                referenceAction
+                referenceAction,
+                'right'
             );
 
             // Keep the aggregate button under "Release Actions", while each
