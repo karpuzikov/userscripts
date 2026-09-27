@@ -360,6 +360,16 @@ If the same `Honeyflow` exists on a single, prefer keeping:
 
 and remove the Japanese album edition, because the album remains represented and all unique songs remain covered with fewer duplicated files.
 
+
+### Release container and move integrity
+
+- Each direct child folder of the selected artist/recycle root is one release container.
+- Audio may be stored recursively inside that release container, including `CD1`, `CD2`, `Disc 1`, etc.; those disc subfolders are not separate releases.
+- Automatic filtering moves the complete top-level release container, never only an internal disc subfolder.
+- A planned move may never be silently skipped.
+- Every move must be verified: source gone, destination present.
+- If any move fails, report the exact source/target and roll back moves already completed in that run.
+
 ## 14. Automatic filtering / safety
 
 The analyzer must do the filtering itself. It must not require the user to inspect release rows or make line-by-line duplicate decisions.
