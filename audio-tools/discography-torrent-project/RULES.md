@@ -113,7 +113,7 @@ Rules:
 
 - if explicit and clean versions are otherwise equivalent, keep explicit and mark clean redundant;
 - a clean version is acceptable only when no explicit equivalent is available;
-- if clean and explicit are genuinely different recordings/edits beyond censorship, mark for review rather than assuming equivalence.
+- if clean and explicit are genuinely different recordings/edits beyond censorship, treat them as distinct and retain both unless another rule makes one redundant.
 
 ## 6. Unique recording/version definition
 
@@ -336,7 +336,7 @@ For this dataset:
 
 - compare recycle WEB releases against existing ALAC and against each other;
 - eliminate complete subsets when recordings are equivalent;
-- keep releases that contribute unique versions/remixes;
+- keep releases that contribute unique wanted non-remix songs/versions;
 - prefer explicit over clean;
 - keep all albums represented;
 - minimize duplicated audio files across album editions/singles/EPs.
@@ -357,3 +357,150 @@ This project follows the general software persistence rule:
 - For Duplicate / Edition Analyzer specifically, remember at minimum:
   - Existing discography (ALAC)
   - Recycle / update folder
+
+
+## English capitalization and label naming
+
+These are the canonical English capitalization rules for album titles, track titles, artist/band names, and label names.
+
+### Title capitalization
+
+Use standard mixed case.
+
+Capitalize:
+- nouns;
+- verbs, including `be`, `been`, `am`, `are`, `is`, `was`, `were`;
+- adverbs;
+- subordinating conjunctions;
+- adjectives;
+- pronouns;
+- the first and last word of every title or major title segment.
+
+Normally lowercase internal:
+- articles: `a`, `an`, `the`;
+- coordinating conjunctions: `and`, `but`, `or`, `nor`, `for`, `yet`, `so`;
+- short prepositions: `as`, `at`, `by`, `for`, `in`, `of`, `on`, `to`, `from`;
+- `versus`, `vs.`, `v.`;
+- `etc.` when meaning "and so on/and so forth";
+- `to` when forming an infinitive.
+
+Grammar exceptions:
+- capitalize `but` when it functions as an adverb ("Life Is But a Dream");
+- capitalize `so` when adjectival ("You Are So Beautiful");
+- capitalize `as` when functioning as a subordinating conjunction;
+- capitalize a preposition when it is part of a phrasal verb ("Get Out of This Country").
+
+Major punctuation starts a new title segment. After a colon, question mark, exclamation mark, dash used as a major separator, parentheses, or quotes, capitalize the first and last word of the segment.
+
+For hyphenated compounds, capitalize each component according to the same title rules.
+
+Only preserve all-caps where common usage is genuinely acronym/abbreviation capitalization. All-uppercase/all-lowercase artwork styling alone is not an artistic-capitalization exception.
+
+Contractions and slang follow the same rules. Keep forms such as internal `o'` ("Will o' the Wisp") and `'n'` ("Rock 'n' Roll") lowercase where they stand for lowercase words.
+
+Proper nouns keep their proper capitalization.
+
+### Artistic-intent exceptions
+
+Preserve genuinely intentional nonstandard capitalization used by the artist/release, e.g. `k.d. lang`, `Yellow mY skYcaptain`, or intentional lowercase `tourette's`.
+
+Do not infer artistic intent merely because cover art prints an entire artist/title/tracklist in uppercase or lowercase.
+
+The Picard capitalization script must not blindly title-case artist names. Artist/album-artist capitalization should come from the authoritative metadata/current artist name unless an explicit normalization rule says otherwise.
+
+### Picard implementation
+
+Source of truth:
+- `picard-tools/scripts/English_Title_Capitalization.txt`
+
+The script applies the deterministic title rules to both track `title` and `album`, including:
+- articles/conjunctions/prepositions;
+- first/last-word behavior;
+- major punctuation divisions;
+- common phrasal-verb exceptions;
+- `vs.` / `v.` / `etc.`;
+- slang forms such as `o'` and `'n'`.
+
+Grammar-dependent and artistic-intent exceptions remain governed by this rulebook if a simple Picard script cannot infer them perfectly.
+
+### Record label capitalization
+
+Preferred forms:
+
+- A&M Records
+- Atlantic
+- Arista Records
+- ATO Records
+- Below Par Records (or Below Par where source usage supports it)
+- Brightside
+- Casablanca Music
+- Central Station Records
+- Dance Pool
+- Data Records
+- Decaydance Records
+- Decca
+- DGC
+- Dreamworks
+- Eleven: A Music Company
+- EMI
+- EPIC
+- Griffen Records
+- Hussle Recordings
+- Interscope Records
+- Jive Records
+- Lava Records
+- Mercury Records
+- Nettwerk
+- Octone Records
+- Rhino Records
+- Radioactive Records
+- Roadrunner Records
+- Shock Records
+- Sony
+- Universal
+- Virgin Records
+- Wah Wah Music
+- Walt Disney Records
+- Warner
+- WEA
+- Wind Up
+- Zoomba Recordings
+
+Specific preferred forms:
+- `EPIC`, not `Epic` or `EPIC recordings`;
+- `Roadrunner Records`, not `roadrunner records pty. ltd.`;
+- `Sony`, not `Sony Music`;
+- `Universal`, not `Universal Music`;
+- `Warner`, not `Warner Music`;
+- `WEA`, not `Warner Elektra Atlantic`;
+- `Wind Up`, not `Wind Up Records`.
+
+Where a label officially ends in `Records`, keep `Records` except for the explicit preferred-form exceptions above.
+
+Multiple-label formatting is not fully standardized yet; keep the source labels rather than inventing a destructive normalization.
+
+## CD rip log quality hierarchy - future implementation
+
+This is for comparing otherwise identical CD rips and selecting the best rip based on the ripping log.
+
+Use `doujincafe/hbcl` as the scoring basis. H.B.C.L. is a CD rip log analyzer/scorer and starts from a 100-point score with deductions.
+
+Hierarchy:
+
+1. `100% - Log + CUE`
+2. `100% - Log`
+3. `Log with non-audio deductions`
+4. `Log with audio deductions`
+5. `FLAC` / lossless source without a qualifying rip log
+
+Meaning of `100%`: the log completes the H.B.C.L.-style check with a full 100 score.
+
+Implementation goal for later:
+- first establish that two releases are the same CD rip/content candidate;
+- score every qualifying rip log;
+- prefer the highest-scoring log;
+- if scores tie, prefer the rip with CUE;
+- distinguish non-audio deductions from audio-affecting deductions when ranking sub-100 logs;
+- only fall back to unlogged lossless when no better logged rip exists.
+
+Do not implement this hierarchy as filename guessing. Parse/score the actual log contents.
