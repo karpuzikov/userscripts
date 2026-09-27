@@ -153,15 +153,36 @@ Near-title matches must not be collapsed automatically.
 
 ## 7. Source preference
 
-When the same recording/version exists in multiple sources, preference is:
+When the same wanted recording/version exists in multiple sources, preference is:
 
 1. CD rip with valid LOG + CUE
 2. other verified lossless physical-media source
 3. WEB lossless
 
-A WEB copy can be removed when the same recording is already preserved from a preferred CD source.
+CD detection rule:
+- if a release folder contains at least one `.cue` file AND at least one `.log` file other than `audiochecker.log`, treat that release as CD;
+- `audiochecker.log` by itself does NOT make a release CD.
+
+A WEB copy can be removed when the same wanted recording is already preserved from a preferred CD source.
 
 Do not replace a unique WEB recording merely because another release is on CD if the actual recording/version is different.
+
+
+## Existing discography precedence
+
+The existing ALAC discography is already processed material and is preferred over an equivalent recycle/update copy when wanted content, explicit/clean state, and source class are equal.
+
+A recycle release should replace an existing release only when it is objectively better by the project rules, for example:
+
+- it preserves wanted unique material the existing release does not;
+- it is explicit while the existing equivalent is clean;
+- it is CD/physical while the existing equivalent is WEB.
+
+For equivalent WEB vs WEB content, keep the existing ALAC release and move/skip the recycle copy.
+
+For equivalent CD vs WEB content, keep the CD release regardless of whether it is in Existing or Recycle.
+
+Release-level equivalence must not depend only on internal fingerprint-group IDs. For related album editions, compare wanted non-remix tracks directly using Chromaprint/MBID/ISRC and, when needed, normalized title + compatible duration as a fallback.
 
 ## 8. Existing discography vs recycle/update
 
