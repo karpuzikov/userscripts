@@ -78,7 +78,7 @@ Rules:
 
 - only an explicit `Remix`, `Remixes`, `Remixed`, or `Dub` marker classifies a track as remix material;
 - the word `Mix` by itself is NOT a remix marker;
-- `Original Mix`, `Extended Mix`, `Club Mix`, `VIP Mix`, `12" Mix`, `7" Mix`, and similar mix labels are wanted versions, not remixes;
+- `Original Mix`, `Extended Mix`, `12" Mix`, `7" Mix`, and similar non-club mix labels are wanted versions, not remixes;\n- `Club Mix` / `Club Mixes` are remix material;
 - `Instrumental` and `A Capella` / `Acapella` are wanted distinct versions, not remixes;
 - a release named `Remixes` does NOT automatically make every track inside it unwanted; classify the tracks individually;
 - the presence of remix tracks does NOT make the entire release unwanted;
@@ -155,7 +155,7 @@ Different versions must remain distinct, including when applicable:
 - remaster/master difference when intentionally distinct
 - explicit vs clean once reliable detection exists
 
-Named `(... Version)` labels are hard identity boundaries. Different labels, or a named version versus an unlabeled version, must remain distinct even when AcoustID/Chromaprint similarity is very strong.
+Named `(... Version)` labels are hard identity boundaries. Different labels, or a named version versus an unlabeled version, must remain distinct even when AcoustID/Chromaprint similarity is very strong.\n\nCompletely different titles are also a hard safety boundary for fingerprint-only matching. This protects translated/different-language recordings such as a localized song title versus its English title: strong AcoustID/Chromaprint similarity alone must not merge them. Fingerprint auto-merge requires the same normalized title or only a one-character metadata typo.
 
 Near-title matches must not be collapsed automatically.
 
