@@ -4,7 +4,7 @@
 from collections import Counter
 import re
 
-from PyQt6 import QtGui, QtWidgets
+from PyQt6 import QtCore, QtGui, QtWidgets
 
 from picard.plugin3.api import OptionsPage, ScriptParser
 
@@ -357,6 +357,25 @@ def _run_barcode_lookup_button(api):
     _barcode_first_autotag(api, objects)
 
 
+def _make_barcode_icon(widget):
+    pixmap = QtGui.QPixmap(22, 22)
+    pixmap.fill(QtCore.Qt.GlobalColor.transparent)
+
+    painter = QtGui.QPainter(pixmap)
+    color = widget.palette().color(QtGui.QPalette.ColorRole.WindowText)
+    painter.setPen(QtCore.Qt.PenStyle.NoPen)
+    painter.setBrush(color)
+
+    bars = (
+        (3, 2), (6, 1), (8, 2), (12, 1), (14, 2), (18, 1),
+    )
+    for x, width in bars:
+        painter.drawRect(x, 4, width, 14)
+
+    painter.end()
+    return QtGui.QIcon(pixmap)
+
+
 def _install_barcode_lookup_button(api):
     global _ORIGINAL_AUTOTAG, _BARCODE_TOOLBAR_ACTION, _LOOKUP_API
 
@@ -368,7 +387,7 @@ def _install_barcode_lookup_button(api):
 
     window = api.tagger.window
     action = QtGui.QAction(
-        QtGui.QIcon(":/images/22x22/lookup-musicbrainz.png"),
+        _make_barcode_icon(window),
         "Barcode / UPC Lookup",
         window,
     )
