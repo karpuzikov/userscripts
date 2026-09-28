@@ -76,7 +76,7 @@ When several singles/EPs overlap:
 
 `Save Remixes` and `Save Live recordings` are user-selectable analyzer options. Unchecked categories do not count toward wanted coverage.
 
-Before fingerprint comparison, the analyzer may also show detected non-remix, non-live version-style pattern families (for example `The Matrix Mix`, `Tom Lord-Alge Mix`, or a normalized `Callout Hook` family). Similar callout spellings such as `Suggested Call Out Research Hook`, `Suggested Callout Hook`, and `Call Out Hook` are grouped. Explicit remix/dub/Club Mix material and tracks classified as live must never appear in this review and must remain controlled only by `Save Remixes` and `Save Live recordings`. Checked means the pattern remains eligible wanted content; unchecked means matching non-remix/non-live tracks are ignored for coverage and fingerprint generation. This preference is not duplicate evidence. Pattern choices are saved and reused as defaults on later runs.
+Before fingerprint comparison, the analyzer may show only unusual/non-standard non-remix/non-live descriptor families that normal rules do not already classify. Examples include `The Matrix Mix`, `Tom Lord-Alge Mix`, and the grouped callout family (`Suggested Call Out Research Hook`, `Suggested Callout Hook`, etc.). Ordinary known patterns such as `Acoustic`, `Instrumental`, `Radio Edit`, `Extended Mix`, `Original Mix`, `Single Version`, and similar standard variants must not appear. Remix/live remain controlled only by `Save Remixes` and `Save Live recordings`. Pattern choices affect wanted coverage only and never duplicate identity.
 
 Rules:
 
