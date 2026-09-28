@@ -387,3 +387,5 @@ Next stage after this: metadata/tag normalization using the shared Picard rules.
 - Chromaprint generation auto-scales parallel fpcalc workers to logical CPU count (up to 32) instead of a fixed 4, and skips tracks already excluded from wanted coverage by the remix/live options.
 
 - Post-fingerprint matching now shows explicit Indexing/Finding candidates/Comparing audio/Optimizing stages. Candidate discovery uses an inverted fingerprint-token index and similarity checks use multi-process CPU parallelism instead of silently running on one Python thread.
+
+- UI labels must explain the effect of each option to a first-time user; ambiguous labels such as `Exclude remixes` are replaced by explicit behavior such as `Ignore remix tracks when deciding which releases must be kept`, with concise inline explanations.
