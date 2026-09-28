@@ -7,6 +7,11 @@ from PyQt6 import QtCore, QtGui, QtWidgets
 
 from picard.plugin3.api import OptionsPage, ScriptParser
 
+from .current_artist_names import (
+    normalize_album_artist_names,
+    normalize_track_artist_names,
+)
+
 
 PLUGIN_PRIORITY = -10000
 
@@ -367,6 +372,11 @@ def disable():
     _LOOKUP_API = None
 
 
+FEATURES = (
+    ("current_artist_names", "Current Artist Names Everywhere"),
+)
+
+
 SCRIPTS = (
     ("move_featured_artists", "Move Featured Artists to Title", "$set(_feat_title,$rsearch(%artist%,\\\\s+\\\\\\(?\\(f\\(ea\\)?t\\\\.[^\\)]*\\)))\n$set(_feat_title,$rreplace(%_feat_title%,^f\\(ea\\)?t\\\\.,ft.))\n$set(artist,$rreplace(%artist%,\\\\s+\\\\\\(?f\\(ea\\)?t\\\\.[^\\)]*\\\\\\)?,))\n$set(albumartist,$rreplace(%albumartist%,\\\\s+\\\\\\(?f\\(ea\\)?t\\\\.[^\\)]*\\\\\\)?,))\n$set(title,$if(%_feat_title%,%title% \\(%_feat_title%\\),%title%))"),
     ("unicode_to_ascii", "Unicode to ASCII", "$foreach(title; album; artist; albumartist; artistsort; albumartistsort; discsubtitle; work; composer; composersort; lyricist; conductor; arranger; remixer; producer; mixer; djmixer; engineer; director; grouping; comment,\n$set(%_loop_value%,$replace($get(%_loop_value%),\n‘,' ,’,', ‚,', ‛,',\n“,'\"', ”,'\"', „,'\"', ‟,'\"',\n‐,-, ‑,-, ‒,-, –,-, —,-, ―,-, −,-,\n…, ..., ·,., •,*, ‧,.,\n×, &, ÷,/, ⁄,/,\n＆, &, ＋,+, ＝,=,\n（,(, ）,), ［,[, ］,], ｛,{, ｝,},\n：,:, ；,;, ！,!, ？,?, ，,\\,, ．,.,\n／,/, ＼,\\\\, ｜,|,\n＜,<, ＞,>, ＿,_,\n©,(c), ®,(R), ™,TM, №,No.,\n , ,  , ,   , ,\n))\n)"),
@@ -388,14 +398,20 @@ class ScriptsOptionsPage(OptionsPage):
         layout = QtWidgets.QVBoxLayout(self)
 
         info = QtWidgets.QLabel(
-            "Enable the tagging scripts you want this plugin to run. "
-            "If you also imported the same .txt script under Options > Scripting, "
+            "Enable the Picard tools you want this plugin to run. "
+            "If Current Artist Names Everywhere is also installed as a standalone plugin, "
+            "disable one copy. If a tagging script is also enabled under Options > Scripting, "
             "disable one copy to avoid running it twice."
         )
         info.setWordWrap(True)
         layout.addWidget(info)
 
         self.checkboxes = {}
+        for key, label in FEATURES:
+            checkbox = QtWidgets.QCheckBox(label)
+            self.checkboxes[key] = checkbox
+            layout.addWidget(checkbox)
+
         for key, label, _script in SCRIPTS:
             checkbox = QtWidgets.QCheckBox(label)
             self.checkboxes[key] = checkbox
@@ -425,14 +441,20 @@ def _run_scripts(api, metadata):
 
 
 def process_album(api, album, metadata, release_node):
+    if api.plugin_config["current_artist_names"]:
+        normalize_album_artist_names(api, metadata, release_node)
     _run_scripts(api, metadata)
 
 
 def process_track(api, track, metadata, track_node, release_node=None):
+    if api.plugin_config["current_artist_names"]:
+        normalize_track_artist_names(api, metadata, track_node, release_node)
     _run_scripts(api, metadata)
 
 
 def enable(api):
+    for key, _label in FEATURES:
+        api.plugin_config.register_option(key, False)
     for key, _label, _script in SCRIPTS:
         api.plugin_config.register_option(key, False)
     api.register_options_page(ScriptsOptionsPage)
