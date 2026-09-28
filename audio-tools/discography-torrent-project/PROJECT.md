@@ -383,3 +383,5 @@ Next stage after this: metadata/tag normalization using the shared Picard rules.
 - CUE and embedded file tags must agree.
 - Existing user rules/scripts are the source of truth.
 - Prefer one `.pyw` application and minimal file count for the final tool.
+
+- Chromaprint generation auto-scales parallel fpcalc workers to logical CPU count (up to 32) instead of a fixed 4, and skips tracks already excluded from wanted coverage by the remix/live options.
