@@ -401,3 +401,5 @@ Next stage after this: metadata/tag normalization using the shared Picard rules.
 - A second mastering/pressing-tolerant Chromaprint threshold handles near-identical-duration copies of the same recording without using filenames/titles.
 - A final redundancy-prune pass removes selected singles/EPs that add no wanted audio when equal-or-better retained sources already cover them.
 - Named person/DJ/producer/act `Mix` labels (for example `Ferry Corsten Mix`, `Tom Lord-Alge Mix`, `Madlib's Mix`) are remix material and are controlled by `Save Remixes`; they must not appear in the unusual-pattern review.
+
+- v0.9.8 classifier refinement: hide standard suffix families regardless of prefix (12-inch, Extended Version, Full Version, style Mixes such as Ambient/Chillout/Downtempo/Garage/House/Trance, instrument versions, etc.); ignore year-only parser fragments; group bare `hook` with Call Out/Callout Hook; treat `Mix by <name>` and handle-style named mixes as remixes; repair mojibake in displayed examples.
