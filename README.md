@@ -75,7 +75,7 @@ Picard can then check for and install future updates from its Plugins interface.
 
 | Project | Description | Version | Download |
 | --- | --- | ---: | --- |
-| **Archive Media Compressor** | Single-file BAT with the PowerShell compressor embedded. Bootstraps WinGet and installs/updates PowerShell 7, FFmpeg, and ImageMagick before launch. | 2.0.0 | [![Download](https://img.shields.io/badge/Download-.bat-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/main/archive-media-compressor/ArchiveMedia.bat) |
+| **Archive Media Compressor** | Single-file BAT with the PowerShell compressor embedded. Bootstraps WinGet and installs/updates PowerShell 7, FFmpeg, and ImageMagick before launch. | 5.0.0 | [![Download](https://img.shields.io/badge/Download-.bat-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/main/archive-media-compressor/ArchiveMedia.bat) |
 
 ## Windows Tools
 
