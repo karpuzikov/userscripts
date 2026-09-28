@@ -1,9 +1,11 @@
 # SPDX-License-Identifier: MIT
 """MusicBrainz-style capitalization for English release and track titles.
 
-This intentionally limits itself to capitalization. It does not rewrite title
-punctuation, add/remove extra-title-information parentheses, or change titles
-on releases whose MusicBrainz title language is not English.
+Main titles follow MusicBrainz English capitalization rules. Parenthetical
+extra title information (ETI) intentionally uses Apple Music-style title
+capitalization, e.g. "(Club Mix)", "(Remix)", "(Live)" and
+"(Extended Version)". The plugin does not add/remove ETI parentheses and does
+not change titles on releases whose MusicBrainz title language is not English.
 """
 
 from __future__ import annotations
@@ -50,22 +52,6 @@ _PHRASAL_VERBS = {
     ("come", "by"), ("drop", "by"), ("get", "by"), ("go", "by"),
     ("pass", "by"), ("stand", "by"), ("stop", "by"), ("swing", "by"),
     ("walk", "by"),
-}
-
-# Words that identify descriptive extra title information (ETI). MusicBrainz
-# requires descriptive ETI to be lowercase while genuine names/title elements
-# inside the ETI keep normal title capitalization.
-_ETI_HEAD_WORDS = {
-    "mix", "remix", "version", "edit", "re-edit", "dub", "live", "remaster",
-    "remastered", "remastering", "refix", "remode", "take", "demo",
-    "instrumental", "karaoke", "stereo", "mono", "single", "radio", "video",
-    "loop",
-}
-_ETI_MODIFIER_WORDS = _ETI_HEAD_WORDS | {
-    "album", "club", "vocal", "power", "extended", "original", "studio",
-    "official", "uncensored", "explicit", "clean", "dirty", "acoustic",
-    "alternate", "alternative", "bonus", "digital", "deluxe", "promo",
-    "promotional", "rap", "techno", "house", "dance", "8-bit",
 }
 
 _ROMAN_NUMERAL_RE = re.compile(
@@ -175,50 +161,6 @@ def _style_word(
     return "".join(output)
 
 
-def _lower_descriptive_eti(title: str) -> str:
-    def rewrite(match: re.Match[str]) -> str:
-        content = match.group(1)
-        words = list(_WORD_RE.finditer(content))
-        if not words:
-            return match.group(0)
-
-        lowered = [word.group(0).lower() for word in words]
-
-        # Keep featured-artist markers lowercase if they already exist in a
-        # title, without trying to add or remove featured credits.
-        content = re.sub(
-            r"(?i)^\s*(feat|ft|f)(\.)",
-            lambda marker: marker.group(1).lower() + marker.group(2),
-            content,
-        )
-
-        if lowered[-1] not in _ETI_HEAD_WORDS:
-            return "(" + content + ")"
-
-        start = len(words) - 1
-        while start > 0:
-            previous = lowered[start - 1]
-            if (
-                previous in _ETI_MODIFIER_WORDS
-                or re.fullmatch(r"\d+(?:-bit|-inch)?", previous)
-            ):
-                start -= 1
-            else:
-                break
-
-        suffix_start = words[start].start()
-        suffix_end = words[-1].end()
-        content = (
-            content[:suffix_start]
-            + content[suffix_start:suffix_end].lower()
-            + content[suffix_end:]
-        )
-        return "(" + content + ")"
-
-    # Process simple parenthetical ETI without changing bracket structure.
-    return re.sub(r"\(([^()]*)\)", rewrite, title)
-
-
 def musicbrainz_english_title_case(title: str) -> str:
     if not title:
         return title
@@ -246,6 +188,16 @@ def musicbrainz_english_title_case(title: str) -> str:
     for index in range(1, len(words)):
         between = working[words[index - 1].end():words[index].start()]
         if _MAJOR_BOUNDARY_RE.search(between):
+            segment_ends.add(index - 1)
+            segment_starts.add(index)
+
+        # Treat parenthetical information as its own title segment. This is an
+        # intentional Apple Music-style override for ETI, so "(club mix)"
+        # becomes "(Club Mix)", "(live)" becomes "(Live)", etc.
+        if "(" in between:
+            segment_ends.add(index - 1)
+            segment_starts.add(index)
+        if ")" in between:
             segment_ends.add(index - 1)
             segment_starts.add(index)
 
@@ -296,7 +248,15 @@ def musicbrainz_english_title_case(title: str) -> str:
     chunks.append(working[cursor:])
     result = "".join(chunks)
 
-    result = _lower_descriptive_eti(result)
+    # Apple Music keeps featured-artist markers lowercase even though the
+    # surrounding parenthetical version information uses title capitalization.
+    result = re.sub(
+        r"(?i)\((\s*)(feat|ft|f)(\.)",
+        lambda match: (
+            "(" + match.group(1) + match.group(2).lower() + match.group(3)
+        ),
+        result,
+    )
 
     result = re.sub(
         r"(?i)\bRock\s+['’]?N['’]?\s+Roll\b",
