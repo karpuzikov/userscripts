@@ -253,7 +253,7 @@ Existing `CUE LOG 4.1.pyw` behavior to preserve:
 Long-term integration:
 run this logic automatically at the final torrent preparation stage and prepare/copy the comment text.
 
-## Duplicate / Edition Analyzer UX\n\n- Release discovery is recursive: organizational folders such as Albums/Other/Singles and per-single grouping folders are traversed, while CD1/CD2/Disc subfolders remain grouped as one release.
+## Duplicate / Edition Analyzer UX\n\n- Startup failures are never silent: the analyzer shows the exception when possible and writes `Documents\\Karpuzikov Tools\\Duplicate Edition Analyzer - Crash.log`.\n\n- Release discovery is recursive: organizational folders such as Albums/Other/Singles and per-single grouping folders are traversed, while CD1/CD2/Disc subfolders remain grouped as one release.
 
 - Remix exclusion exception: remixes with newly added featured performers remain wanted; if no matching non-remix base is present, an explicitly featured remix is kept conservatively.\n\n- Analyzer UI uses a unified dark theme by default, including dark Windows title bars when supported.
 
