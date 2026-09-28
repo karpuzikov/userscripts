@@ -76,7 +76,7 @@ When several singles/EPs overlap:
 
 `Save Remixes` and `Save Live recordings` are user-selectable analyzer options. Unchecked categories do not count toward wanted coverage.
 
-Before fingerprint comparison, the analyzer may show only unusual/non-standard non-remix/non-live descriptor families that normal rules do not already classify. Examples include `The Matrix Mix`, `Tom Lord-Alge Mix`, and the grouped callout family (`Suggested Call Out Research Hook`, `Suggested Callout Hook`, etc.). Ordinary known patterns such as `Acoustic`, `Instrumental`, `Radio Edit`, `Extended Mix`, `Original Mix`, any `VIP Mix` (including named forms such as `Chase & Status VIP Mix`), `Single Version`, and similar standard variants must not appear. Remix/live remain controlled only by `Save Remixes` and `Save Live recordings`. Pattern choices affect wanted coverage only and never duplicate identity.
+Before fingerprint comparison, the analyzer may show only unusual/non-standard non-remix/non-live descriptor families that normal rules do not already classify. Examples include `The Matrix Mix`, `Tom Lord-Alge Mix`, and the grouped callout family (`Suggested Call Out Research Hook`, `Suggested Callout Hook`, etc.). Ordinary known patterns such as `Acoustic`, `Instrumental`, `Instrumental Excerpt`, language versions (`German Version`, `Japanese Version`, `Mandarin Version`, etc.), `Radio Edit`, any `Extended Mix` including named forms, `Original Mix`, any `VIP Mix` including named forms, `Clean Edition`, `Single Version`, and similar standard variants must not appear. Remix/live remain controlled only by `Save Remixes` and `Save Live recordings`. Pattern choices affect wanted coverage only and never duplicate identity.
 
 Rules:
 
@@ -597,3 +597,5 @@ Redundant folders must preserve their source-relative hierarchy under `<artist>_
 Do not flatten release folders into the duplicate root. After successful moves, remove organizational directories that became empty.
 
 - After the main optimizer, run a final selected-set redundancy prune. A non-album release that contributes no wanted audio beyond other retained releases must be removed when equal-or-better source copies remain. Album releases may be pruned only when another retained release still represents the same audio-derived album cluster.
+
+- When the unusual-pattern classifier changes materially, stale review choices from older classifier generations must not be reused; start the new classifier generation with clean defaults while preserving new choices thereafter.
