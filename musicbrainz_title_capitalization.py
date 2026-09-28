@@ -26,6 +26,7 @@ _UPPERCASE_WORDS = {
     "dj", "mc", "tv", "mtv", "ep", "lp", "ymca", "nyc", "ny", "ussr",
     "usa", "r&b", "bbc", "fm", "bc", "ac", "dc", "uk", "bpm", "ok",
     "nba", "rza", "gza", "odb", "dmx", "2xlc",
+    "edm", "vip", "ost", "hd", "hq",
 }
 
 _KNOWN_MIXED_CASE = {
@@ -175,6 +176,11 @@ def _capitalize_piece(piece: str) -> str:
 
     if lower in _UPPERCASE_WORDS:
         return lower.upper()
+
+    # Preserve compact all-uppercase abbreviations such as GPB. The heuristic
+    # intentionally avoids preserving ordinary ALL CAPS words such as LIVE.
+    if _looks_like_acronym(piece):
+        return piece
 
     if lower in _KNOWN_MIXED_CASE:
         return _KNOWN_MIXED_CASE[lower]
