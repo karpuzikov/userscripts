@@ -36,13 +36,17 @@ The plugin registers its metadata processors at low priority (`-100`) so it runs
 
 ## Installation in Picard 3
 
-This directory is a Picard 3 plugin repository. In Picard:
+Recommended Git-updatable installation:
 
-1. Options -> Plugins -> Install Plugin...
-2. Choose **Local**.
-3. Select this extracted repository directory.
-4. Install / enable it.
-5. Reload releases already open in Picard so their metadata is processed again.
+1. Open `Options -> Plugins -> Install Plugin -> URL`.
+2. Git URL: `https://github.com/karpuzikov/userscripts.git`
+3. Leave `Ref/Tag` empty so Picard uses `main`.
+4. Install and enable **Karpuzikov Picard Scripts**.
+5. Open `Options -> Plugins -> Karpuzikov Picard Scripts`.
+6. Enable **Current Artist Names Everywhere**.
+7. Reload releases already open in Picard so their metadata is processed again.
+
+The standalone plugin in this directory remains available for compatibility. Do not enable both copies at the same time.
 
 
 
