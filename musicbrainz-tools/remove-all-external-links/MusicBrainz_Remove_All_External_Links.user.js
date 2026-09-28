@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MusicBrainz - Remove All External Links
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.0.1
+// @version      1.0.2
 // @description  Remove all external links from a MusicBrainz entity in one click.
 // @author       karpuzikov
 // @license      MIT
@@ -56,72 +56,48 @@
         return document.getElementById(EDITOR_ID);
     }
 
-    function getActiveLinkRows() {
+    function getActiveRemoveButtons() {
         const editor = getEditor();
         if (!editor) return [];
 
-        return [...editor.querySelectorAll('tr.external-link-item')].filter(row => {
-            const removeButton = row.querySelector('button.remove-item');
-            if (!removeButton || removeButton.disabled) return false;
-
+        return [...editor.querySelectorAll('tr.external-link-item')].flatMap(row => {
             const submittedUrl = row.querySelector('a.url');
-            return !submittedUrl?.classList.contains('rel-remove');
+            const removeButton = row.querySelector('button.remove-item');
+
+            if (!submittedUrl || !removeButton || removeButton.disabled) return [];
+            if (submittedUrl.classList.contains('rel-remove')) return [];
+
+            return [removeButton];
         });
     }
 
     async function removeAllExternalLinks(button) {
         const oldText = button.textContent;
-        let removed = 0;
+        const removeButtons = getActiveRemoveButtons();
 
         button.disabled = true;
-        button.textContent = 'Removing...';
 
         try {
-            while (true) {
-                const rows = getActiveLinkRows();
-                if (!rows.length) break;
-
-                const row = rows[0];
-                const removeButton = row.querySelector('button.remove-item');
-                const beforeCount = rows.length;
-
-                removeButton.click();
-
-                let changed = false;
-                for (let i = 0; i < 100; i++) {
-                    await wait(20);
-
-                    if (!row.isConnected) {
-                        changed = true;
-                        break;
-                    }
-
-                    const submittedUrl = row.querySelector('a.url');
-                    if (submittedUrl?.classList.contains('rel-remove')) {
-                        changed = true;
-                        break;
-                    }
-
-                    if (getActiveLinkRows().length < beforeCount) {
-                        changed = true;
-                        break;
-                    }
-                }
-
-                if (!changed) {
-                    throw new Error('MusicBrainz did not mark the external link for removal.');
-                }
-
-                removed += 1;
-            }
-
-            if (removed > 0) {
-                appendScriptLinkToEditNote();
-                button.textContent = `Removed ${removed} external link${removed === 1 ? '' : 's'}`;
-            } else {
+            if (!removeButtons.length) {
                 button.textContent = 'No external links';
+                await wait(1000);
+                return;
             }
 
+            button.textContent = `Removing ${removeButtons.length}...`;
+
+            for (let i = 0; i < removeButtons.length; i++) {
+                const removeButton = removeButtons[i];
+                if (removeButton.isConnected && !removeButton.disabled) {
+                    removeButton.click();
+                    await wait(35);
+                }
+            }
+
+            appendScriptLinkToEditNote();
+
+            button.textContent =
+                `Removed ${removeButtons.length} external link${removeButtons.length === 1 ? '' : 's'}`;
             await wait(1000);
         } catch (error) {
             console.error('[MusicBrainz - Remove All External Links]', error);
