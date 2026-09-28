@@ -611,3 +611,11 @@ Do not flatten release folders into the duplicate root. After successful moves, 
 - A `Mix` credited/named after a person, DJ, producer, or act is remix material even when the literal word `Remix` is absent. Examples: `Ferry Corsten Mix`, `Tom Lord-Alge Mix`, `Madlib's Mix`, `Timo Maas Mix`.
 - Ordinary functional/style labels such as `Original Mix`, `Extended Mix`, `VIP Mix`, `Radio Mix`, `Vocal Mix`, `Instrumental Mix`, `12\" Mix`, etc. remain normal version labels unless another remix rule applies.
 - Named-person `Mix` tracks are controlled by `Save Remixes` and must not appear in the unusual-pattern review.
+
+### Pattern-review refinement
+
+- Standard suffix/type recognition must work regardless of any artist/remixer/source prefix.
+- Year-only fragments extracted from compound labels are not review patterns.
+- Bare `hook` belongs to the same review family as Suggested Call Out / Callout Hook.
+- `Mix by <name>` and handle-style credited mixes such as `only4Erol Mix` are remix material and follow `Save Remixes`.
+- UI examples should repair common UTF-8/Windows mojibake before display.
