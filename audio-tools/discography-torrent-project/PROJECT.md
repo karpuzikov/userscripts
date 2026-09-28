@@ -271,7 +271,7 @@ run this logic automatically at the final torrent preparation stage and prepare/
 - Create `<artist>_duplicates` as a sibling of the selected artist folder, e.g. `...\!recycle\3OH!3_duplicates`.
 - Redundant folders containing remix material go under `<artist>_duplicates/!Remixes/`.
 - `Save Remixes` and `Save Live recordings` are persistent affirmative checkboxes, unchecked by default; checked categories count as wanted coverage.
-- Before Chromaprint comparison, show a grouped track-pattern review. Similar spellings such as `Suggested Call Out Research Hook` / `Suggested Callout Hook` are grouped; checked patterns remain eligible wanted content, unchecked patterns are ignored for coverage. Choices persist across launches/versions.
+- Before Chromaprint comparison, show a grouped track-pattern review for non-remix, non-live version patterns only. Similar spellings such as `Suggested Call Out Research Hook` / `Suggested Callout Hook` are grouped; checked patterns remain eligible wanted content, unchecked patterns are ignored for coverage. Remix/live tracks never appear in this review and remain controlled only by `Save Remixes` / `Save Live recordings`. Choices persist across launches/versions.
 - `Mix` alone is not a remix marker: Original/Extended/12-inch/7-inch mixes and Instrumental/A-Capella versions stay wanted unless redundant for other reasons; Club Mix is remix material.
 - Version/language labels are descriptive only for duplicate identity; the decoded audio decides whether recordings are equivalent.
 - Track duplicate identity is audio-only: strict Chromaprint similarity decides equivalence; titles/filenames/MBIDs/ISRCs do not create or block matches.
