@@ -26,7 +26,70 @@ set "PAYLOAD_DIR=%WORK%\app"
 mkdir "%WORK%" >nul 2>&1
 mkdir "%PAYLOAD_DIR%" >nul 2>&1
 
-powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference='Stop'; $lines=Get-Content -LiteralPath $env:PAYLOAD_SELF; $m=[Array]::LastIndexOf($lines,'::ARCHIVE_PAYLOAD
+powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference='Stop'; $lines=Get-Content -LiteralPath $env:PAYLOAD_SELF; $m=[Array]::LastIndexOf($lines,'::ARCHIVE_PAYLOAD'); if($m -lt 0){throw 'Embedded ArchiveMedia payload not found.'}; $b64=($lines[($m+1)..($lines.Count-1)] -join ''); [IO.File]::WriteAllBytes($env:PAYLOAD_ZIP,[Convert]::FromBase64String($b64)); Expand-Archive -LiteralPath $env:PAYLOAD_ZIP -DestinationPath $env:PAYLOAD_DIR -Force"
+if errorlevel 1 goto :failed_cleanup
+
+if not exist "%PAYLOAD_DIR%\ArchiveMedia.ps1" goto :failed_cleanup
+
+"%PWSH%" -NoLogo -NoProfile -STA -ExecutionPolicy Bypass -File "%PAYLOAD_DIR%\ArchiveMedia.ps1"
+set "RC=%ERRORLEVEL%"
+rd /s /q "%WORK%" >nul 2>&1
+exit /b %RC%
+
+:failed_cleanup
+if defined WORK if exist "%WORK%" rd /s /q "%WORK%" >nul 2>&1
+
+:failed
+echo.
+echo ERROR: Archive Media Compressor setup or launch failed.
+echo Check the internet connection and Windows software-installation permissions.
+pause
+exit /b 1
+
+:EnsureWinget
+set "WINGET="
+where winget.exe >nul 2>&1
+if not errorlevel 1 set "WINGET=winget.exe"
+if not defined WINGET if exist "%LOCALAPPDATA%\Microsoft\WindowsApps\winget.exe" set "WINGET=%LOCALAPPDATA%\Microsoft\WindowsApps\winget.exe"
+
+if not defined WINGET (
+    echo [SETUP] WinGet is not installed. Installing the latest WinGet...
+    powershell.exe -NoProfile -ExecutionPolicy Bypass -Command ^
+     "$ErrorActionPreference='Stop'; [Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12; $ProgressPreference='SilentlyContinue'; try { if(-not (Get-PackageProvider -Name NuGet -ListAvailable -ErrorAction SilentlyContinue)){ Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Scope CurrentUser -Force | Out-Null }; if(-not (Get-PSRepository -Name PSGallery -ErrorAction SilentlyContinue)){ Register-PSRepository -Default }; Set-PSRepository -Name PSGallery -InstallationPolicy Trusted; Install-Module -Name Microsoft.WinGet.Client -Repository PSGallery -Scope CurrentUser -Force -AllowClobber; Import-Module Microsoft.WinGet.Client -Force; Repair-WinGetPackageManager -Latest -Force } catch { $tmp=Join-Path $env:TEMP 'Microsoft.DesktopAppInstaller.msixbundle'; Invoke-WebRequest -UseBasicParsing 'https://aka.ms/getwinget' -OutFile $tmp; Add-AppxPackage -Path $tmp; Remove-Item $tmp -Force -ErrorAction SilentlyContinue }"
+    if errorlevel 1 (
+        echo ERROR: Automatic WinGet installation failed.
+        exit /b 1
+    )
+    if exist "%LOCALAPPDATA%\Microsoft\WindowsApps\winget.exe" set "WINGET=%LOCALAPPDATA%\Microsoft\WindowsApps\winget.exe"
+    if not defined WINGET (
+        where winget.exe >nul 2>&1
+        if not errorlevel 1 set "WINGET=winget.exe"
+    )
+)
+if not defined WINGET (
+    echo ERROR: WinGet is still unavailable after installation.
+    exit /b 1
+)
+"%WINGET%" source update >nul 2>&1
+exit /b 0
+
+:EnsureWingetPackage
+setlocal
+set "PKG=%~1"
+"%WINGET%" list --id "%PKG%" -e >nul 2>&1
+if errorlevel 1 (
+    echo [SETUP] Installing %PKG%...
+    "%WINGET%" install --id "%PKG%" -e --silent --accept-package-agreements --accept-source-agreements --disable-interactivity
+    if errorlevel 1 (
+        endlocal & exit /b 1
+    )
+) else (
+    echo [SETUP] Checking %PKG% for updates...
+    "%WINGET%" upgrade --id "%PKG%" -e --silent --accept-package-agreements --accept-source-agreements --disable-interactivity >nul 2>&1
+)
+endlocal & exit /b 0
+
+::ARCHIVE_PAYLOAD
 UEsDBBQAAAAIAOsJOF19t1YxKwIAABcGAAAQABwAQXJjaGl2ZU1lZGlhLmJhdFVUCQADqnm0aqp5
 tGp1eAsAAQQAAAAABOkDAADNVF1v0zAUffevuIpU1koko7xMmrSJDg0xiUHVTuKlL65zk1zhxMF2
 mu6F346dj6UtDQKe8Iud+H6ec3zfocgUqCRhBq1UgktmyUqEhRYZ7RAeMSYO71VeajRGacbqDDVC
