@@ -1,11 +1,11 @@
 # SPDX-License-Identifier: MIT
-"""MusicBrainz-style capitalization for English release and track titles.
+"""MusicBrainz-style capitalization for release and track titles.
 
-Main titles follow MusicBrainz English capitalization rules. Parenthetical
-extra title information (ETI) intentionally uses Apple Music-style title
-capitalization, e.g. "(Club Mix)", "(Remix)", "(Live)" and
-"(Extended Version)". The plugin does not add/remove ETI parentheses and does
-not change titles on releases whose MusicBrainz title language is not English.
+Main titles follow language-aware MusicBrainz capitalization rules, with a
+conservative title-language override when MusicBrainz metadata is obviously
+wrong. Parenthetical extra title information (ETI) intentionally uses Apple
+Music-style title capitalization, e.g. "(Club Mix)", "(Remix)", "(Live)" and
+"(Extended Version)".
 """
 
 from __future__ import annotations
