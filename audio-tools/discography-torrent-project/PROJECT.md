@@ -257,7 +257,7 @@ run this logic automatically at the final torrent preparation stage and prepare/
 
 - Remix exclusion exception: remixes with newly added featured performers remain wanted; if no matching non-remix base is present, an explicitly featured remix is kept conservatively.\n\n- Analyzer UI uses a unified dark theme by default, including dark Windows title bars when supported.
 
-- Release discovery is container-based: each direct child of the selected artist folder is one release, with audio scanned recursively through CD1/CD2/etc.; automatic filtering moves and verifies the whole release folder.
+- Release discovery is recursive through organizational folders. Internal CD1/CD2 folders and sibling `... CD 1` / `... CD 2` folders are treated as one logical release and kept/moved together.
 
 - Existing discography is optional: when blank, the analyzer optimizes Recycle against itself; when supplied, it compares Existing + Recycle together.
 
@@ -270,7 +270,7 @@ run this logic automatically at the final torrent preparation stage and prepare/
 - On confirmation, automatically move redundant release folders as-is into `<artist>_duplicates`; never rename the release folders.
 - Create `<artist>_duplicates` as a sibling of the selected artist folder, e.g. `...\!recycle\3OH!3_duplicates`.
 - Redundant folders containing remix material go under `<artist>_duplicates/!Remixes/`.
-- Remix exclusion and live-version exclusion are persistent UI checkboxes, both enabled by default; they affect wanted coverage only.
+- `Save Remixes` and `Save Live recordings` are persistent affirmative checkboxes, unchecked by default; checked categories count as wanted coverage.
 - `Mix` alone is not a remix marker: Original/Extended/12-inch/7-inch mixes and Instrumental/A-Capella versions stay wanted unless redundant for other reasons; Club Mix is remix material.
 - Version/language labels are descriptive only for duplicate identity; the decoded audio decides whether recordings are equivalent.
 - Track duplicate identity is audio-only: strict Chromaprint similarity decides equivalence; titles/filenames/MBIDs/ISRCs do not create or block matches.
@@ -391,3 +391,8 @@ Next stage after this: metadata/tag normalization using the shared Picard rules.
 - UI labels must explain the effect of each option to a first-time user; ambiguous labels such as `Exclude remixes` are replaced by explicit behavior such as `Ignore remix tracks when deciding which releases must be kept`, with concise inline explanations.
 
 - UI uses concise affirmative controls (`Save Remixes`, `Save Live recordings`) and a visible progress/activity area with current stage, counts, percentage, elapsed time, and move progress. Detailed explanations belong in tooltips rather than permanent paragraphs.
+
+- Duplicate moves preserve the source-relative hierarchy under `<artist>_duplicates`; remix-bucket moves preserve it under `<artist>_duplicates/!Remixes`.
+- Empty organizational folders left after successful moves are removed.
+- Album editions are clustered by strong ordered overlap of audio-derived fingerprint groups rather than edition/folder naming.
+- Chromaprint candidate discovery also considers close audio duration so alternate masterings are not missed only because the cheap token prefilter differs.
