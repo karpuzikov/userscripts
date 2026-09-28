@@ -396,3 +396,6 @@ Next stage after this: metadata/tag normalization using the shared Picard rules.
 - Empty organizational folders left after successful moves are removed.
 - Album editions are clustered by strong ordered overlap of audio-derived fingerprint groups rather than edition/folder naming.
 - Chromaprint candidate discovery also considers close audio duration so alternate masterings are not missed only because the cheap token prefilter differs.
+- Audio matching always evaluates zero/near-zero fingerprint alignment as well as histogram-derived offsets, preventing mastering differences from hiding the correct alignment.
+- A second mastering/pressing-tolerant Chromaprint threshold handles near-identical-duration copies of the same recording without using filenames/titles.
+- A final redundancy-prune pass removes selected singles/EPs that add no wanted audio when equal-or-better retained sources already cover them.
