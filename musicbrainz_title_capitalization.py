@@ -101,21 +101,7 @@ def _release_title(metadata: Any, release_node: Any) -> str:
     return str(title or "")
 
 
-def _language_mode(metadata: Any, release_node: Any) -> str:
-    language = _release_language(metadata, release_node)
-
-    if language in {"eng", "en"}:
-        return "english"
-    if language in {"fra", "fre", "fr"}:
-        return "french"
-    if language in {"spa", "es"}:
-        return "sentence"
-    if language in {"ita", "it", "por", "pt", "cat", "ca", "lat", "la"}:
-        return "sentence"
-
-    # Some MusicBrainz releases have a script but no language. In that case,
-    # infer only when the release title gives strong clues. This is intentionally
-    # conservative and is mainly used to normalize obvious ALL CAPS metadata.
+def _language_scores(metadata: Any, release_node: Any) -> tuple[int, int]:
     probe = _release_title(metadata, release_node).lower()
     words = set(re.findall(r"[^\W_]+", probe, flags=re.UNICODE))
 
@@ -124,9 +110,9 @@ def _language_mode(metadata: Any, release_node: Any) -> str:
 
     if re.search(r"[àâæçéèêëîïôœùûüÿ]", probe):
         french_score += 2
-    if {"le", "les", "des", "du", "une", "et", "vous", "avec", "sans"} & words:
+    if {"le", "la", "les", "des", "du", "une", "et", "vous", "avec", "sans"} & words:
         french_score += 2
-    if "de" in words:
+    if {"de", "se", "souvenir", "souvient"} & words:
         french_score += 1
 
     if re.search(r"[¿¡ñ]", probe):
@@ -136,6 +122,37 @@ def _language_mode(metadata: Any, release_node: Any) -> str:
     if {"y", "te", "mi"} & words:
         spanish_score += 1
 
+    return french_score, spanish_score
+
+
+def _language_mode(metadata: Any, release_node: Any) -> str:
+    language = _release_language(metadata, release_node)
+    french_score, spanish_score = _language_scores(metadata, release_node)
+
+    # MusicBrainz release language can be wrong. If a release marked English
+    # has strong French/Spanish title evidence, prefer the title evidence for
+    # capitalization instead of blindly applying English title case.
+    if language in {"eng", "en"}:
+        if french_score >= 3 and french_score > spanish_score:
+            return "french"
+        if spanish_score >= 3 and spanish_score > french_score:
+            return "sentence"
+        return "english"
+
+    if language in {"fra", "fre", "fr", "french"}:
+        return "french"
+    if language in {"spa", "es", "spanish"}:
+        return "sentence"
+    if language in {
+        "ita", "it", "italian",
+        "por", "pt", "portuguese",
+        "cat", "ca", "catalan",
+        "lat", "la", "latin",
+    }:
+        return "sentence"
+
+    # Some releases have a script but no language. Infer only when the title
+    # gives strong clues; otherwise use the conservative ALL CAPS fallback.
     if french_score >= 3 and french_score > spanish_score:
         return "french"
     if spanish_score >= 3 and spanish_score > french_score:
@@ -368,7 +385,11 @@ def _looks_like_acronym(word: str) -> bool:
     return not any(char in vowels for char in letters)
 
 
-def _sentence_case_title(title: str) -> str:
+def _sentence_case_title(
+    title: str,
+    *,
+    colon_starts_segment: bool = False,
+) -> str:
     if not title:
         return title
 
@@ -380,11 +401,15 @@ def _sentence_case_title(title: str) -> str:
     cursor = 0
     capitalize_next = True
 
+    boundary_pattern = r"[.!?/]"
+    if colon_starts_segment:
+        boundary_pattern = r"[:.!?/]"
+
     for index, match in enumerate(words):
         word = match.group(0)
         between = title[cursor:match.start()]
 
-        if index > 0 and re.search(r"[.!?/]\s*$", between):
+        if index > 0 and re.search(boundary_pattern + r"\s*$", between):
             capitalize_next = True
 
         lower = word.lower()
@@ -407,6 +432,23 @@ def _sentence_case_title(title: str) -> str:
 
     chunks.append(title[cursor:])
     return "".join(chunks)
+
+
+def _french_punctuation(title: str) -> str:
+    # MusicBrainz French style: ? ! ; : are preceded by a space and followed
+    # by a normal space unless they end the title.
+    def repl(match: re.Match[str]) -> str:
+        punctuation = match.group(1)
+        trailing = " " if match.end() < len(title) else ""
+        return " " + punctuation + trailing
+
+    return re.sub(r"\s*([?!;:])\s*", repl, title)
+
+
+def _french_title_case(title: str) -> str:
+    result = _sentence_case_title(title, colon_starts_segment=True)
+    result = _french_punctuation(result)
+    return _apple_eti_case(result)
 
 
 def _apple_eti_case(title: str) -> str:
@@ -436,7 +478,10 @@ def standardize_title_case(
     if mode == "english":
         return musicbrainz_english_title_case(title)
 
-    if mode in {"french", "sentence"}:
+    if mode == "french":
+        return _french_title_case(title)
+
+    if mode == "sentence":
         return _apple_eti_case(_sentence_case_title(title))
 
     # Unknown language: do not rewrite normal mixed-case titles. But ALL CAPS
