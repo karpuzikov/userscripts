@@ -1,14 +1,12 @@
 // ==UserScript==
 // @name         MusicBrainz - Safe Recording Matcher
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.2.2
-// @description  Match recordings by title/artist or pasted ISRCs, with a strict seven-second duration limit.
+// @version      1.3.0
+// @description  Highlight duplicate recording links and safely match release tracks by metadata, highlighted duplicates, or pasted ISRCs.
 // @author       karpuzikov
 // @license      MIT
-// @match        https://musicbrainz.org/release/add*
-// @match        https://musicbrainz.org/release/*/edit*
-// @match        https://beta.musicbrainz.org/release/add*
-// @match        https://beta.musicbrainz.org/release/*/edit*
+// @match        https://musicbrainz.org/release/*
+// @match        https://beta.musicbrainz.org/release/*
 // @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/safe-recording-matcher/MusicBrainz_Safe_Recording_Matcher.user.js
 // @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/safe-recording-matcher/MusicBrainz_Safe_Recording_Matcher.user.js
 // @grant        none
@@ -244,7 +242,11 @@
         return;
     }
 
-    if (!/^\/release\/(?:add|[0-9a-f-]{36}\/edit)\/?$/i.test(location.pathname)) return;
+    const IS_RELEASE_PAGE = /^\/release\/[0-9a-f-]{36}\/?$/i.test(location.pathname);
+    const IS_RELEASE_EDITOR = /^\/release\/(?:add|[0-9a-f-]{36}\/edit)\/?$/i.test(location.pathname);
+    const DUPLICATE_CLASS = 'mb-duplicate-recording';
+
+    if (!IS_RELEASE_PAGE && !IS_RELEASE_EDITOR) return;
 
     const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
     const resultCache = new Map();
@@ -306,6 +308,94 @@
             ...artistCreditFromCell(artistCells(row)[1]),
         };
     }
+
+    function duplicateEntries() {
+        if (IS_RELEASE_EDITOR) {
+            return [...document.querySelectorAll('#recordings tr.track')]
+                .map(row => ({
+                    row,
+                    recordingId: recordingIdFromCell(row.querySelectorAll('td.name')[1]),
+                }))
+                .filter(entry => entry.recordingId);
+        }
+
+        return [...document.querySelectorAll('table.medium tbody > tr')]
+            .filter(row => row.querySelector(':scope > td.pos.t'))
+            .map(row => {
+                const titleCell = row.querySelector(':scope > td.wrap-anywhere, :scope > td:nth-child(2)');
+                return {
+                    row,
+                    recordingId: recordingIdFromCell(titleCell),
+                };
+            })
+            .filter(entry => entry.recordingId);
+    }
+
+    function highlightedEditorRows() {
+        return [...document.querySelectorAll('#recordings tr.track.' + DUPLICATE_CLASS)];
+    }
+
+    function updateDuplicateHighlights() {
+        document.querySelectorAll('.' + DUPLICATE_CLASS).forEach(row => {
+            row.classList.remove(DUPLICATE_CLASS);
+            row.removeAttribute('data-mb-duplicate-recording-count');
+        });
+
+        const groups = new Map();
+        for (const entry of duplicateEntries()) {
+            const id = entry.recordingId.toLowerCase();
+            if (!groups.has(id)) groups.set(id, []);
+            groups.get(id).push(entry.row);
+        }
+
+        let highlighted = 0;
+        for (const rows of groups.values()) {
+            const uniqueRows = [...new Set(rows)];
+            if (uniqueRows.length < 2) continue;
+            highlighted += uniqueRows.length;
+            for (const row of uniqueRows) {
+                row.classList.add(DUPLICATE_CLASS);
+                row.dataset.mbDuplicateRecordingCount = String(uniqueRows.length);
+            }
+        }
+
+        const button = document.querySelector('.mb-safe-highlighted');
+        if (button) button.disabled = running || highlighted === 0;
+        return highlighted;
+    }
+
+    const duplicateStyle = document.createElement('style');
+    duplicateStyle.textContent = `
+        .${DUPLICATE_CLASS} > td {
+            background: #ff1616 !important;
+            color: #fff !important;
+        }
+        .${DUPLICATE_CLASS} > td a,
+        .${DUPLICATE_CLASS} > td a:visited {
+            color: #fff !important;
+            font-weight: 700 !important;
+            text-decoration: underline !important;
+        }
+        .${DUPLICATE_CLASS} > td:first-child {
+            box-shadow: inset 4px 0 0 #7a0000 !important;
+        }
+    `;
+    document.head.appendChild(duplicateStyle);
+
+    let duplicateUpdateTimer = null;
+    const duplicateObserver = new MutationObserver(() => {
+        clearTimeout(duplicateUpdateTimer);
+        duplicateUpdateTimer = setTimeout(updateDuplicateHighlights, 40);
+    });
+    duplicateObserver.observe(document.body, {
+        subtree: true,
+        childList: true,
+        attributes: true,
+        attributeFilter: ['href'],
+    });
+    updateDuplicateHighlights();
+
+    if (!IS_RELEASE_EDITOR) return;
 
     async function waitFor(predicate, timeoutMs) {
         const deadline = Date.now() + timeoutMs;
@@ -459,7 +549,8 @@
         textarea.dispatchEvent(new Event('change', {bubbles: true}));
     }
 
-    async function openEditor(row) {
+    async function openEditor(row, options = {}) {
+        const {allowLinked = false, expectedRecordingId = null} = options;
         const button = row.querySelector('button.edit-track-recording');
         const element = document.querySelector('#recording-assoc-bubble');
         const model = window.MB?.releaseEditor?.recordingBubble;
@@ -468,8 +559,12 @@
         }
         if (model.control !== button || !model.visible()) {
             await throttle();
-            if (!row.isConnected || !maySelectUnlinkedRow(row)) {
-                throw new Error('The track changed or was linked while opening the editor');
+            const currentId = readLinkedRecording(row).id;
+            const invalidState = allowLinked
+                ? !currentId || (expectedRecordingId && currentId.toLowerCase() !== expectedRecordingId.toLowerCase())
+                : !maySelectUnlinkedRow(row);
+            if (!row.isConnected || invalidState) {
+                throw new Error('The track or recording link changed while opening the editor');
             }
             button.click();
             // Opening the bubble can also start a native MusicBrainz suggestion request.
@@ -486,11 +581,16 @@
         return {button, element, model, input, trackLength};
     }
 
-    async function selectInEditor(row, track, candidate, editor) {
+    async function selectInEditor(row, track, candidate, editor, options = {}) {
+        const {allowLinked = false, expectedRecordingId = null} = options;
         const {button, element, model, input} = editor;
         const assertCurrentTarget = () => {
             const current = readTrack(row);
-            if (!row.isConnected || !maySelectUnlinkedRow(row) || !bubbleTargetsRow(model, row) ||
+            const currentRecordingId = readLinkedRecording(row).id;
+            const invalidLinkState = allowLinked
+                ? !currentRecordingId || (expectedRecordingId && currentRecordingId.toLowerCase() !== expectedRecordingId.toLowerCase())
+                : !maySelectUnlinkedRow(row);
+            if (!row.isConnected || invalidLinkState || !bubbleTargetsRow(model, row) ||
                 normalize(current.title) !== normalize(track.title) ||
                 normalize(current.credit) !== normalize(track.credit) ||
                 JSON.stringify(current.artistIds) !== JSON.stringify(track.artistIds)) {
@@ -525,7 +625,23 @@
         if (!verified.ok || linked.length === null || Math.abs(linked.length - candidate.length) > 500) {
             if (bubbleTargetsRow(model, row) &&
                 readLinkedRecording(row).id?.toLowerCase() === candidate.id.toLowerCase()) {
-                element.querySelector('#add-new-recording')?.click();
+                if (allowLinked && expectedRecordingId) {
+                    const original = [...element.querySelectorAll('input[data-change="recording"]')]
+                        .find(radio => radio.value.toLowerCase() === expectedRecordingId.toLowerCase());
+                    if (original) {
+                        original.click();
+                    } else if (input) {
+                        await throttle();
+                        input.value = expectedRecordingId;
+                        input.dispatchEvent(new Event('input', {bubbles: true}));
+                    }
+                    await waitFor(
+                        () => readLinkedRecording(row).id?.toLowerCase() === expectedRecordingId.toLowerCase(),
+                        8000,
+                    );
+                } else {
+                    element.querySelector('#add-new-recording')?.click();
+                }
             }
             throw new Error('Editor linked a recording with different metadata');
         }
@@ -584,25 +700,38 @@
         status.textContent = `Removed ${linked.length} recording link${linked.length === 1 ? '' : 's'}.`;
     }
 
-    async function runMatcher(panel, isrcs = null) {
+    async function runMatcher(panel, isrcs = null, targetRows = null, options = {}) {
         if (running) return;
-        const rows = [...document.querySelectorAll('#recordings tr.track')];
+
+        const allRows = [...document.querySelectorAll('#recordings tr.track')];
+        const rows = Array.isArray(targetRows)
+            ? targetRows.filter(row => row?.isConnected)
+            : allRows;
+        const allowLinked = Boolean(options.allowLinked);
+        const highlightedMode = Boolean(options.highlighted);
+
         const button = panel.querySelector('.mb-safe-start');
+        const highlightedButton = panel.querySelector('.mb-safe-highlighted');
         const isrcButton = panel.querySelector('.mb-safe-isrc');
         const removeButton = panel.querySelector('.mb-safe-remove-links');
         const stop = panel.querySelector('.mb-safe-stop');
         const toggle = panel.querySelector('.mb-safe-toggle');
         const status = panel.querySelector('.mb-safe-status');
         const list = panel.querySelector('.mb-safe-results');
+
         list.replaceChildren();
         list.hidden = true;
         toggle.hidden = true;
         toggle.textContent = 'Show results';
+
         if (!rows.length) {
-            status.textContent = 'No loaded tracks. Open the Recordings tab and load the medium first.';
+            status.textContent = highlightedMode
+                ? 'No duplicate recording links are highlighted.'
+                : 'No loaded tracks. Open the Recordings tab and load the medium first.';
             return;
         }
-        if (isrcs && (isrcs.length !== rows.length || document.querySelector('#recordings .edit-recording'))) {
+
+        if (isrcs && (isrcs.length !== allRows.length || document.querySelector('#recordings .edit-recording'))) {
             status.textContent = 'The loaded track count changed or a medium is not loaded. Open all media and paste the ISRCs again.';
             return;
         }
@@ -610,29 +739,44 @@
         running = true;
         stopRequested = false;
         button.disabled = true;
+        highlightedButton.disabled = true;
         isrcButton.disabled = true;
         removeButton.disabled = true;
         stop.hidden = false;
+
         let matched = 0;
+        let unchanged = 0;
         let review = 0;
         let processed = 0;
+
         try {
             for (const row of rows) {
                 if (stopRequested) break;
-                if (isrcs && !trackRowsUnchanged(rows)) {
+
+                if (isrcs && !trackRowsUnchanged(allRows)) {
                     status.textContent = `Stopped: The track order changed. ${matched} matched, ${review} need review.`;
                     break;
                 }
+
                 processed++;
                 const track = readTrack(row);
-                const isrc = isrcs?.[processed - 1];
+                const isrc = isrcs?.[allRows.indexOf(row)];
                 const display = `${track.title || '(untitled)'}${isrc ? ' (' + isrc + ')' : ''}`;
                 status.textContent = `Checking ${processed}/${rows.length}: ${track.title || '(untitled)'}${isrc ? ' (' + isrc + ')' : ''}`;
 
-                if (!maySelectUnlinkedRow(row)) {
-                    showResult(list, row, 'Already linked', display);
+                const existing = readLinkedRecording(row);
+
+                if (!allowLinked && existing.id) {
+                    showResult(list, row, 'Already linked', display, existing.id);
                     continue;
                 }
+
+                if (allowLinked && !existing.id) {
+                    review++;
+                    showResult(list, row, 'Review', `${display} - highlighted recording link is no longer present`);
+                    continue;
+                }
+
                 if (!track.title || !track.artistIds.length || track.artistIds.some(id => !UUID.test(id)) || !track.credit) {
                     review++;
                     showResult(list, row, 'Review', `${display} - missing title or artist ID`);
@@ -641,7 +785,10 @@
 
                 let editor;
                 try {
-                    editor = await openEditor(row);
+                    editor = await openEditor(row, {
+                        allowLinked,
+                        expectedRecordingId: existing.id,
+                    });
                     track.length = editor.trackLength;
                 } catch (error) {
                     review++;
@@ -662,18 +809,35 @@
                     showResult(list, row, 'Review', `${display} - ${error.message}`);
                     continue;
                 }
-                if (isrcs && !trackRowsUnchanged(rows)) {
+
+                if (isrcs && !trackRowsUnchanged(allRows)) {
                     status.textContent = `Stopped: The track order changed. ${matched} matched, ${review} need review.`;
                     break;
                 }
+
                 if (!chosen.id) {
                     review++;
                     showResult(list, row, 'Review', `${display} - ${chosen.reason}`);
                     continue;
                 }
 
+                if (allowLinked && existing.id?.toLowerCase() === chosen.id.toLowerCase()) {
+                    unchanged++;
+                    showResult(
+                        list,
+                        row,
+                        'Already correct',
+                        display + (chosen.circle ? ' - ' + chosen.circle : ''),
+                        chosen.id,
+                    );
+                    continue;
+                }
+
                 try {
-                    await selectInEditor(row, track, chosen.candidate, editor);
+                    await selectInEditor(row, track, chosen.candidate, editor, {
+                        allowLinked,
+                        expectedRecordingId: existing.id,
+                    });
                     matched++;
                     needsAttribution = true;
                     appendNoteIfPossible();
@@ -681,11 +845,12 @@
                 } catch (error) {
                     review++;
                     showResult(list, row, 'Review', `${display} - ${error.message}`);
-                    continue;
                 }
             }
+
             if (!status.textContent.startsWith('Stopped:')) {
-                status.textContent = `${stopRequested ? 'Stopped' : 'Finished'}: ${matched} matched, ${review} need review, ${processed}/${rows.length} checked. Review all associations before submitting.`;
+                const unchangedText = highlightedMode ? `, ${unchanged} already correct` : '';
+                status.textContent = `${stopRequested ? 'Stopped' : 'Finished'}: ${matched} matched${unchangedText}, ${review} need review, ${processed}/${rows.length} checked. Review all associations before submitting.`;
             }
         } finally {
             running = false;
@@ -695,7 +860,16 @@
             stop.hidden = true;
             toggle.hidden = list.children.length === 0;
             appendNoteIfPossible();
+            updateDuplicateHighlights();
         }
+    }
+
+    function runHighlightedMatcher(panel) {
+        const rows = highlightedEditorRows();
+        runMatcher(panel, null, rows, {
+            allowLinked: true,
+            highlighted: true,
+        });
     }
 
     function openIsrcDialog(panel) {
@@ -772,13 +946,15 @@
         panel.id = 'mb-safe-recording-matcher';
         panel.innerHTML = '<legend>Safe recording matcher</legend>' +
             '<button type="button" class="mb-safe-start">Match unlinked recordings</button> ' +
+            '<button type="button" class="mb-safe-highlighted">Auto-match highlighted recordings</button> ' +
             '<button type="button" class="mb-safe-isrc">Match by ISRC</button> ' +
             '<button type="button" class="mb-safe-remove-links">Remove all links</button> ' +
             '<button type="button" class="mb-safe-stop" hidden>Stop after current track</button> ' +
             '<button type="button" class="mb-safe-toggle" hidden>Show results</button> ' +
-            '<span class="mb-safe-status" role="status">Artist-circle search; equivalent title wording; maximum 7 seconds. Unsafe ties need manual review.</span>' +
+            '<span class="mb-safe-status" role="status">Duplicate recording links are bright red. Matching uses artist circles, equivalent title wording, and a maximum 7-second length difference.</span>' +
             '<ol class="mb-safe-results" hidden></ol>';
         panel.querySelector('.mb-safe-start').addEventListener('click', () => runMatcher(panel));
+        panel.querySelector('.mb-safe-highlighted').addEventListener('click', () => runHighlightedMatcher(panel));
         panel.querySelector('.mb-safe-isrc').addEventListener('click', () => openIsrcDialog(panel));
         panel.querySelector('.mb-safe-remove-links').addEventListener('click', () => removeAllLinks(panel));
         panel.querySelector('.mb-safe-stop').addEventListener('click', () => { stopRequested = true; });
@@ -788,6 +964,7 @@
             event.currentTarget.textContent = list.hidden ? 'Show results' : 'Hide results';
         });
         container.prepend(panel);
+        updateDuplicateHighlights();
         return true;
     }
 
