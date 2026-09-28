@@ -400,3 +400,4 @@ Next stage after this: metadata/tag normalization using the shared Picard rules.
 - Audio matching always evaluates zero/near-zero fingerprint alignment as well as histogram-derived offsets, preventing mastering differences from hiding the correct alignment.
 - A second mastering/pressing-tolerant Chromaprint threshold handles near-identical-duration copies of the same recording without using filenames/titles.
 - A final redundancy-prune pass removes selected singles/EPs that add no wanted audio when equal-or-better retained sources already cover them.
+- Named person/DJ/producer/act `Mix` labels (for example `Ferry Corsten Mix`, `Tom Lord-Alge Mix`, `Madlib's Mix`) are remix material and are controlled by `Save Remixes`; they must not appear in the unusual-pattern review.
