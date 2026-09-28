@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MusicBrainz - Barcode vs Linked Releases Checker
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.3.1
+// @version      1.3.2
 // @description  Checks Digital Media release barcodes against linked provider release pages through Harmony and stages MusicBrainz correction edits.
 // @author       karpuzikov
 // @license      MIT
@@ -1103,16 +1103,128 @@
     function findExistingUrlRow(url) {
         const wantedKey = providerEntityKey(url);
         const rows = [...document.querySelectorAll('#external-links-editor tr.external-link-item')];
+
         return rows.find(row => {
-            const anchors = [...row.querySelectorAll('a[href]')];
-            return anchors.some(anchor => {
+            const candidates = [
+                ...[...row.querySelectorAll('a[href]')].map(anchor => anchor.href),
+                ...[...row.querySelectorAll('input[type="url"]')].map(input => input.value),
+            ].filter(Boolean);
+
+            return candidates.some(candidate => {
                 try {
-                    return providerEntityKey(anchor.href) === wantedKey;
+                    return providerEntityKey(candidate) === wantedKey;
                 } catch {
                     return false;
                 }
             });
         }) || null;
+    }
+
+    function rowIsMarkedForRemoval(row) {
+        return Boolean(row?.querySelector('a.url.rel-remove, .rel-remove'));
+    }
+
+    async function ensureUrlRemoval(url, timeout = 10000) {
+        const started = Date.now();
+
+        while (Date.now() - started < timeout) {
+            const row = findExistingUrlRow(url);
+            if (row) {
+                if (rowIsMarkedForRemoval(row)) return true;
+
+                const button = row.querySelector('button.remove-item');
+                if (button && !button.disabled) {
+                    button.click();
+                    await sleep(150);
+
+                    const refreshedRow = findExistingUrlRow(url);
+                    if (rowIsMarkedForRemoval(refreshedRow)) return true;
+                }
+            }
+
+            await sleep(250);
+        }
+
+        return false;
+    }
+
+    async function ensureTaskRemovals(task) {
+        let removed = 0;
+        const missing = [];
+
+        for (const url of task.removeUrls || []) {
+            if (await ensureUrlRemoval(url)) removed++;
+            else missing.push(url);
+        }
+
+        return { removed, missing };
+    }
+
+    function installRemovalSubmitGuard(task, storageKey) {
+        if (!(task.removeUrls || []).length) return;
+
+        const form =
+            document.querySelector('#release-editor')?.closest('form') ||
+            document.querySelector('#page form');
+        if (!form) return;
+
+        let retryingSubmit = false;
+        let bypassNextSubmit = false;
+
+        form.addEventListener('submit', event => {
+            if (bypassNextSubmit) {
+                bypassNextSubmit = false;
+                localStorage.removeItem(storageKey);
+                return;
+            }
+
+            const notRemoved = (task.removeUrls || []).filter(url => {
+                const row = findExistingUrlRow(url);
+                return !rowIsMarkedForRemoval(row);
+            });
+
+            if (!notRemoved.length) {
+                localStorage.removeItem(storageKey);
+                return;
+            }
+
+            event.preventDefault();
+            event.stopImmediatePropagation();
+
+            if (retryingSubmit) return;
+            retryingSubmit = true;
+
+            const submitter = event.submitter;
+
+            (async () => {
+                const result = await ensureTaskRemovals(task);
+                showEditBanner(task, result.removed, result.missing);
+
+                if (result.missing.length) {
+                    retryingSubmit = false;
+                    alert(
+                        'Barcode/link checker blocked submission because it could not stage every wrong-link removal. ' +
+                        'Review the external links before submitting.'
+                    );
+                    return;
+                }
+
+                bypassNextSubmit = true;
+                retryingSubmit = false;
+
+                if (typeof form.requestSubmit === 'function') {
+                    form.requestSubmit(submitter instanceof HTMLElement ? submitter : undefined);
+                } else if (submitter instanceof HTMLElement) {
+                    submitter.click();
+                } else {
+                    form.submit();
+                }
+            })().catch(error => {
+                retryingSubmit = false;
+                console.error(`[${SCRIPT_NAME}]`, error);
+                alert('Barcode/link checker could not verify the wrong-link removals. Review the edit manually.');
+            });
+        }, true);
     }
 
     async function waitFor(predicate, timeout = 20000, interval = 250) {
@@ -1126,6 +1238,8 @@
     }
 
     function showEditBanner(task, removed, missing) {
+        document.getElementById('mb-barcode-link-checker-edit-banner')?.remove();
+
         const banner = document.createElement('div');
         banner.id = 'mb-barcode-link-checker-edit-banner';
         banner.style.cssText = [
@@ -1165,32 +1279,20 @@
         if (!task) return false;
 
         await waitFor(() => document.querySelector('#external-links-editor'));
-        await waitFor(() => document.querySelectorAll('#external-links-editor tr.external-link-item').length > 0, 20000);
+        await waitFor(
+            () => document.querySelectorAll('#external-links-editor tr.external-link-item').length > 0,
+            20000
+        );
 
-        let removed = 0;
-        const missing = [];
-        for (const url of task.removeUrls || []) {
-            let row = null;
-            for (let attempt = 0; attempt < 20 && !row; attempt++) {
-                row = findExistingUrlRow(url);
-                if (!row) await sleep(250);
-            }
-            const button = row?.querySelector('button.remove-item');
-            if (button) {
-                button.click();
-                removed++;
-                await sleep(100);
-            } else {
-                missing.push(url);
-            }
-        }
+        const result = await ensureTaskRemovals(task);
+        showEditBanner(task, result.removed, result.missing);
 
-        localStorage.removeItem(key);
-        showEditBanner(task, removed, missing);
+        // Keep the task until the edit is actually submitted. The capture-phase
+        // submit guard re-checks the React editor state immediately before
+        // MusicBrainz serializes relationship edits, so a later re-render cannot
+        // silently turn a move into an add-only edit.
+        installRemovalSubmitGuard(task, key);
 
-        const cleanUrl = new URL(location.href);
-        cleanUrl.searchParams.delete('barcode-link-checker');
-        history.replaceState(null, '', cleanUrl.href);
         return true;
     }
 
