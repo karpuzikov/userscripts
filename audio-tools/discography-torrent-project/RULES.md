@@ -619,3 +619,9 @@ Do not flatten release folders into the duplicate root. After successful moves, 
 - Bare `hook` belongs to the same review family as Suggested Call Out / Callout Hook.
 - `Mix by <name>` and handle-style credited mixes such as `only4Erol Mix` are remix material and follow `Save Remixes`.
 - UI examples should repair common UTF-8/Windows mojibake before display.
+
+### Remaining standard-form normalization
+
+- Treat Big Mix, New Mix, Smooth Mix, Low Gain Mix, OG Version, Chillout/genre Version, Special DJ Version, regional code Version labels (US/UK/etc.), and 7-inch/12-inch Version forms as ordinary patterns.
+- Slash compounds consisting only of ordinary components, such as `Single Version / 2008`, must produce no unusual-pattern entry.
+- A style/genre suffix such as `Pop Version` remains ordinary even when preceded by an artist/act credit.
