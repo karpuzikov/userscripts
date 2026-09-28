@@ -625,3 +625,11 @@ Do not flatten release folders into the duplicate root. After successful moves, 
 - Treat Big Mix, New Mix, Smooth Mix, Low Gain Mix, OG Version, Chillout/genre Version, Special DJ Version, regional code Version labels (US/UK/etc.), and 7-inch/12-inch Version forms as ordinary patterns.
 - Slash compounds consisting only of ordinary components, such as `Single Version / 2008`, must produce no unusual-pattern entry.
 - A style/genre suffix such as `Pop Version` remains ordinary even when preceded by an artist/act credit.
+
+### Intra-release duplicate-file rule
+
+- Retained releases may contain redundant audio files. Clean them conservatively only when duplicate identity is already proven by the audio-only high-confidence group and the files also represent the same logical track position/title within the same physical disc/folder.
+- The title/track-position check is a safety gate only; it must never create duplicate identity by itself.
+- Prefer the technically better survivor (lossless over lossy, then sample rate/bit depth/channels, then deterministic codec/container preference). Move redundant files to `!Duplicate Files`; never delete them.
+- Do not automatically remove files from CUE-based releases because exact filenames can be referenced by the CUE sheet.
+- Treat `Rmx` as a remix alias equivalent to `Remix` for Save Remixes handling and `!Remixes` routing.
