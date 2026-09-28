@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         MusicBrainz - Safe Recording Matcher
+// @name         MusicBrainz - Recording Matcher
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.3.0
-// @description  Highlight duplicate recording links and safely match release tracks by metadata, highlighted duplicates, or pasted ISRCs.
+// @version      1.4.0
+// @description  Highlight duplicate recording links and match release tracks by metadata, highlighted duplicates, or pasted ISRCs.
 // @author       karpuzikov
 // @license      MIT
 // @match        https://musicbrainz.org/release/*
@@ -195,21 +195,68 @@
     }
 
     function chooseByIsrc(track, candidates) {
-        const eligible = new Map();
-        for (const candidate of candidates) {
-            const result = evaluateCandidate(track, candidate);
-            if (!result.ok) continue;
-            const id = candidate.id.toLowerCase();
-            if (!eligible.has(id) || result.difference < eligible.get(id).difference) {
-                eligible.set(id, {candidate, difference: result.difference});
+        const unique = new Map();
+        for (const candidate of candidates || []) {
+            if (!UUID.test(candidate?.id || '') || candidate.video) continue;
+            unique.set(candidate.id.toLowerCase(), candidate);
+        }
+
+        const all = [...unique.values()];
+        if (!all.length) return {reason: 'No recording is linked to this ISRC'};
+
+        // An exact ISRC lookup is already a strong recording identifier.
+        // If it resolves to one recording, use it directly instead of rejecting
+        // it because of track-credit or duration differences.
+        if (all.length === 1) {
+            return {id: all[0].id, candidate: all[0]};
+        }
+
+        // Bad/duplicate ISRC assignments do happen in MusicBrainz. When one
+        // ISRC points to several recordings, title is the primary discriminator.
+        const wantedTitle = normalizeTitle(track.title);
+        const titleMatches = all.filter(candidate =>
+            wantedTitle && normalizeTitle(candidate.title ?? candidate.name) === wantedTitle
+        );
+
+        if (!titleMatches.length) {
+            return {reason: `ISRC is linked to ${all.length} recordings, but none matches the track title`};
+        }
+        if (titleMatches.length === 1) {
+            return {id: titleMatches[0].id, candidate: titleMatches[0]};
+        }
+
+        // If multiple recordings share the same title, prefer an exact artist
+        // credit match before falling back to duration.
+        const artistMatches = titleMatches.filter(candidate => {
+            const credit = candidateCredit(candidate);
+            return track.artistIds?.length &&
+                credit.ids.length === track.artistIds.length &&
+                track.artistIds.every((id, index) =>
+                    UUID.test(id) && id.toLowerCase() === credit.ids[index]?.toLowerCase()
+                );
+        });
+        const pool = artistMatches.length ? artistMatches : titleMatches;
+        if (pool.length === 1) {
+            return {id: pool[0].id, candidate: pool[0]};
+        }
+
+        if (Number.isInteger(track.length) && track.length > 0) {
+            const ranked = pool
+                .filter(candidate => Number.isInteger(candidate.length) && candidate.length > 0)
+                .map(candidate => ({
+                    candidate,
+                    difference: Math.abs(track.length - candidate.length),
+                }))
+                .sort((a, b) => a.difference - b.difference);
+
+            if (ranked.length &&
+                ranked[0].difference <= MAX_DIFFERENCE_MS &&
+                (ranked.length === 1 || ranked[0].difference < ranked[1].difference)) {
+                return {id: ranked[0].candidate.id, candidate: ranked[0].candidate};
             }
         }
-        const ranked = [...eligible.values()].sort((a, b) => a.difference - b.difference);
-        if (!ranked.length) return {reason: 'No recording with matching title, artist and length within 7 seconds'};
-        if (ranked.length > 1 && ranked[0].difference === ranked[1].difference) {
-            return {reason: 'Two recordings are equally close; review manually'};
-        }
-        return {id: ranked[0].candidate.id, candidate: ranked[0].candidate};
+
+        return {reason: 'ISRC is linked to multiple recordings with the same matching title; review manually'};
     }
 
     function appendAttribution(note, url) {
@@ -529,11 +576,58 @@
         );
         if (c4?.id || (c4?.reason && c4.reason.startsWith('Two recordings'))) return c4;
 
-        return {reason: 'No safe recording found in C1-C4'};
+        return {reason: 'No recording found in C1-C4'};
     }
 
-    function searchByIsrc(code) {
-        return searchQuery('isrc:' + code);
+    async function searchByIsrc(code) {
+        const normalized = String(code ?? '').replace(/-/g, '').toUpperCase();
+        const cacheKey = 'isrc-lookup:' + normalized;
+        if (resultCache.has(cacheKey)) return resultCache.get(cacheKey);
+
+        const url = '/ws/2/isrc/' + encodeURIComponent(normalized) + '?fmt=json&inc=artist-credits';
+        for (let attempt = 0; attempt < 3; attempt++) {
+            await throttle();
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 12000);
+            let response;
+            try {
+                response = await fetch(url, {
+                    credentials: 'same-origin',
+                    headers: {Accept: 'application/json'},
+                    signal: controller.signal,
+                });
+            } finally {
+                clearTimeout(timeout);
+            }
+
+            if (response.status === 503 || response.status === 429) {
+                const retrySeconds = Number(response.headers.get('Retry-After'));
+                if (attempt === 2) throw new Error('MusicBrainz is rate limiting requests');
+                await sleep(Math.max(
+                    5000 * (attempt + 1),
+                    Number.isFinite(retrySeconds) ? retrySeconds * 1000 : 0,
+                ));
+                continue;
+            }
+
+            if (response.status === 404) {
+                const result = {recordings: []};
+                resultCache.set(cacheKey, result);
+                return result;
+            }
+            if (!response.ok) throw new Error('MusicBrainz ISRC lookup returned HTTP ' + response.status);
+
+            const data = await response.json();
+            if (!Array.isArray(data.recordings)) {
+                throw new Error('MusicBrainz returned an unexpected ISRC response');
+            }
+
+            const result = {recordings: data.recordings};
+            resultCache.set(cacheKey, result);
+            return result;
+        }
+
+        throw new Error('MusicBrainz ISRC lookup did not complete');
     }
 
     function appendNoteIfPossible() {
@@ -582,7 +676,7 @@
     }
 
     async function selectInEditor(row, track, candidate, editor, options = {}) {
-        const {allowLinked = false, expectedRecordingId = null} = options;
+        const {allowLinked = false, expectedRecordingId = null, isrcMatch = false} = options;
         const {button, element, model, input} = editor;
         const assertCurrentTarget = () => {
             const current = readTrack(row);
@@ -620,30 +714,33 @@
         }, 12000);
         if (!linked) throw new Error('MusicBrainz did not confirm the recording lookup');
 
-        // The rendered recording length is rounded; the API length is exact.
-        const verified = evaluateCandidate(track, {...linked, length: candidate.length});
-        if (!verified.ok || linked.length === null || Math.abs(linked.length - candidate.length) > 500) {
-            if (bubbleTargetsRow(model, row) &&
-                readLinkedRecording(row).id?.toLowerCase() === candidate.id.toLowerCase()) {
-                if (allowLinked && expectedRecordingId) {
-                    const original = [...element.querySelectorAll('input[data-change="recording"]')]
-                        .find(radio => radio.value.toLowerCase() === expectedRecordingId.toLowerCase());
-                    if (original) {
-                        original.click();
-                    } else if (input) {
-                        await throttle();
-                        input.value = expectedRecordingId;
-                        input.dispatchEvent(new Event('input', {bubbles: true}));
+        if (!isrcMatch) {
+            // Metadata matching remains strict. Exact ISRC matching is verified by
+            // the recording MBID above and must not be undone by credit/length drift.
+            const verified = evaluateCandidate(track, {...linked, length: candidate.length});
+            if (!verified.ok || linked.length === null || Math.abs(linked.length - candidate.length) > 500) {
+                if (bubbleTargetsRow(model, row) &&
+                    readLinkedRecording(row).id?.toLowerCase() === candidate.id.toLowerCase()) {
+                    if (allowLinked && expectedRecordingId) {
+                        const original = [...element.querySelectorAll('input[data-change="recording"]')]
+                            .find(radio => radio.value.toLowerCase() === expectedRecordingId.toLowerCase());
+                        if (original) {
+                            original.click();
+                        } else if (input) {
+                            await throttle();
+                            input.value = expectedRecordingId;
+                            input.dispatchEvent(new Event('input', {bubbles: true}));
+                        }
+                        await waitFor(
+                            () => readLinkedRecording(row).id?.toLowerCase() === expectedRecordingId.toLowerCase(),
+                            8000,
+                        );
+                    } else {
+                        element.querySelector('#add-new-recording')?.click();
                     }
-                    await waitFor(
-                        () => readLinkedRecording(row).id?.toLowerCase() === expectedRecordingId.toLowerCase(),
-                        8000,
-                    );
-                } else {
-                    element.querySelector('#add-new-recording')?.click();
                 }
+                throw new Error('Editor linked a recording with different metadata');
             }
-            throw new Error('Editor linked a recording with different metadata');
         }
         return linked;
     }
@@ -837,6 +934,7 @@
                     await selectInEditor(row, track, chosen.candidate, editor, {
                         allowLinked,
                         expectedRecordingId: existing.id,
+                        isrcMatch: Boolean(isrc),
                     });
                     matched++;
                     needsAttribution = true;
@@ -944,7 +1042,7 @@
         if (!container) return false;
         const panel = document.createElement('fieldset');
         panel.id = 'mb-safe-recording-matcher';
-        panel.innerHTML = '<legend>Safe recording matcher</legend>' +
+        panel.innerHTML = '<legend>Recording matcher</legend>' +
             '<button type="button" class="mb-safe-start">Match unlinked recordings</button> ' +
             '<button type="button" class="mb-safe-highlighted">Auto-match highlighted recordings</button> ' +
             '<button type="button" class="mb-safe-isrc">Match by ISRC</button> ' +
