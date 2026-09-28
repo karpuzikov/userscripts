@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MusicBrainz - Remove All External Links
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.0.0
+// @version      1.0.1
 // @description  Remove all external links from a MusicBrainz entity in one click.
 // @author       karpuzikov
 // @license      MIT
@@ -56,12 +56,17 @@
         return document.getElementById(EDITOR_ID);
     }
 
-    function getRemoveButtons() {
+    function getActiveLinkRows() {
         const editor = getEditor();
         if (!editor) return [];
 
-        return [...editor.querySelectorAll('tr.external-link-item button.remove-item')]
-            .filter(button => !button.disabled);
+        return [...editor.querySelectorAll('tr.external-link-item')].filter(row => {
+            const removeButton = row.querySelector('button.remove-item');
+            if (!removeButton || removeButton.disabled) return false;
+
+            const submittedUrl = row.querySelector('a.url');
+            return !submittedUrl?.classList.contains('rel-remove');
+        });
     }
 
     async function removeAllExternalLinks(button) {
@@ -73,25 +78,41 @@
 
         try {
             while (true) {
-                const buttons = getRemoveButtons();
-                if (!buttons.length) break;
+                const rows = getActiveLinkRows();
+                if (!rows.length) break;
 
-                const before = buttons.length;
-                buttons[0].click();
-                removed += 1;
+                const row = rows[0];
+                const removeButton = row.querySelector('button.remove-item');
+                const beforeCount = rows.length;
+
+                removeButton.click();
 
                 let changed = false;
-                for (let i = 0; i < 75; i++) {
+                for (let i = 0; i < 100; i++) {
                     await wait(20);
-                    if (getRemoveButtons().length < before) {
+
+                    if (!row.isConnected) {
+                        changed = true;
+                        break;
+                    }
+
+                    const submittedUrl = row.querySelector('a.url');
+                    if (submittedUrl?.classList.contains('rel-remove')) {
+                        changed = true;
+                        break;
+                    }
+
+                    if (getActiveLinkRows().length < beforeCount) {
                         changed = true;
                         break;
                     }
                 }
 
                 if (!changed) {
-                    throw new Error('MusicBrainz did not remove an external-link row as expected.');
+                    throw new Error('MusicBrainz did not mark the external link for removal.');
                 }
+
+                removed += 1;
             }
 
             if (removed > 0) {
