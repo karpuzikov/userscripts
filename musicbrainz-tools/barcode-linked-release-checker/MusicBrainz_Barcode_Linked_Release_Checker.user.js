@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MusicBrainz - Barcode vs Linked Releases Checker
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.3.3
+// @version      1.3.4
 // @description  Checks Digital Media release barcodes against linked provider release pages through Harmony and stages MusicBrainz correction edits.
 // @author       karpuzikov
 // @license      MIT
@@ -18,6 +18,7 @@
 // @connect      music.apple.com
 // @connect      amp-api.music.apple.com
 // @grant        GM_xmlhttpRequest
+// @grant        unsafeWindow
 // @run-at       document-end
 // ==/UserScript==
 
@@ -1214,23 +1215,90 @@
         return Boolean(row?.querySelector('a.url.rel-remove, .rel-remove'));
     }
 
+    function getPageMusicBrainz() {
+        try {
+            const pageWindow = typeof unsafeWindow !== 'undefined' ? unsafeWindow : window;
+            return pageWindow.MB || null;
+        } catch {
+            return null;
+        }
+    }
+
+    function releaseEditorStateHasRemoval(url) {
+        const MB = getPageMusicBrainz();
+        const editor = MB?._releaseEditor;
+        const treeApi = MB?.tree;
+        const linksTree = editor?.externalLinksData?.();
+        if (!editor || !treeApi || !linksTree?.size) return false;
+
+        const wantedKey = providerEntityKey(url);
+        for (const link of treeApi.iterate(linksTree)) {
+            if (link.isNew || providerEntityKey(link.url) !== wantedKey) continue;
+            return Boolean(link.relationships?.length) &&
+                link.relationships.every(relationship => relationship.removed);
+        }
+        return false;
+    }
+
+    function forceReleaseEditorRemoval(url) {
+        const MB = getPageMusicBrainz();
+        const editor = MB?._releaseEditor;
+        const treeApi = MB?.tree;
+        const linksTree = editor?.externalLinksData?.();
+        if (!editor || !treeApi || !linksTree?.size) return false;
+
+        const wantedKey = providerEntityKey(url);
+        const links = [];
+        let found = false;
+        let changed = false;
+
+        for (const link of treeApi.iterate(linksTree)) {
+            if (!link.isNew && providerEntityKey(link.url) === wantedKey) {
+                found = true;
+                const relationships = (link.relationships || []).map(relationship => {
+                    if (relationship.removed) return relationship;
+                    changed = true;
+                    return { ...relationship, removed: true };
+                });
+
+                links.push({
+                    ...link,
+                    url: link.originalUrlEntity?.name || link.url,
+                    rawUrl: link.originalUrlEntity?.name || link.rawUrl,
+                    relationships,
+                });
+            } else {
+                links.push(link);
+            }
+        }
+
+        if (!found) return false;
+
+        if (changed) {
+            editor.externalLinksData(treeApi.fromDistinctAscArray(links));
+        }
+
+        return releaseEditorStateHasRemoval(url);
+    }
+
     async function ensureUrlRemoval(url, timeout = 10000) {
         const started = Date.now();
 
         while (Date.now() - started < timeout) {
+            if (releaseEditorStateHasRemoval(url)) return true;
+
             const row = findExistingUrlRow(url);
-            if (row) {
-                if (rowIsMarkedForRemoval(row)) return true;
+            const button = row?.querySelector('button.remove-item');
 
-                const button = row.querySelector('button.remove-item');
-                if (button && !button.disabled) {
-                    button.click();
-                    await sleep(150);
-
-                    const refreshedRow = findExistingUrlRow(url);
-                    if (rowIsMarkedForRemoval(refreshedRow)) return true;
-                }
+            if (button && !button.disabled && !rowIsMarkedForRemoval(row)) {
+                button.click();
+                await sleep(150);
             }
+
+            // The MusicBrainz release editor generates edits from
+            // MB._releaseEditor.externalLinksData, not from the DOM/form.
+            // Write the removal into that authoritative state directly.
+            if (forceReleaseEditorRemoval(url)) return true;
 
             await sleep(250);
         }
@@ -1250,71 +1318,19 @@
         return { removed, missing };
     }
 
-    function installRemovalSubmitGuard(task, storageKey) {
+    function installRemovalStateGuard(task) {
         if (!(task.removeUrls || []).length) return;
 
-        const form =
-            document.querySelector('#release-editor')?.closest('form') ||
-            document.querySelector('#page form');
-        if (!form) return;
-
-        let retryingSubmit = false;
-        let bypassNextSubmit = false;
-
-        form.addEventListener('submit', event => {
-            if (bypassNextSubmit) {
-                bypassNextSubmit = false;
-                localStorage.removeItem(storageKey);
-                return;
+        const enforce = () => {
+            for (const url of task.removeUrls || []) {
+                forceReleaseEditorRemoval(url);
             }
+        };
 
-            const notRemoved = (task.removeUrls || []).filter(url => {
-                const row = findExistingUrlRow(url);
-                return !rowIsMarkedForRemoval(row);
-            });
+        enforce();
+        const timer = setInterval(enforce, 500);
 
-            if (!notRemoved.length) {
-                localStorage.removeItem(storageKey);
-                return;
-            }
-
-            event.preventDefault();
-            event.stopImmediatePropagation();
-
-            if (retryingSubmit) return;
-            retryingSubmit = true;
-
-            const submitter = event.submitter;
-
-            (async () => {
-                const result = await ensureTaskRemovals(task);
-                showEditBanner(task, result.removed, result.missing);
-
-                if (result.missing.length) {
-                    retryingSubmit = false;
-                    alert(
-                        'Barcode/link checker blocked submission because it could not stage every wrong-link removal. ' +
-                        'Review the external links before submitting.'
-                    );
-                    return;
-                }
-
-                bypassNextSubmit = true;
-                retryingSubmit = false;
-
-                if (typeof form.requestSubmit === 'function') {
-                    form.requestSubmit(submitter instanceof HTMLElement ? submitter : undefined);
-                } else if (submitter instanceof HTMLElement) {
-                    submitter.click();
-                } else {
-                    form.submit();
-                }
-            })().catch(error => {
-                retryingSubmit = false;
-                console.error(`[${SCRIPT_NAME}]`, error);
-                alert('Barcode/link checker could not verify the wrong-link removals. Review the edit manually.');
-            });
-        }, true);
+        window.addEventListener('pagehide', () => clearInterval(timer), { once: true });
     }
 
     async function waitFor(predicate, timeout = 20000, interval = 250) {
@@ -1377,11 +1393,10 @@
         const result = await ensureTaskRemovals(task);
         showEditBanner(task, result.removed, result.missing);
 
-        // Keep the task until the edit is actually submitted. The capture-phase
-        // submit guard re-checks the React editor state immediately before
-        // MusicBrainz serializes relationship edits, so a later re-render cannot
-        // silently turn a move into an add-only edit.
-        installRemovalSubmitGuard(task, key);
+        // MusicBrainz can re-render the external-links React component after
+        // this task runs. Keep the authoritative release-editor observable in
+        // the removed state until the page is submitted or closed.
+        installRemovalStateGuard(task);
 
         return true;
     }
