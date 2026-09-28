@@ -72,9 +72,9 @@ When several singles/EPs overlap:
 
 ## 4. Remixes
 
-- When `Exclude remixes` is enabled, a remix that adds featured performer(s) not present on the matching non-remix version remains wanted and is NOT excluded from coverage. If no matching non-remix version is present, a remix with an explicit featured credit is kept conservatively.
+- When `Save Remixes` is unchecked, ordinary remixes are ignored for wanted coverage. A remix that adds featured performer(s) not present on the matching non-remix version remains wanted. If no matching non-remix version is present, a remix with an explicit featured credit is kept conservatively.
 
-Remix and live exclusion are user-selectable analyzer options. When the corresponding checkbox is enabled, those tracks do not count toward wanted coverage.
+`Save Remixes` and `Save Live recordings` are user-selectable analyzer options. Unchecked categories do not count toward wanted coverage.
 
 Rules:
 
@@ -111,14 +111,12 @@ After remix tracks are ignored, if wanted coverage is equivalent, keep the CD ed
 
 ### Analyzer exclusion checkboxes
 
-The analyzer provides two persistent checkboxes, both enabled by default:
+The analyzer provides two persistent affirmative checkboxes:
 
-- `Exclude remixes`
-- `Exclude live versions`
+- `Save Remixes`
+- `Save Live recordings`
 
-These options affect wanted-content coverage only. They do not participate in duplicate identity. Track duplicate identity remains audio-only and is decided by strict Chromaprint analysis.
-
-When an exclusion is disabled, that category is treated as normal wanted audio. When enabled, tracks in that category are ignored for optimization; a release containing only excluded tracks is redundant/unwanted for that run.
+Both are unchecked by default. Checked categories count as wanted content and may keep a release. Unchecked categories are ignored for coverage/optimization. These options never participate in duplicate identity; track identity remains audio-only.
 
 ## 5. Explicit vs clean - future implementation
 
@@ -226,8 +224,9 @@ Release folders and filenames are containers/labels only. They must not establis
 
 Rules:
 
-- each direct child of the selected artist folder remains one release container;
-- multi-disc subfolders such as `CD1` / `CD2` remain part of that release container;
+- release discovery is recursive through organizational folders such as `Albums`, `Other`, `Singles`, and per-title grouping folders;
+- internal `CD1` / `CD2` / `Disc 1` subfolders remain one release;
+- sibling folders with the same release base plus `CD 1`, `CD 2`, etc. are also one logical multi-disc release and must be kept/moved together;
 - wanted track coverage is compared using audio-derived fingerprint groups;
 - a release covers another only when every wanted target track has a high-confidence audio match;
 - folder names, file names, title text, barcode text in folder names, MBIDs, ISRCs, and metadata typo tolerance must not override the audio result;
@@ -581,3 +580,14 @@ Do not implement this hierarchy as filename guessing. Parse/score the actual log
 
 
 - `Original Mix` is an original-version label and must NOT be classified as a remix merely because it contains the word `Mix`.
+
+
+### Album-edition clustering
+
+Alternate album editions are grouped primarily from audio-derived wanted-track overlap and track order, not edition/folder names. Strong ordered overlap between fingerprint groups identifies related editions even when labels such as Limited, Special Bonus, Sketch Book, regional names, or other edition wording differ.
+
+### Duplicate archive structure
+
+Redundant folders must preserve their source-relative hierarchy under `<artist>_duplicates`. Example: `Singles/Title/Edition` moves to `<artist>_duplicates/Singles/Title/Edition`. Remix-bucket moves preserve the same hierarchy under `<artist>_duplicates/!Remixes/`.
+
+Do not flatten release folders into the duplicate root. After successful moves, remove organizational directories that became empty.
