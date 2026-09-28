@@ -35,6 +35,7 @@ A collection of Tampermonkey userscripts, MusicBrainz/Picard helpers, Windows ut
 | Project | Description | Version | Download |
 | --- | --- | ---: | --- |
 | **Picard - Current Artist Names Everywhere** | Replaces historical/credited/alias artist names with the current MusicBrainz artist name across loaded metadata. Available in the shared Git-updatable Picard plugin. | Not tested! ⚠️ | [![Picard 3](https://img.shields.io/badge/Picard_3-Git_plugin-0969da?style=for-the-badge)](https://github.com/karpuzikov/userscripts) |
+| **Picard - MusicBrainz Title Capitalization** | Standardizes English release and track titles using MusicBrainz English capitalization rules, with Apple Music-style parenthetical ETI capitalization such as `(Club Mix)`, `(Remix)`, `(Live)`, and `(Extended Version)`. | Not tested! ⚠️ | [![Picard 3](https://img.shields.io/badge/Picard_3-Git_plugin-0969da?style=for-the-badge)](https://github.com/karpuzikov/userscripts) |
 | **Picard - Barcode/UPC Lookup** | Adds a separate toolbar button that links only when MusicBrainz returns exactly one release whose actual `barcode` field matches the selected file `Barcode` or `UPC` tag, allowing up to 3 leading-zero differences. No normal Lookup fallback. | 1.1.2 | [![Picard 3](https://img.shields.io/badge/Picard_3-Git_plugin-0969da?style=for-the-badge)](https://github.com/karpuzikov/userscripts) |
 | **Picard - Move Featured Artists to Title** | Moves featured credits into the title using `(ft. Artist)` and removes the featured credit from artist/album artist fields. | 1.0.0 | [![TXT](https://img.shields.io/badge/Manual-.txt-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/main/picard-tools/scripts/Move_Featured_Artists_to_Title.txt) [![Picard 3](https://img.shields.io/badge/Picard_3-Git_plugin-0969da?style=for-the-badge)](https://github.com/karpuzikov/userscripts) |
 | **Picard - Unicode to ASCII** | Normalizes common Unicode punctuation and symbols to ASCII while keeping Unicode letters intact. | 1.0.0 | [![TXT](https://img.shields.io/badge/Manual-.txt-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/main/picard-tools/scripts/Unicode_to_ASCII.txt) [![Picard 3](https://img.shields.io/badge/Picard_3-Git_plugin-0969da?style=for-the-badge)](https://github.com/karpuzikov/userscripts) |
@@ -44,7 +45,7 @@ A collection of Tampermonkey userscripts, MusicBrainz/Picard helpers, Windows ut
 
 ### Picard 3 Git plugin installation
 
-**Current Artist Names Everywhere**, the five tagging scripts above, and the Barcode/UPC-first Lookup helper are available through the shared Picard 3 plugin. The five tagging scripts also remain available as individual **Manual .txt** downloads.
+**Current Artist Names Everywhere**, **MusicBrainz Title Capitalization**, the five tagging scripts above, and the Barcode/UPC-first Lookup helper are available through the shared Picard 3 plugin. The five tagging scripts also remain available as individual **Manual .txt** downloads.
 
 For automatic GitHub updates, install the shared **Karpuzikov Picard Scripts** plugin once:
 
@@ -54,7 +55,7 @@ For automatic GitHub updates, install the shared **Karpuzikov Picard Scripts** p
 4. Install and enable **Karpuzikov Picard Scripts**.
 5. Open `Options -> Plugins -> Karpuzikov Picard Scripts` and enable only the tools/scripts you want.
 
-Picard can then check for and install future updates from its Plugins interface. If Current Artist Names Everywhere is also installed as the old standalone plugin, disable one copy. If the same tagging script is also enabled under `Options -> Scripting`, disable one copy so it is not run twice.
+Picard can then check for and install future updates from its Plugins interface. If Current Artist Names Everywhere is also installed as the old standalone plugin, disable one copy. Do not enable both **MusicBrainz Title Capitalization** and the legacy **English Title Capitalization** script. If the same tagging script is also enabled under `Options -> Scripting`, disable one copy so it is not run twice.
 
 ## Audio Tools
 
