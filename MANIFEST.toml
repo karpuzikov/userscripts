@@ -1,7 +1,7 @@
 uuid = "f25833be-e7f2-4d9b-938e-20f17ed32b92"
 name = "Karpuzikov Picard Scripts"
-version = "1.3.2"
-description = "Git-updatable Picard 3 tagging scripts plus Barcode/UPC-first Lookup."
+version = "1.4.0"
+description = "Git-updatable Picard 3 tools: current artist names, tagging scripts, and strict Barcode/UPC Lookup."
 api = ["3.0"]
 authors = ["karpuzikov"]
 license = "MIT"
