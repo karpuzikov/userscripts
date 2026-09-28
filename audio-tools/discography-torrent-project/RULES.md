@@ -151,6 +151,8 @@ Rules:
 
 Decoded PCM hash is not the primary detector because mastering/remastering can change PCM while the underlying recording remains equivalent for coverage.
 
+- Chromaprint matching has two audio-only confidence tiers: a strict match, plus a mastering/pressing-tolerant match that requires near-identical duration and strong full-track fingerprint similarity. This exists specifically so different CD pressings/masterings of the same recording are not retained as separate recordings merely because their fingerprints are not bit-identical.
+
 Different performances/versions should remain distinct when their audio is materially different, including live, acoustic, radio edit, extended, instrumental, a cappella, remix/dub, demo, alternate mix, language performances, and similar variants.
 
 Titles may describe those variants, but titles themselves are not evidence for or against duplicate identity.
@@ -591,3 +593,5 @@ Alternate album editions are grouped primarily from audio-derived wanted-track o
 Redundant folders must preserve their source-relative hierarchy under `<artist>_duplicates`. Example: `Singles/Title/Edition` moves to `<artist>_duplicates/Singles/Title/Edition`. Remix-bucket moves preserve the same hierarchy under `<artist>_duplicates/!Remixes/`.
 
 Do not flatten release folders into the duplicate root. After successful moves, remove organizational directories that became empty.
+
+- After the main optimizer, run a final selected-set redundancy prune. A non-album release that contributes no wanted audio beyond other retained releases must be removed when equal-or-better source copies remain. Album releases may be pruned only when another retained release still represents the same audio-derived album cluster.
