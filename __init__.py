@@ -11,6 +11,10 @@ from .current_artist_names import (
     normalize_album_artist_names,
     normalize_track_artist_names,
 )
+from .musicbrainz_title_capitalization import (
+    capitalize_release_title,
+    capitalize_track_title,
+)
 
 
 PLUGIN_PRIORITY = -10000
@@ -374,6 +378,7 @@ def disable():
 
 FEATURES = (
     ("current_artist_names", "Current Artist Names Everywhere"),
+    ("musicbrainz_title_capitalization", "MusicBrainz Title Capitalization"),
 )
 
 
@@ -400,8 +405,9 @@ class ScriptsOptionsPage(OptionsPage):
         info = QtWidgets.QLabel(
             "Enable the Picard tools you want this plugin to run. "
             "If Current Artist Names Everywhere is also installed as a standalone plugin, "
-            "disable one copy. If a tagging script is also enabled under Options > Scripting, "
-            "disable one copy to avoid running it twice."
+            "disable one copy. Do not enable both MusicBrainz Title Capitalization and the "
+            "legacy English Title Capitalization script. If a tagging script is also enabled "
+            "under Options > Scripting, disable one copy to avoid running it twice."
         )
         info.setWordWrap(True)
         layout.addWidget(info)
@@ -444,12 +450,16 @@ def process_album(api, album, metadata, release_node):
     if api.plugin_config["current_artist_names"]:
         normalize_album_artist_names(api, metadata, release_node)
     _run_scripts(api, metadata)
+    if api.plugin_config["musicbrainz_title_capitalization"]:
+        capitalize_release_title(api, metadata, release_node)
 
 
 def process_track(api, track, metadata, track_node, release_node=None):
     if api.plugin_config["current_artist_names"]:
         normalize_track_artist_names(api, metadata, track_node, release_node)
     _run_scripts(api, metadata)
+    if api.plugin_config["musicbrainz_title_capitalization"]:
+        capitalize_track_title(api, metadata, track_node, release_node)
 
 
 def enable(api):
