@@ -84,6 +84,66 @@ def _release_language(metadata: Any, release_node: Any) -> str:
     return str(language).strip().lower() if language else ""
 
 
+def _release_title(metadata: Any, release_node: Any) -> str:
+    if isinstance(release_node, dict):
+        title = release_node.get("title")
+        if title:
+            return str(title)
+
+    try:
+        title = metadata.get("album")
+    except Exception:
+        title = None
+
+    if isinstance(title, (list, tuple)):
+        title = title[0] if title else None
+
+    return str(title or "")
+
+
+def _language_mode(metadata: Any, release_node: Any) -> str:
+    language = _release_language(metadata, release_node)
+
+    if language in {"eng", "en"}:
+        return "english"
+    if language in {"fra", "fre", "fr"}:
+        return "french"
+    if language in {"spa", "es"}:
+        return "sentence"
+    if language in {"ita", "it", "por", "pt", "cat", "ca", "lat", "la"}:
+        return "sentence"
+
+    # Some MusicBrainz releases have a script but no language. In that case,
+    # infer only when the release title gives strong clues. This is intentionally
+    # conservative and is mainly used to normalize obvious ALL CAPS metadata.
+    probe = _release_title(metadata, release_node).lower()
+    words = set(re.findall(r"[^\W_]+", probe, flags=re.UNICODE))
+
+    french_score = 0
+    spanish_score = 0
+
+    if re.search(r"[àâæçéèêëîïôœùûüÿ]", probe):
+        french_score += 2
+    if {"le", "les", "des", "du", "une", "et", "vous", "avec", "sans"} & words:
+        french_score += 2
+    if "de" in words:
+        french_score += 1
+
+    if re.search(r"[¿¡ñ]", probe):
+        spanish_score += 3
+    if {"el", "los", "las", "una", "del", "con", "sin", "para", "por"} & words:
+        spanish_score += 2
+    if {"y", "te", "mi"} & words:
+        spanish_score += 1
+
+    if french_score >= 3 and french_score > spanish_score:
+        return "french"
+    if spanish_score >= 3 and spanish_score > french_score:
+        return "sentence"
+
+    return "unknown"
+
+
 def _is_mixed_case(word: str) -> bool:
     letters = "".join(char for char in word if char.isalpha())
     if not letters:
@@ -286,6 +346,108 @@ def musicbrainz_english_title_case(title: str) -> str:
     return result
 
 
+def _has_cased_letters(text: str) -> bool:
+    return any(char.isalpha() and char.lower() != char.upper() for char in text)
+
+
+def _is_all_caps_title(text: str) -> bool:
+    letters = [
+        char for char in text
+        if char.isalpha() and char.lower() != char.upper()
+    ]
+    return bool(letters) and all(char == char.upper() for char in letters)
+
+
+def _looks_like_acronym(word: str) -> bool:
+    letters = "".join(char for char in word if char.isalpha())
+    if not letters or len(letters) > 6 or not letters.isupper():
+        return False
+
+    # Preserve compact consonant-heavy initialisms such as GPB, BBC, DJ, etc.
+    vowels = set("AEIOUYÀÂÄÁÃÅÉÈÊËÍÌÎÏÓÒÔÖÕÚÙÛÜ")
+    return not any(char in vowels for char in letters)
+
+
+def _sentence_case_title(title: str) -> str:
+    if not title:
+        return title
+
+    words = list(_WORD_RE.finditer(title))
+    if not words:
+        return title
+
+    chunks: list[str] = []
+    cursor = 0
+    capitalize_next = True
+
+    for index, match in enumerate(words):
+        word = match.group(0)
+        between = title[cursor:match.start()]
+
+        if index > 0 and re.search(r"[.!?/]\s*$", between):
+            capitalize_next = True
+
+        lower = word.lower()
+
+        if _looks_like_acronym(word):
+            replacement = word
+        elif _is_mixed_case(word):
+            replacement = word
+        elif lower in _KNOWN_MIXED_CASE:
+            replacement = _KNOWN_MIXED_CASE[lower]
+        elif capitalize_next:
+            replacement = _capitalize_piece(word)
+        else:
+            replacement = lower
+
+        chunks.append(title[cursor:match.start()])
+        chunks.append(replacement)
+        cursor = match.end()
+        capitalize_next = False
+
+    chunks.append(title[cursor:])
+    return "".join(chunks)
+
+
+def _apple_eti_case(title: str) -> str:
+    def rewrite(match: re.Match[str]) -> str:
+        content = match.group(1)
+        if not content.strip():
+            return match.group(0)
+
+        styled = musicbrainz_english_title_case(content)
+        styled = re.sub(
+            r"(?i)^\s*(feat|ft|f)(\.)",
+            lambda marker: marker.group(1).lower() + marker.group(2),
+            styled,
+        )
+        return "(" + styled + ")"
+
+    return re.sub(r"\(([^()]*)\)", rewrite, title)
+
+
+def standardize_title_case(
+    title: str,
+    mode: str,
+) -> str:
+    if not title or not _has_cased_letters(title):
+        return title
+
+    if mode == "english":
+        return musicbrainz_english_title_case(title)
+
+    if mode in {"french", "sentence"}:
+        return _apple_eti_case(_sentence_case_title(title))
+
+    # Unknown language: do not rewrite normal mixed-case titles. But ALL CAPS
+    # is explicitly considered a typesetting choice by MusicBrainz, so apply a
+    # conservative sentence-case fallback instead of leaving it untouched.
+    if _is_all_caps_title(title):
+        return _apple_eti_case(_sentence_case_title(title))
+
+    return title
+
+
 def _set_single_value(metadata: Any, tag: str, value: str) -> None:
     try:
         metadata[tag] = value
@@ -294,9 +456,6 @@ def _set_single_value(metadata: Any, tag: str, value: str) -> None:
 
 
 def capitalize_release_title(api: Any, metadata: Any, release_node: Any) -> None:
-    if _release_language(metadata, release_node) not in {"eng", "en"}:
-        return
-
     try:
         original = metadata.get("album")
     except Exception:
@@ -308,11 +467,13 @@ def capitalize_release_title(api: Any, metadata: Any, release_node: Any) -> None
     if not original:
         return
 
-    updated = musicbrainz_english_title_case(str(original))
+    mode = _language_mode(metadata, release_node)
+    updated = standardize_title_case(str(original), mode)
     if updated != str(original):
         _set_single_value(metadata, "album", updated)
         api.logger.debug(
-            "MusicBrainz capitalization changed release title: %r -> %r",
+            "MusicBrainz capitalization changed release title (%s): %r -> %r",
+            mode,
             original,
             updated,
         )
@@ -324,9 +485,6 @@ def capitalize_track_title(
     track_node: Any,
     release_node: Any = None,
 ) -> None:
-    if _release_language(metadata, release_node) not in {"eng", "en"}:
-        return
-
     try:
         original = metadata.get("title")
     except Exception:
@@ -338,11 +496,13 @@ def capitalize_track_title(
     if not original:
         return
 
-    updated = musicbrainz_english_title_case(str(original))
+    mode = _language_mode(metadata, release_node)
+    updated = standardize_title_case(str(original), mode)
     if updated != str(original):
         _set_single_value(metadata, "title", updated)
         api.logger.debug(
-            "MusicBrainz capitalization changed track title: %r -> %r",
+            "MusicBrainz capitalization changed track title (%s): %r -> %r",
+            mode,
             original,
             updated,
         )
