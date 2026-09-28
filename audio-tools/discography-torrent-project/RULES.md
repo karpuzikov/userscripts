@@ -76,6 +76,8 @@ When several singles/EPs overlap:
 
 `Save Remixes` and `Save Live recordings` are user-selectable analyzer options. Unchecked categories do not count toward wanted coverage.
 
+Before fingerprint comparison, the analyzer may also show detected version-style pattern families (for example `The Matrix Mix`, `Tom Lord-Alge Mix`, or a normalized `Callout Hook` family). Similar callout spellings such as `Suggested Call Out Research Hook`, `Suggested Callout Hook`, and `Call Out Hook` are grouped. Checked means the pattern remains eligible wanted content subject to the global remix/live options; unchecked means matching tracks are ignored for coverage and fingerprint generation. This preference is not duplicate evidence. Pattern choices are saved and reused as defaults on later runs.
+
 Rules:
 
 - only an explicit `Remix`, `Remixes`, `Remixed`, or `Dub` marker classifies a track as remix material;
@@ -297,7 +299,7 @@ Use:
 - REPLACE - another source should replace the currently retained copy.
 - NEW - candidate adds material not currently represented.
 
-There is no normal manual REVIEW state. The software must perform the track-by-track comparison itself. If equivalence cannot be established with enough confidence, treat the tracks as different and keep both.
+There is no normal manual REVIEW state for duplicate identity. The software must perform the track-by-track audio comparison itself. If equivalence cannot be established with enough confidence, treat the tracks as different and keep both. A grouped pre-analysis track-pattern review is allowed only to decide which descriptor families count as wanted coverage; it must never create, block, or override an audio duplicate match.
 
 Every REDUNDANT/REPLACE decision must explain what retained release/track covers it.
 
@@ -313,7 +315,7 @@ Examples of high confidence:
 
 When confidence is insufficient:
 
-- do not ask the user to review track-by-track;
+- do not ask the user to review duplicate identity track-by-track; a single grouped pattern-family wanted-content review is allowed before fingerprint comparison;
 - treat the tracks as distinct;
 - keep both so unique material cannot be lost;
 - record the uncertainty only in optional diagnostics.
