@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MusicBrainz - Barcode vs Linked Releases Checker
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.3.2
+// @version      1.3.3
 // @description  Checks Digital Media release barcodes against linked provider release pages through Harmony and stages MusicBrainz correction edits.
 // @author       karpuzikov
 // @license      MIT
@@ -724,6 +724,46 @@
         return groups;
     }
 
+    function stageBarcodeMatchedReplacements(correction, mismatches, reverseLinks, existingUrls) {
+        const existingKeys = new Set(existingUrls.map(providerEntityKey));
+        let staged = 0;
+
+        for (const check of mismatches) {
+            const family = check.provider || providerFamily(check.sourceUrl);
+            if (!family) continue;
+
+            const replacement = reverseLinks.find(link =>
+                providerFamily(link.url) === family &&
+                providerEntityKey(link.url) !== providerEntityKey(check.sourceUrl)
+            );
+            if (!replacement) continue;
+
+            const wrongKey = providerEntityKey(check.sourceUrl);
+
+            if (!correction.removeUrls.some(url => providerEntityKey(url) === wrongKey)) {
+                correction.removeUrls.push(check.sourceUrl);
+            }
+
+            const replacementKey = providerEntityKey(replacement.url);
+            if (
+                !existingKeys.has(replacementKey) &&
+                !correction.addLinks.some(link => providerEntityKey(link.url) === replacementKey)
+            ) {
+                correction.addLinks.push(replacement);
+            }
+
+            correction.linkActions.push({
+                type: 'replace-wrong-link',
+                provider: providerLabel(check.sourceUrl),
+                url: check.sourceUrl,
+                replacementUrl: replacement.url,
+            });
+            staged++;
+        }
+
+        return staged;
+    }
+
     function buildCorrection(release, checks, reverse) {
         const mbBarcode = release.barcode;
         const existingUrls = releaseRelations(release);
@@ -786,9 +826,26 @@
         if (matches.length) {
             const mismatchFamilies = new Set(mismatches.map(check => check.provider).filter(Boolean));
             correction.addLinks = selectReverseLinks(reverse, existingUrls, mismatchFamilies);
-            correction.notes.push(
-                `${mismatches.length} linked page(s) resolve to a different GTIN. They will only be removed automatically if the checker can identify the correct MusicBrainz release and preserve the link there.`,
+
+            const replaced = stageBarcodeMatchedReplacements(
+                correction,
+                mismatches,
+                reverseLinks,
+                existingUrls
             );
+
+            if (replaced) {
+                correction.reasons.push(
+                    `Replaced ${replaced} wrongly linked provider release URL(s) with barcode-matched URL(s).`
+                );
+            }
+
+            const unresolved = mismatches.length - replaced;
+            if (unresolved) {
+                correction.notes.push(
+                    `${unresolved} mismatching linked page(s) had no same-provider barcode-matched replacement and were left for manual review.`
+                );
+            }
             return correction;
         }
 
@@ -798,9 +855,26 @@
 
             if (reverseLinks.length) {
                 correction.addLinks = selectReverseLinks(reverse, existingUrls);
-                correction.notes.push(
-                    `All readable linked pages disagree with MusicBrainz barcode ${mbBarcode}. Barcode-matched provider links can be added, but mismatching links will only be removed if their correct MusicBrainz release is identified.`,
+
+                const replaced = stageBarcodeMatchedReplacements(
+                    correction,
+                    mismatches,
+                    reverseLinks,
+                    existingUrls
                 );
+
+                if (replaced) {
+                    correction.reasons.push(
+                        `Replaced ${replaced} wrongly linked provider release URL(s) with barcode-matched URL(s).`
+                    );
+                }
+
+                const unresolved = mismatches.length - replaced;
+                if (unresolved) {
+                    correction.notes.push(
+                        `${unresolved} mismatching linked page(s) had no same-provider barcode-matched replacement and were left for manual review.`
+                    );
+                }
                 return correction;
             }
 
@@ -838,6 +912,17 @@
             }
             return set;
         };
+
+        // A same-provider URL found by reverse lookup of this release's barcode
+        // is sufficient evidence to replace a linked URL whose own GTIN differs.
+        // Preserve those removals during release-group reconciliation.
+        for (const result of results) {
+            for (const action of result.correction.linkActions || []) {
+                if (action.type === 'replace-wrong-link') {
+                    safeSetFor(result.release.id).add(providerEntityKey(action.url));
+                }
+            }
+        }
 
         const findByGtin = gtin =>
             byBarcode.find(result => equalGtin(result.release.barcode, gtin));
@@ -925,8 +1010,9 @@
         for (const result of results) {
             const safeKeys = safeRemovalKeys.get(result.release.id) || new Set();
 
-            // Destructive safety rule: no link removal survives unless the same
-            // provider release is already present on, or staged onto, the correct MB release.
+            // Keep removals that are proven either by a same-provider
+            // barcode-matched replacement or by preserving/moving the URL to
+            // another MusicBrainz release in this release group.
             result.correction.removeUrls = [...new Map(
                 result.correction.removeUrls
                     .filter(url => safeKeys.has(providerEntityKey(url)))
@@ -985,7 +1071,11 @@
         const lines = [];
 
         for (const action of correction.linkActions || []) {
-            if (action.type === 'remove-duplicate-wrong-link') {
+            if (action.type === 'replace-wrong-link') {
+                lines.push(
+                    `Removed a wrongly linked ${action.provider} release URL and added the barcode-matched replacement: ${action.replacementUrl}`
+                );
+            } else if (action.type === 'remove-duplicate-wrong-link') {
                 lines.push(
                     `Removed a wrongly linked ${action.provider} release URL. The same URL is already correctly linked to: ${action.targetReleaseUrl}`
                 );
