@@ -403,3 +403,5 @@ Next stage after this: metadata/tag normalization using the shared Picard rules.
 - Named person/DJ/producer/act `Mix` labels (for example `Ferry Corsten Mix`, `Tom Lord-Alge Mix`, `Madlib's Mix`) are remix material and are controlled by `Save Remixes`; they must not appear in the unusual-pattern review.
 
 - v0.9.8 classifier refinement: hide standard suffix families regardless of prefix (12-inch, Extended Version, Full Version, style Mixes such as Ambient/Chillout/Downtempo/Garage/House/Trance, instrument versions, etc.); ignore year-only parser fragments; group bare `hook` with Call Out/Callout Hook; treat `Mix by <name>` and handle-style named mixes as remixes; repair mojibake in displayed examples.
+
+- v0.9.9 classifier refinement: hide remaining standard forms including 7-inch/12-inch Version, Big/New/Smooth/Low Gain Mix, OG Version, Single Version + year compounds, Chillout/genre versions, Special DJ Version, regional abbreviations such as US Version, and normal Pop Version suffixes.
