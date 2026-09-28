@@ -122,3 +122,7 @@ Repository software also follows these layout rules:
 ## License
 
 MIT
+
+## Development rules
+
+Repository-wide software rules: [SOFTWARE_RULES.md](SOFTWARE_RULES.md)
