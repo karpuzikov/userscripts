@@ -448,3 +448,153 @@
             groupIndex += 1;
             setStatus(`Checking pending edits... entity ${groupIndex}/${groups.size}`);
             const blocks = await fetchOpenEditBlocks(scope, progress);
+
+            const candidatePairs = [];
+            for (const block of blocks) {
+                for (const proposal of scopedProposals) {
+                    if (fingerprintsEqual(proposal.fingerprint, block.fingerprint)) {
+                        candidatePairs.push({block, proposal});
+                    }
+                }
+            }
+
+            if (!candidatePairs.length) continue;
+
+            const uniqueIds = [...new Set(candidatePairs.map(pair => pair.block.id))];
+            setStatus(`Verifying ${uniqueIds.length} possible duplicate${uniqueIds.length === 1 ? '' : 's'}...`);
+            const dataList = await mapLimit(
+                uniqueIds,
+                MAX_CONCURRENT_DATA_REQUESTS,
+                id => fetchEditData(id),
+            );
+            const dataById = new Map(uniqueIds.map((id, index) => [id, dataList[index]]));
+
+            for (const {block, proposal} of candidatePairs) {
+                const data = dataById.get(block.id);
+                if (
+                    Number(data?.status) === OPEN_STATUS &&
+                    Number(data?.type) === proposal.editType
+                ) {
+                    pendingHashes.add(proposal.hash);
+                    if (!matchesByHash.has(proposal.hash)) matchesByHash.set(proposal.hash, new Set());
+                    matchesByHash.get(proposal.hash).add(block.id);
+                }
+            }
+        }
+
+        const repeated = buildInSubmissionDuplicateInfo(proposals, pendingHashes);
+        const repeatedIndexes = new Set(repeated.map(proposal => proposal.index));
+        const pendingCount = proposals.filter(proposal => pendingHashes.has(proposal.hash)).length;
+        const repeatedCount = repeated.length;
+        const newCount = proposals.length - pendingCount - repeatedCount;
+
+        return {
+            proposals,
+            pendingHashes,
+            matchesByHash,
+            repeatedIndexes,
+            pendingCount,
+            repeatedCount,
+            newCount,
+            total: proposals.length,
+        };
+    }
+
+    function addModalStyles() {
+        if (document.getElementById('mb-duplicate-edit-checker-style')) return;
+        const style = document.createElement('style');
+        style.id = 'mb-duplicate-edit-checker-style';
+        style.textContent = `
+#${MODAL_ID} {
+  position: fixed;
+  inset: 0;
+  z-index: 100000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(0, 0, 0, .55);
+}
+#${MODAL_ID} .mb-dec-dialog {
+  width: min(760px, calc(100vw - 48px));
+  max-height: calc(100vh - 48px);
+  overflow: auto;
+  box-sizing: border-box;
+  padding: 20px;
+  border: 1px solid #aaa;
+  border-radius: 6px;
+  background: Canvas;
+  color: CanvasText;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, .35);
+}
+#${MODAL_ID} h2 { margin: 0 0 14px; }
+#${MODAL_ID} .mb-dec-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(110px, 1fr));
+  gap: 8px;
+  margin: 12px 0 16px;
+}
+#${MODAL_ID} .mb-dec-stat {
+  padding: 10px;
+  border: 1px solid #bbb;
+  border-radius: 4px;
+  text-align: center;
+}
+#${MODAL_ID} .mb-dec-stat strong { display: block; font-size: 1.35em; }
+#${MODAL_ID} details { margin: 12px 0; }
+#${MODAL_ID} .mb-dec-list { max-height: 260px; overflow: auto; margin: 8px 0 0 20px; }
+#${MODAL_ID} .mb-dec-buttons { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; margin-top: 18px; }
+#${MODAL_ID} .mb-dec-buttons button { margin: 0; }
+#${MODAL_ID} .mb-dec-error { color: #a40000; white-space: pre-wrap; }
+@media (max-width: 650px) {
+  #${MODAL_ID} .mb-dec-summary { grid-template-columns: repeat(2, 1fr); }
+}
+`;
+        document.head.appendChild(style);
+    }
+
+    function closeModal() {
+        document.getElementById(MODAL_ID)?.remove();
+    }
+
+    function makeButton(label, className, value, resolve) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.textContent = label;
+        if (className) button.className = className;
+        button.addEventListener('click', () => {
+            closeModal();
+            resolve(value);
+        });
+        return button;
+    }
+
+    function openEditLink(id) {
+        const link = document.createElement('a');
+        link.href = `/edit/${id}`;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        link.textContent = `Edit #${id}`;
+        return link;
+    }
+
+    function showDuplicateDialog(result) {
+        addModalStyles();
+        closeModal();
+
+        return new Promise(resolve => {
+            const overlay = document.createElement('div');
+            overlay.id = MODAL_ID;
+            overlay.setAttribute('role', 'dialog');
+            overlay.setAttribute('aria-modal', 'true');
+
+            const dialog = document.createElement('div');
+            dialog.className = 'mb-dec-dialog';
+            overlay.appendChild(dialog);
+
+            const heading = document.createElement('h2');
+            heading.textContent = result.newCount
+                ? 'Duplicate pending edits found'
+                : 'All proposed edits are duplicates';
+            dialog.appendChild(heading);
+
