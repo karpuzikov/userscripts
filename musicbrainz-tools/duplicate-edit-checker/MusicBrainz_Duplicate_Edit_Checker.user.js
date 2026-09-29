@@ -298,3 +298,153 @@
         // A brand-new release has no entity page and therefore cannot already
         // have release-level open edits. Recording / release-group edits above
         // are still checked because those entities already exist.
+        return null;
+    }
+
+    function buildProposals(edits, previewMap, releaseInfo) {
+        return edits.map((edit, index) => {
+            const preview = previewMap.get(String(edit.hash || '')) || null;
+            const fingerprint = fingerprintFromHtml(preview?.preview);
+            if (!fingerprint) {
+                throw new Error(`Could not read MusicBrainz preview for edit ${index + 1}.`);
+            }
+            return {
+                index,
+                edit,
+                hash: String(edit.hash || ''),
+                editType: Number(edit.edit_type),
+                editName: normalizeText(preview?.editName) || `Edit ${index + 1}`,
+                fingerprint,
+                scope: scopeForEdit(edit, releaseInfo),
+            };
+        });
+    }
+
+    function parsePageNumber(url, expectedPath) {
+        try {
+            const parsed = new URL(url, location.href);
+            if (parsed.pathname !== expectedPath) return null;
+            const page = Number(parsed.searchParams.get('page'));
+            return Number.isInteger(page) && page > 0 ? page : null;
+        } catch {
+            return null;
+        }
+    }
+
+    async function fetchDocument(url) {
+        const response = await pageWindow().fetch(url, {
+            credentials: 'same-origin',
+            headers: {Accept: 'text/html'},
+        });
+        if (!response.ok) {
+            throw new Error(`Could not load ${url}: HTTP ${response.status}`);
+        }
+        const html = await response.text();
+        return new DOMParser().parseFromString(html, 'text/html');
+    }
+
+    function extractOpenEditBlocks(doc) {
+        const result = [];
+        for (const block of doc.querySelectorAll('.edit-list')) {
+            const idInput = block.querySelector('input[type="hidden"][name$=".edit_id"]');
+            const id = Number(idInput?.value);
+            const details = block.querySelector('.edit-details');
+            const fingerprint = fingerprintFromRoot(details);
+            if (Number.isInteger(id) && id > 0 && fingerprint) {
+                result.push({id, fingerprint});
+            }
+        }
+        return result;
+    }
+
+    async function fetchOpenEditBlocks(scope, progress) {
+        const baseUrl = new URL(`/${scope}/open_edits`, location.origin);
+        const firstDoc = await fetchDocument(baseUrl.href);
+        progress.pagesDone += 1;
+        setStatus(`Checking open edits... ${progress.pagesDone} page${progress.pagesDone === 1 ? '' : 's'} loaded`);
+
+        let maxPage = 1;
+        for (const link of firstDoc.querySelectorAll('a[href]')) {
+            const page = parsePageNumber(link.getAttribute('href'), baseUrl.pathname);
+            if (page) maxPage = Math.max(maxPage, page);
+        }
+
+        const blocks = extractOpenEditBlocks(firstDoc);
+        for (let page = 2; page <= maxPage; page += 1) {
+            const pageUrl = new URL(baseUrl.href);
+            pageUrl.searchParams.set('page', String(page));
+            const doc = await fetchDocument(pageUrl.href);
+            blocks.push(...extractOpenEditBlocks(doc));
+            progress.pagesDone += 1;
+            setStatus(`Checking open edits... ${progress.pagesDone} pages loaded`);
+        }
+        return blocks;
+    }
+
+    async function mapLimit(items, limit, worker) {
+        const results = new Array(items.length);
+        let cursor = 0;
+
+        async function run() {
+            while (true) {
+                const index = cursor;
+                cursor += 1;
+                if (index >= items.length) return;
+                results[index] = await worker(items[index], index);
+            }
+        }
+
+        const count = Math.min(Math.max(1, limit), Math.max(1, items.length));
+        await Promise.all(Array.from({length: count}, run));
+        return results;
+    }
+
+    async function fetchEditData(id) {
+        const response = await pageWindow().fetch(`/edit/${id}/data`, {
+            credentials: 'same-origin',
+            headers: {Accept: 'application/json'},
+        });
+        if (!response.ok) {
+            throw new Error(`Could not inspect MusicBrainz edit #${id}: HTTP ${response.status}`);
+        }
+        return response.json();
+    }
+
+    function groupByScope(proposals) {
+        const groups = new Map();
+        for (const proposal of proposals) {
+            if (!proposal.scope) continue;
+            if (!groups.has(proposal.scope)) groups.set(proposal.scope, []);
+            groups.get(proposal.scope).push(proposal);
+        }
+        return groups;
+    }
+
+    function buildInSubmissionDuplicateInfo(proposals, pendingHashes) {
+        const seen = new Set();
+        const repeated = [];
+        for (const proposal of proposals) {
+            if (pendingHashes.has(proposal.hash)) continue;
+            if (proposal.hash && seen.has(proposal.hash)) {
+                repeated.push(proposal);
+            } else if (proposal.hash) {
+                seen.add(proposal.hash);
+            }
+        }
+        return repeated;
+    }
+
+    async function analyzeDuplicates(ed, edits) {
+        setStatus(`Preparing duplicate check for ${edits.length} edit${edits.length === 1 ? '' : 's'}...`);
+        const previewMap = await ensurePreviews(ed, edits);
+        const proposals = buildProposals(edits, previewMap, getReleaseInfo(ed));
+        const groups = groupByScope(proposals);
+        const pendingHashes = new Set();
+        const matchesByHash = new Map();
+        const progress = {pagesDone: 0};
+
+        let groupIndex = 0;
+        for (const [scope, scopedProposals] of groups) {
+            groupIndex += 1;
+            setStatus(`Checking pending edits... entity ${groupIndex}/${groups.size}`);
+            const blocks = await fetchOpenEditBlocks(scope, progress);
