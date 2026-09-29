@@ -273,15 +273,15 @@ run this logic automatically at the final torrent preparation stage and prepare/
 - `Save Remixes` and `Save Live recordings` are persistent affirmative checkboxes, unchecked by default; checked categories count as wanted coverage.
 - Before Chromaprint comparison, show an unusual-pattern review only for non-standard non-remix/non-live descriptors that normal rules do not already understand. Standard families are recognized structurally, not by exact phrases: arbitrary prefixes must not make ordinary Radio Edit/Mix, Instrumental, Acoustic, Demo, Session, Remaster, Edit/Re-Edit, Extended/VIP/Vocal Mix, 7-inch/12-inch forms, common Version/Edition labels, etc. appear. Named/ambiguous plain mixes such as `The Matrix Mix` / `Tom Lord-Alge Mix` may remain review candidates. Similar callout labels are grouped. Remix/live remain controlled only by their existing checkboxes.
 - `Mix` alone is not a remix marker: Original/Extended/12-inch/7-inch mixes and Instrumental/A-Capella versions stay wanted unless redundant for other reasons; Club Mix is remix material.
-- Version/language labels are descriptive only for duplicate identity; the decoded audio decides whether recordings are equivalent.
-- Track duplicate identity is audio-only: strict Chromaprint similarity decides equivalence; titles/filenames/MBIDs/ISRCs do not create or block matches.
-- Duplicate decisions at both track and release-coverage levels are audio-first/audio-only: filenames and track titles cannot create or override a duplicate match.
+- Version/language labels never create duplicate identity, but strong conflicts may conservatively veto an otherwise-valid audio match.
+- Track duplicate identity still requires strict Chromaprint similarity; metadata can never create a match. A post-audio safety gate now blocks merges when strong contradictory evidence indicates a distinct recording/version (for example different recording MBIDs, semantic version/language conflicts, or different ISRCs combined with conflicting titles/credits).
+- Candidate discovery may use exact identifiers and same-base-title + duration only as hints; every final duplicate still requires the audio matcher.
 - Large fingerprint offsets are allowed so long silence/hidden-track padding can be ignored; substantial non-silent extra audio remains a distinct version.
 - Remix tracks are excluded from wanted coverage, but a release containing remixes is not automatically unwanted. For equivalent wanted album content, CD/physical media wins over WEB before file-count minimization. Explicit/clean is deferred until a reliable detector exists.
 - Leave required recycle releases in the recycle folder for the next processing stage.
 - Final UI should only show a short completion summary plus Open filtered recycle / Open duplicates / Undo.
 - Technical diagnostics are optional and must not be required for normal use.
-- Every analysis run writes a detailed JSONL comparison log outside the scanned artist folder, normally under `<artist>_analysis_logs`. Each compared pair records candidate-discovery reason, track paths/titles/IDs, version qualifiers, durations, every Chromaprint metric, strict/mastering threshold pass/fail state, length-gate result, final MATCH/REJECT decision, and run summary. Logging is diagnostic only and must not change matching decisions.
+- Every analysis run writes a detailed JSONL comparison log outside the scanned artist folder, normally under `<artist>_analysis_logs`. Each compared pair records candidate-discovery route, track paths/titles/IDs/credits/version descriptors, durations, every Chromaprint metric, strict/mastering threshold state, metadata-safety result, final MATCH/REJECT decision, and run summary. The log also reports possible-pair vs candidate-pair counts so prefilter efficiency can be audited.
 
 ## AudioChecker automation
 
@@ -397,7 +397,7 @@ Next stage after this: metadata/tag normalization using the shared Picard rules.
 - Duplicate moves preserve the source-relative hierarchy under `<artist>_duplicates`; remix-bucket moves preserve it under `<artist>_duplicates/!Remixes`.
 - Empty organizational folders left after successful moves are removed.
 - Album editions are clustered by strong ordered overlap of audio-derived fingerprint groups rather than edition/folder naming.
-- Chromaprint candidate discovery also considers close audio duration so alternate masterings are not missed only because the cheap token prefilter differs.
+- Chromaprint candidate discovery uses strong token overlap, a weaker token+duration fallback, exact MBID/ISRC candidate indexes, and same-base-title + close-duration fallback. Pure duration-only all-pairs comparison is prohibited because it caused near-quadratic comparison volume.
 - Audio matching always evaluates zero/near-zero fingerprint alignment as well as histogram-derived offsets, preventing mastering differences from hiding the correct alignment.
 - A second mastering/pressing-tolerant Chromaprint threshold handles near-identical-duration copies of the same recording without using filenames/titles.
 - A final redundancy-prune pass removes selected singles/EPs that add no wanted audio when equal-or-better retained sources already cover them.
