@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Harmony - Link External IDs in One Click
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.2.6
+// @version      1.2.7
 // @description  Adds all-in-one and per-type fast submission of Harmony MusicBrainz external-ID edits without opening one edit tab per entity.
 // @author       karpuzikov
 // @license      MIT
@@ -24,6 +24,8 @@
     const QUEUE_KEY = 'harmony-link-external-ids-one-click.queue.v2';
     const BRIDGE_PARAM = 'harmony_external_id_bridge';
     const MAX_CONCURRENT_SUBMISSIONS = 4;
+    const RUNNER_STALE_AFTER_MS = 8000;
+    const RUNNER_HEARTBEAT_MS = 2000;
     const ALLOWED_ENTITY_TYPES = new Set(['artist', 'label', 'recording']);
     const SCRIPT_GITHUB_URL = 'https://github.com/karpuzikov/userscripts/blob/main/musicbrainz-tools/harmony-link-external-ids-one-click/Harmony_Link_External_IDs_in_One_Click.user.js';
 
@@ -34,6 +36,50 @@
     function writeQueue(queue) {
         queue.updatedAt = Date.now();
         GM_setValue(QUEUE_KEY, queue);
+    }
+
+    function currentSourcePage() {
+        return `${location.origin}${location.pathname}${location.search}`;
+    }
+
+    function queueBelongsToCurrentPage(queue) {
+        return Boolean(queue && queue.sourcePage === currentSourcePage());
+    }
+
+    function recountQueue(queue) {
+        queue.succeeded = queue.items.filter((item) => item.state === 'submitted').length;
+        queue.failed = queue.items.filter((item) => item.state === 'failed').length;
+        queue.completed = queue.succeeded + queue.failed;
+    }
+
+    function runnerIsActive(queue) {
+        return Boolean(
+            queue?.status === 'running' &&
+            queue.runnerId &&
+            Number.isFinite(queue.runnerHeartbeatAt) &&
+            Date.now() - queue.runnerHeartbeatAt < RUNNER_STALE_AFTER_MS
+        );
+    }
+
+    function prepareQueueForResume(queue, retryFailed = false) {
+        for (const item of queue.items || []) {
+            if (item.state === 'submitting') {
+                item.state = 'pending';
+                item.error = '';
+            } else if (retryFailed && item.state === 'failed') {
+                item.state = 'pending';
+                item.error = '';
+            } else if (!['pending', 'submitted', 'failed'].includes(item.state)) {
+                item.state = 'pending';
+                item.error = '';
+            }
+        }
+
+        recountQueue(queue);
+        queue.status = 'running';
+        queue.fatalError = '';
+        queue.runnerId = '';
+        queue.runnerHeartbeatAt = 0;
     }
 
     function classifyMusicBrainzEditUrl(rawUrl) {
@@ -292,17 +338,43 @@
                 completed: 0,
                 succeeded: 0,
                 failed: 0,
-                sourcePage: `${location.origin}${location.pathname}${location.search}`,
+                sourcePage: currentSourcePage(),
                 releaseGroupMbid,
                 startedAt: Date.now(),
                 updatedAt: Date.now(),
-                fatalError: ''
+                fatalError: '',
+                runnerId: '',
+                runnerHeartbeatAt: 0
             };
 
             writeQueue(queue);
             status.textContent = `0/${items.length} submitted - using fast MusicBrainz background submission...`;
 
             GM_openInTab(bridgeUrl(jobId, releaseGroupMbid), {
+                active: false,
+                insert: true,
+                setParent: true
+            });
+        }
+
+        function resumeQueue(queue) {
+            if (!queue?.releaseGroupMbid || !queue?.id) {
+                status.textContent = 'Saved Harmony job is incomplete and cannot be resumed.';
+                return;
+            }
+
+            if (runnerIsActive(queue)) {
+                status.textContent = `${queue.completed}/${queue.items.length} processed - job is already running...`;
+                return;
+            }
+
+            const retryFailed = queue.status === 'failed';
+            prepareQueueForResume(queue, retryFailed);
+            writeQueue(queue);
+
+            status.textContent = `Resuming: ${queue.completed}/${queue.items.length} already processed...`;
+
+            GM_openInTab(bridgeUrl(queue.id, queue.releaseGroupMbid), {
                 active: false,
                 insert: true,
                 setParent: true
@@ -316,7 +388,19 @@
             button.dataset.scope = config.scope;
             button.textContent = config.label;
             button.title = summarizeItems(items);
-            button.addEventListener('click', () => { void startQueue(config); });
+            button.addEventListener('click', () => {
+                const queue = readQueue();
+                if (
+                    config.scope === 'all' &&
+                    queueBelongsToCurrentPage(queue) &&
+                    (queue.status === 'running' || queue.status === 'failed')
+                ) {
+                    resumeQueue(queue);
+                    return;
+                }
+
+                void startQueue(config);
+            });
             buttons.push(button);
             return button;
         }
@@ -383,7 +467,8 @@
 
         setInterval(() => {
             const queue = readQueue();
-            if (!queue || queue.sourcePage !== `${location.origin}${location.pathname}${location.search}`) {
+            if (!queueBelongsToCurrentPage(queue)) {
+                allButton.textContent = allConfig.label;
                 return;
             }
 
@@ -391,15 +476,26 @@
 
             if (queue.status === 'running') {
                 setButtonsDisabled(true);
-                status.textContent = `${queue.completed}/${total} processed - ${queue.succeeded} submitted, ${queue.failed} failed...`;
+
+                if (runnerIsActive(queue)) {
+                    allButton.textContent = allConfig.label;
+                    status.textContent = `${queue.completed}/${total} processed - ${queue.succeeded} submitted, ${queue.failed} failed...`;
+                } else {
+                    allButton.disabled = false;
+                    allButton.textContent = 'Resume external IDs in one click';
+                    status.textContent = `Interrupted at ${queue.completed}/${total} processed - click Resume to continue.`;
+                }
             } else if (queue.status === 'complete') {
+                allButton.textContent = allConfig.label;
                 setButtonsDisabled(false);
                 status.textContent = queue.failed
                     ? `Done: ${queue.succeeded}/${total} submitted, ${queue.failed} failed.`
                     : `Done: ${queue.succeeded}/${total} submitted.`;
             } else if (queue.status === 'failed') {
-                setButtonsDisabled(false);
-                status.textContent = `Stopped: ${queue.fatalError || 'MusicBrainz submission failed.'}`;
+                setButtonsDisabled(true);
+                allButton.disabled = false;
+                allButton.textContent = 'Resume external IDs in one click';
+                status.textContent = `Stopped: ${queue.fatalError || 'MusicBrainz submission failed.'} Click Resume to retry unfinished work.`;
             }
         }, 350);
     }
@@ -477,6 +573,63 @@
         return params;
     }
 
+    function canonicalizeLinkText(value) {
+        const text = String(value || '').trim();
+        try {
+            const url = new URL(text);
+            url.hash = '';
+            url.hostname = url.hostname.toLowerCase();
+            if (url.pathname !== '/') {
+                url.pathname = url.pathname.replace(/\/+$/, '');
+            }
+            return url.href.replace(/\/$/, '');
+        } catch {
+            return text;
+        }
+    }
+
+    function linkPairsFromParams(params, item) {
+        const prefix = `edit-${item.type}.url.`;
+        const buckets = new Map();
+
+        for (const [key, value] of params.entries()) {
+            if (!key.startsWith(prefix)) continue;
+
+            const rest = key.slice(prefix.length);
+            const dot = rest.lastIndexOf('.');
+            if (dot <= 0) continue;
+
+            const index = rest.slice(0, dot);
+            const field = rest.slice(dot + 1);
+            if (field !== 'text' && field !== 'link_type_id') continue;
+
+            const entry = buckets.get(index) || { text: '', linkTypeId: '' };
+            if (field === 'text') entry.text = canonicalizeLinkText(value);
+            if (field === 'link_type_id') entry.linkTypeId = String(value).trim();
+            buckets.set(index, entry);
+        }
+
+        return [...buckets.values()].filter((entry) => entry.text && entry.linkTypeId);
+    }
+
+    function formAlreadyContainsSeededLinks(form, item) {
+        const intended = linkPairsFromParams(new URL(item.url).searchParams, item);
+        if (!intended.length) return false;
+
+        const existingParams = new URLSearchParams();
+        for (const [key, value] of new FormData(form).entries()) {
+            if (typeof value === 'string') existingParams.append(key, value);
+        }
+
+        const existing = linkPairsFromParams(existingParams, item);
+        return intended.every((wanted) =>
+            existing.some((current) =>
+                current.linkTypeId === wanted.linkTypeId &&
+                current.text === wanted.text
+            )
+        );
+    }
+
     function extractErrors(doc) {
         const selectors = [
             '.error',
@@ -542,6 +695,15 @@
             throw new Error(pageError || `Could not find the MusicBrainz ${item.type} edit form.`);
         }
 
+        // A browser can be closed after MusicBrainz accepted a POST but before
+        // the userscript persisted "submitted". On resume, first inspect the
+        // current form and skip the POST if Harmony's exact relationship is
+        // already present. This makes interrupted retries idempotent whenever
+        // MusicBrainz has already applied the submitted relationship.
+        if (formAlreadyContainsSeededLinks(form, item)) {
+            return { alreadyPresent: true };
+        }
+
         const body = formToUrlEncoded(form, item);
         const urlPrefix = `edit-${item.type}.url.`;
         const seededTextFields = [...body.keys()].filter(
@@ -591,7 +753,7 @@
             );
         }
 
-        return true;
+        return { alreadyPresent: false };
     }
 
     async function runBridge() {
@@ -604,13 +766,51 @@
             return;
         }
 
-        setBridgeStatus(`Starting: 0/${queue.items.length} processed`);
+        if (runnerIsActive(queue)) {
+            setBridgeStatus('This Harmony submission job is already running in another tab.', true);
+            return;
+        }
+
+        const runnerId = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+        prepareQueueForResume(queue, false);
+        queue.runnerId = runnerId;
+        queue.runnerHeartbeatAt = Date.now();
+        writeQueue(queue);
+
+        const claimedQueue = readQueue();
+        if (claimedQueue?.runnerId !== runnerId) {
+            setBridgeStatus('Another tab claimed this Harmony submission job.', true);
+            return;
+        }
+
+        const heartbeatTimer = setInterval(() => {
+            const latest = readQueue();
+            if (
+                !latest ||
+                latest.id !== jobId ||
+                latest.status !== 'running' ||
+                latest.runnerId !== runnerId
+            ) {
+                return;
+            }
+
+            latest.runnerHeartbeatAt = Date.now();
+            writeQueue(latest);
+        }, RUNNER_HEARTBEAT_MS);
+
+        const workIndexes = queue.items
+            .map((item, index) => ({ item, index }))
+            .filter(({ item }) => item.state === 'pending')
+            .map(({ index }) => index);
+
+        setBridgeStatus(`Starting: ${queue.completed}/${queue.items.length} processed`);
 
         let cursor = 0;
         let fatalError = null;
 
         const saveProgress = () => {
-            queue.completed = queue.succeeded + queue.failed;
+            recountQueue(queue);
+            queue.runnerHeartbeatAt = Date.now();
             writeQueue(queue);
             setBridgeStatus(
                 `${queue.completed}/${queue.items.length} processed - ${queue.succeeded} submitted, ${queue.failed} failed`
@@ -619,22 +819,22 @@
 
         async function worker() {
             while (!fatalError) {
-                const index = cursor++;
-                if (index >= queue.items.length) return;
+                const workIndex = cursor++;
+                if (workIndex >= workIndexes.length) return;
 
+                const index = workIndexes[workIndex];
                 const item = queue.items[index];
                 item.state = 'submitting';
+                queue.runnerHeartbeatAt = Date.now();
                 writeQueue(queue);
 
                 try {
                     await submitItem(item);
                     item.state = 'submitted';
                     item.error = '';
-                    queue.succeeded += 1;
                 } catch (error) {
                     item.state = 'failed';
                     item.error = error?.message || String(error);
-                    queue.failed += 1;
 
                     if (error?.fatal) {
                         fatalError = item.error;
@@ -645,44 +845,54 @@
             }
         }
 
-        const workerCount = Math.min(MAX_CONCURRENT_SUBMISSIONS, queue.items.length);
-        await Promise.all(Array.from({ length: workerCount }, () => worker()));
+        try {
+            const workerCount = Math.min(MAX_CONCURRENT_SUBMISSIONS, workIndexes.length);
+            await Promise.all(Array.from({ length: workerCount }, () => worker()));
 
-        if (fatalError) {
-            queue.status = 'failed';
-            queue.fatalError = fatalError;
+            if (fatalError) {
+                queue.status = 'failed';
+                queue.fatalError = fatalError;
+                queue.runnerId = '';
+                queue.runnerHeartbeatAt = 0;
+                recountQueue(queue);
+                writeQueue(queue);
+
+                const failures = queue.items
+                    .filter((item) => item.state === 'failed')
+                    .map((item) => `${item.type} ${item.mbid}: ${item.error}`)
+                    .join('\n');
+
+                setBridgeStatus(
+                    `Stopped: ${fatalError}${failures ? `\n\n${failures}` : ''}`,
+                    true
+                );
+                return;
+            }
+
+            queue.status = 'complete';
+            queue.runnerId = '';
+            queue.runnerHeartbeatAt = 0;
+            recountQueue(queue);
             writeQueue(queue);
 
-            const failures = queue.items
-                .filter((item) => item.state === 'failed')
-                .map((item) => `${item.type} ${item.mbid}: ${item.error}`)
-                .join('\n');
+            if (queue.failed) {
+                const failures = queue.items
+                    .filter((item) => item.state === 'failed')
+                    .map((item) => `${item.type} ${item.mbid}: ${item.error}`)
+                    .join('\n');
 
-            setBridgeStatus(
-                `Stopped: ${fatalError}${failures ? `\n\n${failures}` : ''}`,
-                true
-            );
-            return;
+                setBridgeStatus(
+                    `Finished: ${queue.succeeded}/${queue.items.length} submitted, ${queue.failed} failed.\n\n${failures}`,
+                    true
+                );
+                return;
+            }
+
+            setBridgeStatus(`Finished: ${queue.succeeded}/${queue.items.length} submitted.`);
+            setTimeout(() => window.close(), 750);
+        } finally {
+            clearInterval(heartbeatTimer);
         }
-
-        queue.status = 'complete';
-        writeQueue(queue);
-
-        if (queue.failed) {
-            const failures = queue.items
-                .filter((item) => item.state === 'failed')
-                .map((item) => `${item.type} ${item.mbid}: ${item.error}`)
-                .join('\n');
-
-            setBridgeStatus(
-                `Finished: ${queue.succeeded}/${queue.items.length} submitted, ${queue.failed} failed.\n\n${failures}`,
-                true
-            );
-            return;
-        }
-
-        setBridgeStatus(`Finished: ${queue.succeeded}/${queue.items.length} submitted.`);
-        setTimeout(() => window.close(), 750);
     }
 
     if (
