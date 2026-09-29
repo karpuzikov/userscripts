@@ -1,14 +1,14 @@
 // ==UserScript==
 // @name         MusicBrainz - Recording Matcher
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.4.3
+// @version      1.4.4
 // @description  Highlight duplicate recording links and match release tracks by metadata, highlighted duplicates, or pasted ISRCs.
 // @author       karpuzikov
 // @license      MIT
 // @match        https://musicbrainz.org/release/*
 // @match        https://beta.musicbrainz.org/release/*
-// @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/safe-recording-matcher/MusicBrainz_Safe_Recording_Matcher.user.js?v=1.4.3
-// @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/safe-recording-matcher/MusicBrainz_Safe_Recording_Matcher.user.js?v=1.4.3
+// @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/safe-recording-matcher/MusicBrainz_Safe_Recording_Matcher.user.js?v=1.4.4
+// @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/safe-recording-matcher/MusicBrainz_Safe_Recording_Matcher.user.js?v=1.4.4
 // @grant        none
 // @run-at       document-idle
 // ==/UserScript==
@@ -614,6 +614,72 @@
         throw new Error('MusicBrainz ISRC lookup did not complete');
     }
 
+    async function verifyRecordingHasIsrc(recordingId, expectedIsrc) {
+        const id = String(recordingId || '').toLowerCase();
+        const isrc = String(expectedIsrc || '').replace(/-/g, '').toUpperCase();
+        if (!UUID.test(id) || !isrc) return false;
+
+        const cacheKey = 'recording-isrc-check:' + id;
+        let data = resultCache.get(cacheKey);
+
+        if (!data) {
+            await throttle();
+            const response = await fetch(
+                '/ws/2/recording/' + encodeURIComponent(id) + '?fmt=json&inc=isrcs',
+                {
+                    credentials: 'same-origin',
+                    headers: {Accept: 'application/json'},
+                },
+            );
+            if (!response.ok) {
+                throw new Error('Recording ISRC verification returned HTTP ' + response.status);
+            }
+            data = await response.json();
+            resultCache.set(cacheKey, data);
+        }
+
+        return Array.isArray(data.isrcs) &&
+            data.isrcs.some(code => String(code).replace(/-/g, '').toUpperCase() === isrc);
+    }
+
+    function releaseTrackModels() {
+        const release = window.MB?.releaseEditor?.rootField?.release?.();
+        return release && typeof release.allTracks === 'function'
+            ? [...release.allTracks()]
+            : [];
+    }
+
+    async function linkExactIsrcRecording(row, trackModel, candidate, expectedIsrc) {
+        if (!trackModel || typeof trackModel.recording !== 'function') {
+            throw new Error('MusicBrainz track model is unavailable');
+        }
+
+        const verified = await verifyRecordingHasIsrc(candidate.id, expectedIsrc);
+        if (!verified) {
+            throw new Error(
+                'Safety check failed: recording ' + candidate.id +
+                ' does not contain ISRC ' + expectedIsrc
+            );
+        }
+
+        const entity = recordingEntityFromWs(candidate);
+        trackModel.recording(entity);
+        if (typeof trackModel.hasNewRecording === 'function') {
+            trackModel.hasNewRecording(false);
+        }
+
+        const linked = await waitFor(() => {
+            const current = readLinkedRecording(row);
+            return current.id?.toLowerCase() === candidate.id.toLowerCase() ? current : null;
+        }, 8000);
+
+        if (!linked) {
+            throw new Error('MusicBrainz did not confirm the exact ISRC recording link');
+        }
+
+        return linked;
+    }
+
     function appendNoteIfPossible() {
         if (!needsAttribution) return;
         const textarea = document.querySelector('#edit-note-text, #edit-note textarea.edit-note');
@@ -872,6 +938,7 @@
             : allRows;
         const allowLinked = Boolean(options.allowLinked);
         const highlightedMode = Boolean(options.highlighted);
+        const allTrackModels = isrcs ? releaseTrackModels() : [];
 
         const button = panel.querySelector('.mb-safe-start');
         const highlightedButton = panel.querySelector('.mb-safe-highlighted');
@@ -894,8 +961,12 @@
             return;
         }
 
-        if (isrcs && (isrcs.length !== allRows.length || document.querySelector('#recordings .edit-recording'))) {
-            status.textContent = 'The loaded track count changed or a medium is not loaded. Open all media and paste the ISRCs again.';
+        if (isrcs && (
+            isrcs.length !== allRows.length ||
+            allTrackModels.length !== allRows.length ||
+            document.querySelector('#recordings .edit-recording')
+        )) {
+            status.textContent = 'The loaded track/model count changed or a medium is not loaded. Open all media and paste the ISRCs again.';
             return;
         }
 
@@ -940,23 +1011,26 @@
                     continue;
                 }
 
-                if (!track.title || !track.artistIds.length || track.artistIds.some(id => !UUID.test(id)) || !track.credit) {
-                    review++;
-                    showResult(list, row, 'Review', `${display} - missing title or artist ID`);
-                    continue;
-                }
+                let editor = null;
 
-                let editor;
-                try {
-                    editor = await openEditor(row, {
-                        allowLinked,
-                        expectedRecordingId: existing.id,
-                    });
-                    track.length = editor.trackLength;
-                } catch (error) {
-                    review++;
-                    showResult(list, row, 'Review', `${display} - ${error.message}`);
-                    continue;
+                if (!isrc) {
+                    if (!track.title || !track.artistIds.length || track.artistIds.some(id => !UUID.test(id)) || !track.credit) {
+                        review++;
+                        showResult(list, row, 'Review', `${display} - missing title or artist ID`);
+                        continue;
+                    }
+
+                    try {
+                        editor = await openEditor(row, {
+                            allowLinked,
+                            expectedRecordingId: existing.id,
+                        });
+                        track.length = editor.trackLength;
+                    } catch (error) {
+                        review++;
+                        showResult(list, row, 'Review', `${display} - ${error.message}`);
+                        continue;
+                    }
                 }
 
                 let chosen;
@@ -997,11 +1071,22 @@
                 }
 
                 try {
-                    await selectInEditor(row, track, chosen.candidate, editor, {
-                        allowLinked,
-                        expectedRecordingId: existing.id,
-                        isrcMatch: Boolean(isrc),
-                    });
+                    if (isrc) {
+                        const index = allRows.indexOf(row);
+                        await linkExactIsrcRecording(
+                            row,
+                            allTrackModels[index],
+                            chosen.candidate,
+                            isrc,
+                        );
+                    } else {
+                        await selectInEditor(row, track, chosen.candidate, editor, {
+                            allowLinked,
+                            expectedRecordingId: existing.id,
+                            isrcMatch: false,
+                        });
+                    }
+
                     matched++;
                     needsAttribution = true;
                     appendNoteIfPossible();
