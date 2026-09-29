@@ -748,3 +748,105 @@
     function prepareFilteredSubmission(result) {
         runtime.pendingHashes = new Set(result.pendingHashes);
         runtime.seenSubmissionHashes = new Set();
+        runtime.skipRepeatedInSubmission = true;
+        runtime.active = true;
+    }
+
+    function prepareUnfilteredSubmission() {
+        runtime.pendingHashes = new Set();
+        runtime.seenSubmissionHashes = new Set();
+        runtime.skipRepeatedInSubmission = false;
+        runtime.active = false;
+    }
+
+    async function install() {
+        const ed = await waitForEditor();
+        if (!ed || ed.__mbDuplicateEditCheckerInstalled) return;
+
+        ed.__mbDuplicateEditCheckerInstalled = true;
+        installSubmissionFilters(ed);
+        ensureStatusElement();
+
+        const originalSubmit = ed.submitEdits;
+
+        ed.submitEdits = async function (...args) {
+            if (runtime.checking) return;
+            if (typeof ed.allowsSubmission === 'function' && !ed.allowsSubmission()) return;
+
+            runtime.checking = true;
+            runtime.active = false;
+            runtime.pendingHashes = new Set();
+            runtime.seenSubmissionHashes = new Set();
+            setSubmitButtonBusy(true);
+
+            try {
+                while (true) {
+                    const edits = currentEdits(ed);
+                    if (!edits.length) return;
+                    const before = snapshotKey(edits);
+
+                    let result;
+                    try {
+                        result = await analyzeDuplicates(ed, edits);
+                    } catch (error) {
+                        setStatus('Duplicate check failed.', 'error');
+                        const choice = await showErrorDialog(error);
+                        if (choice === 'retry') continue;
+                        if (choice === 'submit-all') {
+                            prepareUnfilteredSubmission();
+                            appendEditNote(ed);
+                            setStatus(`Submitting all ${edits.length} edits without duplicate filtering...`);
+                            originalSubmit.apply(ed, args);
+                        } else {
+                            setStatus('Submission cancelled.');
+                        }
+                        return;
+                    }
+
+                    const afterEdits = currentEdits(ed);
+                    if (snapshotKey(afterEdits) !== before) {
+                        setStatus('Edits changed during the check. Checking the updated submission...');
+                        continue;
+                    }
+
+                    const skippedCount = result.pendingCount + result.repeatedCount;
+                    if (!skippedCount) {
+                        prepareUnfilteredSubmission();
+                        appendEditNote(ed);
+                        setStatus(`No pending duplicates found. Submitting ${result.total} edit${result.total === 1 ? '' : 's'}...`, 'success');
+                        originalSubmit.apply(ed, args);
+                        return;
+                    }
+
+                    const choice = await showDuplicateDialog(result);
+                    if (choice === 'submit-new') {
+                        if (snapshotKey(currentEdits(ed)) !== before) {
+                            setStatus('Edits changed. Rechecking before submission...');
+                            continue;
+                        }
+                        prepareFilteredSubmission(result);
+                        appendEditNote(ed);
+                        setStatus(`Submitting ${result.newCount} new edit${result.newCount === 1 ? '' : 's'}; skipping ${skippedCount} duplicate${skippedCount === 1 ? '' : 's'}...`, 'success');
+                        originalSubmit.apply(ed, args);
+                    } else if (choice === 'submit-all') {
+                        prepareUnfilteredSubmission();
+                        appendEditNote(ed);
+                        setStatus(`Submitting all ${result.total} edits...`);
+                        originalSubmit.apply(ed, args);
+                    } else {
+                        setStatus('Submission cancelled.');
+                    }
+                    return;
+                }
+            } finally {
+                runtime.checking = false;
+                setSubmitButtonBusy(false);
+            }
+        };
+    }
+
+    install().catch(error => {
+        console.error('[MusicBrainz - Duplicate Edit Checker]', error);
+        setStatus(`Duplicate Edit Checker failed to initialize: ${error?.message || error}`, 'error');
+    });
+})();
