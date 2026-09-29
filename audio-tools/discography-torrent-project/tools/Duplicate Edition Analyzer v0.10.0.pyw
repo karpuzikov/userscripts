@@ -249,6 +249,29 @@ FP_MASTERING_MAX_DURATION_RATIO = 0.02
 
 FP_SILENCE_MIN_FRAMES = 120
 
+
+def _new_comparison_log_path(recycle: Path) -> Path:
+    """Create a per-run comparison log outside the scanned artist folder."""
+    stamp = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
+    roots = [
+        recycle.parent / f"{recycle.name}_analysis_logs",
+        Path(os.environ.get("LOCALAPPDATA") or Path.home()) / "Karpuzikov" / "Duplicate Edition Analyzer" / "logs",
+    ]
+    last_error: Optional[Exception] = None
+    for root in roots:
+        try:
+            root.mkdir(parents=True, exist_ok=True)
+            candidate = root / f"Duplicate Edition Analyzer Comparison {stamp}.jsonl"
+            suffix = 2
+            while candidate.exists():
+                candidate = root / f"Duplicate Edition Analyzer Comparison {stamp} ({suffix}).jsonl"
+                suffix += 1
+            return candidate
+        except Exception as exc:
+            last_error = exc
+    raise RuntimeError(f"Could not create comparison log folder: {last_error}")
+
+
 UNICODE_REPLACEMENTS = {
     "‘": "'", "’": "'", "‚": "'", "‛": "'",
     "“": '"', "”": '"', "„": '"', "‟": '"',
@@ -1630,13 +1653,138 @@ def _fingerprint_tokens(fp: Tuple[int, ...]) -> Set[int]:
     }
 
 
-def merge_equivalent_tracks(tracks: List[Track], progress_cb=None) -> Tuple[Dict[int, List[int]], List[str]]:
-    """Group recordings from audio fingerprints only.
+def _comparison_decision_details(
+    fp1: Tuple[int, ...],
+    duration1: float,
+    fp2: Tuple[int, ...],
+    duration2: float,
+    matched: bool,
+    sim: Optional[Tuple[float, float, float, int, float, float, int]],
+) -> Dict[str, object]:
+    """Explain every threshold involved in one fingerprint decision."""
+    longer = max(duration1, duration2, 1.0)
+    shorter = min(duration1, duration2, longer)
+    duration_delta = abs(duration1 - duration2)
+    length_ratio = shorter / longer
 
-    Candidate discovery uses an inverted Chromaprint-token index instead of an
-    O(n^2) full set-intersection scan. Expensive similarity checks run across
-    multiple processes so this stage can use all logical CPUs.
-    """
+    details: Dict[str, object] = {
+        "worker_matched": bool(matched),
+        "duration_delta_seconds": round(duration_delta, 6),
+        "length_ratio": round(length_ratio, 6),
+    }
+    if not sim:
+        details.update({
+            "similarity_available": False,
+            "accepted_by": [],
+            "strict_pass": False,
+            "mastering_pass": False,
+            "length_gate_triggered": False,
+            "length_gate_pass": False,
+            "rejection_reasons": ["fingerprint_similarity returned no comparable result"],
+        })
+        return details
+
+    score, good, overlap, shift, excellent, median, p90 = sim
+    strict_checks = {
+        "overlap": overlap >= FP_MIN_OVERLAP,
+        "score": score <= FP_AUTO_SCORE,
+        "good_fraction": good >= FP_AUTO_GOOD_FRACTION,
+        "excellent_fraction": excellent >= FP_AUTO_EXCELLENT_FRACTION,
+        "median": median <= FP_AUTO_MEDIAN_MAX,
+        "p90": p90 <= FP_AUTO_P90_MAX,
+    }
+    mastering_duration_limit = max(
+        FP_MASTERING_MAX_DURATION_SECONDS,
+        FP_MASTERING_MAX_DURATION_RATIO * longer,
+    )
+    mastering_checks = {
+        "overlap": overlap >= FP_MASTERING_MIN_OVERLAP,
+        "duration_delta": duration_delta <= mastering_duration_limit,
+        "score": score <= FP_MASTERING_SCORE,
+        "good_fraction": good >= FP_MASTERING_GOOD_FRACTION,
+        "median": median <= FP_MASTERING_MEDIAN_MAX,
+        "p90": p90 <= FP_MASTERING_P90_MAX,
+    }
+    strict_pass = all(strict_checks.values())
+    mastering_pass = all(mastering_checks.values())
+    preliminary_pass = strict_pass or mastering_pass
+
+    length_gate_triggered = bool(
+        preliminary_pass
+        and (length_ratio < 0.94 or duration_delta > max(12.0, 0.06 * longer))
+    )
+    unmatched_is_silence: Optional[bool] = None
+    length_gate_pass = True
+    if length_gate_triggered:
+        unmatched_is_silence = _unmatched_fingerprint_is_silence(fp1, fp2, shift)
+        length_gate_pass = bool(unmatched_is_silence)
+
+    rejection_reasons: List[str] = []
+    if not preliminary_pass:
+        strict_failed = [name for name, passed in strict_checks.items() if not passed]
+        mastering_failed = [name for name, passed in mastering_checks.items() if not passed]
+        rejection_reasons.append("strict failed: " + ", ".join(strict_failed))
+        rejection_reasons.append("mastering failed: " + ", ".join(mastering_failed))
+    elif not length_gate_pass:
+        rejection_reasons.append("length gate failed: unmatched fingerprint content is not silence")
+
+    accepted_by: List[str] = []
+    if strict_pass:
+        accepted_by.append("strict")
+    if mastering_pass:
+        accepted_by.append("mastering")
+
+    details.update({
+        "similarity_available": True,
+        "score": round(score, 6),
+        "good_fraction": round(good, 6),
+        "excellent_fraction": round(excellent, 6),
+        "overlap": round(overlap, 6),
+        "median": round(median, 6),
+        "p90": int(p90),
+        "shift": int(shift),
+        "strict_checks": strict_checks,
+        "strict_pass": strict_pass,
+        "mastering_checks": mastering_checks,
+        "mastering_duration_limit_seconds": round(mastering_duration_limit, 6),
+        "mastering_pass": mastering_pass,
+        "accepted_by": accepted_by,
+        "length_gate_triggered": length_gate_triggered,
+        "unmatched_is_silence": unmatched_is_silence,
+        "length_gate_pass": length_gate_pass,
+        "derived_final_match": bool(preliminary_pass and length_gate_pass),
+        "decision_consistent": bool(matched) == bool(preliminary_pass and length_gate_pass),
+        "rejection_reasons": rejection_reasons,
+    })
+    return details
+
+
+def _comparison_track_log_data(track: Track) -> Dict[str, object]:
+    return {
+        "release_id": track.release_id,
+        "path": str(track.path),
+        "file": track.path.name,
+        "title": track.display_title,
+        "artist": track.artist,
+        "album": track.album,
+        "duration_seconds": round(track.duration, 6),
+        "fingerprint_duration_seconds": round(track.fingerprint_duration, 6),
+        "mbid": track.mbid,
+        "isrc": track.isrc,
+        "identity_title": identity_title(track.display_title),
+        "content_qualifiers": sorted(content_qualifiers(track.display_title)),
+        "is_remix": track.is_remix,
+        "is_live": track.is_live,
+        "excluded_from_coverage": track.exclude_from_coverage,
+    }
+
+
+def merge_equivalent_tracks(
+    tracks: List[Track],
+    progress_cb=None,
+    comparison_log_path: Optional[Path] = None,
+) -> Tuple[Dict[int, List[int]], List[str]]:
+    """Group recordings from audio fingerprints and log every comparison decision."""
     uf = UnionFind(len(tracks))
     notes: List[str] = []
     tokens: List[Set[int]] = [_fingerprint_tokens(t.fingerprint) for t in tracks]
@@ -1672,6 +1820,7 @@ def merge_equivalent_tracks(tracks: List[Track], progress_cb=None) -> Tuple[Dict
     candidate_pairs: Set[Tuple[int, int]] = {
         pair for pair, shared in pair_counts.items() if shared >= 2
     }
+    duration_candidate_pairs: Set[Tuple[int, int]] = set()
 
     # Duration is audio evidence too. Add close-duration pairs as a fallback so
     # remastering/EQ changes cannot be missed merely because the cheap token
@@ -1686,10 +1835,124 @@ def merge_equivalent_tracks(tracks: List[Track], progress_cb=None) -> Tuple[Dict
             limit = max(6.0, 0.035 * max(duration_a, duration_b))
             if diff > limit:
                 break
-            candidate_pairs.add((min(index_a, index_b), max(index_a, index_b)))
+            pair = (min(index_a, index_b), max(index_a, index_b))
+            candidate_pairs.add(pair)
+            duration_candidate_pairs.add(pair)
 
     candidate_pairs = sorted(candidate_pairs)
     total_candidates = len(candidate_pairs)
+
+    log_handle = None
+    log_counts: Counter = Counter()
+    processed_pairs: Set[Tuple[int, int]] = set()
+    if comparison_log_path is not None:
+        try:
+            comparison_log_path.parent.mkdir(parents=True, exist_ok=True)
+            log_handle = comparison_log_path.open("w", encoding="utf-8", newline="\n")
+            header = {
+                "record_type": "run",
+                "app": APP_NAME,
+                "version": APP_VERSION,
+                "generated": datetime.now().isoformat(timespec="seconds"),
+                "tracks_total": len(tracks),
+                "tracks_with_fingerprints": indexed,
+                "candidate_pairs": total_candidates,
+                "candidate_token_buckets": total_buckets,
+                "thresholds": {
+                    "strict": {
+                        "score_max": FP_AUTO_SCORE,
+                        "good_fraction_min": FP_AUTO_GOOD_FRACTION,
+                        "excellent_fraction_min": FP_AUTO_EXCELLENT_FRACTION,
+                        "median_max": FP_AUTO_MEDIAN_MAX,
+                        "p90_max": FP_AUTO_P90_MAX,
+                        "overlap_min": FP_MIN_OVERLAP,
+                    },
+                    "mastering": {
+                        "score_max": FP_MASTERING_SCORE,
+                        "good_fraction_min": FP_MASTERING_GOOD_FRACTION,
+                        "median_max": FP_MASTERING_MEDIAN_MAX,
+                        "p90_max": FP_MASTERING_P90_MAX,
+                        "overlap_min": FP_MASTERING_MIN_OVERLAP,
+                        "duration_delta_seconds_max": FP_MASTERING_MAX_DURATION_SECONDS,
+                        "duration_delta_ratio_max": FP_MASTERING_MAX_DURATION_RATIO,
+                    },
+                    "length_gate": {
+                        "length_ratio_min": 0.94,
+                        "duration_delta_seconds_or_ratio": "12.0 seconds or 6% of longer track; unmatched part must be silence",
+                    },
+                    "candidate_duration_window": "max(6.0 seconds, 3.5% of longer track)",
+                    "token_candidate_min_shared_buckets": 2,
+                },
+            }
+            log_handle.write(json.dumps(header, ensure_ascii=False) + "\n")
+        except Exception as exc:
+            notes.append(f"Comparison log unavailable: {exc}")
+            log_handle = None
+
+    def log_comparison(pair_index: int, a: int, b: int, matched: bool, sim) -> None:
+        pair = (a, b)
+        processed_pairs.add(pair)
+        if log_handle is None:
+            return
+
+        first = tracks[a]
+        second = tracks[b]
+        shared_tokens = int(pair_counts.get(pair, 0))
+        duration_delta = abs(first.duration - second.duration)
+        duration_limit = max(6.0, 0.035 * max(first.duration, second.duration))
+        reasons: List[str] = []
+        if shared_tokens >= 2:
+            reasons.append("fingerprint_tokens")
+        if pair in duration_candidate_pairs:
+            reasons.append("duration_fallback")
+
+        details = _comparison_decision_details(
+            first.fingerprint,
+            first.duration,
+            second.fingerprint,
+            second.duration,
+            matched,
+            sim,
+        )
+        if matched:
+            log_counts["matched"] += 1
+            for route in details.get("accepted_by", []):
+                log_counts[f"matched_{route}"] += 1
+        else:
+            log_counts["rejected"] += 1
+            if not details.get("similarity_available"):
+                log_counts["rejected_no_similarity"] += 1
+            elif details.get("strict_pass") or details.get("mastering_pass"):
+                log_counts["rejected_length_gate"] += 1
+            else:
+                log_counts["rejected_thresholds"] += 1
+
+        if reasons == ["fingerprint_tokens"]:
+            log_counts["candidate_tokens_only"] += 1
+        elif reasons == ["duration_fallback"]:
+            log_counts["candidate_duration_only"] += 1
+        else:
+            log_counts["candidate_tokens_and_duration"] += 1
+
+        row = {
+            "record_type": "comparison",
+            "pair_index": pair_index,
+            "pair_total": total_candidates,
+            "candidate": {
+                "reasons": reasons,
+                "shared_token_buckets": shared_tokens,
+                "duration_delta_seconds": round(duration_delta, 6),
+                "duration_candidate_limit_seconds": round(duration_limit, 6),
+            },
+            "track_a": _comparison_track_log_data(first),
+            "track_b": _comparison_track_log_data(second),
+            "decision": "MATCH" if matched else "REJECT",
+            "details": details,
+        }
+        try:
+            log_handle.write(json.dumps(row, ensure_ascii=False) + "\n")
+        except Exception as exc:
+            notes.append(f"Comparison log write error: {exc}")
 
     if total_candidates:
         workers = min(total_candidates, _compare_workers())
@@ -1709,6 +1972,7 @@ def merge_equivalent_tracks(tracks: List[Track], progress_cb=None) -> Tuple[Dict
                 results = ex.map(_compare_pair_worker, candidate_pairs, chunksize=chunksize)
                 for done, result in enumerate(results, 1):
                     a, b, matched, sim = result
+                    log_comparison(done, a, b, matched, sim)
                     if matched:
                         uf.union(a, b)
                         score, good, overlap, shift, excellent, median, p90 = sim
@@ -1723,7 +1987,10 @@ def merge_equivalent_tracks(tracks: List[Track], progress_cb=None) -> Tuple[Dict
             notes.append(f"Parallel comparison unavailable; serial fallback: {e}")
             label = "Comparing audio (serial fallback)..."
             for done, (a, b) in enumerate(candidate_pairs, 1):
+                if (a, b) in processed_pairs:
+                    continue
                 matched, sim = fingerprint_auto_match(tracks[a], tracks[b])
+                log_comparison(done, a, b, matched, sim)
                 if matched:
                     uf.union(a, b)
                     score, good, overlap, shift, excellent, median, p90 = sim
@@ -1747,6 +2014,27 @@ def merge_equivalent_tracks(tracks: List[Track], progress_cb=None) -> Tuple[Dict
         groups[gid] = ids
         for i in ids:
             tracks[i].group_id = gid
+
+    if log_handle is not None:
+        try:
+            summary = {
+                "record_type": "summary",
+                "generated": datetime.now().isoformat(timespec="seconds"),
+                "candidate_pairs": total_candidates,
+                "comparisons_logged": len(processed_pairs),
+                "recording_groups": len(groups),
+                "counts": dict(sorted(log_counts.items())),
+            }
+            log_handle.write(json.dumps(summary, ensure_ascii=False) + "\n")
+            log_handle.close()
+            notes.append(f"COMPARISON LOG: {comparison_log_path}")
+        except Exception as exc:
+            notes.append(f"Comparison log finalization error: {exc}")
+            try:
+                log_handle.close()
+            except Exception:
+                pass
+
     return groups, notes
 
 def release_explicit_state(rel: Release) -> str:
@@ -2396,6 +2684,7 @@ def analyze_prepared(
     exclude_remixes: bool = True,
     exclude_live: bool = True,
     excluded_pattern_keys: Optional[Set[str]] = None,
+    comparison_log_path: Optional[Path] = None,
 ) -> Tuple[List[Release], List[Track], Dict[int, List[int]], Set[int], List[Tuple[int, int, str]], List[str]]:
     errors: List[str] = []
     if tracks:
@@ -2433,7 +2722,11 @@ def analyze_prepared(
                 done += 1
                 progress_cb(label, done, len(fingerprint_tracks))
 
-    groups, merge_notes = merge_equivalent_tracks(tracks, progress_cb)
+    groups, merge_notes = merge_equivalent_tracks(
+        tracks,
+        progress_cb,
+        comparison_log_path,
+    )
     errors.extend(merge_notes)
     progress_cb("Optimizing release set...", 0, 1)
     selected = optimize_collection(releases, groups)
@@ -2453,6 +2746,7 @@ def analyze(
     excluded_pattern_keys: Optional[Set[str]] = None,
 ) -> Tuple[List[Release], List[Track], Dict[int, List[int]], Set[int], List[Tuple[int, int, str]], List[str]]:
     releases, tracks = prepare_analysis(existing, recycle, progress_cb)
+    comparison_log_path = _new_comparison_log_path(recycle) if use_fingerprint else None
     return analyze_prepared(
         releases,
         tracks,
@@ -2461,6 +2755,7 @@ def analyze(
         exclude_remixes,
         exclude_live,
         excluded_pattern_keys,
+        comparison_log_path,
     )
 
 
@@ -3750,6 +4045,7 @@ class App(tk.Tk):
         excluded_pattern_keys: Set[str],
     ):
         try:
+            comparison_log_path = _new_comparison_log_path(recycle)
             result = analyze_prepared(
                 releases,
                 tracks,
@@ -3758,6 +4054,7 @@ class App(tk.Tk):
                 not save_remixes,
                 not save_live,
                 excluded_pattern_keys,
+                comparison_log_path,
             )
             self.after(0, lambda result=result: self.done(existing, recycle, result))
         except Exception as exc:
@@ -3771,6 +4068,12 @@ class App(tk.Tk):
         self.progress_detail_var.set("100%")
         self._append_activity("Analysis complete")
         releases, tracks, groups, selected, reviews, notes = result
+        comparison_log = next(
+            (n.split("COMPARISON LOG:", 1)[1].strip() for n in notes if n.startswith("COMPARISON LOG:")),
+            "",
+        )
+        if comparison_log:
+            self._append_activity(f"Comparison log: {comparison_log}")
         decisions = build_release_decisions(releases, tracks, selected, reviews)
         counts = action_summary(decisions)
         recycle_kept = sum(
@@ -3785,7 +4088,11 @@ class App(tk.Tk):
         if to_move == 0:
             messagebox.showinfo(
                 APP_NAME,
-                f"No redundant releases or duplicate files found.\nRecycle releases kept: {recycle_kept}",
+                (
+                    f"No redundant releases or duplicate files found.\n"
+                    f"Recycle releases kept: {recycle_kept}"
+                    + (f"\n\nComparison log:\n{comparison_log}" if comparison_log else "")
+                ),
                 parent=self,
             )
             return
@@ -3803,6 +4110,8 @@ class App(tk.Tk):
             "Redundant releases containing remixes are placed under !Remixes.\n"
             "Redundant files inside retained releases are moved under !Duplicate Files."
         )
+        if comparison_log:
+            confirm_text += f"\n\nComparison log:\n{comparison_log}"
         confirm = messagebox.askyesno(
             APP_NAME,
             confirm_text,
