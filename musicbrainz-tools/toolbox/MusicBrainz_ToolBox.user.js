@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MusicBrainz ToolBox
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.0.5
+// @version      1.0.6
 // @description  Combined MusicBrainz release-editor, recording, barcode, search, cover-art, Disc ID, and duplicate-edit tools.
 // @author       karpuzikov
 // @license      MIT
@@ -974,9 +974,9 @@
 
         const SCRIPT_URL =
             'https://github.com/karpuzikov/userscripts/blob/main/musicbrainz-tools/toolbox/MusicBrainz_ToolBox.user.js';
-        const sessions = new Set();
-        let observer = null;
-        let scanQueued = false;
+
+        let activeSession = null;
+        let reconcileQueued = false;
 
         function pageWindow() {
             try {
@@ -1010,10 +1010,28 @@
             return tracks;
         }
 
-        function trackForRow(row) {
-            const rowId = String(row?.id || '');
-            if (!rowId) return null;
-            return releaseTracks().find(track => String(track?.elementID || '') === rowId) || null;
+        function trackForOpenButton(button) {
+            if (!button?.matches?.('button.open-ac[id^="open-ac-"]')) {
+                return null;
+            }
+
+            // Artist-credit popovers are rendered through a FloatingPortal, so
+            // the checkbox is not inside the track row. The native Edit button
+            // carries the track's uniqueID: open-ac-<track.uniqueID>.
+            const uniqueID = String(button.id || '').replace(/^open-ac-/, '');
+            if (!uniqueID || uniqueID === 'source') return null;
+
+            return releaseTracks().find(track =>
+                String(track?.uniqueID || '') === uniqueID ||
+                String(track?.elementID || '') === 'track-row-' + uniqueID
+            ) || null;
+        }
+
+        function currentOpenTrack() {
+            const button = document.querySelector(
+                '#tracklist button.open-ac[aria-controls="artist-credit-bubble"]'
+            );
+            return trackForOpenButton(button);
         }
 
         function artistId(part) {
@@ -1041,49 +1059,39 @@
             }));
         }
 
-        function individualChanged(oldPart, newPart) {
-            if (!oldPart || !newPart) return false;
-            return (
+        function partChanged(oldPart, newPart) {
+            return Boolean(oldPart && newPart) && (
                 oldPart.artistId !== artistId(newPart) ||
                 oldPart.creditedName !== creditedName(newPart)
             );
         }
 
-        function partMatchesSnapshot(part, snapshot) {
-            if (!part || !snapshot) return false;
+        function partMatchesOriginal(part, original) {
+            if (!part || !original) return false;
 
-            const targetId = artistId(part);
-            const targetName = creditedName(part);
+            const id = artistId(part);
+            const name = creditedName(part);
 
-            // When both sides have an MBID, require the same artist as well as
-            // the same credited name. This avoids changing another alias/credit
-            // for the same artist that the user did not ask to replace.
-            if (snapshot.artistId && targetId) {
-                return (
-                    snapshot.artistId === targetId &&
-                    snapshot.creditedName === targetName
-                );
+            if (original.artistId && id) {
+                return original.artistId === id &&
+                    original.creditedName === name;
             }
 
-            // New/unresolved artists may not have an MBID yet.
-            return snapshot.creditedName === targetName;
+            return original.creditedName === name;
         }
 
-        function changedMappings(originalNames, finalCredit) {
-            const finalNames = unwrap(finalCredit)?.names || [];
-            const count = Math.min(originalNames.length, finalNames.length);
+        function changedMappings(session) {
+            const finalNames = unwrap(session.track?.artistCredit)?.names || [];
+            const count = Math.min(session.originalNames.length, finalNames.length);
             const mappings = [];
 
             for (let index = 0; index < count; index++) {
-                const oldPart = originalNames[index];
-                const newPart = finalNames[index];
+                const original = session.originalNames[index];
+                const replacement = finalNames[index];
 
-                if (!individualChanged(oldPart, newPart)) continue;
+                if (!partChanged(original, replacement)) continue;
 
-                mappings.push({
-                    oldPart,
-                    newPart,
-                });
+                mappings.push({original, replacement});
             }
 
             return mappings;
@@ -1092,27 +1100,28 @@
         function replaceMatchingParts(artistCredit, mappings) {
             const credit = unwrap(artistCredit);
             const names = credit?.names;
+
             if (!Array.isArray(names) || !mappings.length) {
                 return {artistCredit: credit, replacements: 0};
             }
 
             let replacements = 0;
+
             const nextNames = names.map(part => {
                 const mapping = mappings.find(item =>
-                    partMatchesSnapshot(part, item.oldPart)
+                    partMatchesOriginal(part, item.original)
                 );
 
                 if (!mapping) return part;
 
-                const newPart = mapping.newPart;
                 replacements++;
 
                 return {
                     ...part,
-                    artist: unwrap(newPart?.artist) || part.artist,
-                    name: creditedName(newPart),
-                    // Deliberately preserve this track's join phrase. Example:
-                    // "Maître Gims feat. Quincy" -> "GIMS feat. Quincy".
+                    artist: unwrap(mapping.replacement?.artist) || part.artist,
+                    name: creditedName(mapping.replacement),
+                    // Keep the target track's own syntax:
+                    // "Maître Gims feat. Dadju" -> "GIMS feat. Dadju".
                     joinPhrase:
                         unwrap(part?.joinPhrase ?? part?.join_phrase) || '',
                 };
@@ -1171,28 +1180,28 @@
         }
 
         function applySession(session) {
-            if (session.applied) return;
+            if (!session?.checkboxChecked || session.applied) return;
             session.applied = true;
 
-            // Match native MusicBrainz semantics: only extend the operation if
-            // the checkbox was still checked when the artist editor closed.
-            if (!session.checkbox.checked) return;
-
-            const sourceTrack = session.track;
-            const finalCredit = unwrap(sourceTrack?.artistCredit);
-            const mappings = changedMappings(session.originalNames, finalCredit);
+            const mappings = changedMappings(session);
             if (!mappings.length) return;
 
             let changedTracks = 0;
             let replacedParts = 0;
 
             for (const track of releaseTracks()) {
-                if (track === sourceTrack || typeof track?.artistCredit !== 'function') {
+                if (
+                    track === session.track ||
+                    typeof track?.artistCredit !== 'function'
+                ) {
                     continue;
                 }
 
-                const current = track.artistCredit();
-                const result = replaceMatchingParts(current, mappings);
+                const result = replaceMatchingParts(
+                    track.artistCredit(),
+                    mappings
+                );
+
                 if (!result.replacements) continue;
 
                 track.artistCredit(result.artistCredit);
@@ -1202,125 +1211,154 @@
 
             if (replacedParts) {
                 appendScriptLinkToEditNote();
+
                 console.info(
-                    '[MusicBrainz ToolBox] Individual artist replacement: ' +
-                    replacedParts + ' artist credit part(s) changed across ' +
-                    changedTracks + ' track(s).'
+                    '[MusicBrainz ToolBox] Changed ' +
+                    replacedParts + ' matching individual artist credit part(s) ' +
+                    'across ' + changedTracks + ' track(s).'
                 );
             }
         }
 
-        function createSession(checkbox) {
-            const row = checkbox.closest('tr.track');
-            const track = trackForRow(row);
-            if (!row || !track || typeof track.artistCredit !== 'function') return null;
+        function startSession(track) {
+            if (!track || typeof track.artistCredit !== 'function') return null;
 
-            const session = {
-                row,
+            activeSession = {
                 track,
-                checkbox,
                 originalNames: snapshotArtistCredit(track.artistCredit()),
+                checkboxChecked: false,
+                sawDialog: false,
                 applied: false,
-                closing: false,
             };
 
-            sessions.add(session);
-            return session;
+            return activeSession;
         }
 
-        function sessionForTrack(track) {
-            for (const session of sessions) {
-                if (session.track === track && !session.applied) return session;
-            }
-            return null;
+        function finishSession(session) {
+            if (!session || session.applied) return;
+
+            // MusicBrainz performs its built-in whole-credit propagation in a
+            // React effect when the popover closes. Run afterwards, then extend
+            // it to partial/individual artist matches.
+            setTimeout(() => applySession(session), 75);
         }
 
-        function ensureSession(checkbox) {
-            const row = checkbox.closest('tr.track');
-            const track = trackForRow(row);
-            if (!track) return null;
+        function reconcileDialog() {
+            reconcileQueued = false;
 
-            const existing = sessionForTrack(track);
-            if (existing) {
-                existing.checkbox = checkbox;
-                existing.row = row;
-                return existing;
-            }
+            const dialog = document.getElementById('artist-credit-bubble');
+            const openTrack = dialog ? currentOpenTrack() : null;
 
-            return createSession(checkbox);
-        }
-
-        function scan() {
-            scanQueued = false;
-
-            const tracklist = document.getElementById('tracklist');
-            if (!tracklist) return;
-
-            for (const checkbox of tracklist.querySelectorAll(
-                'input#change-matching-artists'
-            )) {
-                ensureSession(checkbox);
-            }
-
-            for (const session of [...sessions]) {
-                if (session.applied) {
-                    sessions.delete(session);
-                    continue;
+            if (dialog && openTrack) {
+                if (!activeSession) {
+                    startSession(openTrack);
+                } else if (activeSession.track !== openTrack) {
+                    const previous = activeSession;
+                    activeSession = null;
+                    finishSession(previous);
+                    startSession(openTrack);
                 }
 
-                if (session.checkbox.isConnected) continue;
+                activeSession.sawDialog = true;
 
-                // React can occasionally replace the checkbox node while keeping
-                // the same artist editor open. Transfer the session instead of
-                // mistaking that re-render for a close.
-                const replacement = session.row?.querySelector(
+                const checkbox = dialog.querySelector(
                     'input#change-matching-artists'
                 );
-
-                if (replacement) {
-                    session.checkbox = replacement;
-                    continue;
+                if (checkbox) {
+                    activeSession.checkboxChecked = checkbox.checked;
                 }
 
-                if (session.closing) continue;
-                session.closing = true;
-
-                // Let MusicBrainz finish its own full-credit propagation first,
-                // then extend it to individual matches.
-                setTimeout(() => {
-                    applySession(session);
-                    sessions.delete(session);
-                }, 0);
-            }
-        }
-
-        function queueScan() {
-            if (scanQueued) return;
-            scanQueued = true;
-            queueMicrotask(scan);
-        }
-
-        function start() {
-            const tracklist = document.getElementById('tracklist');
-            if (!tracklist) {
-                setTimeout(start, 250);
                 return;
             }
 
-            scan();
-
-            observer = new MutationObserver(queueScan);
-            observer.observe(tracklist, {
-                childList: true,
-                subtree: true,
-            });
-
-            window.addEventListener('pagehide', () => observer?.disconnect(), {
-                once: true,
-            });
+            if (!dialog && activeSession?.sawDialog) {
+                const finished = activeSession;
+                activeSession = null;
+                finishSession(finished);
+            }
         }
 
-        start();
+        function queueReconcile() {
+            if (reconcileQueued) return;
+            reconcileQueued = true;
+            queueMicrotask(reconcileDialog);
+        }
+
+        // Capture the original individual artist parts BEFORE React opens the
+        // popover and the user can edit them.
+        document.addEventListener('click', event => {
+            const button = event.target?.closest?.(
+                '#tracklist button.open-ac[id^="open-ac-"]'
+            );
+
+            if (button) {
+                const alreadyOpen =
+                    button.getAttribute('aria-controls') === 'artist-credit-bubble';
+
+                if (!alreadyOpen) {
+                    const track = trackForOpenButton(button);
+                    if (track) startSession(track);
+                }
+            }
+
+            const navigation = event.target?.closest?.(
+                '#artist-credit-bubble #next-track-ac, ' +
+                '#artist-credit-bubble #prev-track-ac'
+            );
+
+            if (navigation && activeSession) {
+                const checkbox = document.querySelector(
+                    '#artist-credit-bubble input#change-matching-artists'
+                );
+                if (checkbox) {
+                    activeSession.checkboxChecked = checkbox.checked;
+                }
+            }
+        }, true);
+
+        document.addEventListener('change', event => {
+            const checkbox = event.target;
+            if (
+                activeSession &&
+                checkbox?.matches?.(
+                    '#artist-credit-bubble input#change-matching-artists'
+                )
+            ) {
+                activeSession.checkboxChecked = checkbox.checked;
+            }
+        }, true);
+
+        // Done submits the native artist-credit form. Capture the checkbox
+        // before MusicBrainz removes the FloatingPortal.
+        document.addEventListener('submit', event => {
+            if (
+                !activeSession ||
+                !event.target?.closest?.('#artist-credit-bubble')
+            ) {
+                return;
+            }
+
+            const checkbox = document.querySelector(
+                '#artist-credit-bubble input#change-matching-artists'
+            );
+            if (checkbox) {
+                activeSession.checkboxChecked = checkbox.checked;
+            }
+
+            const finished = activeSession;
+            activeSession = null;
+            finishSession(finished);
+        }, true);
+
+        // Handles closing by clicking outside, Escape, Next/Previous, and
+        // programmatically-opened neighboring tracks.
+        const observer = new MutationObserver(queueReconcile);
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true,
+        });
+
+        reconcileDialog();
     })();
     }
 
