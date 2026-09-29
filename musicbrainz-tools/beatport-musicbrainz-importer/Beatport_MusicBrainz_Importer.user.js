@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Beatport - MusicBrainz Importer
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.1.0
+// @version      1.1.1
 // @description  Import Beatport releases into MusicBrainz with reverse-linked artists/labels, ISRC recording matching, and barcode-based release sources.
 // @author       karpuzikov
 // @match        https://www.beatport.com/*
@@ -575,6 +575,21 @@
             }
         }
 
+        const resolvedArtists = new Map(
+            artists
+                .filter(artist => artist.mbid)
+                .map(artist => [artistKey(artist), { mbid: artist.mbid, mbName: artist.mbName }])
+        );
+        for (const artist of [
+            ...(release?.artists || []),
+            ...tracks.flatMap(track => track?.artists || []),
+        ]) {
+            const resolved = resolvedArtists.get(artistKey(artist));
+            if (!resolved) continue;
+            artist.mbid = resolved.mbid;
+            artist.mbName = resolved.mbName || artist.name;
+        }
+
         return {
             artistCount: artists.length,
             linkedArtists,
@@ -941,7 +956,7 @@
             'Existing recordings were matched by Beatport ISRC where the result was unambiguous.',
         ];
         if (extraSources.length) {
-            editNoteLines.push(`Additional release URLs found from barcode-linked MusicBrainz data: ${extraSources.length}.`);
+            editNoteLines.push(`Additional release URLs found from barcode/reverse-link lookups: ${extraSources.length}.`);
         }
         editNoteLines.push(`Importer: ${GITHUB_SCRIPT_URL}`);
         params.push(['edit_note', editNoteLines.join('\n')]);
@@ -966,6 +981,7 @@
                 beatportReleaseId: String(release.id),
                 sourceUrl,
                 title,
+                barcode: String(release?.upc || ''),
                 isrcs: remainingIsrcs,
                 createdAt: Date.now(),
             },
@@ -1025,7 +1041,7 @@
     function openMusicBrainzSearch(importData, tracks) {
         const title = importData.pending.title || '';
         const artist = importData.releaseCredits.map(credit => credit.artist_name).join(', ');
-        const barcode = tracks?.release?.upc || '';
+        const barcode = importData.pending.barcode || '';
         const queryParts = [
             `artist:(${artist})`,
             `release:(${title})`,
