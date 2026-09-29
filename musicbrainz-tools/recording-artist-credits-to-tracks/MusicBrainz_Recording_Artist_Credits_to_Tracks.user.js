@@ -5,8 +5,8 @@
 // @description  Copies linked recording titles and artist credits to the corresponding tracks in the MusicBrainz release editor.
 // @author       karpuzikov
 // @license      MIT
-// @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/recording-artist-credits-to-tracks/MusicBrainz_Recording_Artist_Credits_to_Tracks.user.js?v=1.2.0
-// @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/recording-artist-credits-to-tracks/MusicBrainz_Recording_Artist_Credits_to_Tracks.user.js?v=1.2.0
+// @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/recording-artist-credits-to-tracks/MusicBrainz_Recording_Artist_Credits_to_Tracks.user.js
+// @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/recording-artist-credits-to-tracks/MusicBrainz_Recording_Artist_Credits_to_Tracks.user.js
 // @supportURL   https://github.com/karpuzikov/userscripts
 // @match        https://musicbrainz.org/release/add*
 // @match        https://musicbrainz.org/release/*/edit*
