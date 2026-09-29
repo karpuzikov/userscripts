@@ -1,9 +1,12 @@
 name: Userscript distribution check
 
 on:
+  # Published userscripts use immutable README install links. A script update is
+  # therefore committed first, then README is updated to pin that exact commit.
+  # Running on the first commit would always report a stale README link and send
+  # a false failure notification. Validate pushes after the README update instead.
   push:
     paths:
-      - "**/*.user.js"
       - "README.md"
       - "SOFTWARE_RULES.md"
       - ".github/workflows/userscript-distribution-check.yml"
@@ -18,7 +21,7 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
