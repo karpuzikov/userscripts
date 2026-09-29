@@ -1,23 +1,113 @@
 // ==UserScript==
-// @name         Harmony - Link External IDs in One Click
+// @name         Harmony ToolBox
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.2.7
-// @description  Adds all-in-one and per-type fast submission of Harmony MusicBrainz external-ID edits without opening one edit tab per entity.
+// @version      1.0.0
+// @description  Combines Harmony ISRC copying and one-click MusicBrainz external-ID linking.
 // @author       karpuzikov
 // @license      MIT
-// @match        https://harmony.pulsewidth.org.uk/release/actions*
+// @match        https://harmony.pulsewidth.org.uk/release*
 // @match        https://musicbrainz.org/release-group/*
-// @exclude      https://musicbrainz.org/release-group/*/*
 // @connect      musicbrainz.org
-// @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/harmony-link-external-ids-one-click/Harmony_Link_External_IDs_in_One_Click.user.js
-// @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/harmony-link-external-ids-one-click/Harmony_Link_External_IDs_in_One_Click.user.js
+// @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/harmony-toolbox/Harmony_ToolBox.user.js
+// @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/harmony-toolbox/Harmony_ToolBox.user.js
+// @supportURL   https://github.com/karpuzikov/userscripts
 // @grant        GM_getValue
 // @grant        GM_setValue
 // @grant        GM_openInTab
 // @grant        GM_xmlhttpRequest
+// @grant        GM_setClipboard
 // @run-at       document-idle
 // ==/UserScript==
 
+// Copy ISRCs
+(() => {
+    'use strict';
+
+    if (!/^\/release\/?$/.test(location.pathname)) return;
+
+    const BUTTON_CLASS = 'harmony-copy-isrcs';
+
+    function getISRCs(tracklist) {
+        return [...tracklist.querySelectorAll('code.isrc')]
+            .map((element) => element.textContent.replace(/\s+/g, '').trim())
+            .filter(Boolean);
+    }
+
+    function copyText(text) {
+        if (typeof GM_setClipboard === 'function') {
+            GM_setClipboard(text, 'text');
+            return Promise.resolve();
+        }
+
+        return navigator.clipboard.writeText(text);
+    }
+
+    function setButtonText(button, text) {
+        const original = button.dataset.originalText || 'Copy ISRCs';
+
+        button.textContent = text;
+
+        clearTimeout(button._restoreTimer);
+        button._restoreTimer = setTimeout(() => {
+            button.textContent = original;
+        }, 1400);
+    }
+
+    function addButton(tracklist) {
+        const caption = tracklist.querySelector(':scope > caption');
+
+        if (!caption || caption.querySelector(`.${BUTTON_CLASS}`)) {
+            return;
+        }
+
+        const button = document.createElement('button');
+
+        button.type = 'button';
+        button.className = BUTTON_CLASS;
+        button.dataset.originalText = 'Copy ISRCs';
+        button.textContent = 'Copy ISRCs';
+        button.title = 'Copy all ISRCs from this tracklist';
+
+        Object.assign(button.style, {
+            marginLeft: '0.5rem',
+            padding: '0.2rem 0.55rem',
+            cursor: 'pointer',
+            verticalAlign: 'middle'
+        });
+
+        button.addEventListener('click', async () => {
+            const isrcs = getISRCs(tracklist);
+
+            if (!isrcs.length) {
+                setButtonText(button, 'No ISRCs');
+                return;
+            }
+
+            try {
+                await copyText(isrcs.join('\n'));
+                setButtonText(button, `Copied ${isrcs.length}`);
+            } catch (error) {
+                console.error('Harmony - Copy ISRCs:', error);
+                setButtonText(button, 'Copy failed');
+            }
+        });
+
+        caption.appendChild(button);
+    }
+
+    function init() {
+        document.querySelectorAll('table.tracklist').forEach(addButton);
+    }
+
+    init();
+
+    new MutationObserver(init).observe(document.body, {
+        childList: true,
+        subtree: true
+    });
+})();
+
+// Link External IDs in One Click
 (() => {
     'use strict';
 
@@ -27,7 +117,7 @@
     const RUNNER_STALE_AFTER_MS = 8000;
     const RUNNER_HEARTBEAT_MS = 2000;
     const ALLOWED_ENTITY_TYPES = new Set(['artist', 'label', 'recording']);
-    const SCRIPT_GITHUB_URL = 'https://github.com/karpuzikov/userscripts/blob/main/musicbrainz-tools/harmony-link-external-ids-one-click/Harmony_Link_External_IDs_in_One_Click.user.js';
+    const SCRIPT_GITHUB_URL = 'https://github.com/karpuzikov/userscripts/blob/main/musicbrainz-tools/harmony-toolbox/Harmony_ToolBox.user.js';
 
     function readQueue() {
         return GM_getValue(QUEUE_KEY, null);
