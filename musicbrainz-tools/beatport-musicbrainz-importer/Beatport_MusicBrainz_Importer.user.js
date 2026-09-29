@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Beatport - MusicBrainz Importer
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.1.1
+// @version      1.1.2
 // @description  Import Beatport releases into MusicBrainz with reverse-linked artists/labels, ISRC recording matching, and barcode-based release sources.
 // @author       karpuzikov
 // @match        https://www.beatport.com/*
@@ -248,17 +248,62 @@
         });
     }
 
-    async function mbJson(path, { allow404 = false } = {}) {
-        const wait = Math.max(0, nextMbRequestAt - Date.now());
-        if (wait) await sleep(wait);
-        nextMbRequestAt = Date.now() + MB_REQUEST_GAP_MS;
+    function mbHttpGet(url) {
+        return new Promise((resolve, reject) => {
+            GM_xmlhttpRequest({
+                method: 'GET',
+                url,
+                headers: { Accept: 'application/json' },
+                timeout: 20000,
+                onload(response) {
+                    resolve(response);
+                },
+                ontimeout() {
+                    reject(new Error('MusicBrainz request timed out'));
+                },
+                onerror() {
+                    reject(new Error('MusicBrainz request failed'));
+                },
+            });
+        });
+    }
 
-        const response = await gmTextRequest(
-            path.startsWith('http') ? path : MB_WS + path,
-            { headers: { Accept: 'application/json' }, allow404 }
-        );
-        if (!response) return null;
-        return JSON.parse(response.text);
+    function retryAfterMs(response) {
+        const headers = String(response?.responseHeaders || '');
+        const match = headers.match(/^retry-after:\s*(\d+)/im);
+        return match ? Number(match[1]) * 1000 : 0;
+    }
+
+    async function mbJson(path, { allow404 = false } = {}) {
+        const url = path.startsWith('http') ? path : MB_WS + path;
+
+        for (let attempt = 0; attempt < 3; attempt++) {
+            const wait = Math.max(0, nextMbRequestAt - Date.now());
+            if (wait) await sleep(wait);
+            nextMbRequestAt = Date.now() + MB_REQUEST_GAP_MS;
+
+            const response = await mbHttpGet(url);
+
+            if (response.status === 429 || response.status === 503) {
+                if (attempt === 2) {
+                    throw new Error(`MusicBrainz is temporarily unavailable/rate limiting requests (HTTP ${response.status})`);
+                }
+                await sleep(Math.max(
+                    5000 * (attempt + 1),
+                    retryAfterMs(response),
+                ));
+                continue;
+            }
+
+            if (allow404 && response.status === 404) return null;
+            if (response.status < 200 || response.status >= 400) {
+                throw new Error(`MusicBrainz API HTTP ${response.status}: ${url}`);
+            }
+
+            return JSON.parse(response.responseText);
+        }
+
+        throw new Error('MusicBrainz request did not complete');
     }
 
     function artistKey(artist) {
@@ -668,30 +713,19 @@
         return { reason: 'ISRC is linked to multiple recordings with the same matching title; review manually' };
     }
 
-    function escapeLuceneTerm(value) {
-        return String(value ?? '').replace(/[+\-!(){}\[\]^"~*?:\\/|&]/g, char => '\\' + char);
-    }
-
     async function resolveRecordingsByIsrc(tracks, setStatus) {
         const wantedCodes = [...new Set(tracks.map(track => normalizeIsrc(track?.isrc)).filter(Boolean))];
-        const candidatesByIsrc = new Map(wantedCodes.map(code => [code, []]));
+        const candidatesByIsrc = new Map();
 
-        for (let offset = 0; offset < wantedCodes.length; offset += 20) {
-            const chunk = wantedCodes.slice(offset, offset + 20);
-            setStatus(`Matching recordings by ISRC (${Math.min(offset + chunk.length, wantedCodes.length)}/${wantedCodes.length})...`);
+        for (let index = 0; index < wantedCodes.length; index++) {
+            const code = wantedCodes[index];
+            setStatus(`Matching recordings by ISRC (${index + 1}/${wantedCodes.length})...`);
 
-            const query = chunk.map(code => `isrc:${escapeLuceneTerm(code)}`).join(' OR ');
-            const data = await mbJson(`/recording?query=${encodeURIComponent(query)}&fmt=json&limit=100`);
-            const recordings = data?.recordings || [];
-
-            for (const candidate of recordings) {
-                for (const code of candidate.isrcs || []) {
-                    const normalized = normalizeIsrc(code);
-                    if (candidatesByIsrc.has(normalized)) {
-                        candidatesByIsrc.get(normalized).push(candidate);
-                    }
-                }
-            }
+            const data = await mbJson(
+                `/isrc/${encodeURIComponent(code)}?fmt=json&inc=artist-credits`,
+                { allow404: true }
+            );
+            candidatesByIsrc.set(code, Array.isArray(data?.recordings) ? data.recordings : []);
         }
 
         let matched = 0;
