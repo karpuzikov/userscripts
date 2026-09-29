@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Beatport - MusicBrainz Importer
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.2.1
+// @version      1.2.2
 // @description  Import Beatport and BPTopTracker releases into MusicBrainz with Beatport enrichment, ISRC matching, and release-source handling.
 // @author       karpuzikov
 // @match        https://www.beatport.com/*
@@ -1163,28 +1163,25 @@
     }
 
     function makeButton(text, primary = false) {
-        const nativeControl = document.querySelector(
-            'div[class^="ReleaseDetailCard-style__Controls"] button, ' +
-            'div[class^="ReleaseDetailCard-style__Controls"] a[class]'
-        );
+        const selector = primary
+            ? 'button[class*="Button_primary__"]'
+            : 'button[class*="Button_text__"]';
 
+        const nativeButton = document.querySelector(selector);
         const button = document.createElement('button');
         button.type = 'button';
         button.textContent = text;
 
-        if (nativeControl?.className && typeof nativeControl.className === 'string') {
-            button.className = nativeControl.className;
+        if (nativeButton?.className && typeof nativeButton.className === 'string') {
+            button.className = nativeButton.className;
         } else {
-            // Layout-only fallback. Visual properties inherit from Beatport.
-            button.style.font = 'inherit';
-            button.style.color = 'inherit';
-            button.style.background = 'transparent';
-            button.style.border = '1px solid currentColor';
-            button.style.borderRadius = 'inherit';
-            button.style.padding = '0.5em 0.85em';
+            // Current Beatport CSS-module fallbacks; visual styling still comes
+            // from Beatport's own stylesheet rather than custom importer CSS.
+            button.className = primary
+                ? 'Button_button__exqP_ Button_primary__DEC_1'
+                : 'Button_button__exqP_ Button_text__bvVGC';
         }
 
-        button.dataset.mbImporterPrimary = primary ? '1' : '0';
         return button;
     }
 
@@ -1194,57 +1191,74 @@
         return controls || infoArea || null;
     }
 
-    function displayBarcodeBelowCatalogNumber(release) {
+    function removeImporterMetadata() {
         document.getElementById('beatport-mb-barcode-row')?.remove();
+        document.getElementById('beatport-mb-release-artist-row')?.remove();
+        document.getElementById('beatport-mb-status-row')?.remove();
+    }
+
+    function releaseMetaElements() {
+        const meta = document.querySelector('div[class^="ReleaseDetailCard-style__Meta"]');
+        if (!meta) return null;
+
+        const template = meta.querySelector('div[class^="ReleaseDetailCard-style__Info"]');
+        const controls = meta.querySelector('div[class^="ReleaseDetailCard-style__Controls"]');
+        if (!template || !controls) return null;
+
+        return {meta, template, controls};
+    }
+
+    function makeNativeInfoRow(id, label, value) {
+        const parts = releaseMetaElements();
+        if (!parts || !value) return null;
+
+        document.getElementById(id)?.remove();
+
+        const row = document.createElement('div');
+        row.id = id;
+        row.className = parts.template.className;
+
+        const labelElement = document.createElement('p');
+        labelElement.textContent = label;
+
+        const valueElement = document.createElement('span');
+        valueElement.textContent = value;
+
+        row.append(labelElement, valueElement);
+        parts.controls.insertAdjacentElement('beforebegin', row);
+        return row;
+    }
+
+    function displayReleaseMetadata(release, tracks) {
+        document.getElementById('beatport-mb-barcode-row')?.remove();
+        document.getElementById('beatport-mb-release-artist-row')?.remove();
 
         const barcode = normalizeSpace(release?.upc);
-        const catalog = normalizeSpace(release?.catalog_number);
-        if (!barcode || !catalog) return;
+        const releaseArtists = determineReleaseArtists(release, tracks)
+            .map(credit => normalizeSpace(credit.credited_name || credit.artist_name))
+            .filter(Boolean)
+            .join(', ');
 
-        const scope =
-            document.querySelector('div[class^="ReleaseDetailCard-style__Info"]') ||
-            document.querySelector('main') ||
-            document.body;
-
-        const candidates = [...scope.querySelectorAll('div, p, li, dt, dd, span')];
-        let catalogElement = candidates.find(element => {
-            const text = normalizeSpace(element.textContent);
-            return text === catalog;
-        });
-
-        if (!catalogElement) {
-            catalogElement = candidates.find(element => {
-                const text = normalizeSpace(element.textContent);
-                return text.includes(catalog) &&
-                    text.toLocaleLowerCase().includes('catalog') &&
-                    text.length < 180;
-            });
+        if (barcode) {
+            makeNativeInfoRow('beatport-mb-barcode-row', 'Barcode', barcode);
         }
 
-        if (!catalogElement) return;
-
-        let row = catalogElement;
-        for (let i = 0; i < 4 && row.parentElement && row.parentElement !== scope; i++) {
-            const parentText = normalizeSpace(row.parentElement.textContent);
-            if (
-                parentText.includes(catalog) &&
-                parentText.toLocaleLowerCase().includes('catalog') &&
-                parentText.length < 220
-            ) {
-                row = row.parentElement;
-            } else {
-                break;
-            }
+        if (releaseArtists) {
+            makeNativeInfoRow(
+                'beatport-mb-release-artist-row',
+                'Release Artist',
+                releaseArtists
+            );
         }
+    }
 
-        const barcodeRow = document.createElement('div');
-        barcodeRow.id = 'beatport-mb-barcode-row';
-        barcodeRow.textContent = `Barcode: ${barcode}`;
-        barcodeRow.style.marginTop = '4px';
-        barcodeRow.style.fontSize = 'inherit';
-        barcodeRow.style.lineHeight = 'inherit';
-
-        row.insertAdjacentElement('afterend', barcodeRow);
+    function setNativeStatus(text) {
+        const value = normalizeSpace(text);
+        if (!value) {
+            document.getElementById('beatport-mb-status-row')?.remove();
+            return;
+        }
+        makeNativeInfoRow('beatport-mb-status-row', 'MusicBrainz', value);
     }
 
     function makeUiBox() {
@@ -1287,9 +1301,6 @@
         const box = makeUiBox();
         const allIsrcs = tracks.map(track => normalizeIsrc(track?.isrc)).filter(Boolean);
         const baseImportData = buildImport(release, tracks, []);
-        const mainArtists = baseImportData.releaseCredits
-            .map(credit => credit.credited_name || credit.artist_name)
-            .join(', ');
 
         const importButton = makeButton('Import to MusicBrainz', true);
         importButton.title = 'Start MusicBrainz lookups, then open the release editor with the enriched Beatport metadata';
@@ -1303,21 +1314,6 @@
         isrcButton.disabled = allIsrcs.length === 0;
         isrcButton.addEventListener('click', () => openAllIsrcs(release, tracks));
 
-        const status = document.createElement('span');
-        status.setAttribute('role', 'status');
-        status.style.font = 'inherit';
-        status.textContent = 'Ready - no MusicBrainz lookups have been run.';
-
-        const info = document.createElement('span');
-        info.style.font = 'inherit';
-        info.style.opacity = '0.72';
-        info.textContent = [
-            `Barcode: ${release?.upc || 'none'}`,
-            `${tracks.length} tracks`,
-            `${allIsrcs.length} ISRCs`,
-            `release artist: ${mainArtists}`,
-        ].join(' | ');
-
         importButton.addEventListener('click', async () => {
             if (serial !== processSerial) return;
 
@@ -1325,7 +1321,7 @@
             searchButton.disabled = true;
 
             const setStatus = text => {
-                if (status.isConnected) status.textContent = text;
+                setNativeStatus(text);
             };
 
             try {
@@ -1357,7 +1353,7 @@
             }
         });
 
-        box.append(importButton, searchButton, isrcButton, status, info);
+        box.append(importButton, searchButton, isrcButton);
     }
 
     async function processBeatportRelease() {
@@ -1365,6 +1361,7 @@
 
         if (!releasePathParts()) {
             document.getElementById(UI_ID)?.remove();
+            removeImporterMetadata();
             return;
         }
 
@@ -1388,16 +1385,14 @@
                 );
             }
 
-            displayBarcodeBelowCatalogNumber(release);
+            displayReleaseMetadata(release, tracks);
+            setNativeStatus('');
             installIdleUi(release, tracks, serial);
         } catch (error) {
             console.error('[Beatport MB Importer]', error);
             if (serial !== processSerial) return;
-            const box = makeUiBox();
-            const status = document.createElement('span');
-            status.setAttribute('role', 'status');
-            status.textContent = `Importer error: ${error.message}`;
-            box.appendChild(status);
+            makeUiBox();
+            setNativeStatus(`Importer error: ${error.message}`);
         }
     }
 
