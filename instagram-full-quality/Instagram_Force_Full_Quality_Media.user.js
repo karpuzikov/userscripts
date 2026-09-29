@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Instagram Force Full Quality Media
 // @namespace    https://www.instagram.com/
-// @version      4.0.0
+// @version      4.1.0
 // @description  Forces the highest-quality Instagram post/Reel media while leaving profile/search/explore thumbnails untouched.
 // @match        https://www.instagram.com/*
 // @run-at       document-start
@@ -21,8 +21,11 @@
         API_RETRY_MS: 6000
     };
 
-    const IG_APP_ID = '936619743392459';
+    const IG_APP_ID_FALLBACK = '936619743392459';
     const IG_ASBD_ID = '129477';
+    const IG_QUERY_ID = '9496392173716084';
+
+    let detectedAppId = '';
     const SHORTCODE_ALPHABET =
         'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
 
@@ -66,6 +69,22 @@
 
     function currentShortcode() {
         return shortcodeFromUrl(location.href);
+    }
+
+    function getInstagramAppId() {
+        if (detectedAppId) return detectedAppId;
+
+        for (const script of document.querySelectorAll('script[type="application/json"]')) {
+            const text = script.textContent || '';
+            const match = text.match(/"APP_ID":"([0-9]+)"/);
+
+            if (match?.[1]) {
+                detectedAppId = match[1];
+                return detectedAppId;
+            }
+        }
+
+        return IG_APP_ID_FALLBACK;
     }
 
     function shortcodeToMediaPk(shortcode) {
@@ -196,6 +215,20 @@
         });
     }
 
+    function imageTransformPenalty(candidate) {
+        try {
+            const stp = new URL(candidate.url, location.href)
+                .searchParams.get('stp');
+
+            // Instagram's "stp" parameter describes server-side image
+            // transformations. For otherwise equivalent candidates, prefer
+            // the least transformed URL.
+            return stp ? stp.length : 0;
+        } catch {
+            return Number.MAX_SAFE_INTEGER;
+        }
+    }
+
     function bestImage(item) {
         return allImageCandidates(item)
             .sort((a, b) => {
@@ -203,6 +236,12 @@
                     (b.width * b.height) - (a.width * a.height);
 
                 if (areaDiff) return areaDiff;
+
+                const transformDiff =
+                    imageTransformPenalty(a) -
+                    imageTransformPenalty(b);
+
+                if (transformDiff) return transformDiff;
 
                 const widthDiff = b.width - a.width;
                 if (widthDiff) return widthDiff;
@@ -268,6 +307,10 @@
             video_versions: Array.isArray(item.video_versions)
                 ? item.video_versions
                 : [],
+            video_dash_manifest:
+                typeof item.video_dash_manifest === 'string'
+                    ? item.video_dash_manifest
+                    : '',
             carousel_media: carousel
         };
     }
@@ -294,6 +337,47 @@
 
         if (!old || mediaRichness(compact) >= mediaRichness(old)) {
             mediaByCode.set(code, compact);
+        }
+    }
+
+    async function fetchMediaInfoFallback(code) {
+        try {
+            const variables = encodeURIComponent(JSON.stringify({
+                shortcode: code,
+                __relay_internal__pv__PolarisFeedShareMenurelayprovider: true,
+                __relay_internal__pv__PolarisIsLoggedInrelayprovider: true
+            }));
+
+            const response = await fetch(
+                `/graphql/query/?query_id=${IG_QUERY_ID}&variables=${variables}`,
+                {
+                    method: 'GET',
+                    credentials: 'include',
+                    cache: 'no-store',
+                    headers: {
+                        'Accept': '*/*',
+                        'X-IG-App-ID': getInstagramAppId(),
+                        'X-ASBD-ID': IG_ASBD_ID,
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                }
+            );
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+
+            const json = await response.json();
+
+            return (
+                json?.data
+                    ?.xdt_api__v1__media__shortcode__web_info
+                    ?.items?.[0] ||
+                null
+            );
+        } catch (error) {
+            log('GraphQL media fallback failed', code, error);
+            return null;
         }
     }
 
@@ -328,22 +412,28 @@
                         cache: 'no-store',
                         headers: {
                             'Accept': '*/*',
-                            'X-IG-App-ID': IG_APP_ID,
+                            'X-IG-App-ID': getInstagramAppId(),
                             'X-ASBD-ID': IG_ASBD_ID,
                             'X-Requested-With': 'XMLHttpRequest'
                         }
                     }
                 );
 
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}`);
+                let item = null;
+
+                if (response.ok) {
+                    const json = await response.json();
+                    item = json?.items?.[0] || null;
                 }
 
-                const json = await response.json();
-                const item = json?.items?.[0];
+                if (!item) {
+                    item = await fetchMediaInfoFallback(code);
+                }
 
                 if (!item) {
-                    throw new Error('No media item returned');
+                    throw new Error(
+                        `Media metadata unavailable (HTTP ${response.status})`
+                    );
                 }
 
                 const compact = compactMedia(item, code);
@@ -1063,5 +1153,5 @@
 
     observeDom();
 
-    console.info('[IG HQ] v4 active');
+    console.info('[IG HQ] v4.1 active');
 })();
