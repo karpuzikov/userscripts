@@ -9,8 +9,8 @@
 // @match        https://musicbrainz.org/release/*/edit*
 // @match        https://beta.musicbrainz.org/release/add*
 // @match        https://beta.musicbrainz.org/release/*/edit*
-// @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/fill-dates/MusicBrainz_Fill_Dates.user.js?v=1.0.0
-// @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/fill-dates/MusicBrainz_Fill_Dates.user.js?v=1.0.0
+// @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/fill-dates/MusicBrainz_Fill_Dates.user.js
+// @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/fill-dates/MusicBrainz_Fill_Dates.user.js
 // @grant        none
 // @run-at       document-idle
 // ==/UserScript==
