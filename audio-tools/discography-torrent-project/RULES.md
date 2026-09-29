@@ -118,7 +118,7 @@ The analyzer provides two persistent affirmative checkboxes:
 - `Save Remixes`
 - `Save Live recordings`
 
-Both are unchecked by default. Checked categories count as wanted content and may keep a release. Unchecked categories are ignored for coverage/optimization. These options never participate in duplicate identity; track identity remains audio-only.
+Both are unchecked by default. Checked categories count as wanted content and may keep a release. Unchecked categories are ignored for coverage/optimization. These options never create duplicate identity; track identity still requires a high-confidence audio match.
 
 ## 5. Explicit vs clean - future implementation
 
@@ -135,16 +135,18 @@ Future behavior, once a reliable detector exists:
 
 ## 6. Unique recording/version definition
 
-Track duplicate identity is audio-only.
+Track duplicate identity requires a high-confidence audio match.
 
-Primary and decisive identity signal:
+Primary identity signal:
 1. Chromaprint fingerprint similarity calculated from the decoded audio itself.
 
 Rules:
 
-- filenames and track titles do not create a duplicate match;
-- filenames and track titles do not block a duplicate match;
-- MusicBrainz recording IDs, ISRCs, artist credits, album names, and other tags do not create or block a duplicate match;
+- metadata never creates a duplicate match by itself; audio must pass first;
+- candidate discovery may use fingerprint-token overlap, exact MBID/ISRC indexes, or same-base-title + close-duration hints only to decide which pairs deserve the expensive audio comparison;
+- strong contradictory metadata may veto an otherwise-valid audio match when it indicates a distinct recording/version;
+- veto signals include different non-empty MusicBrainz recording MBIDs, conflicting semantic version/language descriptors, different featured/credited performers together with different ISRCs, different title/version descriptors together with different ISRCs, or different ISRCs plus different base titles;
+- a shared recording MBID remains strong identity evidence; a shared ISRC with the same credited performers may tolerate harmless packaging/edition suffixes;
 - use strict fingerprint thresholds; uncertain audio remains distinct and is retained;
 - fingerprint alignment may compensate for leading/trailing silence or padding;
 - if durations differ substantially, the unmatched fingerprint region must behave like silence/padding before the tracks may be merged;
@@ -157,7 +159,7 @@ Decoded PCM hash is not the primary detector because mastering/remastering can c
 
 Different performances/versions should remain distinct when their audio is materially different, including live, acoustic, radio edit, extended, instrumental, a cappella, remix/dub, demo, alternate mix, language performances, and similar variants.
 
-Titles may describe those variants, but titles themselves are not evidence for or against duplicate identity.
+Titles never create duplicate identity, but clear version/language/featured-credit conflicts may act as a conservative safety veto after the audio has already matched.
 
 ## 7. Source preference
 
@@ -189,7 +191,7 @@ For equivalent WEB vs WEB content, keep the existing ALAC release and move/skip 
 
 For equivalent CD vs WEB content, keep the CD release regardless of whether it is in Existing or Recycle.
 
-Release-level equivalence is based on audio-derived track groups and direct Chromaprint comparison. MBIDs, ISRCs, normalized titles, and filenames are not fallback identity tests.
+Release-level equivalence is based on audio-derived track groups and direct Chromaprint comparison. MBIDs, ISRCs, normalized titles, and filenames are not fallback identity tests that can create a match; they may only provide candidate hints or conservative post-audio conflict checks.
 
 
 ### Optional existing-discography mode
@@ -233,7 +235,7 @@ Rules:
 - sibling folders with the same release base plus `CD 1`, `CD 2`, etc. are also one logical multi-disc release and must be kept/moved together;
 - wanted track coverage is compared using audio-derived fingerprint groups;
 - a release covers another only when every wanted target track has a high-confidence audio match;
-- folder names, file names, title text, barcode text in folder names, MBIDs, ISRCs, and metadata typo tolerance must not override the audio result;
+- folder names, file names, title text, barcode text in folder names, MBIDs, ISRCs, and metadata typo tolerance must never create a duplicate result; strong contradictory recording/version metadata may conservatively block an audio merge;
 - uncertain audio remains distinct and therefore keeps the material.
 
 ### Final existing-vs-recycle safeguard
@@ -320,7 +322,7 @@ When confidence is insufficient:
 - keep both so unique material cannot be lost;
 - record the uncertainty only in optional diagnostics.
 
-Strong Chromaprint evidence can override filename/title differences because audio identity is the primary signal. Material duration differences or clearly incompatible fingerprints keep tracks separate.
+Strong Chromaprint evidence remains the primary signal, but it no longer overrides strong contradictory recording/version metadata. Material duration differences, clearly incompatible fingerprints, or a metadata safety veto keep tracks separate.
 
 ## 12. Title normalization for comparison
 
@@ -628,7 +630,7 @@ Do not flatten release folders into the duplicate root. After successful moves, 
 
 ### Intra-release duplicate-file rule
 
-- Retained releases may contain redundant audio files. Clean them conservatively only when duplicate identity is already proven by the audio-only high-confidence group and the files also represent the same logical track position/title within the same physical disc/folder.
+- Retained releases may contain redundant audio files. Clean them conservatively only when duplicate identity is already proven by the high-confidence audio group after the metadata safety gate and the files also represent the same logical track position/title within the same physical disc/folder.
 - The title/track-position check is a safety gate only; it must never create duplicate identity by itself.
 - Prefer the technically better survivor (lossless over lossy, then sample rate/bit depth/channels, then deterministic codec/container preference). Move redundant files to `!Duplicate Files`; never delete them.
 - Do not automatically remove files from CUE-based releases because exact filenames can be referenced by the CUE sheet.
