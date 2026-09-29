@@ -188,7 +188,7 @@
             if (!event.isTrusted) return;
 
             const input = event.target;
-            if (!(input instanceof HTMLInputElement)) return;
+            if (!input || typeof input.matches !== 'function') return;
             if (!input.matches('#recording-assoc-bubble input[name="recording-selection"]')) {
                 return;
             }
