@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Beatport - MusicBrainz Importer
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.2.2
+// @version      1.2.3
 // @description  Import Beatport and BPTopTracker releases into MusicBrainz with Beatport enrichment, ISRC matching, and release-source handling.
 // @author       karpuzikov
 // @match        https://www.beatport.com/*
@@ -247,28 +247,6 @@
         }
     }
 
-    function dominantNumericDirection(tracks) {
-        const ids = (tracks || [])
-            .map(track => Number(track?.id))
-            .filter(Number.isFinite);
-
-        if (ids.length < 4) return 0;
-
-        let ascending = 0;
-        let descending = 0;
-        for (let i = 1; i < ids.length; i++) {
-            if (ids[i] > ids[i - 1]) ascending++;
-            else if (ids[i] < ids[i - 1]) descending++;
-        }
-
-        const comparisons = ascending + descending;
-        if (!comparisons) return 0;
-
-        if (descending / comparisons >= 0.8) return -1;
-        if (ascending / comparisons >= 0.8) return 1;
-        return 0;
-    }
-
     function orderTracksFromDom(trackResults) {
         const byId = new Map(
             (trackResults || [])
@@ -291,6 +269,15 @@
             : null;
     }
 
+    function trackIdFromReleaseEntry(value) {
+        if (value && typeof value === 'object' && value.id != null) {
+            return String(value.id);
+        }
+
+        const raw = typeof value === 'string' ? value : value?.url;
+        return String(raw || '').match(/\/tracks\/(\d+)\/?(?:[?#].*)?$/i)?.[1] || '';
+    }
+
     function orderTracks(release, trackResults) {
         const releaseId = String(release?.id || '');
         const results = (trackResults || []).filter(track =>
@@ -306,16 +293,31 @@
         if (domOrdered) return domOrdered;
 
         /*
-         * Legacy Beatport releases return the release track query in reverse
-         * creation-ID order. Newer/reissued releases can already be in the
-         * correct order. Only reverse when the IDs strongly indicate the old
-         * descending-order behaviour; otherwise preserve Beatport's query
-         * order exactly.
+         * Beatport's release object contains its own ordered track references.
+         * Use that sequence when it covers the complete result set.
+         *
+         * Never infer track position from the numeric track ID. IDs are entity
+         * identifiers, not positions; reversing descending IDs breaks releases
+         * assembled from tracks created at different times.
          */
-        if (dominantNumericDirection(results) === -1) {
-            return [...results].reverse();
+        const byId = new Map(
+            results
+                .filter(track => track?.id != null)
+                .map(track => [String(track.id), track])
+        );
+        const releaseTrackIds = (Array.isArray(release?.tracks) ? release.tracks : [])
+            .map(trackIdFromReleaseEntry)
+            .filter(Boolean);
+
+        if (
+            releaseTrackIds.length === results.length &&
+            new Set(releaseTrackIds).size === results.length &&
+            releaseTrackIds.every(id => byId.has(id))
+        ) {
+            return releaseTrackIds.map(id => byId.get(id));
         }
 
+        // Final fallback: keep the order Beatport returned.
         return [...results];
     }
 
