@@ -136,6 +136,96 @@ def _common_barcode(files):
     return ""
 
 
+def _normalize_track_position(value):
+    if value is None:
+        return ""
+    value = str(value).strip()
+    if not value:
+        return ""
+    if "/" in value:
+        value = value.split("/", 1)[0].strip()
+    if value.isdigit():
+        return str(int(value))
+    return value.casefold()
+
+
+def _file_track_position(file_obj):
+    metadata_sources = (
+        getattr(file_obj, "orig_metadata", None),
+        getattr(file_obj, "metadata", None),
+    )
+
+    def first_value(tag):
+        for metadata in metadata_sources:
+            for value in _metadata_tag_values(metadata, tag):
+                normalized = _normalize_track_position(value)
+                if normalized:
+                    return normalized
+        return ""
+
+    return first_value("discnumber"), first_value("tracknumber")
+
+
+def _move_files_to_release_by_track_number(api, files, release_id):
+    album = api.tagger.load_album(release_id)
+
+    def place_files():
+        exact = {}
+        by_tracknumber = {}
+
+        for track in album.tracks:
+            discnumber = _normalize_track_position(track.metadata["discnumber"]) or "1"
+            tracknumber = _normalize_track_position(track.metadata["tracknumber"])
+            if not tracknumber:
+                continue
+            exact.setdefault((discnumber, tracknumber), []).append(track)
+            by_tracknumber.setdefault(tracknumber, []).append(track)
+
+        for file_obj in files:
+            discnumber, tracknumber = _file_track_position(file_obj)
+            if not tracknumber:
+                api.logger.info(
+                    "Barcode lookup resolved release %s, but file has no track number: %s",
+                    release_id,
+                    getattr(file_obj, "filename", ""),
+                )
+                continue
+
+            candidates = []
+            if discnumber:
+                candidates = exact.get((discnumber, tracknumber), [])
+            if not candidates:
+                candidates = by_tracknumber.get(tracknumber, [])
+
+            if len(candidates) == 1:
+                file_obj.move(candidates[0])
+                api.logger.info(
+                    "Barcode lookup matched %s -> release %s, disc %s, track %s",
+                    getattr(file_obj, "filename", ""),
+                    release_id,
+                    discnumber or candidates[0].metadata["discnumber"],
+                    tracknumber,
+                )
+            elif not candidates:
+                api.logger.info(
+                    "Barcode lookup resolved release %s, but track %s was not found for %s",
+                    release_id,
+                    tracknumber,
+                    getattr(file_obj, "filename", ""),
+                )
+            else:
+                api.logger.info(
+                    "Barcode lookup resolved release %s, but track %s is ambiguous without a disc number for %s",
+                    release_id,
+                    tracknumber,
+                    getattr(file_obj, "filename", ""),
+                )
+
+        album.update()
+
+    album.run_when_loaded(place_files)
+
+
 def _exact_release_barcode(release):
     if not isinstance(release, dict):
         return ""
@@ -239,7 +329,7 @@ def _start_barcode_batch_lookup(api, file_groups):
         for barcode, files in file_groups.items():
             releases = list(state["matches"][barcode].values())
             if len(releases) == 1:
-                api.tagger.move_files_to_album(files, releases[0]["id"])
+                _move_files_to_release_by_track_number(api, files, releases[0]["id"])
                 matched += 1
             elif not releases:
                 missing += 1
