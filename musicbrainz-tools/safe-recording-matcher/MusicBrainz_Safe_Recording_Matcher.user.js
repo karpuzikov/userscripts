@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MusicBrainz - Recording Matcher
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.4.8
+// @version      1.4.9
 // @description  Highlight duplicate recording links and match release tracks by metadata, highlighted duplicates, or pasted ISRCs.
 // @author       karpuzikov
 // @license      MIT
@@ -948,22 +948,57 @@
         let data = resultCache.get(cacheKey);
 
         if (!data) {
-            await throttle();
-            const response = await fetch(
-                '/ws/2/recording/' + encodeURIComponent(id) + '?fmt=json&inc=isrcs',
-                {
-                    credentials: 'same-origin',
-                    headers: {Accept: 'application/json'},
-                },
-            );
-            if (!response.ok) {
-                throw new Error('Recording ISRC verification returned HTTP ' + response.status);
+            for (let attempt = 0; attempt < 3; attempt++) {
+                await throttle();
+
+                const controller = new AbortController();
+                const timeout = setTimeout(() => controller.abort(), 12000);
+                let response;
+
+                try {
+                    response = await fetch(
+                        '/ws/2/recording/' + encodeURIComponent(id) + '?fmt=json&inc=isrcs',
+                        {
+                            credentials: 'same-origin',
+                            headers: {Accept: 'application/json'},
+                            signal: controller.signal,
+                        },
+                    );
+                } catch (error) {
+                    if (error?.name === 'AbortError') {
+                        if (attempt === 2) {
+                            throw new Error('Recording ISRC verification timed out');
+                        }
+                        continue;
+                    }
+                    throw error;
+                } finally {
+                    clearTimeout(timeout);
+                }
+
+                if (response.status === 503 || response.status === 429) {
+                    const retrySeconds = Number(response.headers.get('Retry-After'));
+                    if (attempt === 2) {
+                        throw new Error('MusicBrainz is rate limiting ISRC verification requests');
+                    }
+                    await sleep(Math.max(
+                        5000 * (attempt + 1),
+                        Number.isFinite(retrySeconds) ? retrySeconds * 1000 : 0,
+                    ));
+                    continue;
+                }
+
+                if (!response.ok) {
+                    throw new Error('Recording ISRC verification returned HTTP ' + response.status);
+                }
+
+                data = await response.json();
+                resultCache.set(cacheKey, data);
+                break;
             }
-            data = await response.json();
-            resultCache.set(cacheKey, data);
         }
 
-        return Array.isArray(data.isrcs) &&
+        return Array.isArray(data?.isrcs) &&
             data.isrcs.some(code => String(code).replace(/-/g, '').toUpperCase() === isrc);
     }
 
@@ -1296,6 +1331,7 @@
         }
 
         running = true;
+        PAGE_WINDOW.__MB_RECORDING_MATCHER_ACTIVE__ = true;
         stopRequested = false;
         button.disabled = true;
         highlightedButton.disabled = true;
@@ -1436,6 +1472,7 @@
                 status.textContent = `${stopRequested ? 'Stopped' : 'Finished'}: ${matched} matched${unchangedText}, ${review} need review, ${processed}/${rows.length} checked. Review all associations before submitting.`;
             }
         } finally {
+            PAGE_WINDOW.__MB_RECORDING_MATCHER_ACTIVE__ = false;
             running = false;
             button.disabled = false;
             isrcButton.disabled = false;
