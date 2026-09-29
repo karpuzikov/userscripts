@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MusicBrainz - Recording Data to Tracks
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.2.0
+// @version      1.2.1
 // @description  Copies linked recording titles and artist credits to the corresponding tracks in the MusicBrainz release editor.
 // @author       karpuzikov
 // @license      MIT
@@ -139,6 +139,7 @@
     }
 
     function applyCachedRecordingChoice(track) {
+        if (pageWindow().__MB_RECORDING_MATCHER_ACTIVE__) return false;
         if (!track || typeof track.recording !== 'function') return false;
         if (typeof track.hasExistingRecording === 'function' && track.hasExistingRecording()) {
             return false;
