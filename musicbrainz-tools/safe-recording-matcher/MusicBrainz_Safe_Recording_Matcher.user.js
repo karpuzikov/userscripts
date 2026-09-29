@@ -1,14 +1,14 @@
 // ==UserScript==
 // @name         MusicBrainz - Recording Matcher
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.4.4
+// @version      1.4.5
 // @description  Highlight duplicate recording links and match release tracks by metadata, highlighted duplicates, or pasted ISRCs.
 // @author       karpuzikov
 // @license      MIT
 // @match        https://musicbrainz.org/release/*
 // @match        https://beta.musicbrainz.org/release/*
-// @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/safe-recording-matcher/MusicBrainz_Safe_Recording_Matcher.user.js?v=1.4.4
-// @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/safe-recording-matcher/MusicBrainz_Safe_Recording_Matcher.user.js?v=1.4.4
+// @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/safe-recording-matcher/MusicBrainz_Safe_Recording_Matcher.user.js?v=1.4.5
+// @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/safe-recording-matcher/MusicBrainz_Safe_Recording_Matcher.user.js?v=1.4.5
 // @grant        none
 // @run-at       document-idle
 // ==/UserScript==
@@ -20,6 +20,7 @@
     const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     const MAX_DIFFERENCE_MS = 7000;
     const REQUEST_GAP_MS = 1200;
+    const ISRC_CHOICE_CACHE_KEY = 'mb-recording-matcher:isrc-choice:v1';
 
     function parseLength(value) {
         const text = String(value ?? '').trim().replace(/^\(|\)$/g, '');
@@ -194,7 +195,58 @@
         return codes;
     }
 
-    function chooseByIsrc(track, candidates) {
+    function normalizeIsrcCode(value) {
+        return String(value ?? '').replace(/-/g, '').trim().toUpperCase();
+    }
+
+    function readIsrcChoiceCache() {
+        try {
+            const parsed = JSON.parse(localStorage.getItem(ISRC_CHOICE_CACHE_KEY) || '{}');
+            return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+        } catch {
+            return {};
+        }
+    }
+
+    function writeIsrcChoiceCache(cache) {
+        try {
+            localStorage.setItem(ISRC_CHOICE_CACHE_KEY, JSON.stringify(cache));
+        } catch {
+            // Matching still works without persistence if storage is unavailable.
+        }
+    }
+
+    function cachedIsrcRecording(isrc, candidates) {
+        const code = normalizeIsrcCode(isrc);
+        if (!code) return null;
+
+        const cache = readIsrcChoiceCache();
+        const cachedId = String(cache[code] || '').toLowerCase();
+        if (!UUID.test(cachedId)) return null;
+
+        const candidate = (candidates || []).find(item =>
+            String(item?.id || '').toLowerCase() === cachedId
+        );
+
+        if (candidate) return candidate;
+
+        delete cache[code];
+        writeIsrcChoiceCache(cache);
+        return null;
+    }
+
+    function rememberIsrcChoice(isrc, recordingId) {
+        const code = normalizeIsrcCode(isrc);
+        const id = String(recordingId || '').toLowerCase();
+        if (!code || !UUID.test(id)) return false;
+
+        const cache = readIsrcChoiceCache();
+        cache[code] = id;
+        writeIsrcChoiceCache(cache);
+        return true;
+    }
+
+    function chooseByIsrc(track, candidates, isrc = '') {
         const unique = new Map();
         for (const candidate of candidates || []) {
             if (!UUID.test(candidate?.id || '') || candidate.video) continue;
@@ -203,11 +255,19 @@
 
         const all = [...unique.values()];
         if (!all.length) return {reason: 'No recording is linked to this ISRC'};
-        if (all.length > 1) {
-            return {reason: `ISRC is linked to ${all.length} recordings; review manually`};
+        if (all.length === 1) {
+            return {id: all[0].id, candidate: all[0]};
         }
 
-        return {id: all[0].id, candidate: all[0]};
+        const cached = cachedIsrcRecording(isrc, all);
+        if (cached) {
+            return {id: cached.id, candidate: cached, cached: true};
+        }
+
+        return {
+            reason: 'ISRC is linked to ' + all.length + ' recordings; choose one manually once and it will be remembered',
+            ambiguousCandidates: all,
+        };
     }
 
     function appendAttribution(note, url) {
@@ -249,6 +309,7 @@
     const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
     const resultCache = new Map();
     const artistCache = new Map();
+    const pendingIsrcChoices = new Map();
     let nextRequestAt = 0;
     let running = false;
     let stopRequested = false;
@@ -307,6 +368,41 @@
         };
     }
 
+    function watchManualIsrcChoice(row, isrc, candidates) {
+        const code = normalizeIsrcCode(isrc);
+        const candidateIds = new Set(
+            (candidates || [])
+                .map(candidate => String(candidate?.id || '').toLowerCase())
+                .filter(id => UUID.test(id))
+        );
+        if (!row || !code || candidateIds.size < 2) return;
+
+        pendingIsrcChoices.set(row, {code, candidateIds});
+        captureManualIsrcChoices();
+    }
+
+    function captureManualIsrcChoices() {
+        for (const [row, pending] of pendingIsrcChoices) {
+            if (!row?.isConnected) {
+                pendingIsrcChoices.delete(row);
+                continue;
+            }
+
+            const linkedId = String(readLinkedRecording(row).id || '').toLowerCase();
+            if (!linkedId) continue;
+
+            if (pending.candidateIds.has(linkedId)) {
+                rememberIsrcChoice(pending.code, linkedId);
+                pendingIsrcChoices.delete(row);
+
+                const panel = document.getElementById('mb-safe-recording-matcher');
+                const status = panel?.querySelector('.mb-safe-status');
+                if (status) {
+                    status.textContent = 'Remembered ISRC choice: ' + pending.code + ' -> ' + linkedId;
+                }
+            }
+        }
+    }
     function duplicateEntries() {
         if (IS_RELEASE_EDITOR) {
             return [...document.querySelectorAll('#recordings tr.track')]
@@ -416,7 +512,10 @@
     let duplicateUpdateTimer = null;
     const duplicateObserver = new MutationObserver(() => {
         clearTimeout(duplicateUpdateTimer);
-        duplicateUpdateTimer = setTimeout(updateDuplicateHighlights, 40);
+        duplicateUpdateTimer = setTimeout(() => {
+            updateDuplicateHighlights();
+            captureManualIsrcChoices();
+        }, 40);
     });
     duplicateObserver.observe(document.body, {
         subtree: true,
@@ -1037,7 +1136,7 @@
                 try {
                     if (isrc) {
                         const search = await searchByIsrc(isrc);
-                        chosen = search.reason ? {reason: search.reason} : chooseByIsrc(track, search.recordings);
+                        chosen = search.reason ? {reason: search.reason} : chooseByIsrc(track, search.recordings, isrc);
                     } else {
                         chosen = await searchRecordings(track);
                     }
@@ -1053,6 +1152,9 @@
                 }
 
                 if (!chosen.id) {
+                    if (isrc && Array.isArray(chosen.ambiguousCandidates)) {
+                        watchManualIsrcChoice(row, isrc, chosen.ambiguousCandidates);
+                    }
                     review++;
                     showResult(list, row, 'Review', `${display} - ${chosen.reason}`);
                     continue;
@@ -1090,7 +1192,13 @@
                     matched++;
                     needsAttribution = true;
                     appendNoteIfPossible();
-                    showResult(list, row, 'Matched', display + (chosen.circle ? ' - ' + chosen.circle : ''), chosen.id);
+                    showResult(
+                        list,
+                        row,
+                        chosen.cached ? 'Matched (cached ISRC choice)' : 'Matched',
+                        display + (chosen.circle ? ' - ' + chosen.circle : ''),
+                        chosen.id,
+                    );
                 } catch (error) {
                     review++;
                     showResult(list, row, 'Review', `${display} - ${error.message}`);
