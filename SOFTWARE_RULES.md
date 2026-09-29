@@ -26,3 +26,9 @@ A first-time user must be able to understand every core UI element without prior
 - Every long-running operation must visibly prove that it is active: show the current stage, a progress bar where measurable, processed/total counts, elapsed time, and a compact activity/log area when multiple stages are involved.
 - Software must not appear frozen while doing background work.
 
+## Userscript cache busting
+
+- Every userscript install URL, raw download URL, `@downloadURL`, and `@updateURL` must be cache-busted.
+- Use a versioned query string such as `?v=1.2.3` that matches the userscript's current `@version`.
+- Every userscript version bump must update the cache-buster at the same time.
+- Never publish or provide a non-cache-busted raw userscript URL when a cache-busted URL can be used.
