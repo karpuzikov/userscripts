@@ -204,82 +204,145 @@ def _barcode_lookup_finished(api, files, barcode, document, http, error):
     api.tagger.move_files_to_album(files, release_id)
 
 
-def _start_barcode_lookup(api, files, barcode):
-    if not files or not barcode:
+def _start_barcode_batch_lookup(api, file_groups):
+    file_groups = {
+        barcode: files
+        for barcode, files in file_groups.items()
+        if barcode and files
+    }
+    if not file_groups:
         return
 
+    barcodes = list(file_groups)
     api.tagger.window.set_statusbar_message(
-        "Looking up exact barcode %(barcode)s...",
-        {"barcode": barcode},
+        "Looking up %(count)d unique barcodes...",
+        {"count": len(barcodes)},
         translate=None,
     )
 
-    # MusicBrainz's own Barcode lookup uses the advanced Lucene query
-    # "barcode:<number>". Use that exact form instead of Picard's generic
-    # field-query builder, and query every accepted leading-zero variant.
-    # Results are still verified against the release's actual barcode before
-    # Picard is allowed to link anything.
-    forms = [barcode]
-    forms.extend(
-        sorted(
-            _barcode_forms(barcode) - {barcode},
-            key=lambda value: (abs(len(value) - len(barcode)), len(value), value),
-        )
-    )
-
     state = {
-        "index": 0,
-        "releases": {},
+        "matches": {barcode: {} for barcode in barcodes},
+        "pending": 0,
         "errors": 0,
     }
 
-    def finish():
-        document = {"releases": list(state["releases"].values())}
-        all_failed = state["errors"] == len(forms) and not state["releases"]
-        _barcode_lookup_finished(api, files, barcode, document, None, all_failed)
+    def add_release(barcode, release):
+        release_id = release.get("id")
+        if release_id:
+            state["matches"][barcode][release_id] = release
 
-    def start_next():
-        if state["index"] >= len(forms):
+    def finish():
+        matched = 0
+        missing = 0
+        ambiguous = 0
+
+        for barcode, files in file_groups.items():
+            releases = list(state["matches"][barcode].values())
+            if len(releases) == 1:
+                api.tagger.move_files_to_album(files, releases[0]["id"])
+                matched += 1
+            elif not releases:
+                missing += 1
+                api.logger.info("No exact MusicBrainz barcode match for %s", barcode)
+            else:
+                ambiguous += 1
+                api.logger.info(
+                    "Barcode %s has %d exact MusicBrainz release matches; nothing linked",
+                    barcode,
+                    len(releases),
+                )
+
+        api.tagger.window.set_statusbar_message(
+            "Barcode lookup: %(matched)d matched, %(missing)d not found, %(ambiguous)d ambiguous",
+            {
+                "matched": matched,
+                "missing": missing,
+                "ambiguous": ambiguous,
+            },
+            translate=None,
+            timeout=7000,
+        )
+
+    def request_queries(query_items, form_targets, done):
+        chunks = [
+            query_items[index:index + 50]
+            for index in range(0, len(query_items), 50)
+        ]
+        if not chunks:
+            done()
+            return
+
+        state["pending"] = len(chunks)
+
+        for chunk in chunks:
+            holder = {}
+            query = " OR ".join("barcode:%s" % value for value in chunk)
+
+            def handler(document, http, error, chunk=chunk, holder=holder):
+                task = holder.get("task")
+                if task in _PENDING_BARCODE_TASKS:
+                    _PENDING_BARCODE_TASKS.remove(task)
+
+                if error:
+                    state["errors"] += 1
+                else:
+                    try:
+                        releases = list((document or {}).get("releases") or [])
+                    except Exception:
+                        releases = []
+
+                    for release in releases:
+                        release_barcode = _exact_release_barcode(release)
+                        if not release_barcode:
+                            continue
+                        for original_barcode in form_targets.get(release_barcode, ()):
+                            add_release(original_barcode, release)
+
+                state["pending"] -= 1
+                if state["pending"] == 0:
+                    done()
+
+            task = api.mb_api.find_releases(
+                handler,
+                search=True,
+                advanced_search=True,
+                query=query,
+                limit=100,
+            )
+            holder["task"] = task
+            _PENDING_BARCODE_TASKS.append(task)
+
+    def start_fallback():
+        missing = [
+            barcode
+            for barcode in barcodes
+            if not state["matches"][barcode]
+        ]
+        if not missing:
             finish()
             return
 
-        search_barcode = forms[state["index"]]
-        state["index"] += 1
-        holder = {}
+        form_targets = {}
+        for barcode in missing:
+            for form in _barcode_forms(barcode) - {barcode}:
+                form_targets.setdefault(form, set()).add(barcode)
 
-        def handler(document, http, error):
-            task = holder.get("task")
-            if task in _PENDING_BARCODE_TASKS:
-                _PENDING_BARCODE_TASKS.remove(task)
-
-            if error:
-                state["errors"] += 1
-            else:
-                try:
-                    releases = list((document or {}).get("releases") or [])
-                except Exception:
-                    releases = []
-
-                for release in releases:
-                    if not _barcodes_match(barcode, _exact_release_barcode(release)):
-                        continue
-                    release_id = release.get("id")
-                    key = release_id or repr(release)
-                    state["releases"][key] = release
-
-            start_next()
-
-        task = api.mb_api.find_releases(
-            handler,
-            search=True,
-            advanced_search=True,
-            query="barcode:%s" % search_barcode,
-            limit=100,
+        request_queries(
+            list(form_targets),
+            form_targets,
+            finish,
         )
-        holder["task"] = task
-        _PENDING_BARCODE_TASKS.append(task)
 
-    start_next()
+    exact_targets = {barcode: {barcode} for barcode in barcodes}
+    request_queries(
+        barcodes,
+        exact_targets,
+        start_fallback,
+    )
+
+
+def _start_barcode_lookup(api, files, barcode):
+    _start_barcode_batch_lookup(api, {barcode: files})
 
 
 def _expand_lookup_objects(objects):
@@ -295,39 +358,37 @@ def _expand_lookup_objects(objects):
 def _barcode_only_lookup(api, objects):
     objects = _expand_lookup_objects(list(objects))
 
-    direct_files = []
-    other_objects = []
+    files = []
+    seen = set()
+
     for obj in objects:
         if hasattr(obj, "filename") and hasattr(obj, "metadata"):
-            direct_files.append(obj)
+            candidates = [obj]
         else:
-            other_objects.append(obj)
+            candidates = _files_for_object(obj)
 
-    started = 0
+        for file_obj in candidates:
+            marker = id(file_obj)
+            if marker in seen:
+                continue
+            seen.add(marker)
+            files.append(file_obj)
+
     file_groups = {}
-    for file_obj in direct_files:
+    for file_obj in files:
         barcode = _barcode_from_file(file_obj)
         if barcode:
             file_groups.setdefault(barcode, []).append(file_obj)
 
-    for barcode, files in file_groups.items():
-        _start_barcode_lookup(api, files, barcode)
-        started += 1
-
-    for obj in other_objects:
-        files = _files_for_object(obj)
-        barcode = _common_barcode(files)
-        if barcode:
-            _start_barcode_lookup(api, files, barcode)
-            started += 1
-
-    if not started:
+    if not file_groups:
         api.tagger.window.set_statusbar_message(
             "No usable Barcode / UPC tag found in the selection",
             translate=None,
             timeout=5000,
         )
+        return
 
+    _start_barcode_batch_lookup(api, file_groups)
 
 def _run_barcode_lookup_button(api):
     objects = list(api.tagger.window.selected_objects)
