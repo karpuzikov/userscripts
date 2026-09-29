@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MusicBrainz ToolBox
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.0.2
+// @version      1.0.3
 // @description  Combined MusicBrainz release-editor, recording, barcode, search, cover-art, Disc ID, and duplicate-edit tools.
 // @author       karpuzikov
 // @license      MIT
@@ -1514,7 +1514,8 @@
         const ARTIST_BUTTON_ID = 'mb-recording-ac-to-tracks-button';
         const STATUS_ID = 'mb-recording-data-to-tracks-status';
         const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-        const ISRC_CHOICE_CACHE_KEY = 'mb-recording-data-to-tracks:isrc-choice-cache:v1';
+        const ISRC_CHOICE_CACHE_KEY = 'mb-recording-matcher:isrc-choice:v1';
+        const LEGACY_ISRC_CHOICE_CACHE_KEY = 'mb-recording-data-to-tracks:isrc-choice-cache:v1';
         const watchedTracks = new WeakSet();
     
         const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -1542,55 +1543,103 @@
                 .filter(Boolean))];
         }
     
-        function loadIsrcChoiceCache() {
-            try {
-                const parsed = JSON.parse(localStorage.getItem(ISRC_CHOICE_CACHE_KEY) || '{}');
-                return parsed && typeof parsed === 'object' ? parsed : {};
-            } catch {
-                return {};
-            }
+        function cacheRecordingId(value) {
+            const id = String(
+                typeof value === 'string'
+                    ? value
+                    : value?.recordingMbid || value?.recordingId || ''
+            ).trim().toLowerCase();
+            return UUID.test(id) ? id : '';
         }
-    
+
+        function loadIsrcChoiceCache() {
+            const merged = {};
+
+            for (const key of [LEGACY_ISRC_CHOICE_CACHE_KEY, ISRC_CHOICE_CACHE_KEY]) {
+                try {
+                    const parsed = JSON.parse(localStorage.getItem(key) || '{}');
+                    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) continue;
+
+                    for (const [rawIsrc, value] of Object.entries(parsed)) {
+                        const isrc = normalizeIsrc(rawIsrc);
+                        const recordingMbid = cacheRecordingId(value);
+                        if (!isrc || !recordingMbid) continue;
+
+                        merged[isrc] = {
+                            recordingMbid,
+                            updated: Number(
+                                typeof value === 'object' && value
+                                    ? value.updated || 0
+                                    : 0
+                            ),
+                        };
+                    }
+                } catch {
+                    // Ignore invalid legacy/local cache data.
+                }
+            }
+
+            return merged;
+        }
+
         let isrcChoiceCache = loadIsrcChoiceCache();
-    
+
+        function persistIsrcChoiceCache() {
+            const serializable = {};
+
+            for (const [isrc, value] of Object.entries(isrcChoiceCache)) {
+                const normalized = normalizeIsrc(isrc);
+                const recordingMbid = cacheRecordingId(value);
+                if (normalized && recordingMbid) {
+                    serializable[normalized] = recordingMbid;
+                }
+            }
+
+            localStorage.setItem(
+                ISRC_CHOICE_CACHE_KEY,
+                JSON.stringify(serializable)
+            );
+        }
+
         function saveIsrcChoice(isrcs, recordingMbid) {
-            if (!UUID.test(recordingMbid)) return;
-    
+            const id = cacheRecordingId(recordingMbid);
+            if (!id) return;
+
             const now = Date.now();
             let changed = false;
-    
+
             for (const isrc of isrcs) {
                 const normalized = normalizeIsrc(isrc);
                 if (!normalized) continue;
-    
+
                 const current = isrcChoiceCache[normalized];
-                if (current?.recordingMbid === recordingMbid) continue;
-    
+                if (cacheRecordingId(current) === id) continue;
+
                 isrcChoiceCache[normalized] = {
-                    recordingMbid,
+                    recordingMbid: id,
                     updated: now,
                 };
                 changed = true;
             }
-    
-            if (changed) {
-                localStorage.setItem(
-                    ISRC_CHOICE_CACHE_KEY,
-                    JSON.stringify(isrcChoiceCache)
-                );
-            }
+
+            if (changed) persistIsrcChoiceCache();
         }
-    
+
         function cachedCandidateForTrack(track) {
+            // The Recording Matcher can update the shared cache later on the same
+            // page, so refresh from storage for every lookup instead of relying on
+            // an initialization-time copy.
+            isrcChoiceCache = loadIsrcChoiceCache();
+
             const candidates = unwrap(track?.suggestedRecordings) || [];
             if (candidates.length < 2) return null;
-    
+
             const byIsrc = new Map();
-    
+
             for (const candidate of candidates) {
                 const gid = recordingGid(candidate);
                 if (!gid) continue;
-    
+
                 for (const isrc of recordingIsrcs(candidate)) {
                     let group = byIsrc.get(isrc);
                     if (!group) {
@@ -1600,32 +1649,31 @@
                     group.set(gid, candidate);
                 }
             }
-    
+
             const matches = [];
-    
+
             for (const [isrc, group] of byIsrc) {
                 if (group.size < 2) continue;
-    
+
                 const cached = isrcChoiceCache[isrc];
-                const candidate = cached?.recordingMbid
-                    ? group.get(cached.recordingMbid)
-                    : null;
-    
+                const cachedId = cacheRecordingId(cached);
+                const candidate = cachedId ? group.get(cachedId) : null;
+
                 if (candidate) {
                     matches.push({
                         candidate,
                         isrc,
-                        updated: Number(cached.updated || 0),
+                        updated: Number(cached?.updated || 0),
                     });
                 }
             }
-    
+
             if (!matches.length) return null;
-    
+
             matches.sort((a, b) => b.updated - a.updated);
             return matches[0];
         }
-    
+
         function applyCachedRecordingChoice(track) {
             if (pageWindow().__MB_RECORDING_MATCHER_ACTIVE__) return false;
             if (!track || typeof track.recording !== 'function') return false;
@@ -1704,7 +1752,10 @@
             }, true);
     
             window.addEventListener('storage', event => {
-                if (event.key === ISRC_CHOICE_CACHE_KEY) {
+                if (
+                    event.key === ISRC_CHOICE_CACHE_KEY ||
+                    event.key === LEGACY_ISRC_CHOICE_CACHE_KEY
+                ) {
                     isrcChoiceCache = loadIsrcChoiceCache();
                 }
             });
@@ -4634,6 +4685,7 @@
         const MAX_DIFFERENCE_MS = 7000;
         const REQUEST_GAP_MS = 1000;
         const ISRC_CHOICE_CACHE_KEY = 'mb-recording-matcher:isrc-choice:v1';
+        const LEGACY_ISRC_CHOICE_CACHE_KEY = 'mb-recording-data-to-tracks:isrc-choice-cache:v1';
         const GITHUB_TOKEN_KEY = 'mb-recording-matcher:github-token';
         const GITHUB_CACHE_REPO = 'karpuzikov/userscripts';
         const GITHUB_CACHE_PATH = 'musicbrainz-tools/safe-recording-matcher/isrc-choice-cache.json';
@@ -4816,54 +4868,96 @@
             return String(value ?? '').replace(/-/g, '').trim().toUpperCase();
         }
     
-        function readIsrcChoiceCache() {
-            try {
-                const parsed = JSON.parse(localStorage.getItem(ISRC_CHOICE_CACHE_KEY) || '{}');
-                return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
-            } catch {
-                return {};
-            }
+        function cacheRecordingId(value) {
+            const id = String(
+                typeof value === 'string'
+                    ? value
+                    : value?.recordingMbid || value?.recordingId || ''
+            ).trim().toLowerCase();
+            return UUID.test(id) ? id : '';
         }
-    
+
+        function normalizeChoiceMap(value) {
+            const result = {};
+            if (!value || typeof value !== 'object' || Array.isArray(value)) {
+                return result;
+            }
+
+            for (const [rawIsrc, rawRecording] of Object.entries(value)) {
+                const isrc = normalizeIsrcCode(rawIsrc);
+                const recordingId = cacheRecordingId(rawRecording);
+                if (isrc && recordingId) result[isrc] = recordingId;
+            }
+
+            return result;
+        }
+
+        function readIsrcChoiceCache() {
+            const legacy = (() => {
+                try {
+                    return normalizeChoiceMap(
+                        JSON.parse(localStorage.getItem(LEGACY_ISRC_CHOICE_CACHE_KEY) || '{}')
+                    );
+                } catch {
+                    return {};
+                }
+            })();
+
+            const current = (() => {
+                try {
+                    return normalizeChoiceMap(
+                        JSON.parse(localStorage.getItem(ISRC_CHOICE_CACHE_KEY) || '{}')
+                    );
+                } catch {
+                    return {};
+                }
+            })();
+
+            // Canonical Matcher choices win if both caches contain the same ISRC.
+            return {...legacy, ...current};
+        }
+
         function writeIsrcChoiceCache(cache) {
             try {
-                localStorage.setItem(ISRC_CHOICE_CACHE_KEY, JSON.stringify(cache));
+                localStorage.setItem(
+                    ISRC_CHOICE_CACHE_KEY,
+                    JSON.stringify(normalizeChoiceMap(cache))
+                );
             } catch {
                 // Matching still works without persistence if storage is unavailable.
             }
         }
-    
+
         function cachedIsrcRecording(isrc, candidates) {
             const code = normalizeIsrcCode(isrc);
             if (!code) return null;
-    
+
             const cache = readIsrcChoiceCache();
-            const cachedId = String(cache[code] || '').toLowerCase();
-            if (!UUID.test(cachedId)) return null;
-    
+            const cachedId = cacheRecordingId(cache[code]);
+            if (!cachedId) return null;
+
             const candidate = (candidates || []).find(item =>
                 String(item?.id || '').toLowerCase() === cachedId
             );
-    
+
             if (candidate) return candidate;
-    
+
             delete cache[code];
             writeIsrcChoiceCache(cache);
             return null;
         }
-    
+
         function rememberIsrcChoice(isrc, recordingId) {
             const code = normalizeIsrcCode(isrc);
-            const id = String(recordingId || '').toLowerCase();
-            if (!code || !UUID.test(id)) return false;
-    
+            const id = cacheRecordingId(recordingId);
+            if (!code || !id) return false;
+
             const cache = readIsrcChoiceCache();
             cache[code] = id;
             writeIsrcChoiceCache(cache);
             return true;
         }
-    
-    
+
         function githubToken() {
             try {
                 return String(GM_getValue(GITHUB_TOKEN_KEY, '') || '').trim();
@@ -4939,9 +5033,7 @@
                     if (decoded && typeof decoded === 'object') {
                         parsed = {
                             version: 1,
-                            choices: decoded.choices && typeof decoded.choices === 'object'
-                                ? decoded.choices
-                                : {},
+                            choices: normalizeChoiceMap(decoded.choices),
                         };
                     }
                 } catch {
@@ -5039,6 +5131,8 @@
             button.textContent = githubToken() ? 'GitHub cache: connected' : 'Connect GitHub cache';
         }
     
+        let githubSyncChain = Promise.resolve();
+
         async function syncGithubCacheQuietly(panel) {
             if (!githubToken()) {
                 updateGithubCacheButton(panel);
@@ -5061,14 +5155,17 @@
                 }
                 return;
             }
-    
-            pushGithubChoices()
+
+            githubSyncChain = githubSyncChain
+                .catch(() => undefined)
+                .then(() => pushGithubChoices())
                 .then(result => {
                     if (panel) {
                         panel.querySelector('.mb-safe-status').textContent =
                             'Choice saved locally and synced to GitHub (' +
                             result.count + ' cached ISRC choice(s)).';
                     }
+                    return result;
                 })
                 .catch(error => {
                     console.warn('[MusicBrainz Recording Matcher] GitHub cache push failed:', error);
@@ -5078,7 +5175,7 @@
                     }
                 });
         }
-    
+
         function chooseByIsrc(track, candidates, isrc = '') {
             const unique = new Map();
             for (const candidate of candidates || []) {
@@ -5201,42 +5298,74 @@
             };
         }
     
-        function watchManualIsrcChoice(row, isrc, candidates) {
+        function recordingIdFromTrackModel(trackModel) {
+            const recording = typeof trackModel?.recording === 'function'
+                ? trackModel.recording()
+                : trackModel?.recording;
+            return cacheRecordingId(recording?.gid || recording?.id);
+        }
+
+        function finishPendingIsrcChoice(trackModel, pending) {
+            const linkedId = recordingIdFromTrackModel(trackModel);
+            if (!linkedId || !pending?.candidateIds?.has(linkedId)) return false;
+
+            rememberIsrcChoice(pending.code, linkedId);
+            pending.subscription?.dispose?.();
+            pendingIsrcChoices.delete(trackModel);
+
+            const panel = document.getElementById('mb-safe-recording-matcher');
+            const status = panel?.querySelector('.mb-safe-status');
+            if (status) {
+                status.textContent =
+                    'Remembered ISRC choice: ' + pending.code + ' -> ' + linkedId;
+            }
+
+            syncChoiceToGithub(panel);
+            return true;
+        }
+
+        function watchManualIsrcChoice(trackModel, isrc, candidates) {
             const code = normalizeIsrcCode(isrc);
             const candidateIds = new Set(
                 (candidates || [])
-                    .map(candidate => String(candidate?.id || '').toLowerCase())
-                    .filter(id => UUID.test(id))
+                    .map(candidate => cacheRecordingId(candidate?.id))
+                    .filter(Boolean)
             );
-            if (!row || !code || candidateIds.size < 2) return;
-    
-            pendingIsrcChoices.set(row, {code, candidateIds});
-            captureManualIsrcChoices();
+
+            if (
+                !trackModel ||
+                typeof trackModel.recording !== 'function' ||
+                !code ||
+                candidateIds.size < 2
+            ) {
+                return;
+            }
+
+            const previous = pendingIsrcChoices.get(trackModel);
+            previous?.subscription?.dispose?.();
+
+            const pending = {
+                code,
+                candidateIds,
+                subscription: null,
+            };
+
+            if (typeof trackModel.recording.subscribe === 'function') {
+                pending.subscription = trackModel.recording.subscribe(() => {
+                    finishPendingIsrcChoice(trackModel, pending);
+                });
+            }
+
+            pendingIsrcChoices.set(trackModel, pending);
+            finishPendingIsrcChoice(trackModel, pending);
         }
-    
+
         function captureManualIsrcChoices() {
-            for (const [row, pending] of pendingIsrcChoices) {
-                if (!row?.isConnected) {
-                    pendingIsrcChoices.delete(row);
-                    continue;
-                }
-    
-                const linkedId = String(readLinkedRecording(row).id || '').toLowerCase();
-                if (!linkedId) continue;
-    
-                if (pending.candidateIds.has(linkedId)) {
-                    rememberIsrcChoice(pending.code, linkedId);
-                    pendingIsrcChoices.delete(row);
-    
-                    const panel = document.getElementById('mb-safe-recording-matcher');
-                    const status = panel?.querySelector('.mb-safe-status');
-                    if (status) {
-                        status.textContent = 'Remembered ISRC choice: ' + pending.code + ' -> ' + linkedId;
-                    }
-                    syncChoiceToGithub(panel);
-                }
+            for (const [trackModel, pending] of pendingIsrcChoices) {
+                finishPendingIsrcChoice(trackModel, pending);
             }
         }
+
         function duplicateEntries() {
             if (IS_RELEASE_EDITOR) {
                 return [...document.querySelectorAll('#recordings tr.track')]
@@ -6023,7 +6152,12 @@
     
                     if (!chosen.id) {
                         if (isrc && Array.isArray(chosen.ambiguousCandidates)) {
-                            watchManualIsrcChoice(row, isrc, chosen.ambiguousCandidates);
+                            const index = allRows.indexOf(row);
+                            watchManualIsrcChoice(
+                                allTrackModels[index],
+                                isrc,
+                                chosen.ambiguousCandidates
+                            );
                         }
                         review++;
                         showResult(list, row, 'Review', `${display} - ${chosen.reason}`);
@@ -6183,6 +6317,12 @@
             input.focus();
         }
 
+        function migrateLocalIsrcChoices() {
+            const merged = readIsrcChoiceCache();
+            if (Object.keys(merged).length) writeIsrcChoiceCache(merged);
+            return Object.keys(merged).length;
+        }
+
         function addControls() {
             if (document.getElementById('mb-safe-recording-matcher')) return true;
             const container = document.querySelector('#recordings .changes');
@@ -6214,6 +6354,7 @@
             });
             container.prepend(panel);
             updateDuplicateHighlights();
+            migrateLocalIsrcChoices();
             updateGithubCacheButton(panel);
             syncGithubCacheQuietly(panel);
             return true;
