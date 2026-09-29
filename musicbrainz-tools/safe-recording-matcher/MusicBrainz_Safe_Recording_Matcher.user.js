@@ -1,15 +1,18 @@
 // ==UserScript==
 // @name         MusicBrainz - Recording Matcher
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.4.5
+// @version      1.4.6
 // @description  Highlight duplicate recording links and match release tracks by metadata, highlighted duplicates, or pasted ISRCs.
 // @author       karpuzikov
 // @license      MIT
 // @match        https://musicbrainz.org/release/*
 // @match        https://beta.musicbrainz.org/release/*
-// @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/safe-recording-matcher/MusicBrainz_Safe_Recording_Matcher.user.js?v=1.4.5
-// @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/safe-recording-matcher/MusicBrainz_Safe_Recording_Matcher.user.js?v=1.4.5
-// @grant        none
+// @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/safe-recording-matcher/MusicBrainz_Safe_Recording_Matcher.user.js?v=1.4.6
+// @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/safe-recording-matcher/MusicBrainz_Safe_Recording_Matcher.user.js?v=1.4.6
+// @grant        GM_getValue
+// @grant        GM_setValue
+// @grant        GM_xmlhttpRequest
+// @connect      api.github.com
 // @run-at       document-idle
 // ==/UserScript==
 
@@ -21,6 +24,10 @@
     const MAX_DIFFERENCE_MS = 7000;
     const REQUEST_GAP_MS = 1200;
     const ISRC_CHOICE_CACHE_KEY = 'mb-recording-matcher:isrc-choice:v1';
+    const GITHUB_TOKEN_KEY = 'mb-recording-matcher:github-token';
+    const GITHUB_CACHE_REPO = 'karpuzikov/userscripts';
+    const GITHUB_CACHE_PATH = 'musicbrainz-tools/safe-recording-matcher/isrc-choice-cache.json';
+    const GITHUB_API_BASE = 'https://api.github.com';
 
     function parseLength(value) {
         const text = String(value ?? '').trim().replace(/^\(|\)$/g, '');
@@ -246,6 +253,222 @@
         return true;
     }
 
+
+    function githubToken() {
+        try {
+            return String(GM_getValue(GITHUB_TOKEN_KEY, '') || '').trim();
+        } catch {
+            return '';
+        }
+    }
+
+    function encodeBase64Utf8(text) {
+        const bytes = new TextEncoder().encode(String(text));
+        let binary = '';
+        for (const byte of bytes) binary += String.fromCharCode(byte);
+        return btoa(binary);
+    }
+
+    function decodeBase64Utf8(text) {
+        const binary = atob(String(text || '').replace(/\s+/g, ''));
+        const bytes = Uint8Array.from(binary, char => char.charCodeAt(0));
+        return new TextDecoder().decode(bytes);
+    }
+
+    function githubApi(method, url, body = null, token = githubToken()) {
+        return new Promise((resolve, reject) => {
+            if (!token) {
+                reject(new Error('GitHub cache is not connected'));
+                return;
+            }
+
+            GM_xmlhttpRequest({
+                method,
+                url,
+                headers: {
+                    Accept: 'application/vnd.github+json',
+                    Authorization: 'Bearer ' + token,
+                    'X-GitHub-Api-Version': '2022-11-28',
+                    ...(body ? {'Content-Type': 'application/json'} : {}),
+                },
+                data: body ? JSON.stringify(body) : undefined,
+                timeout: 15000,
+                onload: response => {
+                    let data = null;
+                    try {
+                        data = response.responseText ? JSON.parse(response.responseText) : null;
+                    } catch {
+                        data = null;
+                    }
+
+                    if (response.status >= 200 && response.status < 300) {
+                        resolve({status: response.status, data});
+                    } else {
+                        reject(new Error(
+                            'GitHub API HTTP ' + response.status +
+                            (data?.message ? ': ' + data.message : '')
+                        ));
+                    }
+                },
+                ontimeout: () => reject(new Error('GitHub cache request timed out')),
+                onerror: () => reject(new Error('GitHub cache request failed')),
+            });
+        });
+    }
+
+    async function fetchGithubChoiceFile() {
+        const url = GITHUB_API_BASE + '/repos/' + GITHUB_CACHE_REPO +
+            '/contents/' + GITHUB_CACHE_PATH;
+        const response = await githubApi('GET', url);
+        const data = response.data || {};
+        let parsed = {version: 1, choices: {}};
+
+        if (data.content) {
+            try {
+                const decoded = JSON.parse(decodeBase64Utf8(data.content));
+                if (decoded && typeof decoded === 'object') {
+                    parsed = {
+                        version: 1,
+                        choices: decoded.choices && typeof decoded.choices === 'object'
+                            ? decoded.choices
+                            : {},
+                    };
+                }
+            } catch {
+                throw new Error('GitHub cache JSON is invalid');
+            }
+        }
+
+        return {
+            sha: String(data.sha || ''),
+            choices: parsed.choices,
+        };
+    }
+
+    async function pullGithubChoices() {
+        if (!githubToken()) return {connected: false, count: 0};
+
+        const remote = await fetchGithubChoiceFile();
+        const local = readIsrcChoiceCache();
+        const merged = {...local, ...remote.choices};
+        writeIsrcChoiceCache(merged);
+        return {connected: true, count: Object.keys(remote.choices).length};
+    }
+
+    async function pushGithubChoices() {
+        const token = githubToken();
+        if (!token) return {connected: false, count: 0};
+
+        const url = GITHUB_API_BASE + '/repos/' + GITHUB_CACHE_REPO +
+            '/contents/' + GITHUB_CACHE_PATH;
+
+        for (let attempt = 0; attempt < 2; attempt++) {
+            const remote = await fetchGithubChoiceFile();
+            const local = readIsrcChoiceCache();
+            const merged = {...remote.choices, ...local};
+            const content = JSON.stringify({version: 1, choices: merged}, null, 2) + '\n';
+
+            try {
+                await githubApi('PUT', url, {
+                    message: 'Update Recording Matcher ISRC cache',
+                    content: encodeBase64Utf8(content),
+                    sha: remote.sha,
+                }, token);
+                writeIsrcChoiceCache(merged);
+                return {connected: true, count: Object.keys(merged).length};
+            } catch (error) {
+                if (attempt === 0 && /HTTP (409|422)/.test(error.message)) {
+                    continue;
+                }
+                throw error;
+            }
+        }
+
+        throw new Error('GitHub cache update conflicted twice');
+    }
+
+    async function configureGithubCache(panel) {
+        const current = githubToken();
+        const token = prompt(
+            'GitHub fine-grained token for Recording Matcher cache.\n\n' +
+            'Repository: ' + GITHUB_CACHE_REPO + '\n' +
+            'Required repository permission: Contents - Read and write.\n\n' +
+            'The token is stored only in Tampermonkey.',
+            current
+        );
+
+        if (token === null) return;
+        const trimmed = token.trim();
+        if (!trimmed) {
+            GM_setValue(GITHUB_TOKEN_KEY, '');
+            panel.querySelector('.mb-safe-status').textContent =
+                'GitHub cache disconnected. Local cache is still active.';
+            updateGithubCacheButton(panel);
+            return;
+        }
+
+        GM_setValue(GITHUB_TOKEN_KEY, trimmed);
+        const status = panel.querySelector('.mb-safe-status');
+        status.textContent = 'Connecting GitHub cache...';
+
+        try {
+            await pullGithubChoices();
+            const pushed = await pushGithubChoices();
+            status.textContent =
+                'GitHub cache connected and synced: ' + pushed.count + ' saved ISRC choice(s).';
+        } catch (error) {
+            status.textContent = 'GitHub cache error: ' + error.message;
+        }
+
+        updateGithubCacheButton(panel);
+    }
+
+    function updateGithubCacheButton(panel) {
+        const button = panel?.querySelector('.mb-safe-github-cache');
+        if (!button) return;
+        button.textContent = githubToken() ? 'GitHub cache: connected' : 'Connect GitHub cache';
+    }
+
+    async function syncGithubCacheQuietly(panel) {
+        if (!githubToken()) {
+            updateGithubCacheButton(panel);
+            return;
+        }
+
+        try {
+            await pullGithubChoices();
+        } catch (error) {
+            console.warn('[MusicBrainz Recording Matcher] GitHub cache sync failed:', error);
+        }
+        updateGithubCacheButton(panel);
+    }
+
+    function syncChoiceToGithub(panel) {
+        if (!githubToken()) {
+            if (panel) {
+                panel.querySelector('.mb-safe-status').textContent =
+                    'Choice remembered locally. Connect GitHub cache to sync it across devices.';
+            }
+            return;
+        }
+
+        pushGithubChoices()
+            .then(result => {
+                if (panel) {
+                    panel.querySelector('.mb-safe-status').textContent =
+                        'Choice saved locally and synced to GitHub (' +
+                        result.count + ' cached ISRC choice(s)).';
+                }
+            })
+            .catch(error => {
+                console.warn('[MusicBrainz Recording Matcher] GitHub cache push failed:', error);
+                if (panel) {
+                    panel.querySelector('.mb-safe-status').textContent =
+                        'Choice saved locally; GitHub sync failed: ' + error.message;
+                }
+            });
+    }
+
     function chooseByIsrc(track, candidates, isrc = '') {
         const unique = new Map();
         for (const candidate of candidates || []) {
@@ -400,6 +623,7 @@
                 if (status) {
                     status.textContent = 'Remembered ISRC choice: ' + pending.code + ' -> ' + linkedId;
                 }
+                syncChoiceToGithub(panel);
             }
         }
     }
@@ -1306,6 +1530,7 @@
                 '<button type="button" class="styled-button mb-safe-start">Match unlinked recordings</button>' +
                 '<button type="button" class="styled-button mb-safe-highlighted">Auto-match highlighted</button>' +
                 '<button type="button" class="styled-button mb-safe-isrc">Match by ISRC</button>' +
+                '<button type="button" class="styled-button mb-safe-github-cache">Connect GitHub cache</button>' +
                 '<button type="button" class="styled-button negative mb-safe-remove-links">Remove all links</button>' +
                 '<button type="button" class="styled-button mb-safe-stop" hidden>Stop after current track</button>' +
                 '<button type="button" class="styled-button mb-safe-toggle" hidden>Show results</button>' +
@@ -1315,6 +1540,7 @@
         panel.querySelector('.mb-safe-start').addEventListener('click', () => runMatcher(panel));
         panel.querySelector('.mb-safe-highlighted').addEventListener('click', () => runHighlightedMatcher(panel));
         panel.querySelector('.mb-safe-isrc').addEventListener('click', () => openIsrcDialog(panel));
+        panel.querySelector('.mb-safe-github-cache').addEventListener('click', () => configureGithubCache(panel));
         panel.querySelector('.mb-safe-remove-links').addEventListener('click', () => removeAllLinks(panel));
         panel.querySelector('.mb-safe-stop').addEventListener('click', () => { stopRequested = true; });
         panel.querySelector('.mb-safe-toggle').addEventListener('click', event => {
@@ -1324,6 +1550,8 @@
         });
         container.prepend(panel);
         updateDuplicateHighlights();
+        updateGithubCacheButton(panel);
+        syncGithubCacheQuietly(panel);
         return true;
     }
 
