@@ -41,14 +41,77 @@ jobs:
               m = re.search(rf"^//\s*@{re.escape(key)}\s+(.+?)\s*$", text, re.M)
               return m.group(1).strip() if m else None
 
+          def all_meta(text, key):
+              return [
+                  m.group(1).strip()
+                  for m in re.finditer(rf"^//\s*@{re.escape(key)}\s+(.+?)\s*$", text, re.M)
+              ]
+
+          def numeric_version(value):
+              if not value or not re.fullmatch(r"\d+(?:\.\d+)*", value):
+                  return None
+              return tuple(int(part) for part in value.split("."))
+
+          def version_is_higher(current, previous):
+              a = numeric_version(current)
+              b = numeric_version(previous)
+              if a is None or b is None:
+                  return current != previous
+              size = max(len(a), len(b))
+              a += (0,) * (size - len(a))
+              b += (0,) * (size - len(b))
+              return a > b
+
           for script in scripts:
               rel = script.as_posix()
               text = script.read_text(encoding="utf-8")
 
               if not meta(text, "name"):
                   errors.append(f"{rel}: missing @name")
-              if not meta(text, "version"):
+              current_name = meta(text, "name")
+              current_namespace = meta(text, "namespace")
+              current_version = meta(text, "version")
+
+              if not current_version:
                   errors.append(f"{rel}: missing @version")
+
+              try:
+                  previous_bytes = subprocess.check_output(
+                      ["git", "show", f"HEAD^:{rel}"],
+                      stderr=subprocess.DEVNULL,
+                  )
+              except subprocess.CalledProcessError:
+                  previous_bytes = None
+
+              if previous_bytes is not None and previous_bytes != script.read_bytes():
+                  previous_text = previous_bytes.decode("utf-8")
+                  previous_name = meta(previous_text, "name")
+                  previous_namespace = meta(previous_text, "namespace")
+                  previous_version = meta(previous_text, "version")
+
+                  if previous_name != current_name:
+                      errors.append(
+                          f"{rel}: @name changed from {previous_name!r} to {current_name!r}; "
+                          "normal updates must preserve userscript identity"
+                      )
+                  if previous_namespace != current_namespace:
+                      errors.append(
+                          f"{rel}: @namespace changed from {previous_namespace!r} to {current_namespace!r}; "
+                          "normal updates must preserve userscript identity"
+                      )
+                  if previous_version and current_version and not version_is_higher(current_version, previous_version):
+                      errors.append(
+                          f"{rel}: changed script must increase @version; "
+                          f"previous={previous_version}, current={current_version}"
+                      )
+
+              grants = all_meta(text, "grant")
+              privileged = any(grant != "none" for grant in grants)
+              if privileged and "window.MB" in text:
+                  errors.append(
+                      f"{rel}: privileged Tampermonkey script accesses window.MB directly; "
+                      "use unsafeWindow/page context explicitly to avoid sandbox breakage"
+                  )
 
               expected_auto = raw_prefix + "main/" + rel
               for key in ("updateURL", "downloadURL"):
@@ -110,7 +173,7 @@ jobs:
           local_paths = {p.as_posix() for p in scripts}
           missing = sorted(local_paths - linked_paths)
           for rel in missing:
-              errors.append(f"README.md: missing manual install/update link for {rel}")
+              errors.append(f"README.md: missing immutable manual install link for {rel}")
 
           if errors:
               print("Userscript distribution check FAILED:\n")
