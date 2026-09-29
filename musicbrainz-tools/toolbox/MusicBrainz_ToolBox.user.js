@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MusicBrainz ToolBox
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.0.6
+// @version      1.0.7
 // @description  Combined MusicBrainz release-editor, recording, barcode, search, cover-art, Disc ID, and duplicate-edit tools.
 // @author       karpuzikov
 // @license      MIT
@@ -5633,6 +5633,7 @@
         const IS_RELEASE_PAGE = /^\/release\/[0-9a-f-]{36}\/?$/i.test(location.pathname);
         const IS_RELEASE_EDITOR = /^\/release\/(?:add|[0-9a-f-]{36}\/edit)\/?$/i.test(location.pathname);
         const DUPLICATE_CLASS = 'mb-duplicate-recording';
+        const UNLINKED_CLASS = 'mb-unlinked-recording';
     
         if (!IS_RELEASE_PAGE && !IS_RELEASE_EDITOR) return;
     
@@ -5791,6 +5792,33 @@
         function highlightedEditorRows() {
             return [...document.querySelectorAll('#recordings tr.track.' + DUPLICATE_CLASS)];
         }
+
+        function updateUnlinkedHighlights() {
+            let highlighted = 0;
+
+            for (const row of document.querySelectorAll('#recordings tr.track')) {
+                const nameCells = row.querySelectorAll('td.name');
+                const recordingCell = nameCells[1];
+                const text = String(recordingCell?.textContent || '')
+                    .replace(/\s+/g, ' ')
+                    .trim()
+                    .toLowerCase();
+                const hasRecording = Boolean(
+                    recordingCell?.querySelector('a[href*="/recording/"]')
+                );
+                const unlinked = Boolean(recordingCell) &&
+                    !hasRecording &&
+                    (
+                        text.includes('add new recording') ||
+                        row.querySelector('button.edit-track-recording')
+                    );
+
+                row.classList.toggle(UNLINKED_CLASS, unlinked);
+                if (unlinked) highlighted++;
+            }
+
+            return highlighted;
+        }
     
         function updateDuplicateHighlights() {
             document.querySelectorAll('.' + DUPLICATE_CLASS).forEach(row => {
@@ -5836,6 +5864,19 @@
             .${DUPLICATE_CLASS} > td:first-child {
                 box-shadow: inset 4px 0 0 #7a0000 !important;
             }
+
+            #recordings tr.${UNLINKED_CLASS} > td {
+                background: #ffb300 !important;
+                color: #111 !important;
+                font-weight: 600;
+            }
+            #recordings tr.${UNLINKED_CLASS} > td a,
+            #recordings tr.${UNLINKED_CLASS} > td button {
+                color: #111 !important;
+            }
+            #recordings tr.${UNLINKED_CLASS} > td:first-child {
+                box-shadow: inset 4px 0 0 #a85b00 !important;
+            }
     
             #mb-safe-recording-matcher {
                 margin: 1em 0 1.2em;
@@ -5877,6 +5918,7 @@
             clearTimeout(duplicateUpdateTimer);
             duplicateUpdateTimer = setTimeout(() => {
                 updateDuplicateHighlights();
+                updateUnlinkedHighlights();
                 captureManualIsrcChoices();
             }, 40);
         });
@@ -5887,6 +5929,7 @@
             attributeFilter: ['href'],
         });
         updateDuplicateHighlights();
+        updateUnlinkedHighlights();
     
         if (!IS_RELEASE_EDITOR) return;
     
