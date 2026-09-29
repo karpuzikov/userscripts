@@ -1,0 +1,124 @@
+name: Userscript distribution check
+
+on:
+  push:
+    paths:
+      - "**/*.user.js"
+      - "README.md"
+      - "SOFTWARE_RULES.md"
+      - ".github/workflows/userscript-distribution-check.yml"
+  pull_request:
+    paths:
+      - "**/*.user.js"
+      - "README.md"
+      - "SOFTWARE_RULES.md"
+      - ".github/workflows/userscript-distribution-check.yml"
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify userscript distribution integrity
+        shell: bash
+        run: |
+          python - <<'PY'
+          import pathlib
+          import re
+          import subprocess
+          import sys
+
+          root = pathlib.Path(".")
+          repo = "karpuzikov/userscripts"
+          raw_prefix = f"https://raw.githubusercontent.com/{repo}/"
+          scripts = sorted(root.rglob("*.user.js"))
+          errors = []
+
+          def meta(text, key):
+              m = re.search(rf"^//\s*@{re.escape(key)}\s+(.+?)\s*$", text, re.M)
+              return m.group(1).strip() if m else None
+
+          for script in scripts:
+              rel = script.as_posix()
+              text = script.read_text(encoding="utf-8")
+
+              if not meta(text, "name"):
+                  errors.append(f"{rel}: missing @name")
+              if not meta(text, "namespace"):
+                  errors.append(f"{rel}: missing @namespace")
+              if not meta(text, "version"):
+                  errors.append(f"{rel}: missing @version")
+
+              expected_auto = raw_prefix + "main/" + rel
+              for key in ("updateURL", "downloadURL"):
+                  value = meta(text, key)
+                  if not value:
+                      continue
+                  if "?" in value or "#" in value:
+                      errors.append(f"{rel}: @{key} must not contain query/fragment: {value}")
+                  if value != expected_auto:
+                      errors.append(
+                          f"{rel}: @{key} must be the clean main raw URL\n"
+                          f"  expected: {expected_auto}\n"
+                          f"  actual:   {value}"
+                      )
+
+          readme = pathlib.Path("README.md").read_text(encoding="utf-8")
+          link_re = re.compile(
+              re.escape(raw_prefix) +
+              r"([^/]+)/([^\s)]+\.user\.js)(?:\?[^\s)]*)?"
+          )
+
+          linked_paths = set()
+          for match in link_re.finditer(readme):
+              ref, rel = match.groups()
+              linked_paths.add(rel)
+
+              if not re.fullmatch(r"[0-9a-f]{40}", ref):
+                  errors.append(
+                      f"README.md: manual userscript link must use a full immutable commit SHA, not {ref}: {rel}"
+                  )
+                  continue
+
+              if "?" in match.group(0) or "#" in match.group(0):
+                  errors.append(f"README.md: pinned userscript link must not contain query/fragment: {match.group(0)}")
+
+              local = pathlib.Path(rel)
+              if not local.is_file():
+                  errors.append(f"README.md: linked userscript does not exist: {rel}")
+                  continue
+
+              try:
+                  pinned = subprocess.check_output(
+                      ["git", "show", f"{ref}:{rel}"],
+                      stderr=subprocess.STDOUT,
+                  )
+              except subprocess.CalledProcessError as exc:
+                  errors.append(
+                      f"README.md: cannot read pinned source {ref}:{rel}: "
+                      + exc.output.decode("utf-8", "replace").strip()
+                  )
+                  continue
+
+              current = local.read_bytes()
+              if pinned != current:
+                  errors.append(
+                      f"README.md: pinned source is stale for {rel}; link must point to a commit containing the current bytes"
+                  )
+
+          local_paths = {p.as_posix() for p in scripts}
+          missing = sorted(local_paths - linked_paths)
+          for rel in missing:
+              errors.append(f"README.md: missing manual install/update link for {rel}")
+
+          if errors:
+              print("Userscript distribution check FAILED:\n")
+              for error in errors:
+                  print("- " + error)
+              sys.exit(1)
+
+          print(f"Userscript distribution check passed for {len(scripts)} userscripts.")
+          PY
