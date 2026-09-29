@@ -408,3 +408,5 @@ Next stage after this: metadata/tag normalization using the shared Picard rules.
 - v0.9.9 classifier refinement: hide remaining standard forms including 7-inch/12-inch Version, Big/New/Smooth/Low Gain Mix, OG Version, Single Version + year compounds, Chillout/genre versions, Special DJ Version, regional abbreviations such as US Version, and normal Pop Version suffixes.
 
 - Intra-release duplicate cleanup: after release selection, retained non-CUE releases are checked for multiple files representing the same logical track. A file is redundant only when it shares the same high-confidence audio group, same normalized title, same track position, and same physical disc/folder. Keep the technically better copy and move the redundant file under `!Duplicate Files`; never delete it. CUE-based releases are excluded from this cleanup to avoid breaking CUE references. `Rmx` is treated as `Remix`.
+
+- Logging checkbox: detailed JSONL comparison logging is optional from the main UI and persists with the other analyzer settings. Unchecked means no comparison log is created; checked means the existing detailed comparison log is written for that run.
