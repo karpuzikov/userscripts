@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MusicBrainz ToolBox
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.0.3
+// @version      1.0.4
 // @description  Combined MusicBrainz release-editor, recording, barcode, search, cover-art, Disc ID, and duplicate-edit tools.
 // @author       karpuzikov
 // @license      MIT
@@ -5746,6 +5746,137 @@
                 : [];
         }
     
+        function keepExactIsrcAssociationAcrossTracklistEdits(trackModel, recordingEntity) {
+            if (
+                !trackModel ||
+                typeof trackModel.recording !== 'function' ||
+                !recordingEntity?.gid
+            ) {
+                return;
+            }
+
+            const expectedGid = String(recordingEntity.gid).toLowerCase();
+            const previous = trackModel.__mbToolBoxExactIsrcGuard;
+
+            if (previous?.subscriptions) {
+                for (const subscription of previous.subscriptions) {
+                    subscription?.dispose?.();
+                }
+            }
+
+            const guard = {
+                expectedGid,
+                recordingEntity,
+                subscriptions: [],
+                restoring: false,
+                recentTracklistChangeUntil: 0,
+            };
+
+            trackModel.__mbToolBoxExactIsrcGuard = guard;
+
+            const disposeGuard = () => {
+                if (trackModel.__mbToolBoxExactIsrcGuard !== guard) return;
+                for (const subscription of guard.subscriptions) {
+                    subscription?.dispose?.();
+                }
+                delete trackModel.__mbToolBoxExactIsrcGuard;
+            };
+
+            const refreshSavedComparisonState = () => {
+                if (trackModel.__mbToolBoxExactIsrcGuard !== guard) return;
+
+                if (typeof trackModel.name === 'function') {
+                    trackModel.name.saved =
+                        typeof trackModel.name.peek === 'function'
+                            ? trackModel.name.peek()
+                            : trackModel.name();
+                }
+
+                if (typeof trackModel.length === 'function') {
+                    trackModel.length.saved =
+                        typeof trackModel.length.peek === 'function'
+                            ? trackModel.length.peek()
+                            : trackModel.length();
+                }
+            };
+
+            const restoreIfMusicBrainzUnlinked = () => {
+                if (
+                    guard.restoring ||
+                    trackModel.__mbToolBoxExactIsrcGuard !== guard
+                ) {
+                    return;
+                }
+
+                const current = trackModel.recording();
+                const currentGid = String(current?.gid || '').toLowerCase();
+
+                if (currentGid && currentGid !== expectedGid) {
+                    // A deliberate switch to another recording wins.
+                    disposeGuard();
+                    return;
+                }
+
+                if (currentGid === expectedGid) return;
+
+                // Only restore an empty association when it immediately follows
+                // a Tracklist metadata edit. A manual unlink remains possible.
+                if (Date.now() > guard.recentTracklistChangeUntil) {
+                    disposeGuard();
+                    return;
+                }
+
+                guard.restoring = true;
+                try {
+                    refreshSavedComparisonState();
+                    trackModel.recording(recordingEntity);
+                    if (typeof trackModel.hasNewRecording === 'function') {
+                        trackModel.hasNewRecording(false);
+                    }
+                } finally {
+                    guard.restoring = false;
+                }
+            };
+
+            refreshSavedComparisonState();
+
+            // MusicBrainz intentionally clears recording associations when title
+            // or length drifts from name.saved / length.saved. Exact ISRC matches
+            // use the ISRC as the identity, so keep those baselines synchronized.
+            for (const observable of [trackModel.name, trackModel.length]) {
+                if (typeof observable?.subscribe !== 'function') continue;
+
+                guard.subscriptions.push(observable.subscribe(() => {
+                    guard.recentTracklistChangeUntil = Date.now() + 1500;
+                    refreshSavedComparisonState();
+
+                    // Protect against both the current debounced MusicBrainz
+                    // watcher and future changes to its evaluation timing.
+                    setTimeout(restoreIfMusicBrainzUnlinked, 0);
+                    setTimeout(restoreIfMusicBrainzUnlinked, 350);
+                }));
+            }
+
+            if (typeof trackModel.recording.subscribe === 'function') {
+                guard.subscriptions.push(trackModel.recording.subscribe(value => {
+                    if (guard.restoring) return;
+
+                    const gid = String(value?.gid || '').toLowerCase();
+                    if (gid && gid !== expectedGid) {
+                        disposeGuard();
+                        return;
+                    }
+
+                    if (!gid && Date.now() <= guard.recentTracklistChangeUntil) {
+                        setTimeout(restoreIfMusicBrainzUnlinked, 0);
+                    } else if (!gid) {
+                        // Explicit unlink outside a Tracklist edit stays unlinked.
+                        disposeGuard();
+                    }
+                }));
+            }
+        }
+
         async function linkExactIsrcRecording(row, trackModel, candidate, expectedIsrc) {
             if (!trackModel || typeof trackModel.recording !== 'function') {
                 throw new Error('MusicBrainz track model is unavailable');
@@ -5764,6 +5895,7 @@
             if (typeof trackModel.hasNewRecording === 'function') {
                 trackModel.hasNewRecording(false);
             }
+            keepExactIsrcAssociationAcrossTracklistEdits(trackModel, entity);
     
             const linked = await waitFor(() => {
                 const current = readLinkedRecording(row);
@@ -5894,6 +6026,7 @@
                 if (typeof targetTrack.hasNewRecording === 'function') {
                     targetTrack.hasNewRecording(false);
                 }
+                keepExactIsrcAssociationAcrossTracklistEdits(targetTrack, entity);
             } else {
                 const suggested = [...element.querySelectorAll('input[data-change="recording"]')]
                     .find(radio => radio.value.toLowerCase() === candidate.id.toLowerCase());
