@@ -598,3 +598,153 @@
                 : 'All proposed edits are duplicates';
             dialog.appendChild(heading);
 
+            const intro = document.createElement('p');
+            intro.textContent = result.newCount
+                ? 'Exact duplicates will be skipped as one batch. No existing MusicBrainz edits are cancelled or changed.'
+                : 'Nothing new needs to be submitted. No existing MusicBrainz edits are cancelled or changed.';
+            dialog.appendChild(intro);
+
+            const summary = document.createElement('div');
+            summary.className = 'mb-dec-summary';
+            const stats = [
+                ['Proposed', result.total],
+                ['Already pending', result.pendingCount],
+                ['Repeated here', result.repeatedCount],
+                ['New', result.newCount],
+            ];
+            for (const [label, value] of stats) {
+                const stat = document.createElement('div');
+                stat.className = 'mb-dec-stat';
+                const strong = document.createElement('strong');
+                strong.textContent = String(value);
+                stat.append(strong, document.createTextNode(label));
+                summary.appendChild(stat);
+            }
+            dialog.appendChild(summary);
+
+            if (result.pendingCount) {
+                const details = document.createElement('details');
+                const summaryNode = document.createElement('summary');
+                summaryNode.textContent = `Show pending duplicates (${result.pendingCount})`;
+                details.appendChild(summaryNode);
+
+                const list = document.createElement('ol');
+                list.className = 'mb-dec-list';
+                const shown = new Set();
+                for (const proposal of result.proposals) {
+                    if (!result.pendingHashes.has(proposal.hash) || shown.has(proposal.hash)) continue;
+                    shown.add(proposal.hash);
+
+                    const item = document.createElement('li');
+                    item.append(document.createTextNode(`${proposal.editName} - `));
+                    const ids = [...(result.matchesByHash.get(proposal.hash) || [])];
+                    ids.forEach((id, index) => {
+                        if (index) item.append(document.createTextNode(', '));
+                        item.appendChild(openEditLink(id));
+                    });
+                    list.appendChild(item);
+                }
+                details.appendChild(list);
+                dialog.appendChild(details);
+            }
+
+            if (result.repeatedCount) {
+                const note = document.createElement('p');
+                note.textContent = `${result.repeatedCount} duplicate edit${result.repeatedCount === 1 ? '' : 's'} also appear more than once in this same submission; only the first copy will be kept.`;
+                dialog.appendChild(note);
+            }
+
+            const buttons = document.createElement('div');
+            buttons.className = 'mb-dec-buttons';
+
+            if (result.newCount > 0) {
+                buttons.appendChild(makeButton(
+                    `Submit ${result.newCount} new edit${result.newCount === 1 ? '' : 's'}`,
+                    'positive',
+                    'submit-new',
+                    resolve,
+                ));
+            } else {
+                buttons.appendChild(makeButton('Close', 'positive', 'cancel', resolve));
+            }
+
+            buttons.appendChild(makeButton(
+                `Submit all ${result.total} anyway`,
+                '',
+                'submit-all',
+                resolve,
+            ));
+            buttons.appendChild(makeButton('Cancel', 'negative', 'cancel', resolve));
+            dialog.appendChild(buttons);
+
+            document.body.appendChild(overlay);
+            dialog.querySelector('button')?.focus();
+        });
+    }
+
+    function showErrorDialog(error) {
+        addModalStyles();
+        closeModal();
+
+        return new Promise(resolve => {
+            const overlay = document.createElement('div');
+            overlay.id = MODAL_ID;
+            overlay.setAttribute('role', 'dialog');
+            overlay.setAttribute('aria-modal', 'true');
+
+            const dialog = document.createElement('div');
+            dialog.className = 'mb-dec-dialog';
+            overlay.appendChild(dialog);
+
+            const heading = document.createElement('h2');
+            heading.textContent = 'Duplicate check failed';
+            dialog.appendChild(heading);
+
+            const message = document.createElement('p');
+            message.className = 'mb-dec-error';
+            message.textContent = String(error?.message || error || 'Unknown error');
+            dialog.appendChild(message);
+
+            const explanation = document.createElement('p');
+            explanation.textContent = 'No edits have been submitted. Retry the check, submit everything without filtering, or cancel.';
+            dialog.appendChild(explanation);
+
+            const buttons = document.createElement('div');
+            buttons.className = 'mb-dec-buttons';
+            buttons.appendChild(makeButton('Retry duplicate check', 'positive', 'retry', resolve));
+            buttons.appendChild(makeButton('Submit all anyway', '', 'submit-all', resolve));
+            buttons.appendChild(makeButton('Cancel', 'negative', 'cancel', resolve));
+            dialog.appendChild(buttons);
+
+            document.body.appendChild(overlay);
+            dialog.querySelector('button')?.focus();
+        });
+    }
+
+    function installSubmissionFilters(ed) {
+        if (ed.__mbDuplicateEditCheckerFiltersInstalled) return;
+
+        for (const submission of ed.orderedEditSubmissions) {
+            if (!submission || typeof submission.edits !== 'function') continue;
+            const original = submission.edits;
+            submission.edits = function (...args) {
+                const edits = original.apply(this, args);
+                if (!runtime.active || !Array.isArray(edits)) return edits;
+
+                return edits.filter(edit => {
+                    const hash = String(edit?.hash || '');
+                    if (!hash) return true;
+                    if (runtime.pendingHashes.has(hash)) return false;
+                    if (runtime.skipRepeatedInSubmission && runtime.seenSubmissionHashes.has(hash)) return false;
+                    runtime.seenSubmissionHashes.add(hash);
+                    return true;
+                });
+            };
+        }
+
+        ed.__mbDuplicateEditCheckerFiltersInstalled = true;
+    }
+
+    function prepareFilteredSubmission(result) {
+        runtime.pendingHashes = new Set(result.pendingHashes);
+        runtime.seenSubmissionHashes = new Set();
