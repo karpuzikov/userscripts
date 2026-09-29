@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Beatport - MusicBrainz Importer
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.1.2
+// @version      1.1.3
 // @description  Import Beatport releases into MusicBrainz with reverse-linked artists/labels, ISRC recording matching, and barcode-based release sources.
 // @author       karpuzikov
 // @match        https://www.beatport.com/*
@@ -13,8 +13,8 @@
 // @grant        GM_getValue
 // @grant        GM_deleteValue
 // @grant        GM_xmlhttpRequest
-// @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/beatport-musicbrainz-importer/Beatport_MusicBrainz_Importer.user.js?v=1.1.2
-// @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/beatport-musicbrainz-importer/Beatport_MusicBrainz_Importer.user.js?v=1.1.2
+// @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/beatport-musicbrainz-importer/Beatport_MusicBrainz_Importer.user.js?v=1.1.3
+// @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/beatport-musicbrainz-importer/Beatport_MusicBrainz_Importer.user.js?v=1.1.3
 // @run-at       document-idle
 // ==/UserScript==
 
@@ -1162,58 +1162,24 @@
         return box;
     }
 
-    function showLoadingUi(release, tracks) {
+    function installIdleUi(release, tracks, serial) {
         const box = makeUiBox();
-        const status = document.createElement('span');
-        status.textContent = 'Reading Beatport metadata...';
-        status.style.fontWeight = '700';
-
-        const base = document.createElement('span');
-        base.style.opacity = '0.75';
-        base.textContent = `Barcode: ${release?.upc || 'none'} | ${tracks.length} tracks`;
-
-        box.append(status, base);
-        return text => {
-            if (status.isConnected) status.textContent = text;
-        };
-    }
-
-    function installUi(release, tracks, enrichment) {
-        const box = makeUiBox();
-        const importData = buildImport(release, tracks, enrichment.sources);
         const allIsrcs = tracks.map(track => normalizeIsrc(track?.isrc)).filter(Boolean);
-        const mainArtists = importData.releaseCredits
+        const baseImportData = buildImport(release, tracks, []);
+        const mainArtists = baseImportData.releaseCredits
             .map(credit => credit.credited_name || credit.artist_name)
             .join(', ');
 
         const importButton = makeButton('Import to MusicBrainz', true);
-        importButton.title = 'Open the MusicBrainz release editor with Beatport metadata, resolved artist/label MBIDs, recordings, and release URLs';
-        importButton.addEventListener('click', () => submitMusicBrainzImport(importData));
+        importButton.title = 'Start MusicBrainz lookups, then open the release editor with the enriched Beatport metadata';
 
         const searchButton = makeButton('Search in MusicBrainz');
-        searchButton.title = 'Search MusicBrainz for an existing release';
-        searchButton.addEventListener('click', () => openMusicBrainzSearch(importData, tracks));
+        searchButton.title = 'Search MusicBrainz for an existing release without running importer lookups';
+        searchButton.addEventListener('click', () => openMusicBrainzSearch(baseImportData, tracks));
 
-        box.append(importButton, searchButton);
-
-        if (importData.remainingIsrcCount) {
-            const isrcButton = makeButton(`Submit remaining ISRCs (${importData.remainingIsrcCount})`);
-            isrcButton.title = 'Open MagicISRC with only ISRCs whose recordings were not safely matched';
-            isrcButton.addEventListener('click', () => openRemainingIsrcs(importData));
-            box.appendChild(isrcButton);
-        }
-
-        if (enrichment.reverse.linkedReleaseIds.length === 1) {
-            const linkedButton = makeButton('Open linked MB release');
-            linkedButton.addEventListener('click', () => {
-                window.open(
-                    `https://musicbrainz.org/release/${enrichment.reverse.linkedReleaseIds[0]}`,
-                    '_blank',
-                    'noopener'
-                );
-            });
-            box.appendChild(linkedButton);
-        }
+        const status = document.createElement('span');
+        status.style.fontWeight = '700';
+        status.textContent = 'Ready - no MusicBrainz lookups have been run.';
 
         const info = document.createElement('span');
         info.style.opacity = '0.82';
@@ -1221,14 +1187,50 @@
             `Barcode: ${release?.upc || 'none'}`,
             `${tracks.length} tracks`,
             `${allIsrcs.length} ISRCs`,
-            `artists linked: ${enrichment.reverse.linkedArtists}/${enrichment.reverse.artistCount}`,
-            `recordings linked: ${enrichment.recordings.matched}/${allIsrcs.length}`,
-            `extra sources: ${enrichment.sources.length}`,
-            release?.label?.mbid ? 'label linked' : 'label unresolved',
             `release artist: ${mainArtists}`,
         ].join(' | ');
 
-        box.appendChild(info);
+        importButton.addEventListener('click', async () => {
+            if (serial !== processSerial) return;
+
+            importButton.disabled = true;
+            searchButton.disabled = true;
+
+            const setStatus = text => {
+                if (status.isConnected) status.textContent = text;
+            };
+
+            try {
+                setStatus('Resolving Beatport artist/label links in MusicBrainz...');
+                const reverse = await reverseResolveBeatportLinks(release, tracks, setStatus);
+                if (serial !== processSerial) return;
+
+                const recordings = await resolveRecordingsByIsrc(tracks, setStatus);
+                if (serial !== processSerial) return;
+
+                const sources = await findReleaseSources(release, reverse, setStatus);
+                if (serial !== processSerial) return;
+
+                const importData = buildImport(release, tracks, sources);
+                setStatus([
+                    `Ready: artists linked ${reverse.linkedArtists}/${reverse.artistCount}`,
+                    `recordings linked ${recordings.matched}/${allIsrcs.length}`,
+                    `extra sources ${sources.length}`,
+                    release?.label?.mbid ? 'label linked' : 'label unresolved',
+                    'opening MusicBrainz...',
+                ].join(' | '));
+
+                submitMusicBrainzImport(importData);
+            } catch (error) {
+                console.error('[Beatport MB Importer]', error);
+                setStatus(`Importer error: ${error.message}`);
+                status.style.color = '#ff8080';
+                importButton.disabled = false;
+                searchButton.disabled = false;
+            }
+        });
+
+        box.append(importButton, searchButton, status, info);
     }
 
     async function processBeatportRelease() {
@@ -1253,18 +1255,7 @@
                 .filter(track => String(track?.release?.id || release.id) === String(release.id));
             if (!tracks.length) throw new Error('No tracks belonging to this release were found');
 
-            const setStatus = showLoadingUi(release, tracks);
-
-            const reverse = await reverseResolveBeatportLinks(release, tracks, setStatus);
-            if (serial !== processSerial) return;
-
-            const recordings = await resolveRecordingsByIsrc(tracks, setStatus);
-            if (serial !== processSerial) return;
-
-            const sources = await findReleaseSources(release, reverse, setStatus);
-            if (serial !== processSerial) return;
-
-            installUi(release, tracks, { reverse, recordings, sources });
+            installIdleUi(release, tracks, serial);
         } catch (error) {
             console.error('[Beatport MB Importer]', error);
             if (serial !== processSerial) return;
