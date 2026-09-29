@@ -214,22 +214,72 @@ def _start_barcode_lookup(api, files, barcode):
         translate=None,
     )
 
-    holder = {}
-
-    def handler(document, http, error):
-        task = holder.get("task")
-        if task in _PENDING_BARCODE_TASKS:
-            _PENDING_BARCODE_TASKS.remove(task)
-        _barcode_lookup_finished(api, files, barcode, document, http, error)
-
-    query_limit = api.global_config.setting["query_limit"]
-    task = api.mb_api.find_releases(
-        handler,
-        barcode=barcode,
-        limit=query_limit,
+    # MusicBrainz's own Barcode lookup uses the advanced Lucene query
+    # "barcode:<number>". Use that exact form instead of Picard's generic
+    # field-query builder, and query every accepted leading-zero variant.
+    # Results are still verified against the release's actual barcode before
+    # Picard is allowed to link anything.
+    forms = [barcode]
+    forms.extend(
+        sorted(
+            _barcode_forms(barcode) - {barcode},
+            key=lambda value: (abs(len(value) - len(barcode)), len(value), value),
+        )
     )
-    holder["task"] = task
-    _PENDING_BARCODE_TASKS.append(task)
+
+    state = {
+        "index": 0,
+        "releases": {},
+        "errors": 0,
+    }
+
+    def finish():
+        document = {"releases": list(state["releases"].values())}
+        all_failed = state["errors"] == len(forms) and not state["releases"]
+        _barcode_lookup_finished(api, files, barcode, document, None, all_failed)
+
+    def start_next():
+        if state["index"] >= len(forms):
+            finish()
+            return
+
+        search_barcode = forms[state["index"]]
+        state["index"] += 1
+        holder = {}
+
+        def handler(document, http, error):
+            task = holder.get("task")
+            if task in _PENDING_BARCODE_TASKS:
+                _PENDING_BARCODE_TASKS.remove(task)
+
+            if error:
+                state["errors"] += 1
+            else:
+                try:
+                    releases = list((document or {}).get("releases") or [])
+                except Exception:
+                    releases = []
+
+                for release in releases:
+                    if not _barcodes_match(barcode, _exact_release_barcode(release)):
+                        continue
+                    release_id = release.get("id")
+                    key = release_id or repr(release)
+                    state["releases"][key] = release
+
+            start_next()
+
+        task = api.mb_api.find_releases(
+            handler,
+            search=True,
+            advanced_search=True,
+            query="barcode:%s" % search_barcode,
+            limit=100,
+        )
+        holder["task"] = task
+        _PENDING_BARCODE_TASKS.append(task)
+
+    start_next()
 
 
 def _expand_lookup_objects(objects):
