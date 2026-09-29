@@ -1,20 +1,16 @@
 // ==UserScript==
 // @name         Beatport - MusicBrainz Importer
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.1.3
+// @version      1.1.4
 // @description  Import Beatport releases into MusicBrainz with reverse-linked artists/labels, ISRC recording matching, and barcode-based release sources.
 // @author       karpuzikov
 // @match        https://www.beatport.com/*
-// @match        https://musicbrainz.org/*
 // @connect      musicbrainz.org
 // @connect      music.apple.com
 // @connect      amp-api.music.apple.com
-// @grant        GM_setValue
-// @grant        GM_getValue
-// @grant        GM_deleteValue
 // @grant        GM_xmlhttpRequest
-// @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/beatport-musicbrainz-importer/Beatport_MusicBrainz_Importer.user.js?v=1.1.3
-// @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/beatport-musicbrainz-importer/Beatport_MusicBrainz_Importer.user.js?v=1.1.3
+// @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/beatport-musicbrainz-importer/Beatport_MusicBrainz_Importer.user.js?v=1.1.4
+// @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/beatport-musicbrainz-importer/Beatport_MusicBrainz_Importer.user.js?v=1.1.4
 // @run-at       document-idle
 // ==/UserScript==
 
@@ -28,7 +24,6 @@
     const PURCHASE_FOR_DOWNLOAD = 74;
     const PAID_STREAMING = 980;
     const VARIOUS_ARTISTS_MBID = '89ad4ac3-39f7-470e-963a-56509c546377';
-    const STORAGE_PREFIX = 'beatport-mb-import:';
     const UI_ID = 'beatport-musicbrainz-importer';
     const MAX_DIFFERENCE_MS = 7000;
     const MB_REQUEST_GAP_MS = 1100;
@@ -995,40 +990,19 @@
         editNoteLines.push(`Importer: ${GITHUB_SCRIPT_URL}`);
         params.push(['edit_note', editNoteLines.join('\n')]);
 
-        const remainingIsrcs = tracks.map(track =>
-            track._mbRecordingId ? '' : normalizeIsrc(track?.isrc)
-        );
-        const remainingCount = remainingIsrcs.filter(Boolean).length;
-
-        let storageKey = '';
-        if (remainingCount) {
-            storageKey = `${STORAGE_PREFIX}${release.id}:${Date.now()}`;
-            const redirect = new URL('https://musicbrainz.org/');
-            redirect.searchParams.set('beatport_isrc_import', storageKey);
-            params.push(['redirect_uri', redirect.toString()]);
-        }
-
         return {
             params,
-            storageKey,
             pending: {
                 beatportReleaseId: String(release.id),
                 sourceUrl,
                 title,
                 barcode: String(release?.upc || ''),
-                isrcs: remainingIsrcs,
-                createdAt: Date.now(),
             },
             releaseCredits,
-            remainingIsrcCount: remainingCount,
         };
     }
 
     function submitMusicBrainzImport(importData) {
-        if (importData.storageKey) {
-            GM_setValue(importData.storageKey, importData.pending);
-        }
-
         const form = document.createElement('form');
         form.method = 'post';
         form.action = MB_ADD_RELEASE;
@@ -1049,29 +1023,6 @@
         form.remove();
     }
 
-    function openMagicIsrcForCurrentRelease() {
-        const url = new URL(location.href);
-        const storageKey = url.searchParams.get('beatport_isrc_import');
-        const releaseMbid = url.searchParams.get('release_mbid');
-        if (!storageKey || !releaseMbid) return false;
-
-        const pending = GM_getValue(storageKey, null);
-        if (!pending?.isrcs?.some(Boolean)) return false;
-
-        const target = new URL(MAGIC_ISRC);
-        target.searchParams.set('mbid', releaseMbid);
-        pending.isrcs.forEach((isrc, index) => {
-            if (isrc) target.searchParams.set(`isrc1-${index + 1}`, isrc);
-        });
-        target.searchParams.set(
-            'edit-note',
-            `Remaining ISRCs imported from Beatport: ${pending.sourceUrl}\nImporter: ${GITHUB_SCRIPT_URL}`
-        );
-        GM_deleteValue(storageKey);
-        location.replace(target.toString());
-        return true;
-    }
-
     function openMusicBrainzSearch(importData, tracks) {
         const title = importData.pending.title || '';
         const artist = importData.releaseCredits.map(credit => credit.artist_name).join(', ');
@@ -1090,15 +1041,17 @@
         window.open(url.toString(), '_blank', 'noopener');
     }
 
-    function openRemainingIsrcs(importData) {
-        if (!importData.remainingIsrcCount) return;
+    function openAllIsrcs(release, tracks) {
+        const isrcs = tracks.map(track => normalizeIsrc(track?.isrc));
+        if (!isrcs.some(Boolean)) return;
+
         const target = new URL(MAGIC_ISRC);
-        importData.pending.isrcs.forEach((isrc, index) => {
+        isrcs.forEach((isrc, index) => {
             if (isrc) target.searchParams.set(`isrc1-${index + 1}`, isrc);
         });
         target.searchParams.set(
             'edit-note',
-            `Remaining ISRCs imported from Beatport: ${importData.pending.sourceUrl}\nImporter: ${GITHUB_SCRIPT_URL}`
+            `ISRCs imported from Beatport: ${cleanBeatportUrl()}\nImporter: ${GITHUB_SCRIPT_URL}`
         );
         window.open(target.toString(), '_blank', 'noopener');
     }
@@ -1124,6 +1077,59 @@
         const controls = document.querySelector('div[class^="ReleaseDetailCard-style__Controls"]');
         const infoArea = document.querySelector('div[class^="ReleaseDetailCard-style__Info"]')?.parentElement;
         return controls || infoArea || null;
+    }
+
+    function displayBarcodeBelowCatalogNumber(release) {
+        document.getElementById('beatport-mb-barcode-row')?.remove();
+
+        const barcode = normalizeSpace(release?.upc);
+        const catalog = normalizeSpace(release?.catalog_number);
+        if (!barcode || !catalog) return;
+
+        const scope =
+            document.querySelector('div[class^="ReleaseDetailCard-style__Info"]') ||
+            document.querySelector('main') ||
+            document.body;
+
+        const candidates = [...scope.querySelectorAll('div, p, li, dt, dd, span')];
+        let catalogElement = candidates.find(element => {
+            const text = normalizeSpace(element.textContent);
+            return text === catalog;
+        });
+
+        if (!catalogElement) {
+            catalogElement = candidates.find(element => {
+                const text = normalizeSpace(element.textContent);
+                return text.includes(catalog) &&
+                    text.toLocaleLowerCase().includes('catalog') &&
+                    text.length < 180;
+            });
+        }
+
+        if (!catalogElement) return;
+
+        let row = catalogElement;
+        for (let i = 0; i < 4 && row.parentElement && row.parentElement !== scope; i++) {
+            const parentText = normalizeSpace(row.parentElement.textContent);
+            if (
+                parentText.includes(catalog) &&
+                parentText.toLocaleLowerCase().includes('catalog') &&
+                parentText.length < 220
+            ) {
+                row = row.parentElement;
+            } else {
+                break;
+            }
+        }
+
+        const barcodeRow = document.createElement('div');
+        barcodeRow.id = 'beatport-mb-barcode-row';
+        barcodeRow.textContent = `Barcode: ${barcode}`;
+        barcodeRow.style.marginTop = '4px';
+        barcodeRow.style.fontSize = 'inherit';
+        barcodeRow.style.lineHeight = 'inherit';
+
+        row.insertAdjacentElement('afterend', barcodeRow);
     }
 
     function makeUiBox() {
@@ -1177,6 +1183,11 @@
         searchButton.title = 'Search MusicBrainz for an existing release without running importer lookups';
         searchButton.addEventListener('click', () => openMusicBrainzSearch(baseImportData, tracks));
 
+        const isrcButton = makeButton(`Submit ISRCs (${allIsrcs.length})`);
+        isrcButton.title = 'Open MagicISRC with this Beatport release\'s ISRCs prefilled';
+        isrcButton.disabled = allIsrcs.length === 0;
+        isrcButton.addEventListener('click', () => openAllIsrcs(release, tracks));
+
         const status = document.createElement('span');
         status.style.fontWeight = '700';
         status.textContent = 'Ready - no MusicBrainz lookups have been run.';
@@ -1195,6 +1206,7 @@
 
             importButton.disabled = true;
             searchButton.disabled = true;
+            isrcButton.disabled = true;
 
             const setStatus = text => {
                 if (status.isConnected) status.textContent = text;
@@ -1227,10 +1239,11 @@
                 status.style.color = '#ff8080';
                 importButton.disabled = false;
                 searchButton.disabled = false;
+                isrcButton.disabled = allIsrcs.length === 0;
             }
         });
 
-        box.append(importButton, searchButton, status, info);
+        box.append(importButton, searchButton, isrcButton, status, info);
     }
 
     async function processBeatportRelease() {
@@ -1255,6 +1268,7 @@
                 .filter(track => String(track?.release?.id || release.id) === String(release.id));
             if (!tracks.length) throw new Error('No tracks belonging to this release were found');
 
+            displayBarcodeBelowCatalogNumber(release);
             installIdleUi(release, tracks, serial);
         } catch (error) {
             console.error('[Beatport MB Importer]', error);
@@ -1265,11 +1279,6 @@
             status.style.color = '#ff8080';
             box.appendChild(status);
         }
-    }
-
-    if (location.hostname === 'musicbrainz.org') {
-        openMagicIsrcForCurrentRelease();
-        return;
     }
 
     let lastUrl = '';
