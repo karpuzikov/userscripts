@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MusicBrainz ToolBox
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.0.4
+// @version      1.0.5
 // @description  Combined MusicBrainz release-editor, recording, barcode, search, cover-art, Disc ID, and duplicate-edit tools.
 // @author       karpuzikov
 // @license      MIT
@@ -959,6 +959,368 @@
                 catalogNumber
             );
         });
+    })();
+    }
+
+    // ============================================================================
+    // Individual Artist Match Propagation
+    // Extends MusicBrainz's "Change all artists..." Tracklist option so it
+    // replaces matching individual artist-credit components, not only complete
+    // artist-credit strings.
+    // ============================================================================
+    if (__mbToolBoxShouldRun(["https://musicbrainz.org/release/add*","https://musicbrainz.org/release/*/edit*","https://beta.musicbrainz.org/release/add*","https://beta.musicbrainz.org/release/*/edit*"], [])) {
+    (() => {
+        'use strict';
+
+        const SCRIPT_URL =
+            'https://github.com/karpuzikov/userscripts/blob/main/musicbrainz-tools/toolbox/MusicBrainz_ToolBox.user.js';
+        const sessions = new Set();
+        let observer = null;
+        let scanQueued = false;
+
+        function pageWindow() {
+            try {
+                return typeof unsafeWindow !== 'undefined' ? unsafeWindow : window;
+            } catch {
+                return window;
+            }
+        }
+
+        function unwrap(value) {
+            return typeof value === 'function' ? value() : value;
+        }
+
+        function releaseTracks() {
+            const release =
+                pageWindow().MB?.releaseEditor?.rootField?.release?.() ||
+                pageWindow().MB?._releaseEditor?.rootField?.release?.();
+
+            if (!release) return [];
+
+            if (typeof release.allTracks === 'function') {
+                return [...release.allTracks()];
+            }
+
+            const tracks = [];
+            for (const medium of unwrap(release.mediums) || []) {
+                for (const track of unwrap(medium.tracks) || []) {
+                    tracks.push(track);
+                }
+            }
+            return tracks;
+        }
+
+        function trackForRow(row) {
+            const rowId = String(row?.id || '');
+            if (!rowId) return null;
+            return releaseTracks().find(track => String(track?.elementID || '') === rowId) || null;
+        }
+
+        function artistId(part) {
+            const artist = unwrap(part?.artist) || {};
+            return String(
+                unwrap(artist.gid) ||
+                unwrap(artist.id) ||
+                ''
+            ).trim().toLowerCase();
+        }
+
+        function creditedName(part) {
+            const artist = unwrap(part?.artist) || {};
+            return String(
+                unwrap(part?.name) ??
+                unwrap(artist.name) ??
+                ''
+            );
+        }
+
+        function snapshotArtistCredit(artistCredit) {
+            return (unwrap(artistCredit)?.names || []).map(part => ({
+                artistId: artistId(part),
+                creditedName: creditedName(part),
+            }));
+        }
+
+        function individualChanged(oldPart, newPart) {
+            if (!oldPart || !newPart) return false;
+            return (
+                oldPart.artistId !== artistId(newPart) ||
+                oldPart.creditedName !== creditedName(newPart)
+            );
+        }
+
+        function partMatchesSnapshot(part, snapshot) {
+            if (!part || !snapshot) return false;
+
+            const targetId = artistId(part);
+            const targetName = creditedName(part);
+
+            // When both sides have an MBID, require the same artist as well as
+            // the same credited name. This avoids changing another alias/credit
+            // for the same artist that the user did not ask to replace.
+            if (snapshot.artistId && targetId) {
+                return (
+                    snapshot.artistId === targetId &&
+                    snapshot.creditedName === targetName
+                );
+            }
+
+            // New/unresolved artists may not have an MBID yet.
+            return snapshot.creditedName === targetName;
+        }
+
+        function changedMappings(originalNames, finalCredit) {
+            const finalNames = unwrap(finalCredit)?.names || [];
+            const count = Math.min(originalNames.length, finalNames.length);
+            const mappings = [];
+
+            for (let index = 0; index < count; index++) {
+                const oldPart = originalNames[index];
+                const newPart = finalNames[index];
+
+                if (!individualChanged(oldPart, newPart)) continue;
+
+                mappings.push({
+                    oldPart,
+                    newPart,
+                });
+            }
+
+            return mappings;
+        }
+
+        function replaceMatchingParts(artistCredit, mappings) {
+            const credit = unwrap(artistCredit);
+            const names = credit?.names;
+            if (!Array.isArray(names) || !mappings.length) {
+                return {artistCredit: credit, replacements: 0};
+            }
+
+            let replacements = 0;
+            const nextNames = names.map(part => {
+                const mapping = mappings.find(item =>
+                    partMatchesSnapshot(part, item.oldPart)
+                );
+
+                if (!mapping) return part;
+
+                const newPart = mapping.newPart;
+                replacements++;
+
+                return {
+                    ...part,
+                    artist: unwrap(newPart?.artist) || part.artist,
+                    name: creditedName(newPart),
+                    // Deliberately preserve this track's join phrase. Example:
+                    // "Maître Gims feat. Quincy" -> "GIMS feat. Quincy".
+                    joinPhrase:
+                        unwrap(part?.joinPhrase ?? part?.join_phrase) || '',
+                };
+            });
+
+            if (!replacements) {
+                return {artistCredit: credit, replacements: 0};
+            }
+
+            return {
+                artistCredit: {
+                    ...credit,
+                    names: nextNames,
+                },
+                replacements,
+            };
+        }
+
+        function appendScriptLinkToEditNote() {
+            const ed =
+                pageWindow().MB?.releaseEditor ||
+                pageWindow().MB?._releaseEditor;
+            const editNote = ed?.rootField?.editNote;
+
+            if (typeof editNote === 'function') {
+                const current = String(editNote() || '');
+                if (!current.includes(SCRIPT_URL)) {
+                    editNote(
+                        current
+                            ? current.trimEnd() + '\n\nScript: ' + SCRIPT_URL
+                            : 'Script: ' + SCRIPT_URL
+                    );
+                }
+                return;
+            }
+
+            const textarea = document.querySelector(
+                '#edit-note-text, textarea.edit-note'
+            );
+            if (!textarea || textarea.value.includes(SCRIPT_URL)) return;
+
+            const next = textarea.value.trimEnd()
+                ? textarea.value.trimEnd() + '\n\nScript: ' + SCRIPT_URL
+                : 'Script: ' + SCRIPT_URL;
+
+            const setter = Object.getOwnPropertyDescriptor(
+                HTMLTextAreaElement.prototype,
+                'value'
+            )?.set;
+
+            if (setter) setter.call(textarea, next);
+            else textarea.value = next;
+
+            textarea.dispatchEvent(new Event('input', {bubbles: true}));
+            textarea.dispatchEvent(new Event('change', {bubbles: true}));
+        }
+
+        function applySession(session) {
+            if (session.applied) return;
+            session.applied = true;
+
+            // Match native MusicBrainz semantics: only extend the operation if
+            // the checkbox was still checked when the artist editor closed.
+            if (!session.checkbox.checked) return;
+
+            const sourceTrack = session.track;
+            const finalCredit = unwrap(sourceTrack?.artistCredit);
+            const mappings = changedMappings(session.originalNames, finalCredit);
+            if (!mappings.length) return;
+
+            let changedTracks = 0;
+            let replacedParts = 0;
+
+            for (const track of releaseTracks()) {
+                if (track === sourceTrack || typeof track?.artistCredit !== 'function') {
+                    continue;
+                }
+
+                const current = track.artistCredit();
+                const result = replaceMatchingParts(current, mappings);
+                if (!result.replacements) continue;
+
+                track.artistCredit(result.artistCredit);
+                changedTracks++;
+                replacedParts += result.replacements;
+            }
+
+            if (replacedParts) {
+                appendScriptLinkToEditNote();
+                console.info(
+                    '[MusicBrainz ToolBox] Individual artist replacement: ' +
+                    replacedParts + ' artist credit part(s) changed across ' +
+                    changedTracks + ' track(s).'
+                );
+            }
+        }
+
+        function createSession(checkbox) {
+            const row = checkbox.closest('tr.track');
+            const track = trackForRow(row);
+            if (!row || !track || typeof track.artistCredit !== 'function') return null;
+
+            const session = {
+                row,
+                track,
+                checkbox,
+                originalNames: snapshotArtistCredit(track.artistCredit()),
+                applied: false,
+                closing: false,
+            };
+
+            sessions.add(session);
+            return session;
+        }
+
+        function sessionForTrack(track) {
+            for (const session of sessions) {
+                if (session.track === track && !session.applied) return session;
+            }
+            return null;
+        }
+
+        function ensureSession(checkbox) {
+            const row = checkbox.closest('tr.track');
+            const track = trackForRow(row);
+            if (!track) return null;
+
+            const existing = sessionForTrack(track);
+            if (existing) {
+                existing.checkbox = checkbox;
+                existing.row = row;
+                return existing;
+            }
+
+            return createSession(checkbox);
+        }
+
+        function scan() {
+            scanQueued = false;
+
+            const tracklist = document.getElementById('tracklist');
+            if (!tracklist) return;
+
+            for (const checkbox of tracklist.querySelectorAll(
+                'input#change-matching-artists'
+            )) {
+                ensureSession(checkbox);
+            }
+
+            for (const session of [...sessions]) {
+                if (session.applied) {
+                    sessions.delete(session);
+                    continue;
+                }
+
+                if (session.checkbox.isConnected) continue;
+
+                // React can occasionally replace the checkbox node while keeping
+                // the same artist editor open. Transfer the session instead of
+                // mistaking that re-render for a close.
+                const replacement = session.row?.querySelector(
+                    'input#change-matching-artists'
+                );
+
+                if (replacement) {
+                    session.checkbox = replacement;
+                    continue;
+                }
+
+                if (session.closing) continue;
+                session.closing = true;
+
+                // Let MusicBrainz finish its own full-credit propagation first,
+                // then extend it to individual matches.
+                setTimeout(() => {
+                    applySession(session);
+                    sessions.delete(session);
+                }, 0);
+            }
+        }
+
+        function queueScan() {
+            if (scanQueued) return;
+            scanQueued = true;
+            queueMicrotask(scan);
+        }
+
+        function start() {
+            const tracklist = document.getElementById('tracklist');
+            if (!tracklist) {
+                setTimeout(start, 250);
+                return;
+            }
+
+            scan();
+
+            observer = new MutationObserver(queueScan);
+            observer.observe(tracklist, {
+                childList: true,
+                subtree: true,
+            });
+
+            window.addEventListener('pagehide', () => observer?.disconnect(), {
+                once: true,
+            });
+        }
+
+        start();
     })();
     }
 
