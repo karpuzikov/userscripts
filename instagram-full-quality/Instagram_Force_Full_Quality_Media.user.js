@@ -16,7 +16,7 @@
 // @name:vi            Trợ lý IG
 // @name:zh-CN         IG小助手
 // @name:zh-TW         IG小精靈
-// @namespace          https://github.snkms.com/
+// @namespace          https://www.instagram.com/
 // @version            4.4.0
 // @description        IG Helper with highest-quality Instagram Media API/DASH fetching enabled by default.
 // @description:ar     نزّل صورًا ومقاطع فيديو من منشورات Instagram بنقرة واحدة، بما في ذلك القصص وReels وصور الملف الشخصي.
@@ -37,6 +37,8 @@
 // @description:zh-TW  一鍵下載 Instagram 貼文中的照片、影片，還包含限時動態、Reels 與大頭貼。
 // @author             SN-Koarashi (5026)
 // @match              https://*.instagram.com/*
+// @downloadURL         https://raw.githubusercontent.com/karpuzikov/userscripts/main/instagram-full-quality/Instagram_Force_Full_Quality_Media.user.js
+// @updateURL           https://raw.githubusercontent.com/karpuzikov/userscripts/main/instagram-full-quality/Instagram_Force_Full_Quality_Media.user.js
 // @grant              GM_addStyle
 // @grant              GM_download
 // @grant              GM_getResourceText
