@@ -1206,7 +1206,6 @@
 
             importButton.disabled = true;
             searchButton.disabled = true;
-            isrcButton.disabled = true;
 
             const setStatus = text => {
                 if (status.isConnected) status.textContent = text;
@@ -1239,7 +1238,6 @@
                 status.style.color = '#ff8080';
                 importButton.disabled = false;
                 searchButton.disabled = false;
-                isrcButton.disabled = allIsrcs.length === 0;
             }
         });
 
