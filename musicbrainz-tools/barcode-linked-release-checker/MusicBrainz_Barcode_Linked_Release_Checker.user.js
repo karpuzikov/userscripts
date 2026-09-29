@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MusicBrainz - Barcode vs Linked Releases Checker
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.3.4
+// @version      1.3.5
 // @description  Checks Digital Media release barcodes against linked provider release pages through Harmony and stages MusicBrainz correction edits.
 // @author       karpuzikov
 // @license      MIT
@@ -1130,6 +1130,10 @@
         return output;
     }
 
+    function pendingTaskKey(mbid) {
+        return `${TASK_PREFIX}pending:${mbid}`;
+    }
+
     function storeTask(correction) {
         const id = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
         const task = {
@@ -1141,6 +1145,7 @@
             summary: correction.reasons,
         };
         localStorage.setItem(`${TASK_PREFIX}${id}`, JSON.stringify(task));
+        localStorage.setItem(pendingTaskKey(correction.mbid), id);
         return id;
     }
 
@@ -1148,7 +1153,7 @@
         if (!hasCorrection(correction)) return;
 
         const taskId = storeTask(correction);
-        const targetName = `mb-barcode-link-check-${correction.mbid}`;
+        const targetName = `mb-barcode-link-check-${taskId}`;
         const form = document.createElement('form');
         form.method = 'post';
         form.target = targetName;
@@ -1184,11 +1189,49 @@
             if (!key?.startsWith(TASK_PREFIX)) continue;
             try {
                 const task = JSON.parse(localStorage.getItem(key));
-                if (!task?.created || Date.now() - task.created > maxAge) localStorage.removeItem(key);
+                if (!task?.created || Date.now() - task.created > maxAge) {
+                    localStorage.removeItem(key);
+                    if (task?.mbid) {
+                        const pendingKey = pendingTaskKey(task.mbid);
+                        if (localStorage.getItem(pendingKey) === key.slice(TASK_PREFIX.length)) {
+                            localStorage.removeItem(pendingKey);
+                        }
+                    }
+                }
             } catch {
                 localStorage.removeItem(key);
             }
         }
+    }
+
+    function resolvePendingTaskId() {
+        const fromQuery = new URL(location.href).searchParams.get('barcode-link-checker');
+        if (fromQuery) return fromQuery;
+
+        const nameMatch = String(window.name || '').match(/^mb-barcode-link-check-(.+)$/);
+        if (nameMatch?.[1]) return nameMatch[1];
+
+        const mbid = extractMbid(location.pathname);
+        if (!mbid) return '';
+
+        const pendingId = localStorage.getItem(pendingTaskKey(mbid)) || '';
+        if (!pendingId) return '';
+
+        try {
+            const task = JSON.parse(localStorage.getItem(`${TASK_PREFIX}${pendingId}`));
+            if (
+                task?.mbid === mbid &&
+                task?.created &&
+                Date.now() - task.created <= 60 * 60 * 1000
+            ) {
+                return pendingId;
+            }
+        } catch {
+            // Ignore corrupt pending pointers below.
+        }
+
+        localStorage.removeItem(pendingTaskKey(mbid));
+        return '';
     }
 
     function findExistingUrlRow(url) {
@@ -1372,7 +1415,7 @@
 
     async function applyPendingEditTask() {
         cleanupExpiredTasks();
-        const taskId = new URL(location.href).searchParams.get('barcode-link-checker');
+        const taskId = resolvePendingTaskId();
         if (!taskId) return false;
 
         const key = `${TASK_PREFIX}${taskId}`;
@@ -1383,6 +1426,15 @@
             task = null;
         }
         if (!task) return false;
+
+        const currentMbid = extractMbid(location.pathname);
+        if (!currentMbid || task.mbid !== currentMbid) return false;
+
+        // The pending pointer is only for locating the task after MusicBrainz
+        // handles the seeded POST. Keep the task itself until submission.
+        if (localStorage.getItem(pendingTaskKey(task.mbid)) === taskId) {
+            localStorage.removeItem(pendingTaskKey(task.mbid));
+        }
 
         await waitFor(() => document.querySelector('#external-links-editor'));
         await waitFor(
