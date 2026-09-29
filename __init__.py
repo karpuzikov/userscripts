@@ -166,6 +166,33 @@ def _file_track_position(file_obj):
     return first_value("discnumber"), first_value("tracknumber")
 
 
+def _expected_disc_count(files):
+    counts = set()
+
+    for file_obj in files:
+        metadata_sources = (
+            getattr(file_obj, "orig_metadata", None),
+            getattr(file_obj, "metadata", None),
+        )
+
+        found = ""
+        for metadata in metadata_sources:
+            for value in _metadata_tag_values(metadata, "totaldiscs"):
+                normalized = _normalize_track_position(value)
+                if normalized and normalized.isdigit() and int(normalized) > 0:
+                    found = normalized
+                    break
+            if found:
+                break
+
+        if found:
+            counts.add(found)
+
+    if len(counts) == 1:
+        return next(iter(counts))
+    return ""
+
+
 def _move_files_to_release_by_track_number(api, files, release_id):
     album = api.tagger.load_album(release_id)
 
@@ -312,48 +339,59 @@ def _start_barcode_batch_lookup(api, file_groups):
 
     state = {
         "matches": {barcode: {} for barcode in barcodes},
+        "disc_matches": {barcode: {} for barcode in barcodes},
         "pending": 0,
         "errors": 0,
     }
 
-    def add_release(barcode, release):
+    def add_release(target, barcode, release):
         release_id = release.get("id")
         if release_id:
-            state["matches"][barcode][release_id] = release
+            target[barcode][release_id] = release
 
     def finish():
         matched = 0
         missing = 0
-        ambiguous = 0
+        duplicates = 0
 
         for barcode, files in file_groups.items():
             releases = list(state["matches"][barcode].values())
-            if len(releases) == 1:
-                _move_files_to_release_by_track_number(api, files, releases[0]["id"])
-                matched += 1
-            elif not releases:
+            if not releases:
                 missing += 1
                 api.logger.info("No exact MusicBrainz barcode match for %s", barcode)
+                continue
+
+            chosen = None
+
+            if len(releases) > 1:
+                duplicates += 1
+                disc_releases = list(state["disc_matches"][barcode].values())
+                if disc_releases:
+                    # Disc-count filtering resolved the barcode enough to pick
+                    # from matching releases. If more than one remains, use the
+                    # first MusicBrainz result as requested.
+                    chosen = disc_releases[0]
+                else:
+                    # No usable disc-count distinction: use the first result.
+                    chosen = releases[0]
             else:
-                ambiguous += 1
-                api.logger.info(
-                    "Barcode %s has %d exact MusicBrainz release matches; nothing linked",
-                    barcode,
-                    len(releases),
-                )
+                chosen = releases[0]
+
+            _move_files_to_release_by_track_number(api, files, chosen["id"])
+            matched += 1
 
         api.tagger.window.set_statusbar_message(
-            "Barcode lookup: %(matched)d matched, %(missing)d not found, %(ambiguous)d ambiguous",
+            "Barcode lookup: %(matched)d matched, %(missing)d not found, %(duplicates)d duplicate barcodes resolved",
             {
                 "matched": matched,
                 "missing": missing,
-                "ambiguous": ambiguous,
+                "duplicates": duplicates,
             },
             translate=None,
             timeout=7000,
         )
 
-    def request_queries(query_items, form_targets, done):
+    def request_queries(query_items, form_targets, target_store, done):
         chunks = [
             query_items[index:index + 50]
             for index in range(0, len(query_items), 50)
@@ -366,7 +404,7 @@ def _start_barcode_batch_lookup(api, file_groups):
 
         for chunk in chunks:
             holder = {}
-            query = " OR ".join("barcode:%s" % value for value in chunk)
+            query = " OR ".join(chunk)
 
             def handler(document, http, error, chunk=chunk, holder=holder):
                 task = holder.get("task")
@@ -386,7 +424,7 @@ def _start_barcode_batch_lookup(api, file_groups):
                         if not release_barcode:
                             continue
                         for original_barcode in form_targets.get(release_barcode, ()):
-                            add_release(original_barcode, release)
+                            add_release(target_store, original_barcode, release)
 
                 state["pending"] -= 1
                 if state["pending"] == 0:
@@ -402,6 +440,30 @@ def _start_barcode_batch_lookup(api, file_groups):
             holder["task"] = task
             _PENDING_BARCODE_TASKS.append(task)
 
+    def resolve_duplicates():
+        duplicate_queries = []
+        duplicate_targets = {}
+
+        for barcode, releases_by_id in state["matches"].items():
+            if len(releases_by_id) <= 1:
+                continue
+
+            disc_count = _expected_disc_count(file_groups[barcode])
+            if not disc_count:
+                continue
+
+            duplicate_queries.append(
+                "(barcode:%s AND mediums:%s)" % (barcode, disc_count)
+            )
+            duplicate_targets.setdefault(barcode, set()).add(barcode)
+
+        request_queries(
+            duplicate_queries,
+            duplicate_targets,
+            state["disc_matches"],
+            finish,
+        )
+
     def start_fallback():
         missing = [
             barcode
@@ -409,26 +471,36 @@ def _start_barcode_batch_lookup(api, file_groups):
             if not state["matches"][barcode]
         ]
         if not missing:
-            finish()
+            resolve_duplicates()
             return
 
         form_targets = {}
+        fallback_queries = []
+
         for barcode in missing:
-            for form in _barcode_forms(barcode) - {barcode}:
+            for form in sorted(_barcode_forms(barcode) - {barcode}):
                 form_targets.setdefault(form, set()).add(barcode)
+                fallback_queries.append("barcode:%s" % form)
+
+        def after_fallback():
+            resolve_duplicates()
 
         request_queries(
-            list(form_targets),
+            fallback_queries,
             form_targets,
-            finish,
+            state["matches"],
+            after_fallback,
         )
 
     exact_targets = {barcode: {barcode} for barcode in barcodes}
+    exact_queries = ["barcode:%s" % barcode for barcode in barcodes]
     request_queries(
-        barcodes,
+        exact_queries,
         exact_targets,
+        state["matches"],
         start_fallback,
     )
+
 
 
 def _start_barcode_lookup(api, files, barcode):
@@ -526,8 +598,8 @@ def _install_barcode_lookup_button(api):
         window,
     )
     action.setIconText("Barcode Lookup")
-    action.setToolTip("Lookup selected items by exact Barcode or UPC only")
-    action.setStatusTip("Lookup selected items by exact Barcode or UPC only")
+    action.setToolTip("Match by exact Barcode/UPC, then disc count and track number")
+    action.setStatusTip("Match by exact Barcode/UPC, then disc count and track number")
     action.triggered.connect(lambda _checked=False: _run_barcode_lookup_button(api))
 
     toolbar_actions = window.toolbar.actions()
