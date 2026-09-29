@@ -1,16 +1,22 @@
 // ==UserScript==
 // @name         Beatport - MusicBrainz Importer
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.2.4
+// @version      1.2.5
 // @description  Import Beatport and BPTopTracker releases into MusicBrainz with Beatport enrichment, ISRC matching, and release-source handling.
 // @author       karpuzikov
 // @match        https://www.beatport.com/*
+// @match        https://musicbrainz.org/release/add*
+// @match        https://beta.musicbrainz.org/release/add*
 // @match        https://www.bptoptracker.com/release/*
 // @match        https://bptoptracker.com/release/*
 // @connect      musicbrainz.org
+// @connect      api.github.com
 // @connect      music.apple.com
 // @connect      amp-api.music.apple.com
+// @grant        GM_getValue
+// @grant        GM_setValue
 // @grant        GM_xmlhttpRequest
+// @grant        unsafeWindow
 // @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/beatport-musicbrainz-importer/Beatport_MusicBrainz_Importer.user.js
 // @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/beatport-musicbrainz-importer/Beatport_MusicBrainz_Importer.user.js
 // @run-at       document-idle
@@ -31,6 +37,18 @@
     const UI_ID = 'beatport-musicbrainz-importer';
     const MAX_DIFFERENCE_MS = 7000;
     const MB_REQUEST_GAP_MS = 1100;
+    const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const ISRC_CHOICE_CACHE_KEY = 'mb-recording-matcher:isrc-choice:v1';
+    const LEGACY_ISRC_CHOICE_CACHE_KEY = 'mb-recording-data-to-tracks:isrc-choice-cache:v1';
+    const GITHUB_TOKEN_KEY = 'mb-recording-matcher:github-token';
+    const GITHUB_CACHE_REPO = 'karpuzikov/userscripts';
+    const GITHUB_CACHE_PATH = 'musicbrainz-tools/safe-recording-matcher/isrc-choice-cache.json';
+    const GITHUB_API_BASE = 'https://api.github.com';
+    const PENDING_IMPORT_KEY = 'beatport-mb-importer:pending:v1';
+    const BEATPORT_REL_UUID = {
+        artist: 'f8319a2f-f824-4617-81c8-be6560b3b203',
+        label: 'dc1a65f4-6458-4f3d-bbb1-57e58668d6e7',
+    };
     const GITHUB_SCRIPT_URL = 'https://github.com/karpuzikov/userscripts/blob/main/musicbrainz-tools/beatport-musicbrainz-importer/Beatport_MusicBrainz_Importer.user.js';
 
     const RELEASE_LINK_TYPE_IDS = new Map([
@@ -725,6 +743,253 @@
         };
     }
 
+    function cacheRecordingId(value) {
+        const id = String(
+            typeof value === 'string'
+                ? value
+                : value?.recordingMbid || value?.recordingId || value?.id || ''
+        ).trim().toLowerCase();
+        return UUID.test(id) ? id : '';
+    }
+
+    function normalizeChoiceMap(value) {
+        const result = {};
+        if (!value || typeof value !== 'object' || Array.isArray(value)) return result;
+
+        for (const [rawIsrc, rawRecording] of Object.entries(value)) {
+            const isrc = normalizeIsrc(rawIsrc);
+            const recordingId = cacheRecordingId(rawRecording);
+            if (isrc && recordingId) result[isrc] = recordingId;
+        }
+        return result;
+    }
+
+    function readIsrcChoiceCache() {
+        const read = key => {
+            try {
+                return normalizeChoiceMap(JSON.parse(localStorage.getItem(key) || '{}'));
+            } catch {
+                return {};
+            }
+        };
+        return {
+            ...read(LEGACY_ISRC_CHOICE_CACHE_KEY),
+            ...read(ISRC_CHOICE_CACHE_KEY),
+        };
+    }
+
+    function writeIsrcChoiceCache(cache) {
+        try {
+            localStorage.setItem(
+                ISRC_CHOICE_CACHE_KEY,
+                JSON.stringify(normalizeChoiceMap(cache))
+            );
+        } catch {
+            // Matching still works if local storage is unavailable.
+        }
+    }
+
+    function cachedIsrcRecording(isrc, candidates) {
+        const code = normalizeIsrc(isrc);
+        if (!code) return null;
+
+        const cache = readIsrcChoiceCache();
+        const cachedId = cacheRecordingId(cache[code]);
+        if (!cachedId) return null;
+
+        const candidate = (candidates || []).find(item =>
+            cacheRecordingId(item?.id) === cachedId
+        );
+
+        if (candidate) return candidate;
+
+        delete cache[code];
+        writeIsrcChoiceCache(cache);
+        return null;
+    }
+
+    function rememberIsrcChoice(isrc, recordingId) {
+        const code = normalizeIsrc(isrc);
+        const id = cacheRecordingId(recordingId);
+        if (!code || !id) return false;
+
+        const cache = readIsrcChoiceCache();
+        if (cacheRecordingId(cache[code]) === id) return false;
+        cache[code] = id;
+        writeIsrcChoiceCache(cache);
+        return true;
+    }
+
+    function githubToken() {
+        try {
+            return String(GM_getValue(GITHUB_TOKEN_KEY, '') || '').trim();
+        } catch {
+            return '';
+        }
+    }
+
+    function encodeBase64Utf8(text) {
+        const bytes = new TextEncoder().encode(String(text));
+        let binary = '';
+        for (const byte of bytes) binary += String.fromCharCode(byte);
+        return btoa(binary);
+    }
+
+    function decodeBase64Utf8(text) {
+        const binary = atob(String(text || '').replace(/\s+/g, ''));
+        const bytes = Uint8Array.from(binary, char => char.charCodeAt(0));
+        return new TextDecoder().decode(bytes);
+    }
+
+    function githubApi(method, url, body = null, token = githubToken()) {
+        return new Promise((resolve, reject) => {
+            if (method !== 'GET' && !token) {
+                reject(new Error('GitHub cache is not connected'));
+                return;
+            }
+
+            const headers = {
+                Accept: 'application/vnd.github+json',
+                'X-GitHub-Api-Version': '2022-11-28',
+                ...(body ? {'Content-Type': 'application/json'} : {}),
+            };
+            if (token) headers.Authorization = 'Bearer ' + token;
+
+            GM_xmlhttpRequest({
+                method,
+                url,
+                headers,
+                data: body ? JSON.stringify(body) : undefined,
+                timeout: 15000,
+                onload: response => {
+                    let data = null;
+                    try {
+                        data = response.responseText ? JSON.parse(response.responseText) : null;
+                    } catch {
+                        data = null;
+                    }
+
+                    if (response.status >= 200 && response.status < 300) {
+                        resolve({status: response.status, data});
+                    } else {
+                        reject(new Error(
+                            'GitHub API HTTP ' + response.status +
+                            (data?.message ? ': ' + data.message : '')
+                        ));
+                    }
+                },
+                ontimeout: () => reject(new Error('GitHub cache request timed out')),
+                onerror: () => reject(new Error('GitHub cache request failed')),
+            });
+        });
+    }
+
+    async function fetchGithubChoiceFile() {
+        const url = GITHUB_API_BASE + '/repos/' + GITHUB_CACHE_REPO +
+            '/contents/' + GITHUB_CACHE_PATH;
+        const response = await githubApi('GET', url);
+        const data = response.data || {};
+        let parsed = {version: 1, choices: {}};
+
+        if (data.content) {
+            try {
+                const decoded = JSON.parse(decodeBase64Utf8(data.content));
+                if (decoded && typeof decoded === 'object') {
+                    parsed = {
+                        version: 1,
+                        choices: normalizeChoiceMap(decoded.choices),
+                    };
+                }
+            } catch {
+                throw new Error('GitHub cache JSON is invalid');
+            }
+        }
+
+        return {
+            sha: String(data.sha || ''),
+            choices: parsed.choices,
+        };
+    }
+
+    async function pullGithubChoices() {
+        const remote = await fetchGithubChoiceFile();
+        const local = readIsrcChoiceCache();
+        const merged = {...local, ...remote.choices};
+        writeIsrcChoiceCache(merged);
+        return {connected: Boolean(githubToken()), count: Object.keys(remote.choices).length};
+    }
+
+    async function pushGithubChoices() {
+        const token = githubToken();
+        if (!token) return {connected: false, count: 0};
+
+        const url = GITHUB_API_BASE + '/repos/' + GITHUB_CACHE_REPO +
+            '/contents/' + GITHUB_CACHE_PATH;
+
+        for (let attempt = 0; attempt < 2; attempt++) {
+            const remote = await fetchGithubChoiceFile();
+            const local = readIsrcChoiceCache();
+            const merged = {...remote.choices, ...local};
+            const content = JSON.stringify({version: 1, choices: merged}, null, 2) + '\n';
+
+            try {
+                await githubApi('PUT', url, {
+                    message: 'Update Recording Matcher ISRC cache',
+                    content: encodeBase64Utf8(content),
+                    sha: remote.sha,
+                }, token);
+                writeIsrcChoiceCache(merged);
+                return {connected: true, count: Object.keys(merged).length};
+            } catch (error) {
+                if (attempt === 0 && /HTTP (409|422)/.test(error.message)) continue;
+                throw error;
+            }
+        }
+
+        throw new Error('GitHub cache update conflicted twice');
+    }
+
+    async function configureGithubCache(button) {
+        const current = githubToken();
+        const token = prompt(
+            'GitHub fine-grained token for Recording Matcher cache.\n\n' +
+            'Repository: ' + GITHUB_CACHE_REPO + '\n' +
+            'Required repository permission: Contents - Read and write.\n\n' +
+            'The token is stored only in Tampermonkey.',
+            current
+        );
+
+        if (token === null) return;
+        const trimmed = token.trim();
+
+        if (!trimmed) {
+            GM_setValue(GITHUB_TOKEN_KEY, '');
+            setNativeStatus('GitHub cache disconnected. Shared cache can still be read.');
+            updateGithubCacheButton(button);
+            return;
+        }
+
+        GM_setValue(GITHUB_TOKEN_KEY, trimmed);
+        setNativeStatus('Connecting GitHub cache...');
+
+        try {
+            await pullGithubChoices();
+            const pushed = await pushGithubChoices();
+            setNativeStatus(
+                'GitHub cache connected and synced: ' + pushed.count + ' saved ISRC choice(s).'
+            );
+        } catch (error) {
+            setNativeStatus('GitHub cache error: ' + error.message);
+        }
+
+        updateGithubCacheButton(button);
+    }
+
+    function updateGithubCacheButton(button) {
+        if (!button) return;
+        button.textContent = githubToken() ? 'GitHub cache: connected' : 'Connect GitHub cache';
+    }
+
     function candidateCredit(candidate) {
         const parts = candidate?.['artist-credit'];
         if (!Array.isArray(parts)) return { ids: [], text: '' };
@@ -734,7 +999,7 @@
         };
     }
 
-    function chooseByIsrc(track, candidates) {
+    function chooseByIsrc(track, candidates, isrc = '') {
         const unique = new Map();
         for (const candidate of candidates || []) {
             if (!candidate?.id || candidate.video) continue;
@@ -746,6 +1011,11 @@
 
         if (all.length === 1) {
             return { id: all[0].id, candidate: all[0] };
+        }
+
+        const cached = cachedIsrcRecording(isrc, all);
+        if (cached) {
+            return { id: cached.id, candidate: cached, cached: true };
         }
 
         const wantedTitle = normalizeTitle(track.title);
@@ -825,10 +1095,13 @@
                 title: trackTitle(track),
                 length: Number.isInteger(Number(track?.length_ms)) ? Math.round(Number(track.length_ms)) : null,
                 artistIds: (track?.artists || []).map(artist => artist.mbid).filter(Boolean),
-            }, candidatesByIsrc.get(isrc) || []);
+            }, candidatesByIsrc.get(isrc) || [], isrc);
 
             if (decision.id) {
                 track._mbRecordingId = decision.id;
+                track._mbRecordingCandidate = decision.candidate || null;
+                track._mbRecordingCached = Boolean(decision.cached);
+                rememberIsrcChoice(isrc, decision.id);
                 matched++;
             } else {
                 track._mbRecordingReason = decision.reason || 'No safe recording match';
@@ -840,6 +1113,2559 @@
             matched,
             unmatched: tracks.filter(track => normalizeIsrc(track?.isrc) && !track._mbRecordingId).length,
         };
+    }
+
+    function escapeLucene(value) {
+        return String(value ?? '').replace(/[+\-!(){}\[\]^"~*?:\\/|&]/g, char => '\\' + char);
+    }
+
+    function normalizedEntityName(value) {
+        return normalizeSpace(value).normalize('NFKC').toLocaleLowerCase();
+    }
+
+    async function resolveExactEntityMbid(kind, entity) {
+        if (!entity?.name || entity.mbid) return entity?.mbid || '';
+
+        const field = kind === 'artist' ? 'artist' : 'label';
+        const query = field + ':"' + escapeLucene(entity.name) + '"';
+        const data = await mbJson(
+            '/' + kind + '?query=' + encodeURIComponent(query) + '&fmt=json&limit=25'
+        );
+        const rows = Array.isArray(data?.[kind + 's']) ? data[kind + 's'] : [];
+        const wanted = normalizedEntityName(entity.name);
+
+        const exact = rows.filter(row => {
+            if (!row?.id) return false;
+            if (normalizedEntityName(row.name) === wanted) return true;
+            return (row.aliases || []).some(alias =>
+                normalizedEntityName(alias?.name) === wanted
+            );
+        });
+
+        const unique = new Map(exact.map(row => [String(row.id).toLowerCase(), row]));
+        if (unique.size !== 1) return '';
+
+        const target = [...unique.values()][0];
+        entity.mbid = target.id;
+        entity.mbName = target.name || entity.name;
+        return target.id;
+    }
+
+    function learnArtistMbidsFromRecordingCandidates(release, tracks) {
+        const mappings = new Map();
+
+        for (const track of tracks) {
+            const parts = track?._mbRecordingCandidate?.['artist-credit'];
+            if (!Array.isArray(parts)) continue;
+
+            for (const part of parts) {
+                const id = String(part?.artist?.id || '').toLowerCase();
+                const names = [
+                    part?.name,
+                    part?.artist?.name,
+                    ...(part?.artist?.aliases || []).map(alias => alias?.name),
+                ].map(normalizedEntityName).filter(Boolean);
+
+                if (!UUID.test(id)) continue;
+                for (const name of names) {
+                    if (!mappings.has(name)) mappings.set(name, new Set());
+                    mappings.get(name).add(id);
+                }
+            }
+        }
+
+        for (const artist of [
+            ...(release?.artists || []),
+            ...tracks.flatMap(track => track?.artists || []),
+        ]) {
+            if (!artist?.name || artist.mbid) continue;
+            const ids = mappings.get(normalizedEntityName(artist.name));
+            if (ids?.size === 1) artist.mbid = [...ids][0];
+        }
+    }
+
+    async function resolveMissingEntityMbids(release, tracks, setStatus) {
+        learnArtistMbidsFromRecordingCandidates(release, tracks);
+        const {artists, label} = uniqueEntityObjects(release, tracks);
+
+        for (let i = 0; i < artists.length; i++) {
+            if (artists[i].mbid) continue;
+            setStatus('Resolving MusicBrainz artist ' + (i + 1) + '/' + artists.length + '...');
+            await resolveExactEntityMbid('artist', artists[i]);
+        }
+
+        if (label && !label.mbid) {
+            setStatus('Resolving MusicBrainz label...');
+            await resolveExactEntityMbid('label', label);
+        }
+
+        const resolvedArtists = new Map(
+            artists.filter(artist => artist.mbid)
+                .map(artist => [artistKey(artist), {mbid: artist.mbid, mbName: artist.mbName}])
+        );
+        for (const artist of [
+            ...(release?.artists || []),
+            ...tracks.flatMap(track => track?.artists || []),
+        ]) {
+            const resolved = resolvedArtists.get(artistKey(artist));
+            if (!resolved) continue;
+            artist.mbid = resolved.mbid;
+            artist.mbName = resolved.mbName || artist.name;
+        }
+    }
+
+    function beatportEntityIdentity(value, kind) {
+        try {
+            const path = new URL(value).pathname;
+            return path.match(new RegExp('/' + kind + '/[^/]+/(\\d+)/?        const cleaned = String(value || '').replace(/^0+/, '') || '0';
+        try {
+            return BigInt(cleaned);
+        } catch {
+            return null;
+        }
+    }
+
+    function equalGtin(a, b) {
+        const left = gtinNumber(a);
+        const right = gtinNumber(b);
+        return left !== null && right !== null && left === right;
+    }
+
+    function releaseRelationSources(release) {
+        const sources = [];
+        for (const rel of release?.relations || []) {
+            if (rel?.['target-type'] !== 'url' || rel?.ended || !rel?.url?.resource) continue;
+            const relName = normalizeSpace(rel.type).toLocaleLowerCase();
+            sources.push({
+                url: rel.url.resource,
+                linkType: RELEASE_LINK_TYPE_IDS.get(relName) || 0,
+            });
+        }
+        return sources;
+    }
+
+    async function fetchReleaseSourcesByMbid(mbid) {
+        const release = await mbJson(`/release/${encodeURIComponent(mbid)}?inc=url-rels+media&fmt=json`, { allow404: true });
+        return release ? releaseRelationSources(release) : [];
+    }
+
+    async function findMusicBrainzSourcesByBarcode(barcode, linkedReleaseIds, setStatus) {
+        if (!barcode) return [];
+
+        setStatus('Finding MusicBrainz releases with the same barcode...');
+        const search = await mbJson(`/release?query=${encodeURIComponent(`barcode:${barcode}`)}&fmt=json&limit=20`);
+        const ids = new Set(linkedReleaseIds || []);
+
+        for (const release of search?.releases || []) {
+            if (release?.id && (!release.barcode || equalGtin(release.barcode, barcode))) {
+                ids.add(release.id);
+            }
+        }
+
+        const selected = [...ids].slice(0, 8);
+        const sources = [];
+        for (let index = 0; index < selected.length; index++) {
+            setStatus(`Reading linked release sources (${index + 1}/${selected.length})...`);
+            sources.push(...await fetchReleaseSourcesByMbid(selected[index]));
+        }
+        return sources;
+    }
+
+    function parseAppleAlbumUrl(value) {
+        let url;
+        try {
+            url = new URL(value);
+        } catch {
+            return null;
+        }
+
+        if (providerFamily(url) !== 'apple') return null;
+        url.hostname = 'music.apple.com';
+
+        const parts = url.pathname.split('/').filter(Boolean);
+        const albumIndex = parts.findIndex(part => part === 'album');
+        if (albumIndex < 0) return null;
+
+        const id = parts.slice(albumIndex + 1).reverse().find(part => /^\d+$/.test(part));
+        if (!id) return null;
+
+        return {
+            id,
+            storefront: (parts[0] || 'us').toLowerCase(),
+            pageUrl: url.href,
+        };
+    }
+
+    async function getAppleMusicToken(seedUrl) {
+        if (appleTokenPromise) return appleTokenPromise;
+
+        appleTokenPromise = (async () => {
+            const pages = [
+                parseAppleAlbumUrl(seedUrl)?.pageUrl,
+                'https://music.apple.com/us/browse',
+            ].filter(Boolean);
+
+            let lastError = null;
+            for (const pageUrl of [...new Set(pages)]) {
+                try {
+                    const page = await gmTextRequest(pageUrl);
+                    const doc = new DOMParser().parseFromString(page.text, 'text/html');
+                    const scripts = [...doc.querySelectorAll('script[crossorigin][src]')];
+
+                    for (const script of scripts) {
+                        const scriptUrl = new URL(script.getAttribute('src'), pageUrl).href;
+                        const source = await gmTextRequest(scriptUrl);
+                        const token = source.text.match(/["'](eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+)["']/)?.[1];
+                        if (token) return token;
+                    }
+                } catch (error) {
+                    lastError = error;
+                }
+            }
+
+            throw lastError || new Error('Could not extract the Apple Music bearer token.');
+        })();
+
+        try {
+            return await appleTokenPromise;
+        } catch (error) {
+            appleTokenPromise = null;
+            throw error;
+        }
+    }
+
+    async function appleApiRequest(apiUrl, seedUrl) {
+        const token = await getAppleMusicToken(seedUrl);
+        const response = await gmTextRequest(apiUrl, {
+            headers: {
+                Accept: 'application/json',
+                Authorization: `Bearer ${token}`,
+                Origin: new URL(APPLE_API_BASE).origin,
+            },
+        });
+        return JSON.parse(response.text);
+    }
+
+    async function lookupAppleByBarcode(barcode) {
+        const storefronts = ['us', 'gb', 'de', 'fr', 'jp'];
+        for (const storefront of storefronts) {
+            const url = new URL(`${APPLE_API_BASE}/catalog/${storefront}/albums`);
+            url.searchParams.set('filter[upc]', barcode);
+
+            try {
+                const json = await appleApiRequest(url.href, 'https://music.apple.com/us/browse');
+                const albums = (json.data || []).filter(item => item.type === 'albums');
+                const album = albums.find(item => equalGtin(item.attributes?.upc, barcode)) || albums[0];
+                if (album?.attributes?.url) {
+                    return {
+                        url: album.attributes.url,
+                        linkType: PAID_STREAMING,
+                        provider: 'apple',
+                    };
+                }
+            } catch (error) {
+                console.debug('[Beatport MB Importer] Apple Music barcode lookup failed', storefront, error);
+            }
+        }
+        return null;
+    }
+
+    async function findReleaseSources(release, reverseInfo, setStatus) {
+        const sourceUrl = cleanBeatportUrl();
+        const barcode = String(release?.upc || '').trim();
+        const sources = await findMusicBrainzSourcesByBarcode(
+            barcode,
+            reverseInfo?.linkedReleaseIds || [],
+            setStatus
+        );
+
+        if (barcode && !sources.some(source => providerFamily(source.url) === 'apple')) {
+            setStatus('Checking Apple Music by barcode...');
+            const apple = await lookupAppleByBarcode(barcode);
+            if (apple) sources.push(apple);
+        }
+
+        return dedupeSources(sources, sourceUrl);
+    }
+
+    function buildImport(release, tracks, extraSources = []) {
+        const sourceUrl = cleanBeatportUrl();
+        const params = [];
+        const title = normalizeSpace(release.name);
+        const releaseCredits = determineReleaseArtists(release, tracks);
+        const date = String(release.new_release_date || release.publish_date || '').split('-');
+        const releaseType = mapReleaseType(release?.type?.name);
+
+        params.push(['name', title]);
+        addArtistCreditParams(params, '', releaseCredits);
+        if (releaseType) params.push(['type', releaseType]);
+        params.push(['status', 'official']);
+        params.push(['packaging', 'None']);
+
+        if (/^\d{4}$/.test(date[0] || '')) params.push(['events.0.date.year', date[0]]);
+        if (/^\d{2}$/.test(date[1] || '')) params.push(['events.0.date.month', String(Number(date[1]))]);
+        if (/^\d{2}$/.test(date[2] || '')) params.push(['events.0.date.day', String(Number(date[2]))]);
+
+        const worldwide = tracks.length > 0 && tracks.every(track => track.available_worldwide === true);
+        if (worldwide) params.push(['events.0.country', 'XW']);
+
+        if (release?.upc) params.push(['barcode', String(release.upc)]);
+        if (release?.label?.name) params.push(['labels.0.name', release.label.name]);
+        if (release?.label?.mbid) params.push(['labels.0.mbid', release.label.mbid]);
+        if (release?.catalog_number) params.push(['labels.0.catalog_number', String(release.catalog_number)]);
+
+        const urls = [
+            { url: sourceUrl, linkType: PURCHASE_FOR_DOWNLOAD },
+            ...dedupeSources(extraSources, sourceUrl),
+        ];
+        urls.forEach((entry, index) => {
+            params.push([`urls.${index}.url`, entry.url]);
+            if (entry.linkType) params.push([`urls.${index}.link_type`, String(entry.linkType)]);
+        });
+
+        params.push(['mediums.0.format', 'Digital Media']);
+
+        tracks.forEach((track, index) => {
+            const prefix = `mediums.0.track.${index}.`;
+            params.push([`${prefix}number`, String(index + 1)]);
+            params.push([`${prefix}name`, trackTitle(track)]);
+
+            if (track._mbRecordingId) {
+                params.push([`${prefix}recording`, track._mbRecordingId]);
+            }
+
+            if (Number.isFinite(Number(track?.length_ms)) && Number(track.length_ms) > 0) {
+                params.push([`${prefix}length`, String(Math.round(Number(track.length_ms)))]);
+            }
+            addArtistCreditParams(params, prefix, makeCredits(track?.artists || []));
+        });
+
+        const editNoteLines = [
+            `Imported from Beatport: ${sourceUrl}`,
+            'Beatport artist/label links were reverse-resolved through MusicBrainz where available.',
+            'Existing recordings were matched by Beatport ISRC where the result was unambiguous.',
+        ];
+        if (extraSources.length) {
+            editNoteLines.push(`Additional release URLs found from barcode/reverse-link lookups: ${extraSources.length}.`);
+        }
+        editNoteLines.push(`Importer: ${GITHUB_SCRIPT_URL}`);
+        params.push(['edit_note', editNoteLines.join('\n')]);
+
+        return {
+            params,
+            pending: {
+                beatportReleaseId: String(release.id),
+                sourceUrl,
+                title,
+                barcode: String(release?.upc || ''),
+                createdAt: Date.now(),
+                tracks: tracks.map(track => ({
+                    title: trackTitle(track),
+                    isrc: normalizeIsrc(track?.isrc),
+                    recordingId: cacheRecordingId(track?._mbRecordingId),
+                    length: Number.isFinite(Number(track?.length_ms))
+                        ? Math.round(Number(track.length_ms))
+                        : null,
+                })),
+            },
+            releaseCredits,
+        };
+    }
+
+    function submitMusicBrainzImport(importData) {
+        try {
+            GM_setValue(PENDING_IMPORT_KEY, JSON.stringify(importData.pending || {}));
+        } catch (error) {
+            console.warn('[Beatport MB Importer] Could not save pending import state', error);
+        }
+
+        const form = document.createElement('form');
+        form.method = 'post';
+        form.action = MB_ADD_RELEASE;
+        form.target = '_blank';
+        form.acceptCharset = 'UTF-8';
+        form.style.display = 'none';
+
+        for (const [name, value] of importData.params) {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = name;
+            input.value = String(value);
+            form.appendChild(input);
+        }
+
+        document.body.appendChild(form);
+        form.submit();
+        form.remove();
+    }
+
+    function openMusicBrainzSearch(importData, tracks) {
+        const title = importData.pending.title || '';
+        const artist = importData.releaseCredits.map(credit => credit.artist_name).join(', ');
+        const barcode = importData.pending.barcode || '';
+        const queryParts = [
+            `artist:(${artist})`,
+            `release:(${title})`,
+            `tracks:(${tracks.length})`,
+        ];
+        if (barcode) queryParts.push(`barcode:${barcode}`);
+
+        const url = new URL('https://musicbrainz.org/search');
+        url.searchParams.set('query', queryParts.join(' '));
+        url.searchParams.set('type', 'release');
+        url.searchParams.set('advanced', '1');
+        window.open(url.toString(), '_blank', 'noopener');
+    }
+
+    function openAllIsrcs(release, tracks) {
+        const isrcs = tracks.map(track => normalizeIsrc(track?.isrc));
+        if (!isrcs.some(Boolean)) return;
+
+        const target = new URL(MAGIC_ISRC);
+        isrcs.forEach((isrc, index) => {
+            if (isrc) target.searchParams.set(`isrc1-${index + 1}`, isrc);
+        });
+        target.searchParams.set(
+            'edit-note',
+            `ISRCs imported from Beatport: ${cleanBeatportUrl()}\nImporter: ${GITHUB_SCRIPT_URL}`
+        );
+        window.open(target.toString(), '_blank', 'noopener');
+    }
+
+    function makeButton(text, primary = false) {
+        const selector = primary
+            ? 'button[class*="Button_primary__"]'
+            : 'button[class*="Button_text__"]';
+
+        const nativeButton = document.querySelector(selector);
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.textContent = text;
+
+        if (nativeButton?.className && typeof nativeButton.className === 'string') {
+            button.className = nativeButton.className;
+        } else {
+            // Current Beatport CSS-module fallbacks; visual styling still comes
+            // from Beatport's own stylesheet rather than custom importer CSS.
+            button.className = primary
+                ? 'Button_button__exqP_ Button_primary__DEC_1'
+                : 'Button_button__exqP_ Button_text__bvVGC';
+        }
+
+        return button;
+    }
+
+    function findUiAnchor() {
+        const controls = document.querySelector('div[class^="ReleaseDetailCard-style__Controls"]');
+        const infoArea = document.querySelector('div[class^="ReleaseDetailCard-style__Info"]')?.parentElement;
+        return controls || infoArea || null;
+    }
+
+    function removeImporterMetadata() {
+        document.getElementById('beatport-mb-barcode-row')?.remove();
+        document.getElementById('beatport-mb-release-artist-row')?.remove();
+        document.getElementById('beatport-mb-status-row')?.remove();
+    }
+
+    function releaseMetaElements() {
+        const meta = document.querySelector('div[class^="ReleaseDetailCard-style__Meta"]');
+        if (!meta) return null;
+
+        const template = meta.querySelector('div[class^="ReleaseDetailCard-style__Info"]');
+        const controls = meta.querySelector('div[class^="ReleaseDetailCard-style__Controls"]');
+        if (!template || !controls) return null;
+
+        return {meta, template, controls};
+    }
+
+    function makeNativeInfoRow(id, label, value) {
+        const parts = releaseMetaElements();
+        if (!parts || !value) return null;
+
+        document.getElementById(id)?.remove();
+
+        const row = document.createElement('div');
+        row.id = id;
+        row.className = parts.template.className;
+
+        const labelElement = document.createElement('p');
+        labelElement.textContent = label;
+
+        const valueElement = document.createElement('span');
+        valueElement.textContent = value;
+
+        row.append(labelElement, valueElement);
+        parts.controls.insertAdjacentElement('beforebegin', row);
+        return row;
+    }
+
+    function displayReleaseMetadata(release, tracks) {
+        document.getElementById('beatport-mb-barcode-row')?.remove();
+        document.getElementById('beatport-mb-release-artist-row')?.remove();
+
+        const barcode = normalizeSpace(release?.upc);
+        const releaseArtists = determineReleaseArtists(release, tracks)
+            .map(credit => normalizeSpace(credit.credited_name || credit.artist_name))
+            .filter(Boolean)
+            .join(', ');
+
+        if (barcode) {
+            makeNativeInfoRow('beatport-mb-barcode-row', 'Barcode', barcode);
+        }
+
+        if (releaseArtists) {
+            makeNativeInfoRow(
+                'beatport-mb-release-artist-row',
+                'Release Artist',
+                releaseArtists
+            );
+        }
+    }
+
+    function setNativeStatus(text) {
+        const value = normalizeSpace(text);
+        if (!value) {
+            document.getElementById('beatport-mb-status-row')?.remove();
+            return;
+        }
+        makeNativeInfoRow('beatport-mb-status-row', 'MusicBrainz', value);
+    }
+
+    function makeUiBox() {
+        document.getElementById(UI_ID)?.remove();
+
+        const box = document.createElement('div');
+        box.id = UI_ID;
+        box.setAttribute('role', 'group');
+        box.setAttribute('aria-label', 'MusicBrainz tools');
+        Object.assign(box.style, {
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            flexWrap: 'wrap',
+            marginTop: '8px',
+            font: 'inherit',
+            color: 'inherit',
+        });
+
+        const anchor = findUiAnchor();
+        if (anchor) {
+            // Keep the importer inside Beatport's own release controls instead
+            // of drawing a separate custom panel.
+            if (anchor.matches('div[class^="ReleaseDetailCard-style__Controls"]')) {
+                anchor.appendChild(box);
+            } else if (anchor.parentElement) {
+                anchor.insertAdjacentElement('afterend', box);
+            } else {
+                anchor.appendChild(box);
+            }
+        } else {
+            const main = document.querySelector('main') || document.body;
+            main.prepend(box);
+        }
+
+        return box;
+    }
+
+    function installIdleUi(release, trackResults, serial) {
+        const box = makeUiBox();
+        const previewTracks = orderTracks(release, trackResults);
+        const allIsrcs = trackResults.map(track => normalizeIsrc(track?.isrc)).filter(Boolean);
+        const baseImportData = buildImport(release, previewTracks, []);
+
+        const importButton = makeButton('Import to MusicBrainz', true);
+        importButton.title = 'Start MusicBrainz lookups, then open the release editor with the enriched Beatport metadata';
+
+        const searchButton = makeButton('Search MusicBrainz');
+        searchButton.title = 'Search MusicBrainz for an existing release without running importer lookups';
+        searchButton.addEventListener('click', () => openMusicBrainzSearch(baseImportData, previewTracks));
+
+        const isrcButton = makeButton(`Submit ISRCs (${allIsrcs.length})`);
+        isrcButton.title = 'Open MagicISRC with this Beatport release\'s ISRCs prefilled in visible track order';
+        isrcButton.disabled = allIsrcs.length === 0;
+        isrcButton.addEventListener('click', async () => {
+            try {
+                setNativeStatus('Verifying Beatport track order...');
+                const tracks = await requireRenderedTrackOrder(trackResults);
+                if (serial !== processSerial) return;
+                setNativeStatus('');
+                openAllIsrcs(release, tracks);
+            } catch (error) {
+                console.error('[Beatport MB Importer]', error);
+                setNativeStatus(`Importer error: ${error.message}`);
+            }
+        });
+
+        const githubButton = makeButton('');
+        githubButton.title = 'Use the same GitHub ISRC-choice cache as MusicBrainz ToolBox';
+        updateGithubCacheButton(githubButton);
+        githubButton.addEventListener('click', () => configureGithubCache(githubButton));
+
+        importButton.addEventListener('click', async () => {
+            if (serial !== processSerial) return;
+
+            importButton.disabled = true;
+            searchButton.disabled = true;
+            isrcButton.disabled = true;
+            githubButton.disabled = true;
+
+            const setStatus = text => setNativeStatus(text);
+
+            try {
+                setStatus('Verifying Beatport track order...');
+                const tracks = await requireRenderedTrackOrder(trackResults);
+                if (serial !== processSerial) return;
+
+                setStatus('Syncing shared ISRC cache...');
+                try {
+                    await pullGithubChoices();
+                } catch (error) {
+                    console.warn('[Beatport MB Importer] Shared cache pull failed:', error);
+                }
+
+                setStatus('Resolving Beatport artist/label links in MusicBrainz...');
+                const reverse = await reverseResolveBeatportLinks(release, tracks, setStatus);
+                if (serial !== processSerial) return;
+
+                const recordings = await resolveRecordingsByIsrc(tracks, setStatus);
+                if (serial !== processSerial) return;
+
+                await resolveMissingEntityMbids(release, tracks, setStatus);
+                if (serial !== processSerial) return;
+
+                const entityLinks = await addMissingBeatportEntityLinks(release, tracks, setStatus);
+                if (serial !== processSerial) return;
+
+                if (githubToken()) {
+                    setStatus('Syncing learned ISRC choices to GitHub...');
+                    try {
+                        await pushGithubChoices();
+                    } catch (error) {
+                        console.warn('[Beatport MB Importer] Shared cache push failed:', error);
+                    }
+                }
+
+                const sources = await findReleaseSources(release, reverse, setStatus);
+                if (serial !== processSerial) return;
+
+                const importData = buildImport(release, tracks, sources);
+                setStatus([
+                    `Ready: artists linked ${reverse.linkedArtists}/${reverse.artistCount}`,
+                    `recordings linked ${recordings.matched}/${allIsrcs.length}`,
+                    `Beatport entity links added ${entityLinks.added}`,
+                    entityLinks.failed ? `entity-link failures ${entityLinks.failed}` : '',
+                    `extra sources ${sources.length}`,
+                    release?.label?.mbid ? 'label linked' : 'label unresolved',
+                    'opening MusicBrainz...',
+                ].filter(Boolean).join(' | '));
+
+                submitMusicBrainzImport(importData);
+            } catch (error) {
+                console.error('[Beatport MB Importer]', error);
+                setStatus(`Importer error: ${error.message}`);
+                importButton.disabled = false;
+                searchButton.disabled = false;
+                isrcButton.disabled = allIsrcs.length === 0;
+                githubButton.disabled = false;
+            }
+        });
+
+        box.append(importButton, searchButton, isrcButton, githubButton);
+    }
+
+    async function processBeatportRelease() {
+        const serial = ++processSerial;
+
+        if (!releasePathParts()) {
+            document.getElementById(UI_ID)?.remove();
+            removeImporterMetadata();
+            return;
+        }
+
+        try {
+            const pageProps = await getCurrentPageProps();
+            if (serial !== processSerial) return;
+
+            const release = pageProps?.release;
+            const trackResults = findTracksQuery(pageProps, release?.id, 1)?.state?.data?.results || [];
+            if (!release || !trackResults.length) {
+                throw new Error('Beatport release metadata or tracks were not found');
+            }
+
+            const tracks = orderTracks(release, trackResults);
+            if (!tracks.length) throw new Error('No tracks belonging to this release were found');
+
+            const expected = Number(release.track_count || 0);
+            if (expected && tracks.length !== expected) {
+                throw new Error(
+                    `Beatport track count mismatch (${tracks.length}/${expected}). Import cancelled.`
+                );
+            }
+
+            displayReleaseMetadata(release, tracks);
+            setNativeStatus('');
+            installIdleUi(release, trackResults, serial);
+        } catch (error) {
+            console.error('[Beatport MB Importer]', error);
+            if (serial !== processSerial) return;
+            makeUiBox();
+            setNativeStatus(`Importer error: ${error.message}`);
+        }
+    }
+
+    let lastUrl = '';
+    const refresh = () => {
+        if (location.href === lastUrl) return;
+        lastUrl = location.href;
+        void processBeatportRelease();
+    };
+
+    refresh();
+    setInterval(refresh, 750);
+})();
+
+// MusicBrainz-side support for Beatport imports:
+// - preserve exact ISRC-linked recording associations across Tracklist edits
+// - highlight tracks that still show "Add new recording"
+(() => {
+    'use strict';
+
+    if (!/^(?:beta\.)?musicbrainz\.org$/i.test(location.hostname)) return;
+    if (!/^\/release\/add\/?$/i.test(location.pathname)) return;
+
+    const PAGE_WINDOW = typeof unsafeWindow !== 'undefined' ? unsafeWindow : window;
+    const PENDING_KEY = 'beatport-mb-importer:pending:v1';
+    const UNLINKED_CLASS = 'beatport-unlinked-recording';
+
+    const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+    const normalize = value => String(value ?? '')
+        .normalize('NFKC')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .toLocaleLowerCase();
+
+    function currentRecordingId(trackModel) {
+        const recording = typeof trackModel?.recording === 'function'
+            ? trackModel.recording()
+            : trackModel?.recording;
+        const id = String(recording?.gid || recording?.id || '').trim().toLowerCase();
+        return /^[0-9a-f-]{36}$/i.test(id) ? id : '';
+    }
+
+    function keepExactIsrcAssociationAcrossTracklistEdits(trackModel, recordingEntity) {
+        if (
+            !trackModel ||
+            typeof trackModel.recording !== 'function' ||
+            !recordingEntity?.gid
+        ) return;
+
+        const expectedGid = String(recordingEntity.gid).toLowerCase();
+        const previous = trackModel.__beatportExactIsrcGuard;
+        if (previous?.subscriptions) {
+            for (const subscription of previous.subscriptions) subscription?.dispose?.();
+        }
+
+        const guard = {
+            expectedGid,
+            recordingEntity,
+            subscriptions: [],
+            restoring: false,
+            recentTracklistChangeUntil: 0,
+        };
+        trackModel.__beatportExactIsrcGuard = guard;
+
+        const disposeGuard = () => {
+            if (trackModel.__beatportExactIsrcGuard !== guard) return;
+            for (const subscription of guard.subscriptions) subscription?.dispose?.();
+            delete trackModel.__beatportExactIsrcGuard;
+        };
+
+        const refreshSavedComparisonState = () => {
+            if (trackModel.__beatportExactIsrcGuard !== guard) return;
+
+            if (typeof trackModel.name === 'function') {
+                trackModel.name.saved =
+                    typeof trackModel.name.peek === 'function'
+                        ? trackModel.name.peek()
+                        : trackModel.name();
+            }
+            if (typeof trackModel.length === 'function') {
+                trackModel.length.saved =
+                    typeof trackModel.length.peek === 'function'
+                        ? trackModel.length.peek()
+                        : trackModel.length();
+            }
+        };
+
+        const restoreIfMusicBrainzUnlinked = () => {
+            if (guard.restoring || trackModel.__beatportExactIsrcGuard !== guard) return;
+
+            const current = trackModel.recording();
+            const gid = String(current?.gid || '').toLowerCase();
+
+            if (gid && gid !== expectedGid) {
+                disposeGuard();
+                return;
+            }
+            if (gid === expectedGid) return;
+            if (Date.now() > guard.recentTracklistChangeUntil) {
+                disposeGuard();
+                return;
+            }
+
+            guard.restoring = true;
+            try {
+                refreshSavedComparisonState();
+                trackModel.recording(recordingEntity);
+                if (typeof trackModel.hasNewRecording === 'function') {
+                    trackModel.hasNewRecording(false);
+                }
+            } finally {
+                guard.restoring = false;
+            }
+        };
+
+        refreshSavedComparisonState();
+
+        for (const observable of [trackModel.name, trackModel.length]) {
+            if (typeof observable?.subscribe !== 'function') continue;
+            guard.subscriptions.push(observable.subscribe(() => {
+                guard.recentTracklistChangeUntil = Date.now() + 1500;
+                refreshSavedComparisonState();
+                setTimeout(restoreIfMusicBrainzUnlinked, 0);
+                setTimeout(restoreIfMusicBrainzUnlinked, 350);
+            }));
+        }
+
+        if (typeof trackModel.recording.subscribe === 'function') {
+            guard.subscriptions.push(trackModel.recording.subscribe(value => {
+                if (guard.restoring) return;
+
+                const gid = String(value?.gid || '').toLowerCase();
+                if (gid && gid !== expectedGid) {
+                    disposeGuard();
+                    return;
+                }
+
+                if (!gid && Date.now() <= guard.recentTracklistChangeUntil) {
+                    setTimeout(restoreIfMusicBrainzUnlinked, 0);
+                } else if (!gid) {
+                    disposeGuard();
+                }
+            }));
+        }
+    }
+
+    function readPendingImport() {
+        try {
+            const parsed = JSON.parse(String(GM_getValue(PENDING_KEY, '') || '{}'));
+            if (!parsed || typeof parsed !== 'object') return null;
+            if (!Array.isArray(parsed.tracks) || !parsed.tracks.length) return null;
+            if (!Number(parsed.createdAt) || Date.now() - Number(parsed.createdAt) > 6 * 60 * 60 * 1000) {
+                return null;
+            }
+            return parsed;
+        } catch {
+            return null;
+        }
+    }
+
+    async function installRecordingGuards() {
+        const pending = readPendingImport();
+        if (!pending) return;
+
+        const deadline = Date.now() + 20000;
+        while (Date.now() < deadline) {
+            const release = PAGE_WINDOW.MB?.releaseEditor?.rootField?.release?.();
+            const tracks = release && typeof release.allTracks === 'function'
+                ? [...release.allTracks()]
+                : [];
+
+            if (tracks.length === pending.tracks.length) {
+                let compatible = true;
+
+                for (let i = 0; i < tracks.length; i++) {
+                    const expected = pending.tracks[i];
+                    const track = tracks[i];
+                    const title = typeof track?.name === 'function' ? track.name() : '';
+                    if (expected?.title && title && normalize(expected.title) !== normalize(title)) {
+                        compatible = false;
+                        break;
+                    }
+                }
+
+                if (compatible) {
+                    for (let i = 0; i < tracks.length; i++) {
+                        const expected = pending.tracks[i];
+                        const track = tracks[i];
+                        if (!expected?.isrc || !expected?.recordingId || typeof track?.recording !== 'function') continue;
+
+                        const current = track.recording();
+                        const gid = currentRecordingId(track);
+                        if (gid === String(expected.recordingId).toLowerCase() && current?.gid) {
+                            keepExactIsrcAssociationAcrossTracklistEdits(track, current);
+                        }
+                    }
+                    return;
+                }
+            }
+
+            await sleep(250);
+        }
+    }
+
+    function updateUnlinkedHighlights() {
+        for (const row of document.querySelectorAll('#recordings tr.track')) {
+            const cells = row.querySelectorAll('td.name');
+            const recordingCell = cells[1];
+            const text = normalize(recordingCell?.textContent);
+            const hasRecording = Boolean(recordingCell?.querySelector('a[href*="/recording/"]'));
+            const unlinked = Boolean(recordingCell) &&
+                !hasRecording &&
+                (text.includes('add new recording') || row.querySelector('button.edit-track-recording'));
+
+            row.classList.toggle(UNLINKED_CLASS, unlinked);
+        }
+    }
+
+    const style = document.createElement('style');
+    style.textContent = `
+        #recordings tr.${UNLINKED_CLASS} > td {
+            background: #ffb300 !important;
+            color: #111 !important;
+            font-weight: 600;
+        }
+        #recordings tr.${UNLINKED_CLASS} > td a,
+        #recordings tr.${UNLINKED_CLASS} > td button {
+            color: #111 !important;
+        }
+        #recordings tr.${UNLINKED_CLASS} > td:first-child {
+            box-shadow: inset 4px 0 0 #a85b00 !important;
+        }
+    `;
+    document.head.appendChild(style);
+
+    let timer = null;
+    const observer = new MutationObserver(() => {
+        clearTimeout(timer);
+        timer = setTimeout(updateUnlinkedHighlights, 40);
+    });
+    observer.observe(document.body, {
+        subtree: true,
+        childList: true,
+        attributes: true,
+        attributeFilter: ['href'],
+    });
+
+    updateUnlinkedHighlights();
+    void installRecordingGuards();
+})();
+
+// BPTopTracker release-page importer
+(() => {
+    'use strict';
+
+    if (!/^(?:www\.)?bptoptracker\.com$/i.test(location.hostname)) return;
+
+    const MUSICBRAINZ_ADD_RELEASE_URL = 'https://musicbrainz.org/release/add';
+    const MUSICBRAINZ_SEARCH_URL = 'https://musicbrainz.org/search';
+    const SCRIPT_URL = 'https://github.com/karpuzikov/userscripts/blob/main/musicbrainz-tools/beatport-musicbrainz-importer/Beatport_MusicBrainz_Importer.user.js';
+    const PURCHASE_FOR_DOWNLOAD_LINK_TYPE = '74';
+
+    const normalizeWhitespace = (value) =>
+        String(value ?? '').replace(/\s+/g, ' ').trim();
+
+    const absoluteUrl = (value) => {
+        try {
+            return new URL(value, location.href).href;
+        } catch {
+            return '';
+        }
+    };
+
+    function unique(values) {
+        return [...new Set(values.filter(Boolean))];
+    }
+
+    function defaultJoinPhrase(index, count) {
+        if (index >= count - 1) return '';
+        return index === count - 2 ? ' & ' : ', ';
+    }
+
+    function makeArtistCredit(names) {
+        const cleaned = unique(names.map(normalizeWhitespace));
+        return cleaned.map((name, index) => ({
+            name,
+            joinPhrase: defaultJoinPhrase(index, cleaned.length),
+        }));
+    }
+
+    function artistNamesFrom(container) {
+        if (!container) return [];
+        return unique(
+            [...container.querySelectorAll('a[href*="/artist/"]')]
+                .map((link) => normalizeWhitespace(link.textContent))
+                .filter(Boolean)
+        );
+    }
+
+    function normalizeTrackTitle(rawTitle) {
+        let title = normalizeWhitespace(rawTitle);
+
+        // MusicBrainz title style keeps extra title information (ETI), while
+        // descriptive words such as mix/remix/edit/version are lowercased.
+        // Examples:
+        //   Ghost Dance (Original Mix) -> Ghost Dance (original mix)
+        //   Song (John Doe Remix)      -> Song (John Doe remix)
+        title = title.replace(
+            /\(([^()]*)\b(Mix|Remix|Edit|Version|Rework|Dub)\)$/i,
+            (_, prefix, descriptor) =>
+                `(${prefix}${descriptor.toLowerCase()})`
+        );
+
+        return normalizeWhitespace(title);
+    }
+
+    function findReleaseSection() {
+        const beatportLink = document.querySelector(
+            'a[href*="beatport.com/release/"]'
+        );
+        const heading = document.querySelector('h1');
+
+        return (
+            beatportLink?.closest('section') ||
+            heading?.closest('section') ||
+            heading?.closest('.container') ||
+            document
+        );
+    }
+
+    function findIconValue(section, iconClass) {
+        const icon = section?.querySelector(`i.${iconClass}`);
+        if (!icon) return '';
+
+        const holder = icon.closest('div') || icon.parentElement;
+        if (!holder) return '';
+
+        const clone = holder.cloneNode(true);
+        clone.querySelectorAll('i').forEach((node) => node.remove());
+        return normalizeWhitespace(clone.textContent);
+    }
+
+    function parseReleaseDate(section) {
+        const calendarIcon = section?.querySelector(
+            'i.fa-calendar-check-o, i.fa-calendar'
+        );
+        const localText =
+            calendarIcon?.parentElement?.textContent || section?.textContent || '';
+
+        const match = localText.match(
+            /\b(\d{4})-(\d{2})-(\d{2})\b/
+        );
+
+        if (!match) return null;
+
+        return {
+            year: match[1],
+            month: match[2],
+            day: match[3],
+            text: `${match[1]}-${match[2]}-${match[3]}`,
+        };
+    }
+
+    function parseTracks() {
+        const table =
+            document.querySelector('table.table-tracks') ||
+            [...document.querySelectorAll('table')].find((candidate) => {
+                const headers = [...candidate.querySelectorAll('th')].map((th) =>
+                    normalizeWhitespace(th.textContent).toLowerCase()
+                );
+                return headers.includes('title') && headers.includes('length');
+            });
+
+        if (!table) return [];
+
+        const headers = [...table.querySelectorAll('thead th, tr:first-child th')]
+            .map((th) => normalizeWhitespace(th.textContent).toLowerCase());
+
+        const indexOf = (name) => headers.indexOf(name.toLowerCase());
+
+        const titleIndex = indexOf('title');
+        const artistsIndex = indexOf('artists');
+        const lengthIndex = indexOf('length');
+
+        const rows = [...table.querySelectorAll('tbody tr')];
+        const usableRows = rows.length
+            ? rows
+            : [...table.querySelectorAll('tr')].filter(
+                  (row) => row.querySelectorAll('td').length > 0
+              );
+
+        return usableRows
+            .map((row, rowIndex) => {
+                const cells = [...row.querySelectorAll('td')];
+                if (!cells.length) return null;
+
+                const position =
+                    normalizeWhitespace(
+                        row.querySelector('td.position')?.textContent
+                    ) || String(rowIndex + 1);
+
+                const titleCell =
+                    row.querySelector('td.title') ||
+                    (titleIndex >= 0 ? cells[titleIndex] : null);
+
+                const artistsCell =
+                    row.querySelector('td.artists') ||
+                    (artistsIndex >= 0 ? cells[artistsIndex] : null);
+
+                const lengthCell =
+                    lengthIndex >= 0 ? cells[lengthIndex] : null;
+
+                const rawTitle = normalizeWhitespace(
+                    titleCell?.querySelector('a')?.textContent ||
+                        titleCell?.textContent
+                );
+
+                const artists = artistNamesFrom(artistsCell);
+                const duration = normalizeWhitespace(lengthCell?.textContent);
+
+                if (!rawTitle) return null;
+
+                return {
+                    number: position,
+                    title: normalizeTrackTitle(rawTitle),
+                    artists,
+                    duration: /^\d{1,3}:\d{2}(?::\d{2})?$/.test(duration)
+                        ? duration
+                        : '',
+                };
+            })
+            .filter(Boolean);
+    }
+
+    function parsePage() {
+        const section = findReleaseSection();
+
+        const title = normalizeWhitespace(
+            section.querySelector('h1')?.textContent ||
+                document.querySelector('h1')?.textContent
+        );
+
+        const releaseArtistContainer =
+            section.querySelector('h1 + .g-font-size-18') ||
+            section.querySelector('.g-font-size-18');
+
+        const releaseArtists = artistNamesFrom(releaseArtistContainer);
+
+        const labelLink = section.querySelector('a[href*="/label/"]');
+        const label = normalizeWhitespace(labelLink?.textContent);
+
+        const date = parseReleaseDate(section);
+
+        const catalogNumber =
+            findIconValue(section, 'fa-file-o') ||
+            findIconValue(section, 'fa-file');
+
+        const beatportLink = section.querySelector(
+            'a[href*="beatport.com/release/"]'
+        );
+        const beatportUrl = absoluteUrl(beatportLink?.getAttribute('href'));
+
+        const tracks = parseTracks();
+
+        return {
+            title,
+            releaseArtists,
+            label,
+            date,
+            catalogNumber,
+            beatportUrl,
+            sourceUrl: location.href.split('#')[0],
+            tracks,
+        };
+    }
+
+    function addArtistCredit(params, prefix, credit) {
+        credit.forEach((entry, index) => {
+            params.set(`${prefix}.names.${index}.name`, entry.name);
+            params.set(`${prefix}.names.${index}.artist.name`, entry.name);
+
+            if (entry.joinPhrase) {
+                params.set(
+                    `${prefix}.names.${index}.join_phrase`,
+                    entry.joinPhrase
+                );
+            }
+        });
+    }
+
+    function buildSeedParameters(release) {
+        const params = new URLSearchParams();
+
+        params.set('name', release.title);
+        params.set('status', 'official');
+        params.set('packaging', 'None');
+
+        if (release.date) {
+            params.set('events.0.date.year', release.date.year);
+            params.set('events.0.date.month', release.date.month);
+            params.set('events.0.date.day', release.date.day);
+
+            // Deliberately do not seed events.0.country:
+            // BPTopTracker does not establish a MusicBrainz release country.
+        }
+
+        if (release.label) {
+            params.set('labels.0.name', release.label);
+
+            if (release.catalogNumber) {
+                params.set('labels.0.catalog_number', release.catalogNumber);
+            }
+        }
+
+        if (release.releaseArtists.length) {
+            addArtistCredit(
+                params,
+                'artist_credit',
+                makeArtistCredit(release.releaseArtists)
+            );
+        }
+
+        params.set('mediums.0.format', 'Digital Media');
+
+        release.tracks.forEach((track, index) => {
+            const prefix = `mediums.0.track.${index}`;
+
+            params.set(`${prefix}.name`, track.title);
+            params.set(`${prefix}.number`, track.number);
+
+            if (track.duration) {
+                params.set(`${prefix}.length`, track.duration);
+            }
+
+            if (track.artists.length) {
+                addArtistCredit(
+                    params,
+                    `${prefix}.artist_credit`,
+                    makeArtistCredit(track.artists)
+                );
+            }
+        });
+
+        if (release.beatportUrl) {
+            params.set('urls.0.url', release.beatportUrl);
+            params.set(
+                'urls.0.link_type',
+                PURCHASE_FOR_DOWNLOAD_LINK_TYPE
+            );
+        }
+
+        const note = [
+            `Imported from BPTopTracker: ${release.sourceUrl}`,
+            release.beatportUrl
+                ? `Original Beatport release: ${release.beatportUrl}`
+                : '',
+            `Script: ${SCRIPT_URL}`,
+        ]
+            .filter(Boolean)
+            .join('\n');
+
+        params.set('edit_note', note);
+
+        // Deliberately not seeded unless BPTopTracker explicitly provides them:
+        // - barcode / UPC
+        // - release country
+        // - language
+        // - script
+        // - release-group type
+        //
+        // ISRCs are recording-level identifiers and are not fields supported by
+        // MusicBrainz Release Editor seeding.
+
+        return params;
+    }
+
+    function submitToMusicBrainz(release) {
+        if (!release.title) {
+            alert('MusicBrainz import: release title was not found.');
+            return;
+        }
+
+        if (!release.tracks.length) {
+            alert('MusicBrainz import: no tracks were found.');
+            return;
+        }
+
+        const params = buildSeedParameters(release);
+        const form = document.createElement('form');
+
+        form.method = 'POST';
+        form.action = MUSICBRAINZ_ADD_RELEASE_URL;
+        form.enctype = 'multipart/form-data';
+        form.target = '_blank';
+        form.style.display = 'none';
+
+        for (const [name, value] of params.entries()) {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = name;
+            input.value = value;
+            form.appendChild(input);
+        }
+
+        document.body.appendChild(form);
+        form.submit();
+        form.remove();
+    }
+
+    function searchMusicBrainz(release) {
+        const terms = [
+            release.title ? `"${release.title}"` : '',
+            release.releaseArtists[0] || '',
+            release.catalogNumber || '',
+        ]
+            .filter(Boolean)
+            .join(' ');
+
+        const url = new URL(MUSICBRAINZ_SEARCH_URL);
+        url.searchParams.set('query', terms);
+        url.searchParams.set('type', 'release');
+        url.searchParams.set('method', 'indexed');
+
+        window.open(url.href, '_blank', 'noopener');
+    }
+
+    function addImporterUI(release) {
+        if (document.getElementById('bpt-mb-importer')) return;
+
+        const beatportButton = document.querySelector(
+            'a[href*="beatport.com/release/"]'
+        );
+
+        const host =
+            beatportButton?.parentElement ||
+            findReleaseSection().querySelector('.col-lg-4') ||
+            findReleaseSection();
+
+        const wrapper = document.createElement('div');
+        wrapper.id = 'bpt-mb-importer';
+        wrapper.className = 'g-mt-5';
+
+        const importButton = document.createElement('button');
+        importButton.type = 'button';
+        importButton.className = 'btn u-btn-primary g-ma-2';
+        importButton.textContent = 'Import to MusicBrainz';
+        importButton.title =
+            'Open the MusicBrainz Add Release editor with BPTopTracker data pre-filled';
+
+        const searchButton = document.createElement('button');
+        searchButton.type = 'button';
+        searchButton.className = 'btn u-btn-outline-primary g-ma-2';
+        searchButton.textContent = 'Search MusicBrainz';
+        searchButton.title =
+            'Search MusicBrainz before adding the release';
+
+        const status = document.createElement('small');
+        status.className = 'g-color-gray-dark-v4 g-ml-5';
+        status.textContent = release.tracks.length
+            ? `${release.tracks.length} track${release.tracks.length === 1 ? '' : 's'} ready`
+            : 'No tracks found';
+
+        if (!release.title || !release.tracks.length) {
+            importButton.disabled = true;
+            importButton.title =
+                'Cannot import because required release/track data was not found';
+        }
+
+        importButton.addEventListener('click', () =>
+            submitToMusicBrainz(parsePage())
+        );
+        searchButton.addEventListener('click', () =>
+            searchMusicBrainz(parsePage())
+        );
+
+        wrapper.append(importButton, searchButton, status);
+        host.appendChild(wrapper);
+    }
+
+    try {
+        const release = parsePage();
+
+        console.info('[BPTopTracker -> MusicBrainz]', release);
+        addImporterUI(release);
+    } catch (error) {
+        console.error('[BPTopTracker -> MusicBrainz] Importer failed:', error);
+    }
+})();
+, 'i'))?.[1] || '';
+        } catch {
+            return '';
+        }
+    }
+
+    async function mbEntityHasBeatportLink(kind, mbid, beatportUrl) {
+        const data = await mbJson('/' + kind + '/' + encodeURIComponent(mbid) + '?fmt=json&inc=url-rels');
+        const wantedId = beatportEntityIdentity(beatportUrl, kind);
+        return (data?.relations || []).some(rel => {
+            const resource = rel?.url?.resource || rel?.target || '';
+            if (providerFamily(resource) !== 'beatport') return false;
+            if (!wantedId) return canonicalUrlKey(resource) === canonicalUrlKey(beatportUrl);
+            return beatportEntityIdentity(resource, kind) === wantedId;
+        });
+    }
+
+    const beatportLinkTypeIdCache = new Map();
+    async function beatportLinkTypeId(kind) {
+        if (beatportLinkTypeIdCache.has(kind)) return beatportLinkTypeIdCache.get(kind);
+        const uuid = BEATPORT_REL_UUID[kind];
+        if (!uuid) throw new Error('Unsupported MusicBrainz entity type: ' + kind);
+
+        const response = await gmTextRequest('https://musicbrainz.org/relationship/' + uuid);
+        const doc = new DOMParser().parseFromString(response.text, 'text/html');
+        const match = normalizeSpace(doc.body?.textContent).match(/\bID:\s*(\d+)\b/);
+        if (!match) throw new Error('Could not resolve MusicBrainz Beatport relationship type');
+        const id = match[1];
+        beatportLinkTypeIdCache.set(kind, id);
+        return id;
+    }
+
+    function findEntityEditForm(doc, kind) {
+        const prefix = 'edit-' + kind + '.';
+        return [...doc.querySelectorAll('form')].find(form => {
+            const method = (form.getAttribute('method') || 'get').toLowerCase();
+            return method === 'post' && [...form.elements].some(element =>
+                typeof element.name === 'string' && element.name.startsWith(prefix)
+            );
+        }) || null;
+    }
+
+    function gmFormRequest(method, url, body = null) {
+        return new Promise((resolve, reject) => {
+            GM_xmlhttpRequest({
+                method,
+                url,
+                headers: body ? {
+                    Accept: 'text/html,application/xhtml+xml',
+                    'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+                } : {
+                    Accept: 'text/html,application/xhtml+xml',
+                },
+                data: body || undefined,
+                timeout: 30000,
+                onload: response => resolve({
+                    status: response.status,
+                    text: response.responseText || '',
+                    finalUrl: response.finalUrl || url,
+                }),
+                ontimeout: () => reject(new Error('MusicBrainz edit request timed out')),
+                onerror: () => reject(new Error('MusicBrainz edit request failed')),
+            });
+        });
+    }
+
+    async function submitMissingBeatportEntityLink(kind, mbid, beatportUrl) {
+        if (!UUID.test(String(mbid || '')) || !beatportUrl) return {added: false};
+
+        if (await mbEntityHasBeatportLink(kind, mbid, beatportUrl)) {
+            return {added: false, alreadyPresent: true};
+        }
+
+        const linkTypeId = await beatportLinkTypeId(kind);
+        const editUrl = new URL('https://musicbrainz.org/' + kind + '/' + mbid + '/edit');
+        const prefix = 'edit-' + kind + '.';
+        editUrl.searchParams.set(prefix + 'url.0.text', beatportUrl);
+        editUrl.searchParams.set(prefix + 'url.0.link_type_id', String(linkTypeId));
+        editUrl.searchParams.set(
+            prefix + 'edit_note',
+            'Add missing Beatport link.\nImporter: ' + GITHUB_SCRIPT_URL
+        );
+
+        const getResponse = await gmFormRequest('GET', editUrl.href);
+        const getUrl = new URL(getResponse.finalUrl);
+        if (getUrl.pathname.startsWith('/login')) {
+            throw new Error('MusicBrainz login is required to add Beatport links');
+        }
+        if (getResponse.status < 200 || getResponse.status >= 400) {
+            throw new Error('MusicBrainz edit page HTTP ' + getResponse.status);
+        }
+
+        const doc = new DOMParser().parseFromString(getResponse.text, 'text/html');
+        const form = findEntityEditForm(doc, kind);
+        if (!form) throw new Error('Could not find MusicBrainz ' + kind + ' edit form');
+
+        const params = new URLSearchParams();
+        for (const [key, value] of new FormData(form).entries()) {
+            if (typeof value === 'string') params.append(key, value);
+        }
+
+        for (const [key, value] of editUrl.searchParams.entries()) {
+            if (
+                key.startsWith(prefix + 'url.') &&
+                (key.endsWith('.text') || key.endsWith('.link_type_id'))
+            ) {
+                params.set(key, value);
+            }
+        }
+
+        const noteKey = [...params.keys()].find(key => key === prefix + 'edit_note');
+        if (noteKey) {
+            const current = params.get(noteKey) || '';
+            if (!current.includes(GITHUB_SCRIPT_URL)) {
+                params.set(
+                    noteKey,
+                    (current.trim() ? current.trim() + '\n\n' : '') +
+                    'Add missing Beatport link.\nImporter: ' + GITHUB_SCRIPT_URL
+                );
+            }
+        }
+
+        const action = new URL(form.getAttribute('action') || getResponse.finalUrl, getResponse.finalUrl);
+        const postResponse = await gmFormRequest('POST', action.href, params.toString());
+        const finalUrl = new URL(postResponse.finalUrl);
+        const stillEditing = new RegExp('^/' + kind + '/[0-9a-f-]{36}/edit/?        const cleaned = String(value || '').replace(/^0+/, '') || '0';
+        try {
+            return BigInt(cleaned);
+        } catch {
+            return null;
+        }
+    }
+
+    function equalGtin(a, b) {
+        const left = gtinNumber(a);
+        const right = gtinNumber(b);
+        return left !== null && right !== null && left === right;
+    }
+
+    function releaseRelationSources(release) {
+        const sources = [];
+        for (const rel of release?.relations || []) {
+            if (rel?.['target-type'] !== 'url' || rel?.ended || !rel?.url?.resource) continue;
+            const relName = normalizeSpace(rel.type).toLocaleLowerCase();
+            sources.push({
+                url: rel.url.resource,
+                linkType: RELEASE_LINK_TYPE_IDS.get(relName) || 0,
+            });
+        }
+        return sources;
+    }
+
+    async function fetchReleaseSourcesByMbid(mbid) {
+        const release = await mbJson(`/release/${encodeURIComponent(mbid)}?inc=url-rels+media&fmt=json`, { allow404: true });
+        return release ? releaseRelationSources(release) : [];
+    }
+
+    async function findMusicBrainzSourcesByBarcode(barcode, linkedReleaseIds, setStatus) {
+        if (!barcode) return [];
+
+        setStatus('Finding MusicBrainz releases with the same barcode...');
+        const search = await mbJson(`/release?query=${encodeURIComponent(`barcode:${barcode}`)}&fmt=json&limit=20`);
+        const ids = new Set(linkedReleaseIds || []);
+
+        for (const release of search?.releases || []) {
+            if (release?.id && (!release.barcode || equalGtin(release.barcode, barcode))) {
+                ids.add(release.id);
+            }
+        }
+
+        const selected = [...ids].slice(0, 8);
+        const sources = [];
+        for (let index = 0; index < selected.length; index++) {
+            setStatus(`Reading linked release sources (${index + 1}/${selected.length})...`);
+            sources.push(...await fetchReleaseSourcesByMbid(selected[index]));
+        }
+        return sources;
+    }
+
+    function parseAppleAlbumUrl(value) {
+        let url;
+        try {
+            url = new URL(value);
+        } catch {
+            return null;
+        }
+
+        if (providerFamily(url) !== 'apple') return null;
+        url.hostname = 'music.apple.com';
+
+        const parts = url.pathname.split('/').filter(Boolean);
+        const albumIndex = parts.findIndex(part => part === 'album');
+        if (albumIndex < 0) return null;
+
+        const id = parts.slice(albumIndex + 1).reverse().find(part => /^\d+$/.test(part));
+        if (!id) return null;
+
+        return {
+            id,
+            storefront: (parts[0] || 'us').toLowerCase(),
+            pageUrl: url.href,
+        };
+    }
+
+    async function getAppleMusicToken(seedUrl) {
+        if (appleTokenPromise) return appleTokenPromise;
+
+        appleTokenPromise = (async () => {
+            const pages = [
+                parseAppleAlbumUrl(seedUrl)?.pageUrl,
+                'https://music.apple.com/us/browse',
+            ].filter(Boolean);
+
+            let lastError = null;
+            for (const pageUrl of [...new Set(pages)]) {
+                try {
+                    const page = await gmTextRequest(pageUrl);
+                    const doc = new DOMParser().parseFromString(page.text, 'text/html');
+                    const scripts = [...doc.querySelectorAll('script[crossorigin][src]')];
+
+                    for (const script of scripts) {
+                        const scriptUrl = new URL(script.getAttribute('src'), pageUrl).href;
+                        const source = await gmTextRequest(scriptUrl);
+                        const token = source.text.match(/["'](eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+)["']/)?.[1];
+                        if (token) return token;
+                    }
+                } catch (error) {
+                    lastError = error;
+                }
+            }
+
+            throw lastError || new Error('Could not extract the Apple Music bearer token.');
+        })();
+
+        try {
+            return await appleTokenPromise;
+        } catch (error) {
+            appleTokenPromise = null;
+            throw error;
+        }
+    }
+
+    async function appleApiRequest(apiUrl, seedUrl) {
+        const token = await getAppleMusicToken(seedUrl);
+        const response = await gmTextRequest(apiUrl, {
+            headers: {
+                Accept: 'application/json',
+                Authorization: `Bearer ${token}`,
+                Origin: new URL(APPLE_API_BASE).origin,
+            },
+        });
+        return JSON.parse(response.text);
+    }
+
+    async function lookupAppleByBarcode(barcode) {
+        const storefronts = ['us', 'gb', 'de', 'fr', 'jp'];
+        for (const storefront of storefronts) {
+            const url = new URL(`${APPLE_API_BASE}/catalog/${storefront}/albums`);
+            url.searchParams.set('filter[upc]', barcode);
+
+            try {
+                const json = await appleApiRequest(url.href, 'https://music.apple.com/us/browse');
+                const albums = (json.data || []).filter(item => item.type === 'albums');
+                const album = albums.find(item => equalGtin(item.attributes?.upc, barcode)) || albums[0];
+                if (album?.attributes?.url) {
+                    return {
+                        url: album.attributes.url,
+                        linkType: PAID_STREAMING,
+                        provider: 'apple',
+                    };
+                }
+            } catch (error) {
+                console.debug('[Beatport MB Importer] Apple Music barcode lookup failed', storefront, error);
+            }
+        }
+        return null;
+    }
+
+    async function findReleaseSources(release, reverseInfo, setStatus) {
+        const sourceUrl = cleanBeatportUrl();
+        const barcode = String(release?.upc || '').trim();
+        const sources = await findMusicBrainzSourcesByBarcode(
+            barcode,
+            reverseInfo?.linkedReleaseIds || [],
+            setStatus
+        );
+
+        if (barcode && !sources.some(source => providerFamily(source.url) === 'apple')) {
+            setStatus('Checking Apple Music by barcode...');
+            const apple = await lookupAppleByBarcode(barcode);
+            if (apple) sources.push(apple);
+        }
+
+        return dedupeSources(sources, sourceUrl);
+    }
+
+    function buildImport(release, tracks, extraSources = []) {
+        const sourceUrl = cleanBeatportUrl();
+        const params = [];
+        const title = normalizeSpace(release.name);
+        const releaseCredits = determineReleaseArtists(release, tracks);
+        const date = String(release.new_release_date || release.publish_date || '').split('-');
+        const releaseType = mapReleaseType(release?.type?.name);
+
+        params.push(['name', title]);
+        addArtistCreditParams(params, '', releaseCredits);
+        if (releaseType) params.push(['type', releaseType]);
+        params.push(['status', 'official']);
+        params.push(['packaging', 'None']);
+
+        if (/^\d{4}$/.test(date[0] || '')) params.push(['events.0.date.year', date[0]]);
+        if (/^\d{2}$/.test(date[1] || '')) params.push(['events.0.date.month', String(Number(date[1]))]);
+        if (/^\d{2}$/.test(date[2] || '')) params.push(['events.0.date.day', String(Number(date[2]))]);
+
+        const worldwide = tracks.length > 0 && tracks.every(track => track.available_worldwide === true);
+        if (worldwide) params.push(['events.0.country', 'XW']);
+
+        if (release?.upc) params.push(['barcode', String(release.upc)]);
+        if (release?.label?.name) params.push(['labels.0.name', release.label.name]);
+        if (release?.label?.mbid) params.push(['labels.0.mbid', release.label.mbid]);
+        if (release?.catalog_number) params.push(['labels.0.catalog_number', String(release.catalog_number)]);
+
+        const urls = [
+            { url: sourceUrl, linkType: PURCHASE_FOR_DOWNLOAD },
+            ...dedupeSources(extraSources, sourceUrl),
+        ];
+        urls.forEach((entry, index) => {
+            params.push([`urls.${index}.url`, entry.url]);
+            if (entry.linkType) params.push([`urls.${index}.link_type`, String(entry.linkType)]);
+        });
+
+        params.push(['mediums.0.format', 'Digital Media']);
+
+        tracks.forEach((track, index) => {
+            const prefix = `mediums.0.track.${index}.`;
+            params.push([`${prefix}number`, String(index + 1)]);
+            params.push([`${prefix}name`, trackTitle(track)]);
+
+            if (track._mbRecordingId) {
+                params.push([`${prefix}recording`, track._mbRecordingId]);
+            }
+
+            if (Number.isFinite(Number(track?.length_ms)) && Number(track.length_ms) > 0) {
+                params.push([`${prefix}length`, String(Math.round(Number(track.length_ms)))]);
+            }
+            addArtistCreditParams(params, prefix, makeCredits(track?.artists || []));
+        });
+
+        const editNoteLines = [
+            `Imported from Beatport: ${sourceUrl}`,
+            'Beatport artist/label links were reverse-resolved through MusicBrainz where available.',
+            'Existing recordings were matched by Beatport ISRC where the result was unambiguous.',
+        ];
+        if (extraSources.length) {
+            editNoteLines.push(`Additional release URLs found from barcode/reverse-link lookups: ${extraSources.length}.`);
+        }
+        editNoteLines.push(`Importer: ${GITHUB_SCRIPT_URL}`);
+        params.push(['edit_note', editNoteLines.join('\n')]);
+
+        return {
+            params,
+            pending: {
+                beatportReleaseId: String(release.id),
+                sourceUrl,
+                title,
+                barcode: String(release?.upc || ''),
+            },
+            releaseCredits,
+        };
+    }
+
+    function submitMusicBrainzImport(importData) {
+        const form = document.createElement('form');
+        form.method = 'post';
+        form.action = MB_ADD_RELEASE;
+        form.target = '_blank';
+        form.acceptCharset = 'UTF-8';
+        form.style.display = 'none';
+
+        for (const [name, value] of importData.params) {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = name;
+            input.value = String(value);
+            form.appendChild(input);
+        }
+
+        document.body.appendChild(form);
+        form.submit();
+        form.remove();
+    }
+
+    function openMusicBrainzSearch(importData, tracks) {
+        const title = importData.pending.title || '';
+        const artist = importData.releaseCredits.map(credit => credit.artist_name).join(', ');
+        const barcode = importData.pending.barcode || '';
+        const queryParts = [
+            `artist:(${artist})`,
+            `release:(${title})`,
+            `tracks:(${tracks.length})`,
+        ];
+        if (barcode) queryParts.push(`barcode:${barcode}`);
+
+        const url = new URL('https://musicbrainz.org/search');
+        url.searchParams.set('query', queryParts.join(' '));
+        url.searchParams.set('type', 'release');
+        url.searchParams.set('advanced', '1');
+        window.open(url.toString(), '_blank', 'noopener');
+    }
+
+    function openAllIsrcs(release, tracks) {
+        const isrcs = tracks.map(track => normalizeIsrc(track?.isrc));
+        if (!isrcs.some(Boolean)) return;
+
+        const target = new URL(MAGIC_ISRC);
+        isrcs.forEach((isrc, index) => {
+            if (isrc) target.searchParams.set(`isrc1-${index + 1}`, isrc);
+        });
+        target.searchParams.set(
+            'edit-note',
+            `ISRCs imported from Beatport: ${cleanBeatportUrl()}\nImporter: ${GITHUB_SCRIPT_URL}`
+        );
+        window.open(target.toString(), '_blank', 'noopener');
+    }
+
+    function makeButton(text, primary = false) {
+        const selector = primary
+            ? 'button[class*="Button_primary__"]'
+            : 'button[class*="Button_text__"]';
+
+        const nativeButton = document.querySelector(selector);
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.textContent = text;
+
+        if (nativeButton?.className && typeof nativeButton.className === 'string') {
+            button.className = nativeButton.className;
+        } else {
+            // Current Beatport CSS-module fallbacks; visual styling still comes
+            // from Beatport's own stylesheet rather than custom importer CSS.
+            button.className = primary
+                ? 'Button_button__exqP_ Button_primary__DEC_1'
+                : 'Button_button__exqP_ Button_text__bvVGC';
+        }
+
+        return button;
+    }
+
+    function findUiAnchor() {
+        const controls = document.querySelector('div[class^="ReleaseDetailCard-style__Controls"]');
+        const infoArea = document.querySelector('div[class^="ReleaseDetailCard-style__Info"]')?.parentElement;
+        return controls || infoArea || null;
+    }
+
+    function removeImporterMetadata() {
+        document.getElementById('beatport-mb-barcode-row')?.remove();
+        document.getElementById('beatport-mb-release-artist-row')?.remove();
+        document.getElementById('beatport-mb-status-row')?.remove();
+    }
+
+    function releaseMetaElements() {
+        const meta = document.querySelector('div[class^="ReleaseDetailCard-style__Meta"]');
+        if (!meta) return null;
+
+        const template = meta.querySelector('div[class^="ReleaseDetailCard-style__Info"]');
+        const controls = meta.querySelector('div[class^="ReleaseDetailCard-style__Controls"]');
+        if (!template || !controls) return null;
+
+        return {meta, template, controls};
+    }
+
+    function makeNativeInfoRow(id, label, value) {
+        const parts = releaseMetaElements();
+        if (!parts || !value) return null;
+
+        document.getElementById(id)?.remove();
+
+        const row = document.createElement('div');
+        row.id = id;
+        row.className = parts.template.className;
+
+        const labelElement = document.createElement('p');
+        labelElement.textContent = label;
+
+        const valueElement = document.createElement('span');
+        valueElement.textContent = value;
+
+        row.append(labelElement, valueElement);
+        parts.controls.insertAdjacentElement('beforebegin', row);
+        return row;
+    }
+
+    function displayReleaseMetadata(release, tracks) {
+        document.getElementById('beatport-mb-barcode-row')?.remove();
+        document.getElementById('beatport-mb-release-artist-row')?.remove();
+
+        const barcode = normalizeSpace(release?.upc);
+        const releaseArtists = determineReleaseArtists(release, tracks)
+            .map(credit => normalizeSpace(credit.credited_name || credit.artist_name))
+            .filter(Boolean)
+            .join(', ');
+
+        if (barcode) {
+            makeNativeInfoRow('beatport-mb-barcode-row', 'Barcode', barcode);
+        }
+
+        if (releaseArtists) {
+            makeNativeInfoRow(
+                'beatport-mb-release-artist-row',
+                'Release Artist',
+                releaseArtists
+            );
+        }
+    }
+
+    function setNativeStatus(text) {
+        const value = normalizeSpace(text);
+        if (!value) {
+            document.getElementById('beatport-mb-status-row')?.remove();
+            return;
+        }
+        makeNativeInfoRow('beatport-mb-status-row', 'MusicBrainz', value);
+    }
+
+    function makeUiBox() {
+        document.getElementById(UI_ID)?.remove();
+
+        const box = document.createElement('div');
+        box.id = UI_ID;
+        box.setAttribute('role', 'group');
+        box.setAttribute('aria-label', 'MusicBrainz tools');
+        Object.assign(box.style, {
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            flexWrap: 'wrap',
+            marginTop: '8px',
+            font: 'inherit',
+            color: 'inherit',
+        });
+
+        const anchor = findUiAnchor();
+        if (anchor) {
+            // Keep the importer inside Beatport's own release controls instead
+            // of drawing a separate custom panel.
+            if (anchor.matches('div[class^="ReleaseDetailCard-style__Controls"]')) {
+                anchor.appendChild(box);
+            } else if (anchor.parentElement) {
+                anchor.insertAdjacentElement('afterend', box);
+            } else {
+                anchor.appendChild(box);
+            }
+        } else {
+            const main = document.querySelector('main') || document.body;
+            main.prepend(box);
+        }
+
+        return box;
+    }
+
+    function installIdleUi(release, trackResults, serial) {
+        const box = makeUiBox();
+        const previewTracks = orderTracks(release, trackResults);
+        const allIsrcs = trackResults.map(track => normalizeIsrc(track?.isrc)).filter(Boolean);
+        const baseImportData = buildImport(release, previewTracks, []);
+
+        const importButton = makeButton('Import to MusicBrainz', true);
+        importButton.title = 'Start MusicBrainz lookups, then open the release editor with the enriched Beatport metadata';
+
+        const searchButton = makeButton('Search MusicBrainz');
+        searchButton.title = 'Search MusicBrainz for an existing release without running importer lookups';
+        searchButton.addEventListener('click', () => openMusicBrainzSearch(baseImportData, previewTracks));
+
+        const isrcButton = makeButton(`Submit ISRCs (${allIsrcs.length})`);
+        isrcButton.title = 'Open MagicISRC with this Beatport release\'s ISRCs prefilled in visible track order';
+        isrcButton.disabled = allIsrcs.length === 0;
+        isrcButton.addEventListener('click', async () => {
+            try {
+                setNativeStatus('Verifying Beatport track order...');
+                const tracks = await requireRenderedTrackOrder(trackResults);
+                if (serial !== processSerial) return;
+                setNativeStatus('');
+                openAllIsrcs(release, tracks);
+            } catch (error) {
+                console.error('[Beatport MB Importer]', error);
+                setNativeStatus(`Importer error: ${error.message}`);
+            }
+        });
+
+        importButton.addEventListener('click', async () => {
+            if (serial !== processSerial) return;
+
+            importButton.disabled = true;
+            searchButton.disabled = true;
+            isrcButton.disabled = true;
+
+            const setStatus = text => {
+                setNativeStatus(text);
+            };
+
+            try {
+                setStatus('Verifying Beatport track order...');
+                const tracks = await requireRenderedTrackOrder(trackResults);
+                if (serial !== processSerial) return;
+
+                setStatus('Resolving Beatport artist/label links in MusicBrainz...');
+                const reverse = await reverseResolveBeatportLinks(release, tracks, setStatus);
+                if (serial !== processSerial) return;
+
+                const recordings = await resolveRecordingsByIsrc(tracks, setStatus);
+                if (serial !== processSerial) return;
+
+                const sources = await findReleaseSources(release, reverse, setStatus);
+                if (serial !== processSerial) return;
+
+                const importData = buildImport(release, tracks, sources);
+                setStatus([
+                    `Ready: artists linked ${reverse.linkedArtists}/${reverse.artistCount}`,
+                    `recordings linked ${recordings.matched}/${allIsrcs.length}`,
+                    `extra sources ${sources.length}`,
+                    release?.label?.mbid ? 'label linked' : 'label unresolved',
+                    'opening MusicBrainz...',
+                ].join(' | '));
+
+                submitMusicBrainzImport(importData);
+            } catch (error) {
+                console.error('[Beatport MB Importer]', error);
+                setStatus(`Importer error: ${error.message}`);
+                importButton.disabled = false;
+                searchButton.disabled = false;
+                isrcButton.disabled = allIsrcs.length === 0;
+            }
+        });
+
+        box.append(importButton, searchButton, isrcButton);
+    }
+
+    async function processBeatportRelease() {
+        const serial = ++processSerial;
+
+        if (!releasePathParts()) {
+            document.getElementById(UI_ID)?.remove();
+            removeImporterMetadata();
+            return;
+        }
+
+        try {
+            const pageProps = await getCurrentPageProps();
+            if (serial !== processSerial) return;
+
+            const release = pageProps?.release;
+            const trackResults = findTracksQuery(pageProps, release?.id, 1)?.state?.data?.results || [];
+            if (!release || !trackResults.length) {
+                throw new Error('Beatport release metadata or tracks were not found');
+            }
+
+            const tracks = orderTracks(release, trackResults);
+            if (!tracks.length) throw new Error('No tracks belonging to this release were found');
+
+            const expected = Number(release.track_count || 0);
+            if (expected && tracks.length !== expected) {
+                throw new Error(
+                    `Beatport track count mismatch (${tracks.length}/${expected}). Import cancelled.`
+                );
+            }
+
+            displayReleaseMetadata(release, tracks);
+            setNativeStatus('');
+            installIdleUi(release, trackResults, serial);
+        } catch (error) {
+            console.error('[Beatport MB Importer]', error);
+            if (serial !== processSerial) return;
+            makeUiBox();
+            setNativeStatus(`Importer error: ${error.message}`);
+        }
+    }
+
+    let lastUrl = '';
+    const refresh = () => {
+        if (location.href === lastUrl) return;
+        lastUrl = location.href;
+        void processBeatportRelease();
+    };
+
+    refresh();
+    setInterval(refresh, 750);
+})();
+
+// BPTopTracker release-page importer
+(() => {
+    'use strict';
+
+    if (!/^(?:www\.)?bptoptracker\.com$/i.test(location.hostname)) return;
+
+    const MUSICBRAINZ_ADD_RELEASE_URL = 'https://musicbrainz.org/release/add';
+    const MUSICBRAINZ_SEARCH_URL = 'https://musicbrainz.org/search';
+    const SCRIPT_URL = 'https://github.com/karpuzikov/userscripts/blob/main/musicbrainz-tools/beatport-musicbrainz-importer/Beatport_MusicBrainz_Importer.user.js';
+    const PURCHASE_FOR_DOWNLOAD_LINK_TYPE = '74';
+
+    const normalizeWhitespace = (value) =>
+        String(value ?? '').replace(/\s+/g, ' ').trim();
+
+    const absoluteUrl = (value) => {
+        try {
+            return new URL(value, location.href).href;
+        } catch {
+            return '';
+        }
+    };
+
+    function unique(values) {
+        return [...new Set(values.filter(Boolean))];
+    }
+
+    function defaultJoinPhrase(index, count) {
+        if (index >= count - 1) return '';
+        return index === count - 2 ? ' & ' : ', ';
+    }
+
+    function makeArtistCredit(names) {
+        const cleaned = unique(names.map(normalizeWhitespace));
+        return cleaned.map((name, index) => ({
+            name,
+            joinPhrase: defaultJoinPhrase(index, cleaned.length),
+        }));
+    }
+
+    function artistNamesFrom(container) {
+        if (!container) return [];
+        return unique(
+            [...container.querySelectorAll('a[href*="/artist/"]')]
+                .map((link) => normalizeWhitespace(link.textContent))
+                .filter(Boolean)
+        );
+    }
+
+    function normalizeTrackTitle(rawTitle) {
+        let title = normalizeWhitespace(rawTitle);
+
+        // MusicBrainz title style keeps extra title information (ETI), while
+        // descriptive words such as mix/remix/edit/version are lowercased.
+        // Examples:
+        //   Ghost Dance (Original Mix) -> Ghost Dance (original mix)
+        //   Song (John Doe Remix)      -> Song (John Doe remix)
+        title = title.replace(
+            /\(([^()]*)\b(Mix|Remix|Edit|Version|Rework|Dub)\)$/i,
+            (_, prefix, descriptor) =>
+                `(${prefix}${descriptor.toLowerCase()})`
+        );
+
+        return normalizeWhitespace(title);
+    }
+
+    function findReleaseSection() {
+        const beatportLink = document.querySelector(
+            'a[href*="beatport.com/release/"]'
+        );
+        const heading = document.querySelector('h1');
+
+        return (
+            beatportLink?.closest('section') ||
+            heading?.closest('section') ||
+            heading?.closest('.container') ||
+            document
+        );
+    }
+
+    function findIconValue(section, iconClass) {
+        const icon = section?.querySelector(`i.${iconClass}`);
+        if (!icon) return '';
+
+        const holder = icon.closest('div') || icon.parentElement;
+        if (!holder) return '';
+
+        const clone = holder.cloneNode(true);
+        clone.querySelectorAll('i').forEach((node) => node.remove());
+        return normalizeWhitespace(clone.textContent);
+    }
+
+    function parseReleaseDate(section) {
+        const calendarIcon = section?.querySelector(
+            'i.fa-calendar-check-o, i.fa-calendar'
+        );
+        const localText =
+            calendarIcon?.parentElement?.textContent || section?.textContent || '';
+
+        const match = localText.match(
+            /\b(\d{4})-(\d{2})-(\d{2})\b/
+        );
+
+        if (!match) return null;
+
+        return {
+            year: match[1],
+            month: match[2],
+            day: match[3],
+            text: `${match[1]}-${match[2]}-${match[3]}`,
+        };
+    }
+
+    function parseTracks() {
+        const table =
+            document.querySelector('table.table-tracks') ||
+            [...document.querySelectorAll('table')].find((candidate) => {
+                const headers = [...candidate.querySelectorAll('th')].map((th) =>
+                    normalizeWhitespace(th.textContent).toLowerCase()
+                );
+                return headers.includes('title') && headers.includes('length');
+            });
+
+        if (!table) return [];
+
+        const headers = [...table.querySelectorAll('thead th, tr:first-child th')]
+            .map((th) => normalizeWhitespace(th.textContent).toLowerCase());
+
+        const indexOf = (name) => headers.indexOf(name.toLowerCase());
+
+        const titleIndex = indexOf('title');
+        const artistsIndex = indexOf('artists');
+        const lengthIndex = indexOf('length');
+
+        const rows = [...table.querySelectorAll('tbody tr')];
+        const usableRows = rows.length
+            ? rows
+            : [...table.querySelectorAll('tr')].filter(
+                  (row) => row.querySelectorAll('td').length > 0
+              );
+
+        return usableRows
+            .map((row, rowIndex) => {
+                const cells = [...row.querySelectorAll('td')];
+                if (!cells.length) return null;
+
+                const position =
+                    normalizeWhitespace(
+                        row.querySelector('td.position')?.textContent
+                    ) || String(rowIndex + 1);
+
+                const titleCell =
+                    row.querySelector('td.title') ||
+                    (titleIndex >= 0 ? cells[titleIndex] : null);
+
+                const artistsCell =
+                    row.querySelector('td.artists') ||
+                    (artistsIndex >= 0 ? cells[artistsIndex] : null);
+
+                const lengthCell =
+                    lengthIndex >= 0 ? cells[lengthIndex] : null;
+
+                const rawTitle = normalizeWhitespace(
+                    titleCell?.querySelector('a')?.textContent ||
+                        titleCell?.textContent
+                );
+
+                const artists = artistNamesFrom(artistsCell);
+                const duration = normalizeWhitespace(lengthCell?.textContent);
+
+                if (!rawTitle) return null;
+
+                return {
+                    number: position,
+                    title: normalizeTrackTitle(rawTitle),
+                    artists,
+                    duration: /^\d{1,3}:\d{2}(?::\d{2})?$/.test(duration)
+                        ? duration
+                        : '',
+                };
+            })
+            .filter(Boolean);
+    }
+
+    function parsePage() {
+        const section = findReleaseSection();
+
+        const title = normalizeWhitespace(
+            section.querySelector('h1')?.textContent ||
+                document.querySelector('h1')?.textContent
+        );
+
+        const releaseArtistContainer =
+            section.querySelector('h1 + .g-font-size-18') ||
+            section.querySelector('.g-font-size-18');
+
+        const releaseArtists = artistNamesFrom(releaseArtistContainer);
+
+        const labelLink = section.querySelector('a[href*="/label/"]');
+        const label = normalizeWhitespace(labelLink?.textContent);
+
+        const date = parseReleaseDate(section);
+
+        const catalogNumber =
+            findIconValue(section, 'fa-file-o') ||
+            findIconValue(section, 'fa-file');
+
+        const beatportLink = section.querySelector(
+            'a[href*="beatport.com/release/"]'
+        );
+        const beatportUrl = absoluteUrl(beatportLink?.getAttribute('href'));
+
+        const tracks = parseTracks();
+
+        return {
+            title,
+            releaseArtists,
+            label,
+            date,
+            catalogNumber,
+            beatportUrl,
+            sourceUrl: location.href.split('#')[0],
+            tracks,
+        };
+    }
+
+    function addArtistCredit(params, prefix, credit) {
+        credit.forEach((entry, index) => {
+            params.set(`${prefix}.names.${index}.name`, entry.name);
+            params.set(`${prefix}.names.${index}.artist.name`, entry.name);
+
+            if (entry.joinPhrase) {
+                params.set(
+                    `${prefix}.names.${index}.join_phrase`,
+                    entry.joinPhrase
+                );
+            }
+        });
+    }
+
+    function buildSeedParameters(release) {
+        const params = new URLSearchParams();
+
+        params.set('name', release.title);
+        params.set('status', 'official');
+        params.set('packaging', 'None');
+
+        if (release.date) {
+            params.set('events.0.date.year', release.date.year);
+            params.set('events.0.date.month', release.date.month);
+            params.set('events.0.date.day', release.date.day);
+
+            // Deliberately do not seed events.0.country:
+            // BPTopTracker does not establish a MusicBrainz release country.
+        }
+
+        if (release.label) {
+            params.set('labels.0.name', release.label);
+
+            if (release.catalogNumber) {
+                params.set('labels.0.catalog_number', release.catalogNumber);
+            }
+        }
+
+        if (release.releaseArtists.length) {
+            addArtistCredit(
+                params,
+                'artist_credit',
+                makeArtistCredit(release.releaseArtists)
+            );
+        }
+
+        params.set('mediums.0.format', 'Digital Media');
+
+        release.tracks.forEach((track, index) => {
+            const prefix = `mediums.0.track.${index}`;
+
+            params.set(`${prefix}.name`, track.title);
+            params.set(`${prefix}.number`, track.number);
+
+            if (track.duration) {
+                params.set(`${prefix}.length`, track.duration);
+            }
+
+            if (track.artists.length) {
+                addArtistCredit(
+                    params,
+                    `${prefix}.artist_credit`,
+                    makeArtistCredit(track.artists)
+                );
+            }
+        });
+
+        if (release.beatportUrl) {
+            params.set('urls.0.url', release.beatportUrl);
+            params.set(
+                'urls.0.link_type',
+                PURCHASE_FOR_DOWNLOAD_LINK_TYPE
+            );
+        }
+
+        const note = [
+            `Imported from BPTopTracker: ${release.sourceUrl}`,
+            release.beatportUrl
+                ? `Original Beatport release: ${release.beatportUrl}`
+                : '',
+            `Script: ${SCRIPT_URL}`,
+        ]
+            .filter(Boolean)
+            .join('\n');
+
+        params.set('edit_note', note);
+
+        // Deliberately not seeded unless BPTopTracker explicitly provides them:
+        // - barcode / UPC
+        // - release country
+        // - language
+        // - script
+        // - release-group type
+        //
+        // ISRCs are recording-level identifiers and are not fields supported by
+        // MusicBrainz Release Editor seeding.
+
+        return params;
+    }
+
+    function submitToMusicBrainz(release) {
+        if (!release.title) {
+            alert('MusicBrainz import: release title was not found.');
+            return;
+        }
+
+        if (!release.tracks.length) {
+            alert('MusicBrainz import: no tracks were found.');
+            return;
+        }
+
+        const params = buildSeedParameters(release);
+        const form = document.createElement('form');
+
+        form.method = 'POST';
+        form.action = MUSICBRAINZ_ADD_RELEASE_URL;
+        form.enctype = 'multipart/form-data';
+        form.target = '_blank';
+        form.style.display = 'none';
+
+        for (const [name, value] of params.entries()) {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = name;
+            input.value = value;
+            form.appendChild(input);
+        }
+
+        document.body.appendChild(form);
+        form.submit();
+        form.remove();
+    }
+
+    function searchMusicBrainz(release) {
+        const terms = [
+            release.title ? `"${release.title}"` : '',
+            release.releaseArtists[0] || '',
+            release.catalogNumber || '',
+        ]
+            .filter(Boolean)
+            .join(' ');
+
+        const url = new URL(MUSICBRAINZ_SEARCH_URL);
+        url.searchParams.set('query', terms);
+        url.searchParams.set('type', 'release');
+        url.searchParams.set('method', 'indexed');
+
+        window.open(url.href, '_blank', 'noopener');
+    }
+
+    function addImporterUI(release) {
+        if (document.getElementById('bpt-mb-importer')) return;
+
+        const beatportButton = document.querySelector(
+            'a[href*="beatport.com/release/"]'
+        );
+
+        const host =
+            beatportButton?.parentElement ||
+            findReleaseSection().querySelector('.col-lg-4') ||
+            findReleaseSection();
+
+        const wrapper = document.createElement('div');
+        wrapper.id = 'bpt-mb-importer';
+        wrapper.className = 'g-mt-5';
+
+        const importButton = document.createElement('button');
+        importButton.type = 'button';
+        importButton.className = 'btn u-btn-primary g-ma-2';
+        importButton.textContent = 'Import to MusicBrainz';
+        importButton.title =
+            'Open the MusicBrainz Add Release editor with BPTopTracker data pre-filled';
+
+        const searchButton = document.createElement('button');
+        searchButton.type = 'button';
+        searchButton.className = 'btn u-btn-outline-primary g-ma-2';
+        searchButton.textContent = 'Search MusicBrainz';
+        searchButton.title =
+            'Search MusicBrainz before adding the release';
+
+        const status = document.createElement('small');
+        status.className = 'g-color-gray-dark-v4 g-ml-5';
+        status.textContent = release.tracks.length
+            ? `${release.tracks.length} track${release.tracks.length === 1 ? '' : 's'} ready`
+            : 'No tracks found';
+
+        if (!release.title || !release.tracks.length) {
+            importButton.disabled = true;
+            importButton.title =
+                'Cannot import because required release/track data was not found';
+        }
+
+        importButton.addEventListener('click', () =>
+            submitToMusicBrainz(parsePage())
+        );
+        searchButton.addEventListener('click', () =>
+            searchMusicBrainz(parsePage())
+        );
+
+        wrapper.append(importButton, searchButton, status);
+        host.appendChild(wrapper);
+    }
+
+    try {
+        const release = parsePage();
+
+        console.info('[BPTopTracker -> MusicBrainz]', release);
+        addImporterUI(release);
+    } catch (error) {
+        console.error('[BPTopTracker -> MusicBrainz] Importer failed:', error);
+    }
+})();
+, 'i').test(finalUrl.pathname);
+
+        if (postResponse.status < 200 || postResponse.status >= 400 || stillEditing) {
+            const postDoc = new DOMParser().parseFromString(postResponse.text, 'text/html');
+            const error = [...postDoc.querySelectorAll('.error, .errors, .error-message, .field-error')]
+                .map(node => normalizeSpace(node.textContent))
+                .filter(Boolean)
+                .slice(0, 3)
+                .join(' | ');
+            throw new Error(error || 'MusicBrainz did not confirm the Beatport link edit');
+        }
+
+        return {added: true};
+    }
+
+    async function addMissingBeatportEntityLinks(release, tracks, setStatus) {
+        const {artists, label} = uniqueEntityObjects(release, tracks);
+        const entries = [
+            ...artists.map(entity => ({kind: 'artist', entity, url: beatportEntityUrl(entity, 'artist')})),
+            ...(label ? [{kind: 'label', entity: label, url: beatportEntityUrl(label, 'label')}] : []),
+        ].filter(entry => entry.url && entry.entity?.mbid);
+
+        let added = 0;
+        let failed = 0;
+        for (let i = 0; i < entries.length; i++) {
+            const entry = entries[i];
+            setStatus(
+                'Checking Beatport ' + entry.kind + ' links (' + (i + 1) + '/' + entries.length + ')...'
+            );
+            try {
+                const result = await submitMissingBeatportEntityLink(
+                    entry.kind,
+                    entry.entity.mbid,
+                    entry.url
+                );
+                if (result.added) added++;
+            } catch (error) {
+                failed++;
+                console.warn('[Beatport MB Importer] Could not add Beatport link', entry, error);
+            }
+        }
+
+        return {checked: entries.length, added, failed};
     }
 
     function gtinNumber(value) {
