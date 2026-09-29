@@ -5,8 +5,8 @@
 // @description  Checks release-editor submissions against open MusicBrainz edits and skips exact pending duplicates in one batch.
 // @author       karpuzikov
 // @license      MIT
-// @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/duplicate-edit-checker/MusicBrainz_Duplicate_Edit_Checker.user.js?v=1.0.0
-// @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/duplicate-edit-checker/MusicBrainz_Duplicate_Edit_Checker.user.js?v=1.0.0
+// @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/duplicate-edit-checker/MusicBrainz_Duplicate_Edit_Checker.user.js
+// @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/duplicate-edit-checker/MusicBrainz_Duplicate_Edit_Checker.user.js
 // @supportURL   https://github.com/karpuzikov/userscripts
 // @match        https://musicbrainz.org/release/add*
 // @match        https://musicbrainz.org/release/*/edit*
