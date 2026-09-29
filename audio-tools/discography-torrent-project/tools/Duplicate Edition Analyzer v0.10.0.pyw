@@ -249,6 +249,15 @@ FP_MASTERING_MAX_DURATION_RATIO = 0.02
 
 FP_SILENCE_MIN_FRAMES = 120
 
+# Candidate prefilter. The previous pure-duration fallback compared almost every
+# track with every other similarly-sized track. Real matches from the diagnostic
+# corpus had far stronger token overlap, so keep a generous weak fallback without
+# turning the expensive matcher back into O(n^2).
+FP_CANDIDATE_STRONG_SHARED_TOKENS = 64
+FP_CANDIDATE_WEAK_SHARED_TOKENS = 24
+FP_CANDIDATE_DURATION_SECONDS = 6.0
+FP_CANDIDATE_DURATION_RATIO = 0.035
+
 
 def _new_comparison_log_path(recycle: Path) -> Path:
     """Create a per-run comparison log outside the scanned artist folder."""
@@ -795,6 +804,198 @@ def version_label_conflict(a: str, b: str) -> bool:
     va = version_labels(a)
     vb = version_labels(b)
     return va != vb and bool(va or vb)
+
+
+def _normalized_identifier(value: str) -> str:
+    return re.sub(r"[^A-Z0-9-]+", "", (value or "").upper())
+
+
+def _artist_signature(text: str) -> Set[str]:
+    """Normalize multi-artist credits into a comparison set."""
+    source = ascii_punctuation(text or "")
+    parts = re.split(r"\s*(?:;|,|&|\band\b|\bx\b)\s*", source, flags=re.I)
+    result: Set[str] = set()
+    for part in parts:
+        key = re.sub(r"[^a-z0-9]+", "", normalize_title(part))
+        if key:
+            result.add(key)
+    return result
+
+
+def _featured_credit_signature(text: str) -> Set[str]:
+    """Return featured performers explicitly named in a track title."""
+    source = ascii_punctuation(text or "")
+    values: List[str] = []
+    for part in re.findall(r"[\[(]([^\])]+)[\])]", source):
+        match = re.match(r"\s*(?:feat(?:uring)?|ft)\.?\s+(.+)", part, re.I)
+        if match:
+            values.extend(
+                re.split(r"\s*(?:,|&|\band\b|\bx\b)\s*", match.group(1), flags=re.I)
+            )
+    result: Set[str] = set()
+    for value in values:
+        key = re.sub(r"[^a-z0-9]+", "", normalize_title(value))
+        if key:
+            result.add(key)
+    return result
+
+
+def _version_descriptors(text: str) -> Set[str]:
+    """Return meaningful parenthetical/bracket version descriptors.
+
+    Featured credits, mastering labels, and generic clean/explicit advisory
+    labels are not treated as separate versions here.
+    """
+    source = ascii_punctuation(strip_track_number(text or ""))
+    result: Set[str] = set()
+    for part in re.findall(r"[\[(]([^\])]+)[\])]", source):
+        value = normalize_space(part)
+        if re.match(r"^(?:feat(?:uring)?|ft)\.?\s+", value, re.I):
+            continue
+        normalized = _normalized_pattern_text(value)
+        if not normalized:
+            continue
+        if re.fullmatch(
+            r"(?:(?:album|main|original) version(?: (?:explicit|edited|clean|dirty|censored))?|"
+            r"(?:explicit|edited|clean|dirty|censored)(?: version)?)",
+            normalized,
+            re.I,
+        ):
+            continue
+        if re.fullmatch(r"(?:\d{4}\s+)?remaster(?:ed)?(?:\s+version)?", normalized, re.I):
+            continue
+        result.add(normalized)
+
+    trailing = re.search(r"\s+(?:-|:)\s+(.+)$", source)
+    if trailing:
+        value = _normalized_pattern_text(trailing.group(1))
+        if value and (
+            TRACK_PATTERN_DESCRIPTOR_RE.search(value)
+            or LANGUAGE_VERSION_RE.fullmatch(value)
+        ):
+            result.add(value)
+    return result
+
+
+def _semantic_version_descriptors(text: str) -> Set[str]:
+    """Subset of descriptors that explicitly signal a different recording/version."""
+    result: Set[str] = set()
+    for value in _version_descriptors(text):
+        if (
+            TRACK_PATTERN_DESCRIPTOR_RE.search(value)
+            or LANGUAGE_VERSION_RE.fullmatch(value)
+            or re.search(
+                r"\b(?:slowed|sped\s*up|speed\s*up|nightcore|karaoke|piano|harp|guitar|"
+                r"orchestral|orchestra|vocal)\b",
+                value,
+                re.I,
+            )
+        ):
+            result.add(value)
+    return result
+
+
+def _base_title_identity(text: str) -> str:
+    """Title identity with bracketed descriptors/featured credits removed."""
+    source = ascii_punctuation(strip_track_number(text or ""))
+    source = re.sub(r"[\[(][^\])]+[\])]", " ", source)
+    source = re.sub(r"\s+(?:feat(?:uring)?|ft)\.?\s+.+$", " ", source, flags=re.I)
+    source = strip_advisory_version_for_match(source)
+    source = re.sub(r"\b(?:\d{4}\s+)?remaster(?:ed)?\b", " ", source, flags=re.I)
+    return re.sub(r"[^a-z0-9]+", "", normalize_title(source))
+
+
+def _candidate_duration_close(a: Track, b: Track) -> bool:
+    if a.duration <= 0 or b.duration <= 0:
+        return False
+    delta = abs(a.duration - b.duration)
+    return delta <= max(
+        FP_CANDIDATE_DURATION_SECONDS,
+        FP_CANDIDATE_DURATION_RATIO * max(a.duration, b.duration),
+    )
+
+
+def _metadata_match_conflict(a: Track, b: Track) -> str:
+    """Return a conservative reason to veto an otherwise-valid audio match.
+
+    Audio remains required. Metadata only blocks a merge when it contains strong,
+    contradictory evidence that the files are distinct recordings/versions.
+    """
+    mbid_a = _normalized_identifier(a.mbid)
+    mbid_b = _normalized_identifier(b.mbid)
+    isrc_a = _normalized_identifier(a.isrc)
+    isrc_b = _normalized_identifier(b.isrc)
+
+    if mbid_a and mbid_b and mbid_a != mbid_b:
+        return f"different MusicBrainz recording MBIDs ({a.mbid} vs {b.mbid})"
+
+    artists_a = _artist_signature(a.artist)
+    artists_b = _artist_signature(b.artist)
+    same_mbid = bool(mbid_a and mbid_b and mbid_a == mbid_b)
+    same_isrc = bool(isrc_a and isrc_b and isrc_a == isrc_b)
+
+    # A shared recording MBID is the strongest available identity evidence.
+    if same_mbid:
+        return ""
+
+    # A shared ISRC plus the same credited performers is strong enough to tolerate
+    # packaging/edition suffixes such as "(Pilule bleue)".
+    if same_isrc and (not artists_a or not artists_b or artists_a == artists_b):
+        return ""
+
+    semantic_a = _semantic_version_descriptors(a.display_title)
+    semantic_b = _semantic_version_descriptors(b.display_title)
+    if semantic_a != semantic_b and (semantic_a or semantic_b):
+        return (
+            "conflicting semantic version descriptors "
+            f"({sorted(semantic_a)} vs {sorted(semantic_b)})"
+        )
+
+    featured_a = _featured_credit_signature(a.display_title)
+    featured_b = _featured_credit_signature(b.display_title)
+    if (
+        featured_a != featured_b
+        and (featured_a or featured_b)
+        and isrc_a and isrc_b and isrc_a != isrc_b
+    ):
+        return (
+            "different featured performers with different ISRCs "
+            f"({sorted(featured_a)} vs {sorted(featured_b)})"
+        )
+
+    if (
+        artists_a and artists_b and artists_a != artists_b
+        and isrc_a and isrc_b and isrc_a != isrc_b
+    ):
+        return (
+            "different credited artists with different ISRCs "
+            f"({sorted(artists_a)} vs {sorted(artists_b)})"
+        )
+
+    descriptors_a = _version_descriptors(a.display_title)
+    descriptors_b = _version_descriptors(b.display_title)
+    if (
+        descriptors_a != descriptors_b
+        and (descriptors_a or descriptors_b)
+        and isrc_a and isrc_b and isrc_a != isrc_b
+    ):
+        return (
+            "different title/version descriptors with different ISRCs "
+            f"({sorted(descriptors_a)} vs {sorted(descriptors_b)})"
+        )
+
+    base_a = _base_title_identity(a.display_title)
+    base_b = _base_title_identity(b.display_title)
+    if (
+        isrc_a and isrc_b and isrc_a != isrc_b
+        and base_a and base_b and base_a != base_b
+    ):
+        return (
+            "different ISRCs and different base titles "
+            f"({a.display_title!r} vs {b.display_title!r})"
+        )
+
+    return ""
 
 
 FEATURE_CREDIT_RE = re.compile(
@@ -1772,7 +1973,12 @@ def _comparison_track_log_data(track: Track) -> Dict[str, object]:
         "mbid": track.mbid,
         "isrc": track.isrc,
         "identity_title": identity_title(track.display_title),
+        "base_title_identity": _base_title_identity(track.display_title),
         "content_qualifiers": sorted(content_qualifiers(track.display_title)),
+        "version_descriptors": sorted(_version_descriptors(track.display_title)),
+        "semantic_version_descriptors": sorted(_semantic_version_descriptors(track.display_title)),
+        "featured_credit_signature": sorted(_featured_credit_signature(track.display_title)),
+        "artist_signature": sorted(_artist_signature(track.artist)),
         "is_remix": track.is_remix,
         "is_live": track.is_live,
         "excluded_from_coverage": track.exclude_from_coverage,
@@ -1784,7 +1990,12 @@ def merge_equivalent_tracks(
     progress_cb=None,
     comparison_log_path: Optional[Path] = None,
 ) -> Tuple[Dict[int, List[int]], List[str]]:
-    """Group recordings from audio fingerprints and log every comparison decision."""
+    """Group recordings from audio fingerprints with a conservative metadata veto.
+
+    Candidate discovery now uses strong fingerprint-token overlap, a weaker
+    token+duration fallback, exact ID indexes, and same-base-title+duration
+    fallback. Pure duration-only all-pairs comparison is intentionally avoided.
+    """
     uf = UnionFind(len(tracks))
     notes: List[str] = []
     tokens: List[Set[int]] = [_fingerprint_tokens(t.fingerprint) for t in tracks]
@@ -1817,30 +2028,70 @@ def merge_equivalent_tracks(
         if progress_cb and (bi % 250 == 0 or bi == total_buckets):
             progress_cb("Finding audio candidates...", bi, max(1, total_buckets))
 
-    candidate_pairs: Set[Tuple[int, int]] = {
-        pair for pair, shared in pair_counts.items() if shared >= 2
-    }
-    duration_candidate_pairs: Set[Tuple[int, int]] = set()
+    candidate_reasons: Dict[Tuple[int, int], Set[str]] = defaultdict(set)
 
-    # Duration is audio evidence too. Add close-duration pairs as a fallback so
-    # remastering/EQ changes cannot be missed merely because the cheap token
-    # prefilter produced too few exact token collisions.
-    duration_items = sorted(
-        (t.duration, i) for i, t in enumerate(tracks)
-        if t.fingerprint and t.duration > 0
-    )
-    for pos, (duration_a, index_a) in enumerate(duration_items):
-        for duration_b, index_b in duration_items[pos + 1:]:
-            diff = duration_b - duration_a
-            limit = max(6.0, 0.035 * max(duration_a, duration_b))
-            if diff > limit:
-                break
-            pair = (min(index_a, index_b), max(index_a, index_b))
-            candidate_pairs.add(pair)
-            duration_candidate_pairs.add(pair)
+    # Primary fingerprint-token routes.
+    for pair, shared in pair_counts.items():
+        a, b = pair
+        if shared >= FP_CANDIDATE_STRONG_SHARED_TOKENS:
+            candidate_reasons[pair].add("fingerprint_tokens_strong")
+        elif (
+            shared >= FP_CANDIDATE_WEAK_SHARED_TOKENS
+            and _candidate_duration_close(tracks[a], tracks[b])
+        ):
+            candidate_reasons[pair].add("fingerprint_tokens_weak+duration")
 
-    candidate_pairs = sorted(candidate_pairs)
+    # Exact identifiers are candidate hints only; audio still has to pass.
+    mbid_index: Dict[str, List[int]] = defaultdict(list)
+    isrc_index: Dict[str, List[int]] = defaultdict(list)
+    for i, track in enumerate(tracks):
+        if not track.fingerprint:
+            continue
+        mbid = _normalized_identifier(track.mbid)
+        isrc = _normalized_identifier(track.isrc)
+        if mbid:
+            mbid_index[mbid].append(i)
+        if isrc:
+            isrc_index[isrc].append(i)
+
+    for ids in mbid_index.values():
+        for a, b in itertools.combinations(sorted(set(ids)), 2):
+            candidate_reasons[(a, b)].add("same_mbid")
+    for ids in isrc_index.values():
+        for a, b in itertools.combinations(sorted(set(ids)), 2):
+            candidate_reasons[(a, b)].add("same_isrc")
+
+    # Conservative fallback for alternate masterings whose cheap fingerprint
+    # tokens diverge: same base title + close duration still gets a full audio test.
+    title_index: Dict[str, List[int]] = defaultdict(list)
+    for i, track in enumerate(tracks):
+        if not track.fingerprint or track.duration <= 0:
+            continue
+        key = _base_title_identity(track.display_title)
+        if key:
+            title_index[key].append(i)
+
+    for ids in title_index.values():
+        ordered = sorted(ids, key=lambda i: tracks[i].duration)
+        for pos, a in enumerate(ordered):
+            for b in ordered[pos + 1:]:
+                if not _candidate_duration_close(tracks[a], tracks[b]):
+                    if (
+                        tracks[b].duration - tracks[a].duration
+                        > max(
+                            FP_CANDIDATE_DURATION_SECONDS,
+                            FP_CANDIDATE_DURATION_RATIO * tracks[b].duration,
+                        )
+                    ):
+                        break
+                    continue
+                pair = (min(a, b), max(a, b))
+                candidate_reasons[pair].add("same_base_title+duration")
+
+    candidate_pairs = sorted(candidate_reasons)
     total_candidates = len(candidate_pairs)
+    total_possible = indexed * (indexed - 1) // 2
+    prefilter_rejected = max(0, total_possible - total_candidates)
 
     log_handle = None
     log_counts: Counter = Counter()
@@ -1849,6 +2100,11 @@ def merge_equivalent_tracks(
         try:
             comparison_log_path.parent.mkdir(parents=True, exist_ok=True)
             log_handle = comparison_log_path.open("w", encoding="utf-8", newline="\n")
+            route_counts = Counter(
+                reason
+                for reasons in candidate_reasons.values()
+                for reason in reasons
+            )
             header = {
                 "record_type": "run",
                 "app": APP_NAME,
@@ -1856,9 +2112,24 @@ def merge_equivalent_tracks(
                 "generated": datetime.now().isoformat(timespec="seconds"),
                 "tracks_total": len(tracks),
                 "tracks_with_fingerprints": indexed,
+                "possible_pairs": total_possible,
+                "token_pairs_seen": len(pair_counts),
                 "candidate_pairs": total_candidates,
+                "prefilter_rejected_pairs": prefilter_rejected,
                 "candidate_token_buckets": total_buckets,
+                "candidate_routes": dict(sorted(route_counts.items())),
                 "thresholds": {
+                    "candidate_prefilter": {
+                        "strong_shared_token_min": FP_CANDIDATE_STRONG_SHARED_TOKENS,
+                        "weak_shared_token_min": FP_CANDIDATE_WEAK_SHARED_TOKENS,
+                        "weak_duration_seconds": FP_CANDIDATE_DURATION_SECONDS,
+                        "weak_duration_ratio": FP_CANDIDATE_DURATION_RATIO,
+                        "fallbacks": [
+                            "same_mbid",
+                            "same_isrc",
+                            "same_base_title+duration",
+                        ],
+                    },
                     "strict": {
                         "score_max": FP_AUTO_SCORE,
                         "good_fraction_min": FP_AUTO_GOOD_FRACTION,
@@ -1880,8 +2151,14 @@ def merge_equivalent_tracks(
                         "length_ratio_min": 0.94,
                         "duration_delta_seconds_or_ratio": "12.0 seconds or 6% of longer track; unmatched part must be silence",
                     },
-                    "candidate_duration_window": "max(6.0 seconds, 3.5% of longer track)",
-                    "token_candidate_min_shared_buckets": 2,
+                    "metadata_safety_gate": [
+                        "different recording MBIDs",
+                        "semantic version descriptor conflict",
+                        "different featured performers + different ISRCs",
+                        "different credited artists + different ISRCs",
+                        "different descriptors + different ISRCs",
+                        "different ISRCs + different base titles",
+                    ],
                 },
             }
             log_handle.write(json.dumps(header, ensure_ascii=False) + "\n")
@@ -1889,7 +2166,15 @@ def merge_equivalent_tracks(
             notes.append(f"Comparison log unavailable: {exc}")
             log_handle = None
 
-    def log_comparison(pair_index: int, a: int, b: int, matched: bool, sim) -> None:
+    def log_comparison(
+        pair_index: int,
+        a: int,
+        b: int,
+        audio_matched: bool,
+        final_matched: bool,
+        sim,
+        metadata_conflict: str,
+    ) -> None:
         pair = (a, b)
         processed_pairs.add(pair)
         if log_handle is None:
@@ -1899,40 +2184,38 @@ def merge_equivalent_tracks(
         second = tracks[b]
         shared_tokens = int(pair_counts.get(pair, 0))
         duration_delta = abs(first.duration - second.duration)
-        duration_limit = max(6.0, 0.035 * max(first.duration, second.duration))
-        reasons: List[str] = []
-        if shared_tokens >= 2:
-            reasons.append("fingerprint_tokens")
-        if pair in duration_candidate_pairs:
-            reasons.append("duration_fallback")
+        duration_limit = max(
+            FP_CANDIDATE_DURATION_SECONDS,
+            FP_CANDIDATE_DURATION_RATIO * max(first.duration, second.duration),
+        )
+        reasons = sorted(candidate_reasons.get(pair, set()))
 
         details = _comparison_decision_details(
             first.fingerprint,
             first.duration,
             second.fingerprint,
             second.duration,
-            matched,
+            audio_matched,
             sim,
         )
-        if matched:
+        details["audio_match"] = bool(audio_matched)
+        details["metadata_conflict"] = metadata_conflict
+        details["final_match"] = bool(final_matched)
+
+        if final_matched:
             log_counts["matched"] += 1
             for route in details.get("accepted_by", []):
                 log_counts[f"matched_{route}"] += 1
+        elif audio_matched and metadata_conflict:
+            log_counts["rejected_metadata_conflict"] += 1
         else:
-            log_counts["rejected"] += 1
+            log_counts["rejected_audio"] += 1
             if not details.get("similarity_available"):
                 log_counts["rejected_no_similarity"] += 1
             elif details.get("strict_pass") or details.get("mastering_pass"):
                 log_counts["rejected_length_gate"] += 1
             else:
                 log_counts["rejected_thresholds"] += 1
-
-        if reasons == ["fingerprint_tokens"]:
-            log_counts["candidate_tokens_only"] += 1
-        elif reasons == ["duration_fallback"]:
-            log_counts["candidate_duration_only"] += 1
-        else:
-            log_counts["candidate_tokens_and_duration"] += 1
 
         row = {
             "record_type": "comparison",
@@ -1946,13 +2229,42 @@ def merge_equivalent_tracks(
             },
             "track_a": _comparison_track_log_data(first),
             "track_b": _comparison_track_log_data(second),
-            "decision": "MATCH" if matched else "REJECT",
+            "audio_decision": "MATCH" if audio_matched else "REJECT",
+            "metadata_safety": {
+                "blocked": bool(metadata_conflict),
+                "reason": metadata_conflict,
+            },
+            "decision": "MATCH" if final_matched else "REJECT",
             "details": details,
         }
         try:
             log_handle.write(json.dumps(row, ensure_ascii=False) + "\n")
         except Exception as exc:
             notes.append(f"Comparison log write error: {exc}")
+
+    def handle_result(done: int, a: int, b: int, audio_matched: bool, sim) -> None:
+        metadata_conflict = _metadata_match_conflict(tracks[a], tracks[b]) if audio_matched else ""
+        final_matched = bool(audio_matched and not metadata_conflict)
+        log_comparison(done, a, b, audio_matched, final_matched, sim, metadata_conflict)
+
+        if final_matched:
+            uf.union(a, b)
+            if sim:
+                score, good, overlap, shift, excellent, median, p90 = sim
+                notes.append(
+                    f"AUDIO MATCH: {tracks[a].path.name} <-> {tracks[b].path.name}; "
+                    f"score={score:.2f}, good={good:.0%}, excellent={excellent:.0%}, "
+                    f"overlap={overlap:.0%}, median={median:.1f}, p90={p90}, shift={shift}"
+                )
+        elif audio_matched and metadata_conflict:
+            if sim:
+                score, good, overlap, shift, excellent, median, p90 = sim
+                notes.append(
+                    f"AUDIO MATCH BLOCKED: {tracks[a].path.name} <-> {tracks[b].path.name}; "
+                    f"reason={metadata_conflict}; score={score:.2f}, good={good:.0%}, "
+                    f"excellent={excellent:.0%}, overlap={overlap:.0%}, "
+                    f"median={median:.1f}, p90={p90}, shift={shift}"
+                )
 
     if total_candidates:
         workers = min(total_candidates, _compare_workers())
@@ -1971,16 +2283,8 @@ def merge_equivalent_tracks(
             ) as ex:
                 results = ex.map(_compare_pair_worker, candidate_pairs, chunksize=chunksize)
                 for done, result in enumerate(results, 1):
-                    a, b, matched, sim = result
-                    log_comparison(done, a, b, matched, sim)
-                    if matched:
-                        uf.union(a, b)
-                        score, good, overlap, shift, excellent, median, p90 = sim
-                        notes.append(
-                            f"AUDIO MATCH: {tracks[a].path.name} <-> {tracks[b].path.name}; "
-                            f"score={score:.2f}, good={good:.0%}, excellent={excellent:.0%}, "
-                            f"overlap={overlap:.0%}, median={median:.1f}, p90={p90}, shift={shift}"
-                        )
+                    a, b, audio_matched, sim = result
+                    handle_result(done, a, b, audio_matched, sim)
                     if progress_cb and (done % 25 == 0 or done == total_candidates):
                         progress_cb(label, done, total_candidates)
         except Exception as e:
@@ -1989,16 +2293,8 @@ def merge_equivalent_tracks(
             for done, (a, b) in enumerate(candidate_pairs, 1):
                 if (a, b) in processed_pairs:
                     continue
-                matched, sim = fingerprint_auto_match(tracks[a], tracks[b])
-                log_comparison(done, a, b, matched, sim)
-                if matched:
-                    uf.union(a, b)
-                    score, good, overlap, shift, excellent, median, p90 = sim
-                    notes.append(
-                        f"AUDIO MATCH: {tracks[a].path.name} <-> {tracks[b].path.name}; "
-                        f"score={score:.2f}, good={good:.0%}, excellent={excellent:.0%}, "
-                        f"overlap={overlap:.0%}, median={median:.1f}, p90={p90}, shift={shift}"
-                    )
+                audio_matched, sim = fingerprint_auto_match(tracks[a], tracks[b])
+                handle_result(done, a, b, audio_matched, sim)
                 if progress_cb and (done % 25 == 0 or done == total_candidates):
                     progress_cb(label, done, total_candidates)
     elif progress_cb:
@@ -2020,7 +2316,10 @@ def merge_equivalent_tracks(
             summary = {
                 "record_type": "summary",
                 "generated": datetime.now().isoformat(timespec="seconds"),
+                "possible_pairs": total_possible,
+                "token_pairs_seen": len(pair_counts),
                 "candidate_pairs": total_candidates,
+                "prefilter_rejected_pairs": prefilter_rejected,
                 "comparisons_logged": len(processed_pairs),
                 "recording_groups": len(groups),
                 "counts": dict(sorted(log_counts.items())),
