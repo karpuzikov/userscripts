@@ -148,3 +148,153 @@
         for (const child of table?.children || []) {
             const tag = child.tagName?.toUpperCase();
             if (tag === 'TR') {
+                rows.push(child);
+            } else if (tag === 'TBODY' || tag === 'THEAD' || tag === 'TFOOT') {
+                for (const row of child.children || []) {
+                    if (row.tagName?.toUpperCase() === 'TR') rows.push(row);
+                }
+            }
+        }
+        return rows;
+    }
+
+    function rowText(row) {
+        const clone = row.cloneNode(true);
+        clone.querySelectorAll('script, style, noscript').forEach(node => node.remove());
+        return normalizeText(clone.textContent);
+    }
+
+    function fingerprintFromRoot(root) {
+        const table = root?.matches?.('table.details')
+            ? root
+            : root?.querySelector?.('table.details');
+        if (!table) return null;
+
+        const classKey = [...table.classList].sort().join(' ');
+        const rows = getDirectRows(table).map(rowText).filter(Boolean);
+        return rows.length ? {classKey, rows} : null;
+    }
+
+    function fingerprintFromHtml(html) {
+        if (!html) return null;
+        const doc = new DOMParser().parseFromString(String(html), 'text/html');
+        return fingerprintFromRoot(doc.body);
+    }
+
+    function arraysEqual(a, b) {
+        return a.length === b.length && a.every((value, index) => value === b[index]);
+    }
+
+    function fingerprintsEqual(proposed, open) {
+        if (!proposed || !open) return false;
+        if (proposed.classKey !== open.classKey) return false;
+
+        if (arraysEqual(proposed.rows, open.rows)) return true;
+
+        // Several MusicBrainz preview components intentionally hide only the
+        // entity-context row (usually "Release:") while the open-edit view
+        // includes it. Allow exactly that one leading-row difference, but no
+        // other superset/subset matching.
+        return (
+            open.rows.length === proposed.rows.length + 1 &&
+            arraysEqual(proposed.rows, open.rows.slice(1))
+        );
+    }
+
+    function existingPreviewMap(ed) {
+        const map = new Map();
+        const previews = unwrap(ed?.editPreviews);
+        if (!Array.isArray(previews)) return map;
+
+        for (const preview of previews) {
+            if (preview?.editHash) map.set(String(preview.editHash), preview);
+        }
+        return map;
+    }
+
+    function stripHash(edit) {
+        const copy = {...edit};
+        delete copy.hash;
+        return copy;
+    }
+
+    async function requestMissingPreviews(edits) {
+        if (!edits.length) return [];
+
+        const response = await pageWindow().fetch('/ws/js/edit/preview', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json; charset=utf-8',
+            },
+            body: JSON.stringify({
+                edits: edits.map(stripHash),
+                makeVotable: false,
+            }),
+        });
+
+        if (!response.ok) {
+            throw new Error(`MusicBrainz preview request failed: HTTP ${response.status}`);
+        }
+
+        const data = await response.json();
+        if (!Array.isArray(data?.previews) || data.previews.length !== edits.length) {
+            throw new Error('MusicBrainz returned an incomplete edit preview response.');
+        }
+        return data.previews;
+    }
+
+    async function ensurePreviews(ed, edits) {
+        const deadline = Date.now() + PREVIEW_WAIT_MS;
+        while (Date.now() < deadline && unwrap(ed?.loadingEditPreviews)) {
+            setStatus('Waiting for MusicBrainz edit previews...');
+            await sleep(100);
+        }
+
+        const map = existingPreviewMap(ed);
+        const missing = edits.filter(edit => !map.has(String(edit.hash || '')));
+
+        if (missing.length) {
+            setStatus(`Building ${missing.length} missing edit preview${missing.length === 1 ? '' : 's'}...`);
+            const previews = await requestMissingPreviews(missing);
+            previews.forEach((preview, index) => {
+                map.set(String(missing[index].hash || ''), {
+                    ...preview,
+                    editHash: missing[index].hash,
+                });
+            });
+        }
+
+        return map;
+    }
+
+    function getReleaseInfo(ed) {
+        const release = unwrap(ed?.rootField?.release) || null;
+        const releaseGid = normalizeText(unwrap(release?.gid));
+        const releaseGroup = unwrap(release?.releaseGroup) || null;
+        const releaseGroupGid = normalizeText(unwrap(releaseGroup?.gid));
+        return {release, releaseGid, releaseGroupGid};
+    }
+
+    function scopeForEdit(edit, releaseInfo) {
+        const enteredFrom = edit?.enteredFrom || edit?.entered_from || null;
+        const enteredFromType = String(enteredFrom?.entity_type || enteredFrom?.entityType || '');
+        const toEdit = normalizeText(edit?.to_edit);
+        const gid = normalizeText(edit?.gid);
+
+        if (enteredFromType === 'release' && UUID.test(toEdit)) {
+            return `recording/${toEdit}`;
+        }
+
+        if (enteredFromType === 'release' && UUID.test(gid)) {
+            return `release-group/${gid}`;
+        }
+
+        if (UUID.test(releaseInfo.releaseGid)) {
+            return `release/${releaseInfo.releaseGid}`;
+        }
+
+        // A brand-new release has no entity page and therefore cannot already
+        // have release-level open edits. Recording / release-group edits above
+        // are still checked because those entities already exist.
