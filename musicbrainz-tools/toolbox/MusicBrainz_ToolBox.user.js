@@ -1,0 +1,6195 @@
+// ==UserScript==
+// @name         MusicBrainz ToolBox
+// @namespace    https://github.com/karpuzikov/userscripts
+// @version      1.0.0
+// @description  Combined MusicBrainz release-editor, recording, barcode, search, cover-art, Disc ID, and duplicate-edit tools.
+// @author       karpuzikov
+// @license      MIT
+// @match        https://musicbrainz.org/*
+// @match        https://beta.musicbrainz.org/*
+// @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/toolbox/MusicBrainz_ToolBox.user.js
+// @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/toolbox/MusicBrainz_ToolBox.user.js
+// @supportURL   https://github.com/karpuzikov/userscripts
+// @grant        GM_getValue
+// @grant        GM_setValue
+// @grant        GM_xmlhttpRequest
+// @grant        unsafeWindow
+// @connect      api.github.com
+// @connect      harmony.pulsewidth.org.uk
+// @connect      music.apple.com
+// @connect      amp-api.music.apple.com
+// @run-at       document-idle
+// ==/UserScript==
+
+(() => {
+    'use strict';
+
+    function __mbToolBoxPattern(pattern) {
+        const value = location.href;
+        const parts = String(pattern).split('*');
+        if (!value.startsWith(parts[0])) return false;
+        let position = parts[0].length;
+        for (let index = 1; index < parts.length; index++) {
+            const part = parts[index];
+            if (!part) continue;
+            const found = value.indexOf(part, position);
+            if (found === -1) return false;
+            position = found + part.length;
+        }
+        return String(pattern).endsWith('*') || position === value.length;
+    }
+
+    function __mbToolBoxShouldRun(matches, excludes = []) {
+        return matches.some(__mbToolBoxPattern) && !excludes.some(__mbToolBoxPattern);
+    }
+
+    // ============================================================================
+    // Auto-Select Single Disc ID Artist
+    // Source merged from: musicbrainz-tools/disc-id-auto-select-artist/MusicBrainz_Auto_Select_Single_Disc_ID_Artist.user.js
+    // ============================================================================
+    if (__mbToolBoxShouldRun(["https://musicbrainz.org/cdtoc/attach*","https://beta.musicbrainz.org/cdtoc/attach*"], [])) {
+    (() => {
+        'use strict';
+    
+        const url = new URL(location.href);
+    
+        if (!url.searchParams.has('filter-artist.query') || url.searchParams.has('artist')) {
+            return;
+        }
+    
+        const artistRadios = [
+            ...document.querySelectorAll('input[type="radio"][name="artist"]')
+        ];
+    
+        if (artistRadios.length !== 1) {
+            return;
+        }
+    
+        const radio = artistRadios[0];
+        const form = radio.form;
+    
+        if (!form) {
+            return;
+        }
+    
+        radio.checked = true;
+    
+        if (typeof form.requestSubmit === 'function') {
+            form.requestSubmit();
+        } else {
+            form.submit();
+        }
+    })();
+    }
+
+    // ============================================================================
+    // BOIU Cover Art Removal
+    // Source merged from: musicbrainz-tools/MusicBrainz_BOIU_Cover_Art_Removal.user.js
+    // ============================================================================
+    if (__mbToolBoxShouldRun(["https://musicbrainz.org/release/*/cover-art","https://musicbrainz.org/release/*/remove-cover-art/*"], [])) {
+    (function () {
+        'use strict';
+    
+        const SCRIPT_URL = 'https://github.com/karpuzikov/userscripts/blob/main/musicbrainz-tools/toolbox/MusicBrainz_ToolBox.user.js';
+        const EDIT_NOTE = `better one is uploaded\n\nScript: ${SCRIPT_URL}`;
+        const STORAGE_KEY = 'mb_boiu_remove';
+    
+        if (/^\/release\/[^/]+\/cover-art\/?$/.test(location.pathname)) {
+            document
+                .querySelectorAll('.buttons a[href*="/remove-cover-art/"]')
+                .forEach(removeLink => {
+                    const buttons = removeLink.parentElement;
+    
+                    if (buttons.querySelector('.boiu-button')) {
+                        return;
+                    }
+    
+                    const boiu = document.createElement('a');
+                    boiu.className = 'boiu-button';
+                    boiu.href = removeLink.href;
+                    boiu.textContent = 'BOIU';
+                    boiu.title = 'Remove with note: ' + EDIT_NOTE;
+    
+                    boiu.addEventListener('click', event => {
+                        event.preventDefault();
+    
+                        const targetURL = new URL(removeLink.href);
+    
+                        sessionStorage.setItem(
+                            STORAGE_KEY,
+                            JSON.stringify({
+                                pathname: targetURL.pathname,
+                                timestamp: Date.now()
+                            })
+                        );
+    
+                        location.assign(removeLink.href);
+                    });
+    
+                    buttons.appendChild(boiu);
+                });
+    
+            return;
+        }
+    
+        if (/^\/release\/[^/]+\/remove-cover-art\/[^/]+\/?$/.test(location.pathname)) {
+            let data;
+    
+            try {
+                data = JSON.parse(sessionStorage.getItem(STORAGE_KEY) || 'null');
+            } catch {
+                sessionStorage.removeItem(STORAGE_KEY);
+                return;
+            }
+    
+            if (!data || data.pathname !== location.pathname) {
+                return;
+            }
+    
+            if (
+                typeof data.timestamp !== 'number' ||
+                Date.now() - data.timestamp > 30000
+            ) {
+                sessionStorage.removeItem(STORAGE_KEY);
+                return;
+            }
+    
+            sessionStorage.removeItem(STORAGE_KEY);
+    
+            const textarea = document.querySelector(
+                'textarea[name="confirm.edit_note"]'
+            );
+    
+            const submitButton = document.querySelector(
+                'button.submit.positive[type="submit"]'
+            );
+    
+            const form =
+                textarea?.closest('form') ||
+                submitButton?.closest('form');
+    
+            if (!textarea || !submitButton || !form) {
+                return;
+            }
+    
+            textarea.value = EDIT_NOTE;
+    
+            textarea.dispatchEvent(
+                new Event('input', {
+                    bubbles: true
+                })
+            );
+    
+            textarea.dispatchEvent(
+                new Event('change', {
+                    bubbles: true
+                })
+            );
+    
+            if (typeof form.requestSubmit === 'function') {
+                form.requestSubmit(submitButton);
+            } else {
+                submitButton.click();
+            }
+        }
+    })();
+    }
+
+    // ============================================================================
+    // Remove All External Links
+    // Source merged from: musicbrainz-tools/remove-all-external-links/MusicBrainz_Remove_All_External_Links.user.js
+    // ============================================================================
+    if (__mbToolBoxShouldRun(["https://musicbrainz.org/*/*/edit","https://beta.musicbrainz.org/*/*/edit"], [])) {
+    (function () {
+        'use strict';
+    
+        const EDITOR_ID = 'external-links-editor';
+        const BUTTON_ID = 'mb-remove-all-external-links';
+        const SCRIPT_URL = 'https://github.com/karpuzikov/userscripts/blob/main/musicbrainz-tools/toolbox/MusicBrainz_ToolBox.user.js';
+    
+        function wait(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+    
+        function fire(element, type) {
+            element.dispatchEvent(new Event(type, { bubbles: true }));
+        }
+    
+        function appendScriptLinkToEditNote() {
+            const textarea = document.querySelector('#edit-note-text, textarea.edit-note');
+            if (!textarea || textarea.value.includes(SCRIPT_URL)) return;
+    
+            const currentNote = textarea.value.trimEnd();
+            const newNote = currentNote
+                ? `${currentNote}\n\nScript: ${SCRIPT_URL}`
+                : `Script: ${SCRIPT_URL}`;
+    
+            const setter = Object.getOwnPropertyDescriptor(
+                HTMLTextAreaElement.prototype,
+                'value'
+            )?.set;
+    
+            if (setter) {
+                setter.call(textarea, newNote);
+            } else {
+                textarea.value = newNote;
+            }
+    
+            fire(textarea, 'input');
+            fire(textarea, 'change');
+        }
+    
+        function getEditor() {
+            return document.getElementById(EDITOR_ID);
+        }
+    
+        function getActiveRemoveButtons() {
+            const editor = getEditor();
+            if (!editor) return [];
+    
+            return [...editor.querySelectorAll('tr.external-link-item')].flatMap(row => {
+                const submittedUrl = row.querySelector('a.url');
+                const removeButton = row.querySelector('button.remove-item');
+    
+                if (!submittedUrl || !removeButton || removeButton.disabled) return [];
+                if (submittedUrl.classList.contains('rel-remove')) return [];
+    
+                return [removeButton];
+            });
+        }
+    
+        async function removeAllExternalLinks(button) {
+            const oldText = button.textContent;
+            const removeButtons = getActiveRemoveButtons();
+    
+            button.disabled = true;
+    
+            try {
+                if (!removeButtons.length) {
+                    button.textContent = 'No external links';
+                    await wait(1000);
+                    return;
+                }
+    
+                button.textContent = `Removing ${removeButtons.length}...`;
+    
+                for (let i = 0; i < removeButtons.length; i++) {
+                    const removeButton = removeButtons[i];
+                    if (removeButton.isConnected && !removeButton.disabled) {
+                        removeButton.click();
+                        await wait(35);
+                    }
+                }
+    
+                appendScriptLinkToEditNote();
+    
+                button.textContent =
+                    `Removed ${removeButtons.length} external link${removeButtons.length === 1 ? '' : 's'}`;
+                await wait(1000);
+            } catch (error) {
+                console.error('[MusicBrainz - Remove All External Links]', error);
+                alert(error.message || String(error));
+            } finally {
+                button.disabled = false;
+                button.textContent = oldText;
+            }
+        }
+    
+        function addButton() {
+            if (document.getElementById(BUTTON_ID)) return;
+    
+            const editor = getEditor();
+            if (!editor) return;
+    
+            const container = editor.closest('.external-links-editor-container') || editor;
+            const toolbar = document.createElement('div');
+            toolbar.style.margin = '0 0 0.75em';
+    
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.id = BUTTON_ID;
+            button.textContent = 'Remove all external links';
+            button.addEventListener('click', () => removeAllExternalLinks(button));
+    
+            toolbar.appendChild(button);
+            container.insertAdjacentElement('beforebegin', toolbar);
+        }
+    
+        addButton();
+        new MutationObserver(addButton).observe(document.body, {
+            childList: true,
+            subtree: true
+        });
+    })();
+    }
+
+    // ============================================================================
+    // Fill Dates
+    // Source merged from: musicbrainz-tools/fill-dates/MusicBrainz_Fill_Dates.user.js
+    // ============================================================================
+    if (__mbToolBoxShouldRun(["https://musicbrainz.org/release/add*","https://musicbrainz.org/release/*/edit*","https://beta.musicbrainz.org/release/add*","https://beta.musicbrainz.org/release/*/edit*"], [])) {
+    (() => {
+        'use strict';
+    
+        const BUTTON_ID = 'mb-fill-dates-button';
+        const SCRIPT_URL = 'https://github.com/karpuzikov/userscripts/blob/main/musicbrainz-tools/toolbox/MusicBrainz_ToolBox.user.js';
+    
+        function fire(element, type) {
+            element.dispatchEvent(new Event(type, { bubbles: true }));
+        }
+    
+        function getReleaseEventFieldset() {
+            return [...document.querySelectorAll('fieldset')].find(fieldset => {
+                const legend = fieldset.querySelector(':scope > legend');
+                return legend && legend.textContent.trim() === 'Release event';
+            }) || null;
+        }
+    
+        function getDateRows(fieldset) {
+            if (!fieldset) return [];
+    
+            return [...fieldset.querySelectorAll('tr')]
+                .map(row => ({
+                    row,
+                    year: row.querySelector('input.partial-date-year'),
+                    month: row.querySelector('input.partial-date-month'),
+                    day: row.querySelector('input.partial-date-day'),
+                }))
+                .filter(date => date.year && date.month && date.day);
+        }
+    
+        function setInputValue(input, value) {
+            const setter = Object.getOwnPropertyDescriptor(
+                HTMLInputElement.prototype,
+                'value'
+            )?.set;
+    
+            if (setter) {
+                setter.call(input, value);
+            } else {
+                input.value = value;
+            }
+    
+            fire(input, 'input');
+            fire(input, 'change');
+        }
+    
+        function appendScriptLinkToEditNote() {
+            const textarea = document.querySelector('#edit-note-text, textarea.edit-note');
+            if (!textarea || textarea.value.includes(SCRIPT_URL)) return;
+    
+            const currentNote = textarea.value.trimEnd();
+            const newNote = currentNote
+                ? `${currentNote}\n\nScript: ${SCRIPT_URL}`
+                : `Script: ${SCRIPT_URL}`;
+    
+            const setter = Object.getOwnPropertyDescriptor(
+                HTMLTextAreaElement.prototype,
+                'value'
+            )?.set;
+    
+            if (setter) {
+                setter.call(textarea, newNote);
+            } else {
+                textarea.value = newNote;
+            }
+    
+            fire(textarea, 'input');
+            fire(textarea, 'change');
+        }
+    
+        function fillDates(button) {
+            const fieldset = getReleaseEventFieldset();
+            const dates = getDateRows(fieldset);
+            if (dates.length < 2) return;
+    
+            const source = {
+                year: dates[0].year.value,
+                month: dates[0].month.value,
+                day: dates[0].day.value,
+            };
+    
+            for (const date of dates.slice(1)) {
+                setInputValue(date.year, source.year);
+                setInputValue(date.month, source.month);
+                setInputValue(date.day, source.day);
+            }
+    
+            appendScriptLinkToEditNote();
+    
+            const originalText = button.textContent;
+            button.textContent = `Filled ${dates.length - 1}`;
+            window.setTimeout(() => {
+                if (button.isConnected) button.textContent = originalText;
+            }, 1000);
+        }
+    
+        function syncButton() {
+            const fieldset = getReleaseEventFieldset();
+            const dates = getDateRows(fieldset);
+            if (!dates.length) return;
+    
+            const firstDateCell = dates[0].year.closest('td.partial-date');
+            const firstDate = firstDateCell?.querySelector('span.partial-date');
+            if (!firstDateCell || !firstDate) return;
+    
+            let button = document.getElementById(BUTTON_ID);
+    
+            if (!button) {
+                button = document.createElement('button');
+                button.id = BUTTON_ID;
+                button.type = 'button';
+                button.textContent = 'Fill Dates';
+                button.style.display = 'block';
+                button.style.margin = '0 0 6px 0';
+                button.addEventListener('click', () => fillDates(button));
+            }
+    
+            if (button.parentElement !== firstDateCell || button.nextElementSibling !== firstDate) {
+                firstDateCell.insertBefore(button, firstDate);
+            }
+        }
+    
+        syncButton();
+    
+        new MutationObserver(syncButton).observe(document.body, {
+            childList: true,
+            subtree: true,
+        });
+    })();
+    }
+
+    // ============================================================================
+    // Release Events to Worldwide
+    // Source merged from: musicbrainz-tools/release-events-worldwide/MusicBrainz_Release_Events_Worldwide.user.js
+    // ============================================================================
+    if (__mbToolBoxShouldRun(["https://musicbrainz.org/release/*/edit","https://beta.musicbrainz.org/release/*/edit"], [])) {
+    (function () {
+        'use strict';
+    
+        if (!/^\/release\/[0-9a-f-]{36}\/edit\/?$/i.test(location.pathname)) return;
+    
+        const WORLDWIDE_ID = '240';
+        const BUTTON_ID = 'mb-replace-release-events-worldwide';
+        const SCRIPT_URL = 'https://github.com/karpuzikov/userscripts/blob/main/musicbrainz-tools/toolbox/MusicBrainz_ToolBox.user.js';
+    
+        function wait(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+    
+        function fire(element, type) {
+            element.dispatchEvent(new Event(type, { bubbles: true }));
+        }
+    
+        function appendScriptLinkToEditNote() {
+            const textarea = document.querySelector('#edit-note-text, textarea.edit-note');
+            if (!textarea || textarea.value.includes(SCRIPT_URL)) return;
+    
+            const currentNote = textarea.value.trimEnd();
+            const newNote = currentNote
+                ? `${currentNote}\n\nScript: ${SCRIPT_URL}`
+                : `Script: ${SCRIPT_URL}`;
+    
+            const setter = Object.getOwnPropertyDescriptor(
+                HTMLTextAreaElement.prototype,
+                'value'
+            )?.set;
+    
+            if (setter) {
+                setter.call(textarea, newNote);
+            } else {
+                textarea.value = newNote;
+            }
+    
+            fire(textarea, 'input');
+            fire(textarea, 'change');
+        }
+    
+        function getFieldset() {
+            return [...document.querySelectorAll('fieldset')].find(fieldset => {
+                const legend = fieldset.querySelector(':scope > legend');
+                return legend && legend.textContent.trim() === 'Release event';
+            });
+        }
+    
+        function getRows(fieldset) {
+            if (!fieldset) return [];
+            return [...fieldset.querySelectorAll('button.remove-release-event')]
+                .map(button => button.closest('tr, .release-event'))
+                .filter(Boolean);
+        }
+    
+        function readDate(row) {
+            if (!row) return { year: '', month: '', day: '' };
+            return {
+                year: row.querySelector('.partial-date-year')?.value || '',
+                month: row.querySelector('.partial-date-month')?.value || '',
+                day: row.querySelector('.partial-date-day')?.value || ''
+            };
+        }
+    
+        function writeValue(input, value) {
+            if (!input) return;
+            input.value = value;
+            fire(input, 'input');
+            fire(input, 'change');
+        }
+    
+        async function removeAllEvents(fieldset) {
+            while (true) {
+                const buttons = [...fieldset.querySelectorAll('button.remove-release-event')];
+                if (!buttons.length) return;
+    
+                const before = buttons.length;
+                buttons[buttons.length - 1].click();
+    
+                for (let i = 0; i < 50; i++) {
+                    await wait(20);
+                    const after = fieldset.querySelectorAll('button.remove-release-event').length;
+                    if (after < before) break;
+                }
+            }
+        }
+    
+        async function replaceEvents(button) {
+            const fieldset = getFieldset();
+            if (!fieldset) return;
+    
+            const existingRows = getRows(fieldset);
+            const date = readDate(existingRows[0]);
+    
+            button.disabled = true;
+            const oldText = button.textContent;
+            button.textContent = 'Working...';
+    
+            try {
+                await removeAllEvents(fieldset);
+    
+                const addButton = fieldset.querySelector('button[data-click="addReleaseEvent"]');
+                if (!addButton) throw new Error('MusicBrainz Add Release Event button was not found.');
+    
+                addButton.click();
+    
+                let row = null;
+                for (let i = 0; i < 100; i++) {
+                    await wait(20);
+                    const rows = getRows(fieldset);
+                    if (rows.length) {
+                        row = rows[rows.length - 1];
+                        break;
+                    }
+                }
+                if (!row) throw new Error('The new release event did not appear.');
+    
+                writeValue(row.querySelector('.partial-date-year'), date.year);
+                writeValue(row.querySelector('.partial-date-month'), date.month);
+                writeValue(row.querySelector('.partial-date-day'), date.day);
+    
+                const country = row.querySelector('select');
+                if (!country) throw new Error('Country selector was not found.');
+                country.value = WORLDWIDE_ID;
+                fire(country, 'change');
+    
+                appendScriptLinkToEditNote();
+    
+                button.textContent = 'Done';
+                await wait(900);
+            } catch (error) {
+                console.error('[Release Events to Worldwide]', error);
+                alert(error.message || String(error));
+            } finally {
+                button.disabled = false;
+                button.textContent = oldText;
+            }
+        }
+    
+        function addButton() {
+            if (document.getElementById(BUTTON_ID)) return;
+    
+            const fieldset = getFieldset();
+            if (!fieldset) return;
+    
+            const addReleaseEvent = fieldset.querySelector('button[data-click="addReleaseEvent"]');
+            if (!addReleaseEvent) return;
+    
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.id = BUTTON_ID;
+            button.textContent = 'Replace with [Worldwide]';
+            button.style.marginLeft = '0.5em';
+            button.addEventListener('click', () => replaceEvents(button));
+    
+            addReleaseEvent.insertAdjacentElement('afterend', button);
+        }
+    
+        addButton();
+        new MutationObserver(addButton).observe(document.body, { childList: true, subtree: true });
+    })();
+    }
+
+    // ============================================================================
+    // Barcode and Catalog Number Search
+    // Source merged from: musicbrainz-tools/barcode-catalog-search/MusicBrainz_Barcode_Catalog_Search.user.js
+    // ============================================================================
+    if (__mbToolBoxShouldRun(["https://musicbrainz.org/*","https://beta.musicbrainz.org/*"], [])) {
+    (() => {
+        'use strict';
+    
+        const GROUP_ID = 'mb-quick-release-search';
+    
+        if (window.top !== window.self || document.getElementById(GROUP_ID)) {
+            return;
+        }
+    
+        const nativeInput = document.getElementById('headerid-query');
+        const nativeForm = nativeInput?.closest('form[action="/search"]');
+        const searchContainer = nativeForm?.parentElement;
+        const nativeButton = nativeForm?.querySelector('button[type="submit"]');
+    
+        if (!nativeInput || !nativeForm || !searchContainer || !nativeButton) {
+            return;
+        }
+    
+        searchContainer.classList.add('mb-quick-release-search-enabled');
+    
+        const style = document.createElement('style');
+        style.textContent = `
+            .search-container.mb-quick-release-search-enabled {
+                display: flex;
+                align-items: flex-start;
+            }
+    
+            #${GROUP_ID} {
+                display: flex;
+                align-items: flex-start;
+                gap: 4px;
+                margin-right: 6px;
+            }
+    
+            #${GROUP_ID} form {
+                width: 180px !important;
+                height: 25px;
+                margin-top: 5px !important;
+                position: relative;
+                flex: 0 0 180px;
+            }
+    
+            #${GROUP_ID} input {
+                width: 150px !important;
+                height: 25px !important;
+                position: absolute !important;
+                left: 0 !important;
+                top: 0 !important;
+            }
+    
+            #${GROUP_ID} button {
+                width: 30px !important;
+                height: 25px !important;
+                position: absolute !important;
+                left: 149px !important;
+                top: 0 !important;
+            }
+        `;
+        document.head.appendChild(style);
+    
+        const visualProperties = [
+            'boxSizing',
+            'paddingTop',
+            'paddingRight',
+            'paddingBottom',
+            'paddingLeft',
+            'fontFamily',
+            'fontSize',
+            'fontWeight',
+            'fontStyle',
+            'lineHeight',
+            'letterSpacing',
+            'color',
+            'backgroundColor',
+            'backgroundImage',
+            'backgroundPosition',
+            'backgroundRepeat',
+            'borderTopWidth',
+            'borderRightWidth',
+            'borderBottomWidth',
+            'borderLeftWidth',
+            'borderTopStyle',
+            'borderRightStyle',
+            'borderBottomStyle',
+            'borderLeftStyle',
+            'borderTopColor',
+            'borderRightColor',
+            'borderBottomColor',
+            'borderLeftColor',
+            'borderTopLeftRadius',
+            'borderTopRightRadius',
+            'borderBottomRightRadius',
+            'borderBottomLeftRadius'
+        ];
+    
+        const copyVisualStyle = (source, target) => {
+            const computed = getComputedStyle(source);
+            for (const property of visualProperties) {
+                target.style[property] = computed[property];
+            }
+        };
+    
+        const group = document.createElement('div');
+        group.id = GROUP_ID;
+    
+        const makeSearchForm = (type, placeholder, ariaLabel, numeric = false) => {
+            const form = document.createElement('form');
+            form.dataset.search = type;
+            form.autocomplete = 'off';
+    
+            const input = nativeInput.cloneNode(false);
+            input.removeAttribute('id');
+            input.name = type;
+            input.value = '';
+            input.placeholder = placeholder;
+            input.setAttribute('aria-label', ariaLabel);
+            input.type = 'text';
+            if (numeric) {
+                input.inputMode = 'numeric';
+            } else {
+                input.removeAttribute('inputmode');
+            }
+            copyVisualStyle(nativeInput, input);
+    
+            const button = nativeButton.cloneNode(true);
+            button.removeAttribute('id');
+            button.type = 'submit';
+    
+            form.append(input, ' ', button);
+            group.appendChild(form);
+    
+            return {form, input};
+        };
+    
+        const barcodeSearch = makeSearchForm(
+            'barcode',
+            'Barcode',
+            'Search MusicBrainz releases by barcode',
+            true
+        );
+    
+        const catnoSearch = makeSearchForm(
+            'catno',
+            'Catalog number',
+            'Search MusicBrainz releases by catalog number'
+        );
+    
+        searchContainer.insertBefore(group, nativeForm);
+    
+        const buildSearchUrl = (query) => {
+            const url = new URL('/search', location.origin);
+            url.searchParams.set('query', query);
+            url.searchParams.set('type', 'release');
+            url.searchParams.set('limit', '100');
+            url.searchParams.set('method', 'advanced');
+            return url;
+        };
+    
+        const normalizeCatalogNumber = (value) => String(value ?? '')
+            .normalize('NFKC')
+            .toLocaleLowerCase('en-US')
+            .replace(/[\p{P}\p{S}\s]+/gu, '');
+    
+        const openUniqueReleaseOrResults = async (query, catalogNumber = null) => {
+            const resultsUrl = buildSearchUrl(query);
+            const apiUrl = new URL('/ws/2/release/', location.origin);
+            apiUrl.searchParams.set('query', query);
+            apiUrl.searchParams.set('fmt', 'json');
+            apiUrl.searchParams.set('limit', catalogNumber ? '100' : '2');
+    
+            try {
+                const response = await fetch(apiUrl, {
+                    credentials: 'same-origin',
+                    headers: {
+                        Accept: 'application/json'
+                    }
+                });
+    
+                if (response.ok) {
+                    const data = await response.json();
+                    const releases = Array.isArray(data.releases) ? data.releases : [];
+    
+                    if (catalogNumber) {
+                        const wanted = normalizeCatalogNumber(catalogNumber);
+                        const exactMatches = releases.filter((release) =>
+                            Array.isArray(release['label-info']) &&
+                            release['label-info'].some((labelInfo) =>
+                                normalizeCatalogNumber(labelInfo?.['catalog-number']) === wanted
+                            )
+                        );
+    
+                        const uniqueExactMatches = [
+                            ...new Map(
+                                exactMatches
+                                    .filter((release) => release?.id)
+                                    .map((release) => [release.id, release])
+                            ).values()
+                        ];
+    
+                        if (uniqueExactMatches.length === 1) {
+                            location.assign('/release/' + uniqueExactMatches[0].id);
+                            return;
+                        }
+                    } else if (Number(data.count) === 1 && releases.length === 1 && releases[0]?.id) {
+                        location.assign('/release/' + releases[0].id);
+                        return;
+                    }
+                }
+            } catch {
+                // Fall back to the normal MusicBrainz results page.
+            }
+    
+            location.assign(resultsUrl.toString());
+        };
+    
+        barcodeSearch.form.addEventListener('submit', (event) => {
+            event.preventDefault();
+    
+            const barcode = barcodeSearch.input.value.replace(/\D/g, '');
+    
+            if (!barcode) {
+                barcodeSearch.input.focus();
+                return;
+            }
+    
+            openUniqueReleaseOrResults('barcode:' + barcode);
+        });
+    
+        catnoSearch.form.addEventListener('submit', (event) => {
+            event.preventDefault();
+    
+            const catalogNumber = catnoSearch.input.value.trim();
+    
+            if (!catalogNumber) {
+                catnoSearch.input.focus();
+                return;
+            }
+    
+            const escapedCatalogNumber = catalogNumber
+                .replace(/\\/g, '\\\\')
+                .replace(/"/g, '\\"');
+    
+            openUniqueReleaseOrResults(
+                'catno:"' + escapedCatalogNumber + '"',
+                catalogNumber
+            );
+        });
+    })();
+    }
+
+    // ============================================================================
+    // Tracklist vs Recording
+    // Source merged from: musicbrainz-tools/tracklist-vs-recording/MusicBrainz_Tracklist_vs_Recording.user.js
+    // ============================================================================
+    if (__mbToolBoxShouldRun(["https://musicbrainz.org/release/add*","https://musicbrainz.org/release/*/edit*","https://beta.musicbrainz.org/release/add*","https://beta.musicbrainz.org/release/*/edit*"], [])) {
+    (() => {
+        'use strict';
+    
+        const SCRIPT_NAME = 'MusicBrainz - Tracklist vs Recording';
+        const SCRIPT_URL = 'https://github.com/karpuzikov/userscripts/blob/main/musicbrainz-tools/toolbox/MusicBrainz_ToolBox.user.js';
+        const STYLE_ID = 'mb-tracklist-vs-recording-style';
+        const DIFF_ROW_CLASS = 'mb-tracklist-vs-recording-diff-row';
+        const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+        const watchedTracks = new WeakSet();
+        const artistEntityCache = new Map();
+        let scanTimer = 0;
+    
+        function pageWindow() {
+            try {
+                return typeof unsafeWindow !== 'undefined' ? unsafeWindow : window;
+            } catch {
+                return window;
+            }
+        }
+    
+        function editor() {
+            return pageWindow().MB?._releaseEditor || null;
+        }
+    
+        function unwrap(value) {
+            return typeof value === 'function' ? value() : value;
+        }
+    
+        function installStyle() {
+            if (document.getElementById(STYLE_ID)) return;
+    
+            const style = document.createElement('style');
+            style.id = STYLE_ID;
+            style.textContent = `
+                tr.${DIFF_ROW_CLASS} > td {
+                    padding-top: 2px;
+                    padding-bottom: 6px;
+                    vertical-align: middle;
+                }
+    
+                tr.${DIFF_ROW_CLASS} > td.mb-tvr-diff-cell {
+                    font-size: 12px;
+                }
+    
+                .mb-tvr-diff {
+                    display: flex;
+                    align-items: center;
+                    gap: 6px;
+                    min-width: 0;
+                }
+    
+                .mb-tvr-value {
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    white-space: nowrap;
+                    min-width: 0;
+                }
+    
+                .mb-tvr-track-value {
+                    text-decoration: line-through;
+                    opacity: .8;
+                }
+    
+                .mb-tvr-recording-value {
+                    font-weight: 600;
+                }
+    
+                .mb-tvr-replace {
+                    min-width: 28px;
+                    padding: 0 7px;
+                    font-weight: 700;
+                    line-height: 20px;
+                    cursor: pointer;
+                    flex: 0 0 auto;
+                }
+    
+                .mb-tvr-replace[disabled] {
+                    cursor: default;
+                    opacity: .55;
+                }
+            `;
+            document.head.appendChild(style);
+        }
+    
+        function appendScriptLinkToEditNote() {
+            const ed = editor();
+            const editNote = ed?.rootField?.editNote;
+            if (typeof editNote === 'function') {
+                const current = String(editNote() || '');
+                if (!current.includes(SCRIPT_URL)) {
+                    editNote(current
+                        ? `${current.replace(/\s+$/, '')}\n\nScript: ${SCRIPT_URL}`
+                        : `Script: ${SCRIPT_URL}`);
+                }
+                return;
+            }
+    
+            const textarea = document.querySelector('#edit-note-text, textarea.edit-note');
+            if (!textarea || textarea.value.includes(SCRIPT_URL)) return;
+    
+            const current = textarea.value.trimEnd();
+            const next = current
+                ? `${current}\n\nScript: ${SCRIPT_URL}`
+                : `Script: ${SCRIPT_URL}`;
+    
+            const setter = Object.getOwnPropertyDescriptor(
+                HTMLTextAreaElement.prototype,
+                'value'
+            )?.set;
+    
+            if (setter) setter.call(textarea, next);
+            else textarea.value = next;
+    
+            textarea.dispatchEvent(new Event('input', {bubbles: true}));
+            textarea.dispatchEvent(new Event('change', {bubbles: true}));
+        }
+    
+        function hasExistingRecording(track) {
+            try {
+                if (typeof track?.hasExistingRecording === 'function') {
+                    return Boolean(track.hasExistingRecording());
+                }
+            } catch {
+                // Fall through to the recording GID check.
+            }
+    
+            return Boolean(unwrap(track?.recording)?.gid);
+        }
+    
+        function recordingTitle(recording) {
+            return String(unwrap(recording?.name) || '').trim();
+        }
+    
+        function trackTitle(track) {
+            return String(unwrap(track?.name) || '').trim();
+        }
+    
+        function artistMbid(artist) {
+            const entity = unwrap(artist) || {};
+            const gid = String(unwrap(entity.gid) || '').trim();
+            if (UUID.test(gid)) return gid.toLowerCase();
+    
+            const id = String(unwrap(entity.id) || '').trim();
+            return UUID.test(id) ? id.toLowerCase() : '';
+        }
+    
+        function numericArtistId(artist) {
+            const entity = unwrap(artist) || {};
+            const id = unwrap(entity.id);
+            if (Number.isInteger(id) && id > 0) return id;
+            if (/^\d+$/.test(String(id || '')) && Number(id) > 0) return Number(id);
+            return null;
+        }
+    
+        function artistCreditNames(artistCredit) {
+            return unwrap(artistCredit)?.names || [];
+        }
+    
+        function artistCreditText(artistCredit) {
+            return artistCreditNames(artistCredit)
+                .map(credit => {
+                    const artist = unwrap(credit?.artist) || {};
+                    const creditedName = String(
+                        unwrap(credit?.name) || unwrap(artist.name) || ''
+                    );
+                    const joinPhrase = String(
+                        unwrap(credit?.joinPhrase ?? credit?.join_phrase ?? '') || ''
+                    );
+                    return creditedName + joinPhrase;
+                })
+                .join('')
+                .trim();
+        }
+    
+        function artistCreditSignature(artistCredit) {
+            return JSON.stringify(artistCreditNames(artistCredit).map(credit => {
+                const artist = unwrap(credit?.artist) || {};
+                return {
+                    artistId: numericArtistId(artist),
+                    artistGid: artistMbid(artist),
+                    artistName: String(unwrap(artist.name) || ''),
+                    creditedName: String(unwrap(credit?.name) || ''),
+                    joinPhrase: String(
+                        unwrap(credit?.joinPhrase ?? credit?.join_phrase ?? '') || ''
+                    ),
+                };
+            }));
+        }
+    
+        function titleDiffers(track) {
+            if (!hasExistingRecording(track)) return false;
+    
+            try {
+                if (typeof track.titleDiffersFromRecording === 'function') {
+                    return Boolean(track.titleDiffersFromRecording());
+                }
+            } catch {
+                // Fall through to the exact comparison.
+            }
+    
+            return trackTitle(track) !== recordingTitle(unwrap(track.recording));
+        }
+    
+        function artistDiffers(track) {
+            if (!hasExistingRecording(track)) return false;
+    
+            try {
+                if (typeof track.artistDiffersFromRecording === 'function') {
+                    return Boolean(track.artistDiffersFromRecording());
+                }
+            } catch {
+                // Fall through to a structural comparison.
+            }
+    
+            const recording = unwrap(track.recording);
+            return artistCreditSignature(track.artistCredit) !==
+                artistCreditSignature(recording?.artistCredit);
+        }
+    
+        function writeTrackTitle(track, title, recording) {
+            if (!title || typeof track?.name !== 'function') return false;
+    
+            /*
+             * MusicBrainz may unlink a recording when a track title changes too
+             * far from the title saved at association time. This replacement is
+             * coming from the linked recording itself, so update the saved title
+             * first and keep the association intact.
+             */
+            if (recording?.gid) {
+                track.name.saved = title;
+            }
+    
+            if (typeof track.inputName === 'function') {
+                track.inputName(title);
+            } else {
+                track.name(title);
+            }
+    
+            return true;
+        }
+    
+        async function resolveArtistEntity(artist) {
+            const source = unwrap(artist) || {};
+            if (numericArtistId(source)) return source;
+    
+            const gid = artistMbid(source);
+            if (!gid) return null;
+    
+            const mb = pageWindow().MB;
+            const cachedMbEntity = mb?.entityCache?.[gid];
+            if (cachedMbEntity && numericArtistId(cachedMbEntity)) {
+                return cachedMbEntity;
+            }
+    
+            if (artistEntityCache.has(gid)) {
+                return artistEntityCache.get(gid);
+            }
+    
+            const promise = (async () => {
+                const response = await fetch('/ws/js/entity/' + encodeURIComponent(gid), {
+                    credentials: 'same-origin',
+                    headers: {Accept: 'application/json'},
+                });
+    
+                if (!response.ok) {
+                    throw new Error('Could not resolve artist ' + gid + ' (HTTP ' + response.status + ')');
+                }
+    
+                const entity = await response.json();
+                if (!entity || entity.entityType !== 'artist' || !numericArtistId(entity)) {
+                    throw new Error('MusicBrainz did not return a linkable artist for ' + gid);
+                }
+    
+                if (!entity.gid) entity.gid = gid;
+                return entity;
+            })();
+    
+            artistEntityCache.set(gid, promise);
+    
+            try {
+                const entity = await promise;
+                artistEntityCache.set(gid, entity);
+                return entity;
+            } catch (error) {
+                artistEntityCache.delete(gid);
+                throw error;
+            }
+        }
+    
+        async function cloneLinkedArtistCredit(artistCredit) {
+            const source = unwrap(artistCredit);
+            const sourceNames = source?.names || [];
+            const names = [];
+    
+            for (const credit of sourceNames) {
+                const sourceArtist = unwrap(credit?.artist);
+                const artist = await resolveArtistEntity(sourceArtist);
+    
+                if (!artist) {
+                    throw new Error(
+                        'Could not resolve MusicBrainz artist for credit "' +
+                        String(unwrap(credit?.name) || unwrap(sourceArtist?.name) || '').trim() +
+                        '"'
+                    );
+                }
+    
+                names.push({
+                    ...credit,
+                    artist,
+                    name: unwrap(credit?.name) || unwrap(artist.name) || '',
+                    joinPhrase: unwrap(credit?.joinPhrase ?? credit?.join_phrase ?? '') || '',
+                });
+            }
+    
+            return {
+                ...(source || {}),
+                names,
+            };
+        }
+    
+        function removeDiffRow(track) {
+            const row = document.querySelector(
+                `tr.${DIFF_ROW_CLASS}[data-track-id="${CSS.escape(String(track?.elementID || ''))}"]`
+            );
+            row?.remove();
+        }
+    
+        function createDiffRow(track, trackRow) {
+            const diffRow = document.createElement('tr');
+            diffRow.className = DIFF_ROW_CLASS;
+            diffRow.dataset.trackId = String(track.elementID || '');
+    
+            const reorder = document.createElement('td');
+            const position = document.createElement('td');
+            const title = document.createElement('td');
+            const artist = document.createElement('td');
+            const length = document.createElement('td');
+            const icon = document.createElement('td');
+    
+            title.className = 'mb-tvr-diff-cell mb-tvr-title-cell';
+            artist.className = 'mb-tvr-diff-cell mb-tvr-artist-cell';
+    
+            diffRow.append(reorder, position, title, artist, length, icon);
+            trackRow.insertAdjacentElement('afterend', diffRow);
+            return diffRow;
+        }
+    
+        function valueSpan(text, className, title) {
+            const span = document.createElement('span');
+            span.className = `mb-tvr-value ${className}`;
+            span.textContent = text || '[empty]';
+            span.title = title;
+            return span;
+        }
+    
+        function replaceButton(title, onClick) {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'mb-tvr-replace';
+            button.textContent = '<';
+            button.title = title;
+            button.addEventListener('click', onClick);
+            return button;
+        }
+    
+        function renderTitleDiff(track, cell, recording) {
+            cell.textContent = '';
+            if (!titleDiffers(track)) return false;
+    
+            const currentTitle = trackTitle(track);
+            const sourceTitle = recordingTitle(recording);
+            const wrapper = document.createElement('div');
+            wrapper.className = 'mb-tvr-diff';
+    
+            const current = valueSpan(
+                currentTitle,
+                'mb-tvr-track-value',
+                'Current tracklist title: ' + (currentTitle || '[empty]')
+            );
+    
+            const button = replaceButton(
+                'Replace tracklist title with recording title',
+                () => {
+                    if (writeTrackTitle(track, sourceTitle, recording)) {
+                        appendScriptLinkToEditNote();
+                        renderTrack(track);
+                    }
+                }
+            );
+    
+            const source = valueSpan(
+                sourceTitle,
+                'mb-tvr-recording-value',
+                'Recording title: ' + (sourceTitle || '[empty]')
+            );
+    
+            wrapper.append(current, button, source);
+            cell.appendChild(wrapper);
+            return true;
+        }
+    
+        function renderArtistDiff(track, cell, recording) {
+            cell.textContent = '';
+            if (!artistDiffers(track)) return false;
+    
+            const currentText = artistCreditText(track.artistCredit);
+            const sourceText = artistCreditText(recording?.artistCredit);
+            const wrapper = document.createElement('div');
+            wrapper.className = 'mb-tvr-diff';
+    
+            const current = valueSpan(
+                currentText,
+                'mb-tvr-track-value',
+                'Current tracklist artist credit: ' + (currentText || '[empty]')
+            );
+    
+            const button = replaceButton(
+                'Replace tracklist artist credit with recording artist credit',
+                async () => {
+                    if (button.disabled) return;
+                    button.disabled = true;
+    
+                    try {
+                        if (typeof track.artistCredit !== 'function') {
+                            throw new Error('Track artist credit is not editable.');
+                        }
+    
+                        const linkedCredit = await cloneLinkedArtistCredit(recording?.artistCredit);
+                        track.artistCredit(linkedCredit);
+                        appendScriptLinkToEditNote();
+                        renderTrack(track);
+                    } catch (error) {
+                        console.error(`[${SCRIPT_NAME}]`, error);
+                        button.disabled = false;
+                        button.title = 'Error: ' + error.message;
+                    }
+                }
+            );
+    
+            const source = valueSpan(
+                sourceText,
+                'mb-tvr-recording-value',
+                'Recording artist credit: ' + (sourceText || '[empty]')
+            );
+    
+            wrapper.append(current, button, source);
+            cell.appendChild(wrapper);
+            return true;
+        }
+    
+        function renderTrack(track) {
+            if (!track?.elementID) return;
+    
+            const trackRow = document.getElementById(track.elementID);
+            if (!trackRow || !trackRow.matches('tr.track')) {
+                removeDiffRow(track);
+                return;
+            }
+    
+            const recording = unwrap(track.recording);
+            if (!hasExistingRecording(track) || !recording?.gid) {
+                removeDiffRow(track);
+                return;
+            }
+    
+            const hasTitleDiff = titleDiffers(track);
+            const hasArtistDiff = artistDiffers(track);
+    
+            if (!hasTitleDiff && !hasArtistDiff) {
+                removeDiffRow(track);
+                return;
+            }
+    
+            let diffRow = document.querySelector(
+                `tr.${DIFF_ROW_CLASS}[data-track-id="${CSS.escape(String(track.elementID))}"]`
+            );
+    
+            if (!diffRow) {
+                diffRow = createDiffRow(track, trackRow);
+            } else if (diffRow.previousElementSibling !== trackRow) {
+                trackRow.insertAdjacentElement('afterend', diffRow);
+            }
+    
+            const titleCell = diffRow.querySelector('.mb-tvr-title-cell');
+            const artistCell = diffRow.querySelector('.mb-tvr-artist-cell');
+    
+            renderTitleDiff(track, titleCell, recording);
+            renderArtistDiff(track, artistCell, recording);
+        }
+    
+        function watchObservable(observable, track) {
+            if (typeof observable?.subscribe !== 'function') return;
+            observable.subscribe(() => {
+                queueMicrotask(() => renderTrack(track));
+            });
+        }
+    
+        function watchTrack(track) {
+            if (!track || watchedTracks.has(track)) return;
+            watchedTracks.add(track);
+    
+            watchObservable(track.name, track);
+            watchObservable(track.artistCredit, track);
+            watchObservable(track.recording, track);
+    
+            renderTrack(track);
+        }
+    
+        function releaseTracks() {
+            const release = editor()?.rootField?.release?.();
+            if (!release) return [];
+    
+            const tracks = [];
+            for (const medium of unwrap(release.mediums) || []) {
+                for (const track of unwrap(medium.tracks) || []) {
+                    tracks.push(track);
+                }
+            }
+            return tracks;
+        }
+    
+        function removeOrphanRows(liveTrackIds) {
+            for (const row of document.querySelectorAll(`tr.${DIFF_ROW_CLASS}`)) {
+                if (!liveTrackIds.has(row.dataset.trackId || '')) {
+                    row.remove();
+                }
+            }
+        }
+    
+        function scan() {
+            const tracks = releaseTracks();
+            const liveTrackIds = new Set();
+    
+            for (const track of tracks) {
+                if (track?.elementID) liveTrackIds.add(String(track.elementID));
+                watchTrack(track);
+                renderTrack(track);
+            }
+    
+            removeOrphanRows(liveTrackIds);
+        }
+    
+        function start() {
+            installStyle();
+            scan();
+    
+            if (!scanTimer) {
+                scanTimer = window.setInterval(scan, 800);
+            }
+    
+            const tracklist = document.getElementById('tracklist');
+            if (tracklist) {
+                const observer = new MutationObserver(() => scan());
+                observer.observe(tracklist, {childList: true, subtree: true});
+            }
+        }
+    
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', start, {once: true});
+        } else {
+            start();
+        }
+    })();
+    }
+
+    // ============================================================================
+    // Recording Data to Tracks
+    // Source merged from: musicbrainz-tools/recording-artist-credits-to-tracks/MusicBrainz_Recording_Artist_Credits_to_Tracks.user.js
+    // ============================================================================
+    if (__mbToolBoxShouldRun(["https://musicbrainz.org/release/add*","https://musicbrainz.org/release/*/edit*","https://beta.musicbrainz.org/release/add*","https://beta.musicbrainz.org/release/*/edit*"], [])) {
+    (() => {
+        'use strict';
+    
+        const SCRIPT_NAME = 'MusicBrainz - Recording Data to Tracks';
+        const SCRIPT_URL = 'https://github.com/karpuzikov/userscripts/blob/main/musicbrainz-tools/toolbox/MusicBrainz_ToolBox.user.js';
+        const WRAPPER_ID = 'mb-recording-data-to-tracks';
+        const TITLE_BUTTON_ID = 'mb-recording-title-to-tracks-button';
+        const ARTIST_BUTTON_ID = 'mb-recording-ac-to-tracks-button';
+        const STATUS_ID = 'mb-recording-data-to-tracks-status';
+        const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+        const ISRC_CHOICE_CACHE_KEY = 'mb-recording-data-to-tracks:isrc-choice-cache:v1';
+        const watchedTracks = new WeakSet();
+    
+        const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+    
+        function normalizeIsrc(value) {
+            const normalized = String(value || '')
+                .toUpperCase()
+                .replace(/[^A-Z0-9]/g, '');
+            return normalized.length === 12 ? normalized : '';
+        }
+    
+        function recordingGid(recording) {
+            const gid = String(unwrap(recording?.gid) || '').trim().toLowerCase();
+            return UUID.test(gid) ? gid : '';
+        }
+    
+        function recordingIsrcs(recording) {
+            const values = unwrap(recording?.isrcs);
+            if (!Array.isArray(values)) return [];
+    
+            return [...new Set(values
+                .map(item => normalizeIsrc(
+                    typeof item === 'string' ? item : unwrap(item?.isrc)
+                ))
+                .filter(Boolean))];
+        }
+    
+        function loadIsrcChoiceCache() {
+            try {
+                const parsed = JSON.parse(localStorage.getItem(ISRC_CHOICE_CACHE_KEY) || '{}');
+                return parsed && typeof parsed === 'object' ? parsed : {};
+            } catch {
+                return {};
+            }
+        }
+    
+        let isrcChoiceCache = loadIsrcChoiceCache();
+    
+        function saveIsrcChoice(isrcs, recordingMbid) {
+            if (!UUID.test(recordingMbid)) return;
+    
+            const now = Date.now();
+            let changed = false;
+    
+            for (const isrc of isrcs) {
+                const normalized = normalizeIsrc(isrc);
+                if (!normalized) continue;
+    
+                const current = isrcChoiceCache[normalized];
+                if (current?.recordingMbid === recordingMbid) continue;
+    
+                isrcChoiceCache[normalized] = {
+                    recordingMbid,
+                    updated: now,
+                };
+                changed = true;
+            }
+    
+            if (changed) {
+                localStorage.setItem(
+                    ISRC_CHOICE_CACHE_KEY,
+                    JSON.stringify(isrcChoiceCache)
+                );
+            }
+        }
+    
+        function cachedCandidateForTrack(track) {
+            const candidates = unwrap(track?.suggestedRecordings) || [];
+            if (candidates.length < 2) return null;
+    
+            const byIsrc = new Map();
+    
+            for (const candidate of candidates) {
+                const gid = recordingGid(candidate);
+                if (!gid) continue;
+    
+                for (const isrc of recordingIsrcs(candidate)) {
+                    let group = byIsrc.get(isrc);
+                    if (!group) {
+                        group = new Map();
+                        byIsrc.set(isrc, group);
+                    }
+                    group.set(gid, candidate);
+                }
+            }
+    
+            const matches = [];
+    
+            for (const [isrc, group] of byIsrc) {
+                if (group.size < 2) continue;
+    
+                const cached = isrcChoiceCache[isrc];
+                const candidate = cached?.recordingMbid
+                    ? group.get(cached.recordingMbid)
+                    : null;
+    
+                if (candidate) {
+                    matches.push({
+                        candidate,
+                        isrc,
+                        updated: Number(cached.updated || 0),
+                    });
+                }
+            }
+    
+            if (!matches.length) return null;
+    
+            matches.sort((a, b) => b.updated - a.updated);
+            return matches[0];
+        }
+    
+        function applyCachedRecordingChoice(track) {
+            if (pageWindow().__MB_RECORDING_MATCHER_ACTIVE__) return false;
+            if (!track || typeof track.recording !== 'function') return false;
+            if (typeof track.hasExistingRecording === 'function' && track.hasExistingRecording()) {
+                return false;
+            }
+    
+            const match = cachedCandidateForTrack(track);
+            if (!match) return false;
+    
+            const gid = recordingGid(match.candidate);
+            if (!gid) return false;
+    
+            track.recording(match.candidate);
+    
+            console.info(
+                `[${SCRIPT_NAME}] Reused cached recording ${gid} for ISRC ${match.isrc}.`
+            );
+            return true;
+        }
+    
+        function watchTrackForCachedRecordingChoice(track) {
+            if (!track || watchedTracks.has(track)) return;
+            watchedTracks.add(track);
+    
+            if (typeof track.suggestedRecordings?.subscribe === 'function') {
+                track.suggestedRecordings.subscribe(() => {
+                    applyCachedRecordingChoice(track);
+                });
+            }
+    
+            applyCachedRecordingChoice(track);
+        }
+    
+        function watchReleaseTracksForCache() {
+            const ed = editor();
+            const release = ed?.rootField?.release?.();
+            if (!release) return;
+    
+            for (const medium of unwrap(release.mediums) || []) {
+                for (const track of unwrap(medium.tracks) || []) {
+                    watchTrackForCachedRecordingChoice(track);
+                }
+            }
+        }
+    
+        function installManualRecordingChoiceCache() {
+            document.addEventListener('change', event => {
+                if (!event.isTrusted) return;
+    
+                const input = event.target;
+                if (!input || typeof input.matches !== 'function') return;
+                if (!input.matches('#recording-assoc-bubble input[name="recording-selection"]')) {
+                    return;
+                }
+    
+                const selectedMbid = String(input.value || '').trim().toLowerCase();
+                if (!UUID.test(selectedMbid)) return;
+    
+                setTimeout(() => {
+                    const track = editor()?.recordingBubble?.currentTrack?.();
+                    const recording = unwrap(track?.recording);
+                    const chosenMbid = recordingGid(recording);
+    
+                    if (!track || chosenMbid !== selectedMbid) return;
+    
+                    const isrcs = recordingIsrcs(recording);
+                    if (!isrcs.length) return;
+    
+                    saveIsrcChoice(isrcs, chosenMbid);
+    
+                    console.info(
+                        `[${SCRIPT_NAME}] Cached recording ${chosenMbid} for ISRC(s): ${isrcs.join(', ')}.`
+                    );
+                }, 0);
+            }, true);
+    
+            window.addEventListener('storage', event => {
+                if (event.key === ISRC_CHOICE_CACHE_KEY) {
+                    isrcChoiceCache = loadIsrcChoiceCache();
+                }
+            });
+    
+            watchReleaseTracksForCache();
+            setInterval(watchReleaseTracksForCache, 1000);
+        }
+    
+        function pageWindow() {
+            try {
+                return typeof unsafeWindow !== 'undefined' ? unsafeWindow : window;
+            } catch {
+                return window;
+            }
+        }
+    
+        function unwrap(value) {
+            return typeof value === 'function' ? value() : value;
+        }
+    
+        function editor() {
+            return pageWindow().MB?._releaseEditor || null;
+        }
+    
+        const artistEntityCache = new Map();
+    
+        function artistMbid(artist) {
+            const entity = unwrap(artist) || {};
+            const gid = String(unwrap(entity.gid) || '').trim();
+            if (UUID.test(gid)) return gid.toLowerCase();
+    
+            const id = String(unwrap(entity.id) || '').trim();
+            return UUID.test(id) ? id.toLowerCase() : '';
+        }
+    
+        function hasLinkedArtistId(artist) {
+            const entity = unwrap(artist) || {};
+            const id = unwrap(entity.id);
+            return Number.isInteger(id) ? id > 0 : /^\d+$/.test(String(id || '')) && Number(id) > 0;
+        }
+    
+        async function resolveArtistEntity(artist) {
+            const source = unwrap(artist) || {};
+            if (hasLinkedArtistId(source)) return source;
+    
+            const gid = artistMbid(source);
+            if (!gid) return null;
+    
+            const mb = pageWindow().MB;
+            const cachedMbEntity = mb?.entityCache?.[gid];
+            if (cachedMbEntity && hasLinkedArtistId(cachedMbEntity)) {
+                return cachedMbEntity;
+            }
+    
+            if (artistEntityCache.has(gid)) {
+                return artistEntityCache.get(gid);
+            }
+    
+            const promise = (async () => {
+                const response = await fetch('/ws/js/entity/' + encodeURIComponent(gid), {
+                    credentials: 'same-origin',
+                    headers: {Accept: 'application/json'},
+                });
+                if (!response.ok) {
+                    throw new Error('Could not resolve artist ' + gid + ' (HTTP ' + response.status + ')');
+                }
+    
+                const entity = await response.json();
+                if (!entity || entity.entityType !== 'artist' || !hasLinkedArtistId(entity)) {
+                    throw new Error('MusicBrainz did not return a linkable artist for ' + gid);
+                }
+    
+                if (!entity.gid) entity.gid = gid;
+                return entity;
+            })();
+    
+            artistEntityCache.set(gid, promise);
+    
+            try {
+                const entity = await promise;
+                artistEntityCache.set(gid, entity);
+                return entity;
+            } catch (error) {
+                artistEntityCache.delete(gid);
+                throw error;
+            }
+        }
+    
+        async function cloneLinkedArtistCredit(artistCredit) {
+            const source = unwrap(artistCredit);
+            const names = [];
+    
+            for (const credit of source?.names || []) {
+                const artist = await resolveArtistEntity(credit.artist);
+                if (!artist) {
+                    throw new Error(
+                        'Could not resolve MusicBrainz artist for credit "' +
+                        String(unwrap(credit.name) || '').trim() + '"'
+                    );
+                }
+    
+                names.push({
+                    ...credit,
+                    artist,
+                    name: unwrap(credit.name) || unwrap(artist.name) || '',
+                    joinPhrase: unwrap(credit.joinPhrase ?? credit.join_phrase ?? '') || '',
+                });
+            }
+    
+            return {
+                ...(source || {}),
+                names,
+            };
+        }
+    
+        function artistCreditSignature(artistCredit) {
+            const source = unwrap(artistCredit);
+            return JSON.stringify((source?.names || []).map(credit => {
+                const artist = unwrap(credit.artist) || {};
+                return {
+                    artistId: unwrap(artist.id) ?? null,
+                    artistGid: unwrap(artist.gid) || '',
+                    artistName: unwrap(artist.name) || '',
+                    creditedName: unwrap(credit.name) || '',
+                    joinPhrase: unwrap(credit.joinPhrase ?? credit.join_phrase ?? '') || '',
+                };
+            }));
+        }
+    
+        function hasCompleteRecordingArtistCredit(track, recording) {
+            const artistCredit = recording?.artistCredit;
+            if (!artistCredit) return false;
+    
+            try {
+                if (typeof track.isCompleteArtistCredit === 'function') {
+                    return Boolean(track.isCompleteArtistCredit(artistCredit));
+                }
+            } catch {
+                // Fall through to a conservative structural check.
+            }
+    
+            const names = unwrap(artistCredit)?.names || [];
+            return names.length > 0 && names.every(credit => {
+                const artist = unwrap(credit.artist);
+                return Boolean(artist && (unwrap(artist.gid) || unwrap(artist.id)));
+            });
+        }
+    
+        async function ensureMediumLoaded(medium) {
+            if (unwrap(medium.loaded)) return true;
+    
+            if (!unwrap(medium.loading) && typeof medium.loadTracks === 'function') {
+                medium.loadTracks();
+            }
+    
+            const deadline = Date.now() + 30000;
+            while (Date.now() < deadline) {
+                if (unwrap(medium.loaded)) return true;
+                await sleep(200);
+            }
+            return false;
+        }
+    
+        function appendEditNote(ed) {
+            const editNote = ed?.rootField?.editNote;
+            if (typeof editNote !== 'function') return;
+    
+            const current = String(editNote() || '');
+            if (current.includes(SCRIPT_URL)) return;
+    
+            editNote(current
+                ? `${current.replace(/\s+$/, '')}\n\nScript: ${SCRIPT_URL}`
+                : `Script: ${SCRIPT_URL}`);
+        }
+    
+        function setStatus(message, kind = '') {
+            const status = document.getElementById(STATUS_ID);
+            if (!status) return;
+            status.textContent = message;
+            status.dataset.kind = kind;
+        }
+    
+        function setButtonsDisabled(disabled) {
+            const titleButton = document.getElementById(TITLE_BUTTON_ID);
+            const artistButton = document.getElementById(ARTIST_BUTTON_ID);
+            if (titleButton) titleButton.disabled = disabled;
+            if (artistButton) artistButton.disabled = disabled;
+        }
+    
+        function recordingTitle(recording) {
+            return String(unwrap(recording?.name) || '').trim();
+        }
+    
+        function trackTitle(track) {
+            return String(unwrap(track?.name) || '').trim();
+        }
+    
+        function writeTrackTitle(track, title, recording) {
+            if (!title || typeof track?.name !== 'function') return false;
+    
+            /*
+             * MusicBrainz watches track-title changes and can unlink a recording
+             * when the new title differs from the title saved at association time.
+             * The new value here comes from that exact linked recording, so update
+             * the saved comparison value first to preserve the association.
+             */
+            if (recording?.gid) {
+                track.name.saved = title;
+            }
+    
+            if (typeof track.inputName === 'function') {
+                track.inputName(title);
+            } else {
+                track.name(title);
+            }
+            return true;
+        }
+    
+        async function copyRecordingTitles() {
+            const ed = editor();
+            const release = ed?.rootField?.release?.();
+    
+            if (!release) {
+                setStatus('MusicBrainz release editor is not ready.', 'bad');
+                return;
+            }
+    
+            setButtonsDisabled(true);
+            setStatus('Loading linked recordings...');
+    
+            try {
+                const mediums = unwrap(release.mediums) || [];
+                let changed = 0;
+                let unchanged = 0;
+                let skipped = 0;
+                let loadFailures = 0;
+    
+                for (const medium of mediums) {
+                    if (!(await ensureMediumLoaded(medium))) {
+                        loadFailures++;
+                        continue;
+                    }
+    
+                    const tracks = unwrap(medium.tracks) || [];
+                    for (const track of tracks) {
+                        const recording = unwrap(track.recording);
+                        const sourceTitle = recordingTitle(recording);
+    
+                        if (!recording?.gid || !sourceTitle) {
+                            skipped++;
+                            continue;
+                        }
+    
+                        if (trackTitle(track) === sourceTitle) {
+                            unchanged++;
+                            continue;
+                        }
+    
+                        if (writeTrackTitle(track, sourceTitle, recording)) {
+                            changed++;
+                        } else {
+                            skipped++;
+                        }
+                    }
+                }
+    
+                if (changed) appendEditNote(ed);
+    
+                const parts = [];
+                if (changed) parts.push(`${changed} title(s) copied`);
+                if (unchanged) parts.push(`${unchanged} already identical`);
+                if (skipped) parts.push(`${skipped} skipped`);
+                if (loadFailures) parts.push(`${loadFailures} medium(s) failed to load`);
+    
+                setStatus(
+                    parts.length ? parts.join(' | ') : 'No tracks found.',
+                    changed ? 'ok' : (loadFailures ? 'bad' : '')
+                );
+            } catch (error) {
+                console.error(`[${SCRIPT_NAME}]`, error);
+                setStatus(`Error: ${error.message}`, 'bad');
+            } finally {
+                setButtonsDisabled(false);
+            }
+        }
+    
+        async function copyRecordingArtistCredits() {
+            const ed = editor();
+            const release = ed?.rootField?.release?.();
+    
+            if (!release) {
+                setStatus('MusicBrainz release editor is not ready.', 'bad');
+                return;
+            }
+    
+            setButtonsDisabled(true);
+            setStatus('Loading linked recordings...');
+    
+            try {
+                const mediums = unwrap(release.mediums) || [];
+                let changed = 0;
+                let unchanged = 0;
+                let skipped = 0;
+                let loadFailures = 0;
+    
+                for (const medium of mediums) {
+                    if (!(await ensureMediumLoaded(medium))) {
+                        loadFailures++;
+                        continue;
+                    }
+    
+                    const tracks = unwrap(medium.tracks) || [];
+                    for (const track of tracks) {
+                        const recording = unwrap(track.recording);
+    
+                        if (!recording?.gid || !hasCompleteRecordingArtistCredit(track, recording)) {
+                            skipped++;
+                            continue;
+                        }
+    
+                        const sourceCredit = recording.artistCredit;
+                        const before = artistCreditSignature(track.artistCredit);
+                        const after = artistCreditSignature(sourceCredit);
+    
+                        if (before === after) {
+                            unchanged++;
+                            continue;
+                        }
+    
+                        const linkedCredit = await cloneLinkedArtistCredit(sourceCredit);
+                        track.artistCredit(linkedCredit);
+                        changed++;
+                    }
+                }
+    
+                if (changed) appendEditNote(ed);
+    
+                const parts = [];
+                if (changed) parts.push(`${changed} artist credit(s) copied`);
+                if (unchanged) parts.push(`${unchanged} already identical`);
+                if (skipped) parts.push(`${skipped} skipped`);
+                if (loadFailures) parts.push(`${loadFailures} medium(s) failed to load`);
+    
+                setStatus(
+                    parts.length ? parts.join(' | ') : 'No tracks found.',
+                    changed ? 'ok' : (loadFailures ? 'bad' : '')
+                );
+            } catch (error) {
+                console.error(`[${SCRIPT_NAME}]`, error);
+                setStatus(`Error: ${error.message}`, 'bad');
+            } finally {
+                setButtonsDisabled(false);
+            }
+        }
+    
+        function insertButtons() {
+            if (document.getElementById(WRAPPER_ID)) return true;
+    
+            const tracklist = document.getElementById('tracklist');
+            if (!tracklist) return false;
+    
+            const wrapper = document.createElement('div');
+            wrapper.id = WRAPPER_ID;
+            wrapper.style.cssText = [
+                'display:flex',
+                'align-items:center',
+                'gap:8px',
+                'flex-wrap:wrap',
+                'margin:0 0 12px 0',
+                'padding:10px',
+                'border:1px solid #bbb',
+                'border-radius:4px',
+            ].join(';');
+    
+            const titleButton = document.createElement('button');
+            titleButton.id = TITLE_BUTTON_ID;
+            titleButton.type = 'button';
+            titleButton.textContent = 'Copy recording titles to tracks';
+            titleButton.title = 'Replace track titles with the titles of their linked MusicBrainz recordings';
+            titleButton.addEventListener('click', copyRecordingTitles);
+    
+            const artistButton = document.createElement('button');
+            artistButton.id = ARTIST_BUTTON_ID;
+            artistButton.type = 'button';
+            artistButton.textContent = 'Copy recording artist credits to tracks';
+            artistButton.title = 'Replace track artist credits with the exact artist credits of their linked MusicBrainz recordings';
+            artistButton.addEventListener('click', copyRecordingArtistCredits);
+    
+            const status = document.createElement('span');
+            status.id = STATUS_ID;
+            status.style.marginLeft = '2px';
+    
+            wrapper.append(titleButton, artistButton, status);
+            tracklist.insertBefore(wrapper, tracklist.firstChild);
+    
+            const style = document.createElement('style');
+            style.textContent = `
+                #${STATUS_ID}[data-kind="ok"] { color: #087a28; }
+                #${STATUS_ID}[data-kind="bad"] { color: #b00020; }
+            `;
+            document.head.appendChild(style);
+    
+            return true;
+        }
+    
+        installManualRecordingChoiceCache();
+    
+        if (!insertButtons()) {
+            const observer = new MutationObserver(() => {
+                if (insertButtons()) observer.disconnect();
+            });
+            observer.observe(document.documentElement, { childList: true, subtree: true });
+        }
+    })();
+    }
+
+    // ============================================================================
+    // Duplicate Edit Checker
+    // Source merged from: musicbrainz-tools/duplicate-edit-checker/MusicBrainz_Duplicate_Edit_Checker.user.js
+    // ============================================================================
+    if (__mbToolBoxShouldRun(["https://musicbrainz.org/release/add*","https://musicbrainz.org/release/*/edit*","https://beta.musicbrainz.org/release/add*","https://beta.musicbrainz.org/release/*/edit*"], [])) {
+    (() => {
+        'use strict';
+    
+        const SCRIPT_URL = 'https://github.com/karpuzikov/userscripts/blob/main/musicbrainz-tools/toolbox/MusicBrainz_ToolBox.user.js';
+        const STATUS_ID = 'mb-duplicate-edit-checker-status';
+        const MODAL_ID = 'mb-duplicate-edit-checker-modal';
+        const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        const OPEN_STATUS = 1;
+        const PREVIEW_WAIT_MS = 5000;
+        const EDITOR_WAIT_MS = 20000;
+        const MAX_CONCURRENT_DATA_REQUESTS = 6;
+    
+        const runtime = {
+            active: false,
+            checking: false,
+            pendingHashes: new Set(),
+            seenSubmissionHashes: new Set(),
+            skipRepeatedInSubmission: true,
+        };
+    
+        function pageWindow() {
+            try {
+                return typeof unsafeWindow !== 'undefined' ? unsafeWindow : window;
+            } catch {
+                return window;
+            }
+        }
+    
+        function unwrap(value) {
+            return typeof value === 'function' ? value() : value;
+        }
+    
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+    
+        function getEditor() {
+            return pageWindow().MB?._releaseEditor || null;
+        }
+    
+        async function waitForEditor() {
+            const deadline = Date.now() + EDITOR_WAIT_MS;
+            while (Date.now() < deadline) {
+                const ed = getEditor();
+                if (
+                    ed &&
+                    typeof ed.submitEdits === 'function' &&
+                    typeof ed.allEdits === 'function' &&
+                    Array.isArray(ed.orderedEditSubmissions)
+                ) {
+                    return ed;
+                }
+                await sleep(100);
+            }
+            return null;
+        }
+    
+        function currentEdits(ed) {
+            const edits = unwrap(ed?.allEdits);
+            return Array.isArray(edits) ? edits.filter(Boolean) : [];
+        }
+    
+        function snapshotKey(edits) {
+            return edits.map((edit, index) => String(edit?.hash || `no-hash-${index}`)).join('\u0000');
+        }
+    
+        function appendEditNote(ed) {
+            const editNote = ed?.rootField?.editNote;
+            if (typeof editNote !== 'function') return;
+    
+            const current = String(editNote() || '');
+            if (current.includes(SCRIPT_URL)) return;
+    
+            editNote(current
+                ? `${current.replace(/\s+$/, '')}\n\nScript: ${SCRIPT_URL}`
+                : `Script: ${SCRIPT_URL}`);
+        }
+    
+        function ensureStatusElement() {
+            let status = document.getElementById(STATUS_ID);
+            if (status) return status;
+    
+            const submit = document.getElementById('enter-edit');
+            if (!submit?.parentElement) return null;
+    
+            status = document.createElement('span');
+            status.id = STATUS_ID;
+            status.setAttribute('role', 'status');
+            status.style.cssText = [
+                'display:none',
+                'margin-right:12px',
+                'font-weight:600',
+                'vertical-align:middle',
+            ].join(';');
+            submit.parentElement.insertBefore(status, submit);
+            return status;
+        }
+    
+        function setStatus(message, kind = '') {
+            const status = ensureStatusElement();
+            if (!status) return;
+    
+            status.textContent = message || '';
+            status.style.display = message ? 'inline-block' : 'none';
+            status.style.color = kind === 'error'
+                ? '#a40000'
+                : kind === 'success'
+                    ? '#246b2f'
+                    : '';
+        }
+    
+        function setSubmitButtonBusy(busy) {
+            const button = document.getElementById('enter-edit');
+            if (!button) return;
+            button.dataset.mbDuplicateCheckerBusy = busy ? '1' : '0';
+            button.setAttribute('aria-busy', busy ? 'true' : 'false');
+            button.style.cursor = busy ? 'progress' : '';
+        }
+    
+        function normalizeText(value) {
+            return String(value ?? '')
+                .normalize('NFKC')
+                .replace(/[\u200B-\u200D\uFEFF]/g, '')
+                .replace(/\s+/g, ' ')
+                .trim();
+        }
+    
+        function getDirectRows(table) {
+            const rows = [];
+            for (const child of table?.children || []) {
+                const tag = child.tagName?.toUpperCase();
+                if (tag === 'TR') {
+                    rows.push(child);
+                } else if (tag === 'TBODY' || tag === 'THEAD' || tag === 'TFOOT') {
+                    for (const row of child.children || []) {
+                        if (row.tagName?.toUpperCase() === 'TR') rows.push(row);
+                    }
+                }
+            }
+            return rows;
+        }
+    
+        function rowText(row) {
+            const clone = row.cloneNode(true);
+            clone.querySelectorAll('script, style, noscript').forEach(node => node.remove());
+            return normalizeText(clone.textContent);
+        }
+    
+        function fingerprintFromRoot(root) {
+            const table = root?.matches?.('table.details')
+                ? root
+                : root?.querySelector?.('table.details');
+            if (!table) return null;
+    
+            const classKey = [...table.classList].sort().join(' ');
+            const rows = getDirectRows(table).map(rowText).filter(Boolean);
+            return rows.length ? {classKey, rows} : null;
+        }
+    
+        function fingerprintFromHtml(html) {
+            if (!html) return null;
+            const doc = new DOMParser().parseFromString(String(html), 'text/html');
+            return fingerprintFromRoot(doc.body);
+        }
+    
+        function arraysEqual(a, b) {
+            return a.length === b.length && a.every((value, index) => value === b[index]);
+        }
+    
+        function fingerprintsEqual(proposed, open) {
+            if (!proposed || !open) return false;
+            if (proposed.classKey !== open.classKey) return false;
+    
+            if (arraysEqual(proposed.rows, open.rows)) return true;
+    
+            // Several MusicBrainz preview components intentionally hide only the
+            // entity-context row (usually "Release:") while the open-edit view
+            // includes it. Allow exactly that one leading-row difference, but no
+            // other superset/subset matching.
+            return (
+                open.rows.length === proposed.rows.length + 1 &&
+                arraysEqual(proposed.rows, open.rows.slice(1))
+            );
+        }
+    
+        function existingPreviewMap(ed) {
+            const map = new Map();
+            const previews = unwrap(ed?.editPreviews);
+            if (!Array.isArray(previews)) return map;
+    
+            for (const preview of previews) {
+                if (preview?.editHash) map.set(String(preview.editHash), preview);
+            }
+            return map;
+        }
+    
+        function stripHash(edit) {
+            const copy = {...edit};
+            delete copy.hash;
+            return copy;
+        }
+    
+        async function requestMissingPreviews(edits) {
+            if (!edits.length) return [];
+    
+            const response = await pageWindow().fetch('/ws/js/edit/preview', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {
+                    Accept: 'application/json',
+                    'Content-Type': 'application/json; charset=utf-8',
+                },
+                body: JSON.stringify({
+                    edits: edits.map(stripHash),
+                    makeVotable: false,
+                }),
+            });
+    
+            if (!response.ok) {
+                throw new Error(`MusicBrainz preview request failed: HTTP ${response.status}`);
+            }
+    
+            const data = await response.json();
+            if (!Array.isArray(data?.previews) || data.previews.length !== edits.length) {
+                throw new Error('MusicBrainz returned an incomplete edit preview response.');
+            }
+            return data.previews;
+        }
+    
+        async function ensurePreviews(ed, edits) {
+            const deadline = Date.now() + PREVIEW_WAIT_MS;
+            while (Date.now() < deadline && unwrap(ed?.loadingEditPreviews)) {
+                setStatus('Waiting for MusicBrainz edit previews...');
+                await sleep(100);
+            }
+    
+            const map = existingPreviewMap(ed);
+            const missing = edits.filter(edit => !map.has(String(edit.hash || '')));
+    
+            if (missing.length) {
+                setStatus(`Building ${missing.length} missing edit preview${missing.length === 1 ? '' : 's'}...`);
+                const previews = await requestMissingPreviews(missing);
+                previews.forEach((preview, index) => {
+                    map.set(String(missing[index].hash || ''), {
+                        ...preview,
+                        editHash: missing[index].hash,
+                    });
+                });
+            }
+    
+            return map;
+        }
+    
+        function getReleaseInfo(ed) {
+            const release = unwrap(ed?.rootField?.release) || null;
+            const releaseGid = normalizeText(unwrap(release?.gid));
+            const releaseGroup = unwrap(release?.releaseGroup) || null;
+            const releaseGroupGid = normalizeText(unwrap(releaseGroup?.gid));
+            return {release, releaseGid, releaseGroupGid};
+        }
+    
+        function scopeForEdit(edit, releaseInfo) {
+            const enteredFrom = edit?.enteredFrom || edit?.entered_from || null;
+            const enteredFromType = String(enteredFrom?.entity_type || enteredFrom?.entityType || '');
+            const toEdit = normalizeText(edit?.to_edit);
+            const gid = normalizeText(edit?.gid);
+    
+            if (enteredFromType === 'release' && UUID.test(toEdit)) {
+                return `recording/${toEdit}`;
+            }
+    
+            if (enteredFromType === 'release' && UUID.test(gid)) {
+                return `release-group/${gid}`;
+            }
+    
+            if (UUID.test(releaseInfo.releaseGid)) {
+                return `release/${releaseInfo.releaseGid}`;
+            }
+    
+            // A brand-new release has no entity page and therefore cannot already
+            // have release-level open edits. Recording / release-group edits above
+            // are still checked because those entities already exist.
+            return null;
+        }
+    
+        function buildProposals(edits, previewMap, releaseInfo) {
+            return edits.map((edit, index) => {
+                const preview = previewMap.get(String(edit.hash || '')) || null;
+                const fingerprint = fingerprintFromHtml(preview?.preview);
+                if (!fingerprint) {
+                    throw new Error(`Could not read MusicBrainz preview for edit ${index + 1}.`);
+                }
+                return {
+                    index,
+                    edit,
+                    hash: String(edit.hash || ''),
+                    editType: Number(edit.edit_type),
+                    editName: normalizeText(preview?.editName) || `Edit ${index + 1}`,
+                    fingerprint,
+                    scope: scopeForEdit(edit, releaseInfo),
+                };
+            });
+        }
+    
+        function parsePageNumber(url, expectedPath) {
+            try {
+                const parsed = new URL(url, location.href);
+                if (parsed.pathname !== expectedPath) return null;
+                const page = Number(parsed.searchParams.get('page'));
+                return Number.isInteger(page) && page > 0 ? page : null;
+            } catch {
+                return null;
+            }
+        }
+    
+        async function fetchDocument(url) {
+            const response = await pageWindow().fetch(url, {
+                credentials: 'same-origin',
+                headers: {Accept: 'text/html'},
+            });
+            if (!response.ok) {
+                throw new Error(`Could not load ${url}: HTTP ${response.status}`);
+            }
+            const html = await response.text();
+            return new DOMParser().parseFromString(html, 'text/html');
+        }
+    
+        function extractOpenEditBlocks(doc) {
+            const result = [];
+            for (const block of doc.querySelectorAll('.edit-list')) {
+                const idInput = block.querySelector('input[type="hidden"][name$=".edit_id"]');
+                const id = Number(idInput?.value);
+                const details = block.querySelector('.edit-details');
+                const fingerprint = fingerprintFromRoot(details);
+                if (Number.isInteger(id) && id > 0 && fingerprint) {
+                    result.push({id, fingerprint});
+                }
+            }
+            return result;
+        }
+    
+        async function fetchOpenEditBlocks(scope, progress) {
+            const baseUrl = new URL(`/${scope}/open_edits`, location.origin);
+            const firstDoc = await fetchDocument(baseUrl.href);
+            progress.pagesDone += 1;
+            setStatus(`Checking open edits... ${progress.pagesDone} page${progress.pagesDone === 1 ? '' : 's'} loaded`);
+    
+            let maxPage = 1;
+            for (const link of firstDoc.querySelectorAll('a[href]')) {
+                const page = parsePageNumber(link.getAttribute('href'), baseUrl.pathname);
+                if (page) maxPage = Math.max(maxPage, page);
+            }
+    
+            const blocks = extractOpenEditBlocks(firstDoc);
+            for (let page = 2; page <= maxPage; page += 1) {
+                const pageUrl = new URL(baseUrl.href);
+                pageUrl.searchParams.set('page', String(page));
+                const doc = await fetchDocument(pageUrl.href);
+                blocks.push(...extractOpenEditBlocks(doc));
+                progress.pagesDone += 1;
+                setStatus(`Checking open edits... ${progress.pagesDone} pages loaded`);
+            }
+            return blocks;
+        }
+    
+        async function mapLimit(items, limit, worker) {
+            const results = new Array(items.length);
+            let cursor = 0;
+    
+            async function run() {
+                while (true) {
+                    const index = cursor;
+                    cursor += 1;
+                    if (index >= items.length) return;
+                    results[index] = await worker(items[index], index);
+                }
+            }
+    
+            const count = Math.min(Math.max(1, limit), Math.max(1, items.length));
+            await Promise.all(Array.from({length: count}, run));
+            return results;
+        }
+    
+        async function fetchEditData(id) {
+            const response = await pageWindow().fetch(`/edit/${id}/data`, {
+                credentials: 'same-origin',
+                headers: {Accept: 'application/json'},
+            });
+            if (!response.ok) {
+                throw new Error(`Could not inspect MusicBrainz edit #${id}: HTTP ${response.status}`);
+            }
+            return response.json();
+        }
+    
+        function groupByScope(proposals) {
+            const groups = new Map();
+            for (const proposal of proposals) {
+                if (!proposal.scope) continue;
+                if (!groups.has(proposal.scope)) groups.set(proposal.scope, []);
+                groups.get(proposal.scope).push(proposal);
+            }
+            return groups;
+        }
+    
+        function buildInSubmissionDuplicateInfo(proposals, pendingHashes) {
+            const seen = new Set();
+            const repeated = [];
+            for (const proposal of proposals) {
+                if (pendingHashes.has(proposal.hash)) continue;
+                if (proposal.hash && seen.has(proposal.hash)) {
+                    repeated.push(proposal);
+                } else if (proposal.hash) {
+                    seen.add(proposal.hash);
+                }
+            }
+            return repeated;
+        }
+    
+        async function analyzeDuplicates(ed, edits) {
+            setStatus(`Preparing duplicate check for ${edits.length} edit${edits.length === 1 ? '' : 's'}...`);
+            const previewMap = await ensurePreviews(ed, edits);
+            const proposals = buildProposals(edits, previewMap, getReleaseInfo(ed));
+            const groups = groupByScope(proposals);
+            const pendingHashes = new Set();
+            const matchesByHash = new Map();
+            const progress = {pagesDone: 0};
+    
+            let groupIndex = 0;
+            for (const [scope, scopedProposals] of groups) {
+                groupIndex += 1;
+                setStatus(`Checking pending edits... entity ${groupIndex}/${groups.size}`);
+                const blocks = await fetchOpenEditBlocks(scope, progress);
+    
+                const candidatePairs = [];
+                for (const block of blocks) {
+                    for (const proposal of scopedProposals) {
+                        if (fingerprintsEqual(proposal.fingerprint, block.fingerprint)) {
+                            candidatePairs.push({block, proposal});
+                        }
+                    }
+                }
+    
+                if (!candidatePairs.length) continue;
+    
+                const uniqueIds = [...new Set(candidatePairs.map(pair => pair.block.id))];
+                setStatus(`Verifying ${uniqueIds.length} possible duplicate${uniqueIds.length === 1 ? '' : 's'}...`);
+                const dataList = await mapLimit(
+                    uniqueIds,
+                    MAX_CONCURRENT_DATA_REQUESTS,
+                    id => fetchEditData(id),
+                );
+                const dataById = new Map(uniqueIds.map((id, index) => [id, dataList[index]]));
+    
+                for (const {block, proposal} of candidatePairs) {
+                    const data = dataById.get(block.id);
+                    if (
+                        Number(data?.status) === OPEN_STATUS &&
+                        Number(data?.type) === proposal.editType
+                    ) {
+                        pendingHashes.add(proposal.hash);
+                        if (!matchesByHash.has(proposal.hash)) matchesByHash.set(proposal.hash, new Set());
+                        matchesByHash.get(proposal.hash).add(block.id);
+                    }
+                }
+            }
+    
+            const repeated = buildInSubmissionDuplicateInfo(proposals, pendingHashes);
+            const repeatedIndexes = new Set(repeated.map(proposal => proposal.index));
+            const pendingCount = proposals.filter(proposal => pendingHashes.has(proposal.hash)).length;
+            const repeatedCount = repeated.length;
+            const newCount = proposals.length - pendingCount - repeatedCount;
+    
+            return {
+                proposals,
+                pendingHashes,
+                matchesByHash,
+                repeatedIndexes,
+                pendingCount,
+                repeatedCount,
+                newCount,
+                total: proposals.length,
+            };
+        }
+    
+        function addModalStyles() {
+            if (document.getElementById('mb-duplicate-edit-checker-style')) return;
+            const style = document.createElement('style');
+            style.id = 'mb-duplicate-edit-checker-style';
+            style.textContent = `
+    #${MODAL_ID} {
+      position: fixed;
+      inset: 0;
+      z-index: 100000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background: rgba(0, 0, 0, .55);
+    }
+    #${MODAL_ID} .mb-dec-dialog {
+      width: min(760px, calc(100vw - 48px));
+      max-height: calc(100vh - 48px);
+      overflow: auto;
+      box-sizing: border-box;
+      padding: 20px;
+      border: 1px solid #aaa;
+      border-radius: 6px;
+      background: Canvas;
+      color: CanvasText;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, .35);
+    }
+    #${MODAL_ID} h2 { margin: 0 0 14px; }
+    #${MODAL_ID} .mb-dec-summary {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(110px, 1fr));
+      gap: 8px;
+      margin: 12px 0 16px;
+    }
+    #${MODAL_ID} .mb-dec-stat {
+      padding: 10px;
+      border: 1px solid #bbb;
+      border-radius: 4px;
+      text-align: center;
+    }
+    #${MODAL_ID} .mb-dec-stat strong { display: block; font-size: 1.35em; }
+    #${MODAL_ID} details { margin: 12px 0; }
+    #${MODAL_ID} .mb-dec-list { max-height: 260px; overflow: auto; margin: 8px 0 0 20px; }
+    #${MODAL_ID} .mb-dec-buttons { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; margin-top: 18px; }
+    #${MODAL_ID} .mb-dec-buttons button { margin: 0; }
+    #${MODAL_ID} .mb-dec-error { color: #a40000; white-space: pre-wrap; }
+    @media (max-width: 650px) {
+      #${MODAL_ID} .mb-dec-summary { grid-template-columns: repeat(2, 1fr); }
+    }
+    `;
+            document.head.appendChild(style);
+        }
+    
+        function closeModal() {
+            document.getElementById(MODAL_ID)?.remove();
+        }
+    
+        function makeButton(label, className, value, resolve) {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.textContent = label;
+            if (className) button.className = className;
+            button.addEventListener('click', () => {
+                closeModal();
+                resolve(value);
+            });
+            return button;
+        }
+    
+        function openEditLink(id) {
+            const link = document.createElement('a');
+            link.href = `/edit/${id}`;
+            link.target = '_blank';
+            link.rel = 'noopener noreferrer';
+            link.textContent = `Edit #${id}`;
+            return link;
+        }
+    
+        function showDuplicateDialog(result) {
+            addModalStyles();
+            closeModal();
+    
+            return new Promise(resolve => {
+                const overlay = document.createElement('div');
+                overlay.id = MODAL_ID;
+                overlay.setAttribute('role', 'dialog');
+                overlay.setAttribute('aria-modal', 'true');
+    
+                const dialog = document.createElement('div');
+                dialog.className = 'mb-dec-dialog';
+                overlay.appendChild(dialog);
+    
+                const heading = document.createElement('h2');
+                heading.textContent = result.newCount
+                    ? 'Duplicate pending edits found'
+                    : 'All proposed edits are duplicates';
+                dialog.appendChild(heading);
+    
+                const intro = document.createElement('p');
+                intro.textContent = result.newCount
+                    ? 'Exact duplicates will be skipped as one batch. No existing MusicBrainz edits are cancelled or changed.'
+                    : 'Nothing new needs to be submitted. No existing MusicBrainz edits are cancelled or changed.';
+                dialog.appendChild(intro);
+    
+                const summary = document.createElement('div');
+                summary.className = 'mb-dec-summary';
+                const stats = [
+                    ['Proposed', result.total],
+                    ['Already pending', result.pendingCount],
+                    ['Repeated here', result.repeatedCount],
+                    ['New', result.newCount],
+                ];
+                for (const [label, value] of stats) {
+                    const stat = document.createElement('div');
+                    stat.className = 'mb-dec-stat';
+                    const strong = document.createElement('strong');
+                    strong.textContent = String(value);
+                    stat.append(strong, document.createTextNode(label));
+                    summary.appendChild(stat);
+                }
+                dialog.appendChild(summary);
+    
+                if (result.pendingCount) {
+                    const details = document.createElement('details');
+                    const summaryNode = document.createElement('summary');
+                    summaryNode.textContent = `Show pending duplicates (${result.pendingCount})`;
+                    details.appendChild(summaryNode);
+    
+                    const list = document.createElement('ol');
+                    list.className = 'mb-dec-list';
+                    const shown = new Set();
+                    for (const proposal of result.proposals) {
+                        if (!result.pendingHashes.has(proposal.hash) || shown.has(proposal.hash)) continue;
+                        shown.add(proposal.hash);
+    
+                        const item = document.createElement('li');
+                        item.append(document.createTextNode(`${proposal.editName} - `));
+                        const ids = [...(result.matchesByHash.get(proposal.hash) || [])];
+                        ids.forEach((id, index) => {
+                            if (index) item.append(document.createTextNode(', '));
+                            item.appendChild(openEditLink(id));
+                        });
+                        list.appendChild(item);
+                    }
+                    details.appendChild(list);
+                    dialog.appendChild(details);
+                }
+    
+                if (result.repeatedCount) {
+                    const note = document.createElement('p');
+                    note.textContent = `${result.repeatedCount} duplicate edit${result.repeatedCount === 1 ? '' : 's'} also appear more than once in this same submission; only the first copy will be kept.`;
+                    dialog.appendChild(note);
+                }
+    
+                const buttons = document.createElement('div');
+                buttons.className = 'mb-dec-buttons';
+    
+                if (result.newCount > 0) {
+                    buttons.appendChild(makeButton(
+                        `Submit ${result.newCount} new edit${result.newCount === 1 ? '' : 's'}`,
+                        'positive',
+                        'submit-new',
+                        resolve,
+                    ));
+                } else {
+                    buttons.appendChild(makeButton('Close', 'positive', 'cancel', resolve));
+                }
+    
+                buttons.appendChild(makeButton(
+                    `Submit all ${result.total} anyway`,
+                    '',
+                    'submit-all',
+                    resolve,
+                ));
+                buttons.appendChild(makeButton('Cancel', 'negative', 'cancel', resolve));
+                dialog.appendChild(buttons);
+    
+                document.body.appendChild(overlay);
+                dialog.querySelector('button')?.focus();
+            });
+        }
+    
+        function showErrorDialog(error) {
+            addModalStyles();
+            closeModal();
+    
+            return new Promise(resolve => {
+                const overlay = document.createElement('div');
+                overlay.id = MODAL_ID;
+                overlay.setAttribute('role', 'dialog');
+                overlay.setAttribute('aria-modal', 'true');
+    
+                const dialog = document.createElement('div');
+                dialog.className = 'mb-dec-dialog';
+                overlay.appendChild(dialog);
+    
+                const heading = document.createElement('h2');
+                heading.textContent = 'Duplicate check failed';
+                dialog.appendChild(heading);
+    
+                const message = document.createElement('p');
+                message.className = 'mb-dec-error';
+                message.textContent = String(error?.message || error || 'Unknown error');
+                dialog.appendChild(message);
+    
+                const explanation = document.createElement('p');
+                explanation.textContent = 'No edits have been submitted. Retry the check, submit everything without filtering, or cancel.';
+                dialog.appendChild(explanation);
+    
+                const buttons = document.createElement('div');
+                buttons.className = 'mb-dec-buttons';
+                buttons.appendChild(makeButton('Retry duplicate check', 'positive', 'retry', resolve));
+                buttons.appendChild(makeButton('Submit all anyway', '', 'submit-all', resolve));
+                buttons.appendChild(makeButton('Cancel', 'negative', 'cancel', resolve));
+                dialog.appendChild(buttons);
+    
+                document.body.appendChild(overlay);
+                dialog.querySelector('button')?.focus();
+            });
+        }
+    
+        function installSubmissionFilters(ed) {
+            if (ed.__mbDuplicateEditCheckerFiltersInstalled) return;
+    
+            for (const submission of ed.orderedEditSubmissions) {
+                if (!submission || typeof submission.edits !== 'function') continue;
+                const original = submission.edits;
+                submission.edits = function (...args) {
+                    const edits = original.apply(this, args);
+                    if (!runtime.active || !Array.isArray(edits)) return edits;
+    
+                    return edits.filter(edit => {
+                        const hash = String(edit?.hash || '');
+                        if (!hash) return true;
+                        if (runtime.pendingHashes.has(hash)) return false;
+                        if (runtime.skipRepeatedInSubmission && runtime.seenSubmissionHashes.has(hash)) return false;
+                        runtime.seenSubmissionHashes.add(hash);
+                        return true;
+                    });
+                };
+            }
+    
+            ed.__mbDuplicateEditCheckerFiltersInstalled = true;
+        }
+    
+        function prepareFilteredSubmission(result) {
+            runtime.pendingHashes = new Set(result.pendingHashes);
+            runtime.seenSubmissionHashes = new Set();
+            runtime.skipRepeatedInSubmission = true;
+            runtime.active = true;
+        }
+    
+        function prepareUnfilteredSubmission() {
+            runtime.pendingHashes = new Set();
+            runtime.seenSubmissionHashes = new Set();
+            runtime.skipRepeatedInSubmission = false;
+            runtime.active = false;
+        }
+    
+        async function install() {
+            const ed = await waitForEditor();
+            if (!ed || ed.__mbDuplicateEditCheckerInstalled) return;
+    
+            ed.__mbDuplicateEditCheckerInstalled = true;
+            installSubmissionFilters(ed);
+            ensureStatusElement();
+    
+            const originalSubmit = ed.submitEdits;
+    
+            ed.submitEdits = async function (...args) {
+                if (runtime.checking) return;
+                if (typeof ed.allowsSubmission === 'function' && !ed.allowsSubmission()) return;
+    
+                runtime.checking = true;
+                runtime.active = false;
+                runtime.pendingHashes = new Set();
+                runtime.seenSubmissionHashes = new Set();
+                setSubmitButtonBusy(true);
+    
+                try {
+                    while (true) {
+                        const edits = currentEdits(ed);
+                        if (!edits.length) return;
+                        const before = snapshotKey(edits);
+    
+                        let result;
+                        try {
+                            result = await analyzeDuplicates(ed, edits);
+                        } catch (error) {
+                            setStatus('Duplicate check failed.', 'error');
+                            const choice = await showErrorDialog(error);
+                            if (choice === 'retry') continue;
+                            if (choice === 'submit-all') {
+                                prepareUnfilteredSubmission();
+                                appendEditNote(ed);
+                                setStatus(`Submitting all ${edits.length} edits without duplicate filtering...`);
+                                originalSubmit.apply(ed, args);
+                            } else {
+                                setStatus('Submission cancelled.');
+                            }
+                            return;
+                        }
+    
+                        const afterEdits = currentEdits(ed);
+                        if (snapshotKey(afterEdits) !== before) {
+                            setStatus('Edits changed during the check. Checking the updated submission...');
+                            continue;
+                        }
+    
+                        const skippedCount = result.pendingCount + result.repeatedCount;
+                        if (!skippedCount) {
+                            prepareUnfilteredSubmission();
+                            appendEditNote(ed);
+                            setStatus(`No pending duplicates found. Submitting ${result.total} edit${result.total === 1 ? '' : 's'}...`, 'success');
+                            originalSubmit.apply(ed, args);
+                            return;
+                        }
+    
+                        const choice = await showDuplicateDialog(result);
+                        if (choice === 'submit-new') {
+                            if (snapshotKey(currentEdits(ed)) !== before) {
+                                setStatus('Edits changed. Rechecking before submission...');
+                                continue;
+                            }
+                            prepareFilteredSubmission(result);
+                            appendEditNote(ed);
+                            setStatus(`Submitting ${result.newCount} new edit${result.newCount === 1 ? '' : 's'}; skipping ${skippedCount} duplicate${skippedCount === 1 ? '' : 's'}...`, 'success');
+                            originalSubmit.apply(ed, args);
+                        } else if (choice === 'submit-all') {
+                            prepareUnfilteredSubmission();
+                            appendEditNote(ed);
+                            setStatus(`Submitting all ${result.total} edits...`);
+                            originalSubmit.apply(ed, args);
+                        } else {
+                            setStatus('Submission cancelled.');
+                        }
+                        return;
+                    }
+                } finally {
+                    runtime.checking = false;
+                    setSubmitButtonBusy(false);
+                }
+            };
+        }
+    
+        install().catch(error => {
+            console.error('[MusicBrainz - Duplicate Edit Checker]', error);
+            setStatus(`Duplicate Edit Checker failed to initialize: ${error?.message || error}`, 'error');
+        });
+    })();
+    }
+
+    // ============================================================================
+    // Barcode vs Linked Releases Checker
+    // Source merged from: musicbrainz-tools/barcode-linked-release-checker/MusicBrainz_Barcode_Linked_Release_Checker.user.js
+    // ============================================================================
+    if (__mbToolBoxShouldRun(["https://musicbrainz.org/release-group/*","https://beta.musicbrainz.org/release-group/*","https://musicbrainz.org/release/*/edit","https://beta.musicbrainz.org/release/*/edit"], ["https://musicbrainz.org/release-group/*/*","https://beta.musicbrainz.org/release-group/*/*"])) {
+    (() => {
+        'use strict';
+    
+        const SCRIPT_NAME = 'MusicBrainz - Barcode vs Linked Releases Checker';
+        const SCRIPT_URL = 'https://github.com/karpuzikov/userscripts/blob/main/musicbrainz-tools/toolbox/MusicBrainz_ToolBox.user.js';
+        const HARMONY_URL = 'https://harmony.pulsewidth.org.uk/';
+        const APPLE_API_BASE = 'https://amp-api.music.apple.com/v1';
+        const TASK_PREFIX = 'mb-barcode-link-checker:';
+        let appleTokenPromise = null;
+    
+        const RELEASE_LINK_TYPE_IDS = new Map([
+            ['free streaming', 85],
+            ['streaming', 980],
+            ['paid streaming', 980],
+            ['purchase for download', 74],
+            ['paid download', 74],
+            ['download for free', 75],
+            ['free download', 75],
+            ['purchase for mail-order', 79],
+            ['mail order', 79],
+            ['discography entry', 288],
+            ['license', 301],
+            ['get the music', 73],
+            ['production', 72],
+            ['crowdfunding page', 906],
+            ['show notes', 729],
+            ['other databases', 82],
+            ['discogs', 76],
+            ['vgmdb', 86],
+            ['secondhandsongs', 308],
+            ['allmusic', 755],
+            ['bookbrainz', 850],
+        ]);
+    
+        const PROVIDER_LABELS = {
+            spotify: 'Spotify',
+            deezer: 'Deezer',
+            tidal: 'TIDAL',
+            apple: 'Apple Music/iTunes',
+            qobuz: 'Qobuz',
+            beatport: 'Beatport',
+            bandcamp: 'Bandcamp',
+            discogs: 'Discogs',
+            mora: 'Mora',
+            ototoy: 'OTOTOY',
+            bugs: 'Bugs!',
+            melon: 'Melon',
+        };
+    
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+    
+        function normalizeSpace(value) {
+            return String(value || '').replace(/\s+/g, ' ').trim();
+        }
+    
+        function escapeHtml(value) {
+            return String(value ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+    
+        function extractMbid(value) {
+            return String(value || '').match(/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/i)?.[0]?.toLowerCase() || '';
+        }
+    
+        function gtinNumber(value) {
+            const cleaned = String(value || '').replace(/^0+/, '') || '0';
+            try {
+                return BigInt(cleaned);
+            } catch {
+                return null;
+            }
+        }
+    
+        function equalGtin(a, b) {
+            const left = gtinNumber(a);
+            const right = gtinNumber(b);
+            return left !== null && right !== null && left === right;
+        }
+    
+        function gtinChecksum(value) {
+            const digits = String(value).split('').map(Number);
+            const length = digits.length;
+            return digits.reduce(
+                (sum, digit, index) => sum + digit * ((length - index) % 2 ? 1 : 3),
+                0,
+            );
+        }
+    
+        function isValidGtin(value) {
+            const gtin = String(value || '');
+            return /^(?:\d{8}|\d{12}|\d{13}|\d{14})$/.test(gtin) &&
+                gtinChecksum(gtin) % 10 === 0;
+        }
+    
+        function qobuzNormalizedGtin(value) {
+            const gtin = String(value || '');
+            if (isValidGtin(gtin)) return gtin;
+    
+            // Harmony/Qobuz compatibility: some older 13-digit Qobuz IDs omit
+            // the GTIN-14 check digit. Append it only when that produces a valid GTIN.
+            if (/^\d{13}$/.test(gtin)) {
+                const provisional = `${gtin}0`;
+                const checkDigit = (10 - (gtinChecksum(provisional) % 10)) % 10;
+                const normalized = `${gtin}${checkDigit}`;
+                if (isValidGtin(normalized)) return normalized;
+            }
+    
+            return '';
+        }
+    
+        function extractGtinFromProviderUrl(value) {
+            let url;
+            try {
+                url = value instanceof URL ? value : new URL(value);
+            } catch {
+                return '';
+            }
+    
+            const family = providerFamily(url);
+            const parts = url.pathname.split('/').filter(Boolean);
+    
+            if (family === 'mora') {
+                // Example:
+                // /package/43000174/093624949107_48/
+                // 093624949107 = UPC, _48 = Mora Hi-Res package suffix.
+                const packageId = parts.at(-1) || '';
+                const candidate = packageId.match(/^(\d{8}|\d{12}|\d{13}|\d{14})(?:_[^/]+)?$/)?.[1] || '';
+                return isValidGtin(candidate) ? candidate : '';
+            }
+    
+            if (family === 'qobuz') {
+                // Many Qobuz album URLs use the barcode itself as the final album ID.
+                // Example: /album/.../0093624447061
+                const candidate = parts.at(-1) || '';
+                if (!/^\d{8,14}$/.test(candidate)) return '';
+                return qobuzNormalizedGtin(candidate);
+            }
+    
+            return '';
+        }
+    
+        function lookupUrlEmbeddedGtin(url) {
+            const gtin = extractGtinFromProviderUrl(url);
+            if (!gtin) return null;
+    
+            return {
+                sourceUrl: url,
+                provider: providerFamily(url),
+                found: true,
+                gtin,
+                externalLinks: [{
+                    url,
+                    types: providerFamily(url) === 'mora'
+                        ? ['paid download']
+                        : ['paid streaming', 'paid download'],
+                }],
+                providers: [providerLabel(url)],
+                errors: [],
+                lookupUrl: url,
+                state: 'ok',
+                method: 'url-embedded-gtin',
+            };
+        }
+    
+        function providerFamily(value) {
+            let url;
+            try {
+                url = value instanceof URL ? value : new URL(value);
+            } catch {
+                return '';
+            }
+    
+            const host = url.hostname.toLowerCase().replace(/^www\./, '');
+            if (host === 'open.spotify.com') return 'spotify';
+            if (host === 'deezer.com') return 'deezer';
+            if (host === 'tidal.com' || host === 'listen.tidal.com') return 'tidal';
+            if (host === 'music.apple.com' || host === 'itunes.apple.com' || host === 'geo.music.apple.com' || host === 'geo.itunes.apple.com') return 'apple';
+            if (host === 'qobuz.com' || host.endsWith('.qobuz.com')) return 'qobuz';
+            if (host === 'beatport.com') return 'beatport';
+            if (host === 'bandcamp.com' || host.endsWith('.bandcamp.com')) return 'bandcamp';
+            if (host === 'discogs.com') return 'discogs';
+            if (host === 'mora.jp') return 'mora';
+            if (host === 'ototoy.jp') return 'ototoy';
+            if (host === 'bugs.co.kr' || host.endsWith('.bugs.co.kr')) return 'bugs';
+            if (host === 'melon.com' || host.endsWith('.melon.com')) return 'melon';
+            return '';
+        }
+    
+        function providerLabel(url) {
+            const family = providerFamily(url);
+            return PROVIDER_LABELS[family] || family || 'Provider';
+        }
+    
+        function providerEntityKey(value) {
+            let url;
+            try {
+                url = value instanceof URL ? value : new URL(value);
+            } catch {
+                return String(value || '');
+            }
+    
+            const family = providerFamily(url);
+            const path = url.pathname.replace(/\/+$/, '');
+            let match;
+    
+            switch (family) {
+                case 'spotify':
+                    match = path.match(/\/(?:intl-[a-z-]+\/)?album\/([A-Za-z0-9]+)/i);
+                    break;
+                case 'deezer':
+                    match = path.match(/\/(?:[a-z]{2}\/)?album\/(\d+)/i);
+                    break;
+                case 'tidal':
+                    match = path.match(/\/album\/(\d+)/i);
+                    break;
+                case 'apple':
+                    match = path.match(/\/album(?:\/[^/]+)?\/(\d+)/i);
+                    break;
+                case 'qobuz':
+                    match = path.match(/\/album\/[^/]+\/([^/]+)$/i) || path.match(/\/album\/([^/]+)$/i);
+                    break;
+                case 'beatport':
+                    match = path.match(/\/release\/[^/]+\/(\d+)/i) || path.match(/\/release\/(\d+)/i);
+                    break;
+                case 'discogs':
+                    match = path.match(/\/release\/(\d+)/i);
+                    break;
+                default:
+                    break;
+            }
+    
+            if (match) return `${family}:${match[1].toLowerCase()}`;
+    
+            const clean = new URL(url.href);
+            clean.hash = '';
+            clean.search = '';
+            clean.hostname = clean.hostname.toLowerCase().replace(/^www\./, '');
+            clean.pathname = clean.pathname.replace(/\/+$/, '');
+            return `${family || clean.hostname}:${clean.href.toLowerCase()}`;
+        }
+    
+        function isDigitalRelease(release) {
+            return Array.isArray(release.media) &&
+                release.media.length > 0 &&
+                release.media.every(medium => medium?.format === 'Digital Media');
+        }
+    
+        function releaseRelations(release) {
+            return (release.relations || [])
+                .filter(rel => rel?.['target-type'] === 'url' && !rel?.ended && rel?.url?.resource)
+                .map(rel => rel.url.resource);
+        }
+    
+        function gmTextRequest(url, { headers = {}, timeout = 60000 } = {}) {
+            return new Promise((resolve, reject) => {
+                GM_xmlhttpRequest({
+                    method: 'GET',
+                    url,
+                    headers,
+                    timeout,
+                    onload(response) {
+                        if (response.status >= 200 && response.status < 400) {
+                            resolve({
+                                text: response.responseText,
+                                finalUrl: response.finalUrl || url,
+                                status: response.status,
+                            });
+                        } else {
+                            reject(new Error(`HTTP ${response.status}: ${url}`));
+                        }
+                    },
+                    ontimeout() {
+                        reject(new Error(`Request timed out: ${url}`));
+                    },
+                    onerror() {
+                        reject(new Error(`Request failed: ${url}`));
+                    },
+                });
+            });
+        }
+    
+        function parseAppleAlbumUrl(value) {
+            let url;
+            try {
+                url = new URL(value);
+            } catch {
+                return null;
+            }
+    
+            if (providerFamily(url) !== 'apple') return null;
+    
+            // Always use the regular music.apple.com host for token extraction.
+            url.hostname = 'music.apple.com';
+    
+            const parts = url.pathname.split('/').filter(Boolean);
+            const albumIndex = parts.findIndex(part => part === 'album');
+            if (albumIndex < 0) return null;
+    
+            const id = parts.slice(albumIndex + 1).reverse().find(part => /^\d+$/.test(part));
+            if (!id) return null;
+    
+            return {
+                id,
+                storefront: (parts[0] || 'us').toLowerCase(),
+                pageUrl: url.href,
+            };
+        }
+    
+        async function getAppleMusicToken(seedUrl) {
+            if (appleTokenPromise) return appleTokenPromise;
+    
+            appleTokenPromise = (async () => {
+                const pages = [
+                    parseAppleAlbumUrl(seedUrl)?.pageUrl,
+                    'https://music.apple.com/us/browse',
+                ].filter(Boolean);
+    
+                let lastError = null;
+                for (const pageUrl of [...new Set(pages)]) {
+                    try {
+                        const page = await gmTextRequest(pageUrl);
+                        const doc = new DOMParser().parseFromString(page.text, 'text/html');
+                        const scripts = [...doc.querySelectorAll('script[crossorigin][src]')];
+    
+                        for (const script of scripts) {
+                            const scriptUrl = new URL(script.getAttribute('src'), pageUrl).href;
+                            const source = await gmTextRequest(scriptUrl);
+                            const token = source.text.match(/["'](eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+)["']/)?.[1];
+                            if (token) return token;
+                        }
+                    } catch (error) {
+                        lastError = error;
+                    }
+                }
+    
+                throw lastError || new Error('Could not extract the Apple Music bearer token.');
+            })();
+    
+            try {
+                return await appleTokenPromise;
+            } catch (error) {
+                appleTokenPromise = null;
+                throw error;
+            }
+        }
+    
+        async function appleApiRequest(apiUrl, seedUrl) {
+            const token = await getAppleMusicToken(seedUrl);
+            const response = await gmTextRequest(apiUrl, {
+                headers: {
+                    Accept: 'application/json',
+                    Authorization: `Bearer ${token}`,
+                    Origin: new URL(APPLE_API_BASE).origin,
+                },
+            });
+            return JSON.parse(response.text);
+        }
+    
+        async function lookupAppleByUrl(url) {
+            const parsedUrl = parseAppleAlbumUrl(url);
+            const lookupUrl = parsedUrl
+                ? `${APPLE_API_BASE}/catalog/${parsedUrl.storefront}/albums/${parsedUrl.id}`
+                : '';
+    
+            if (!parsedUrl) {
+                return {
+                    sourceUrl: url,
+                    provider: 'apple',
+                    found: false,
+                    gtin: '',
+                    externalLinks: [],
+                    providers: ['Apple Music'],
+                    errors: ['Unsupported Apple Music album URL'],
+                    lookupUrl,
+                    state: 'failed',
+                };
+            }
+    
+            try {
+                const json = await appleApiRequest(lookupUrl, parsedUrl.pageUrl);
+                const album = (json.data || []).find(item => item.type === 'albums') || json.data?.[0];
+                const gtin = album?.attributes?.upc || '';
+                const releaseUrl = album?.attributes?.url || parsedUrl.pageUrl;
+    
+                return {
+                    sourceUrl: url,
+                    provider: 'apple',
+                    found: Boolean(album),
+                    gtin,
+                    externalLinks: album ? [{ url: releaseUrl, types: ['paid streaming'] }] : [],
+                    providers: ['Apple Music'],
+                    errors: [],
+                    lookupUrl,
+                    state: gtin ? 'ok' : (album ? 'no-gtin' : 'failed'),
+                };
+            } catch (error) {
+                return {
+                    sourceUrl: url,
+                    provider: 'apple',
+                    found: false,
+                    gtin: '',
+                    externalLinks: [],
+                    providers: ['Apple Music'],
+                    errors: [error.message],
+                    lookupUrl,
+                    state: 'failed',
+                };
+            }
+        }
+    
+        async function lookupAppleByBarcode(barcode, seedUrl = 'https://music.apple.com/us/browse') {
+            const seed = parseAppleAlbumUrl(seedUrl);
+            const storefronts = [...new Set([
+                seed?.storefront,
+                'us',
+                'gb',
+                'de',
+                'jp',
+            ].filter(Boolean))];
+    
+            const lookupUrls = [];
+            let lastError = null;
+    
+            for (const storefront of storefronts) {
+                const url = new URL(`${APPLE_API_BASE}/catalog/${storefront}/albums`);
+                url.searchParams.set('filter[upc]', barcode);
+                lookupUrls.push(url.href);
+    
+                try {
+                    const json = await appleApiRequest(url.href, seed?.pageUrl || seedUrl);
+                    const albums = (json.data || []).filter(item => item.type === 'albums');
+                    const album = albums.find(item => equalGtin(item.attributes?.upc, barcode)) || albums[0];
+                    if (!album) continue;
+    
+                    return {
+                        found: true,
+                        gtin: album.attributes?.upc || barcode,
+                        externalLinks: album.attributes?.url
+                            ? [{ url: album.attributes.url, types: ['paid streaming'] }]
+                            : [],
+                        providers: ['Apple Music'],
+                        errors: [],
+                        lookupUrl: url.href,
+                        lookupUrls,
+                    };
+                } catch (error) {
+                    lastError = error;
+                }
+            }
+    
+            return {
+                found: false,
+                gtin: '',
+                externalLinks: [],
+                providers: ['Apple Music'],
+                errors: lastError ? [lastError.message] : [],
+                lookupUrl: lookupUrls[0] || '',
+                lookupUrls,
+            };
+        }
+    
+        async function lookupLinkedUrl(url) {
+            const embedded = lookupUrlEmbeddedGtin(url);
+            if (embedded) return embedded;
+    
+            return providerFamily(url) === 'apple'
+                ? lookupAppleByUrl(url)
+                : lookupHarmonyByUrl(url);
+        }
+    
+        async function lookupByBarcode(barcode, appleSeedUrl) {
+            const harmony = await lookupHarmonyByBarcode(barcode);
+            harmony.externalLinks = (harmony.externalLinks || [])
+                .filter(link => providerFamily(link.url) !== 'apple');
+    
+            const apple = await lookupAppleByBarcode(barcode, appleSeedUrl);
+    
+            return {
+                found: Boolean(harmony.found || apple.found),
+                gtin: harmony.gtin || apple.gtin || '',
+                externalLinks: dedupeExternalLinks([
+                    ...(harmony.externalLinks || []),
+                    ...(apple.externalLinks || []),
+                ]),
+                providers: [...new Set([
+                    ...(harmony.providers || []),
+                    ...(apple.providers || []),
+                ])],
+                errors: [...(harmony.errors || []), ...(apple.errors || [])],
+                lookupUrl: [harmony.lookupUrl, apple.lookupUrl].filter(Boolean).join(' | '),
+                lookupUrls: [
+                    harmony.lookupUrl,
+                    ...(apple.lookupUrls || [apple.lookupUrl]),
+                ].filter(Boolean),
+            };
+        }
+    
+        function harmonyRequest(url) {
+            return new Promise((resolve, reject) => {
+                GM_xmlhttpRequest({
+                    method: 'GET',
+                    url,
+                    headers: { Accept: 'text/html,application/xhtml+xml' },
+                    timeout: 60000,
+                    onload(response) {
+                        if (response.status >= 200 && response.status < 400) {
+                            resolve({ html: response.responseText, finalUrl: response.finalUrl || url });
+                        } else {
+                            reject(new Error(`Harmony HTTP ${response.status}`));
+                        }
+                    },
+                    ontimeout() {
+                        reject(new Error('Harmony request timed out'));
+                    },
+                    onerror() {
+                        reject(new Error('Harmony request failed'));
+                    },
+                });
+            });
+        }
+    
+        function findReleaseInfoRow(doc, label) {
+            const wanted = label.toLowerCase();
+            return [...doc.querySelectorAll('table.release-info tr')].find(row => {
+                const th = row.querySelector('th');
+                return th && normalizeSpace(th.textContent).toLowerCase() === wanted;
+            });
+        }
+    
+        function parseHarmony(html, lookupUrl) {
+            const doc = new DOMParser().parseFromString(html, 'text/html');
+            const release = doc.querySelector('.release');
+            const gtinRow = findReleaseInfoRow(doc, 'GTIN');
+            const linksRow = findReleaseInfoRow(doc, 'External links');
+            const errors = [...doc.querySelectorAll('.message-box.error, .error-message, .page-error')]
+                .map(node => normalizeSpace(node.textContent))
+                .filter(Boolean);
+    
+            let gtin = '';
+            if (gtinRow) {
+                const text = normalizeSpace(gtinRow.querySelector('td')?.textContent || '');
+                gtin = text.match(/\b(?:\d{14}|\d{13}|\d{12}|\d{8})\b/)?.[0] || '';
+            }
+    
+            const externalLinks = [];
+            if (linksRow) {
+                for (const item of linksRow.querySelectorAll('li')) {
+                    const anchor = item.querySelector('a[href]');
+                    if (!anchor) continue;
+                    const labels = [...item.querySelectorAll('.label')]
+                        .map(node => normalizeSpace(node.textContent).toLowerCase())
+                        .filter(Boolean);
+                    externalLinks.push({
+                        url: anchor.href,
+                        types: labels,
+                    });
+                }
+            }
+    
+            const providers = [...doc.querySelectorAll('.provider-list li[data-provider]')]
+                .map(node => node.dataset.provider || normalizeSpace(node.textContent).split(':')[0])
+                .filter(Boolean);
+    
+            return {
+                found: Boolean(release || gtinRow || linksRow),
+                gtin,
+                externalLinks,
+                providers,
+                errors,
+                lookupUrl,
+            };
+        }
+    
+        async function lookupHarmonyByUrl(url) {
+            const lookupUrl = `${HARMONY_URL}release?url=${encodeURIComponent(url)}`;
+            try {
+                const response = await harmonyRequest(lookupUrl);
+                const parsed = parseHarmony(response.html, lookupUrl);
+                return {
+                    sourceUrl: url,
+                    provider: providerFamily(url),
+                    ...parsed,
+                    state: parsed.gtin ? 'ok' : (parsed.found ? 'no-gtin' : 'failed'),
+                };
+            } catch (error) {
+                return {
+                    sourceUrl: url,
+                    provider: providerFamily(url),
+                    found: false,
+                    gtin: '',
+                    externalLinks: [],
+                    providers: [],
+                    errors: [error.message],
+                    lookupUrl,
+                    state: 'failed',
+                };
+            }
+        }
+    
+        async function lookupHarmonyByBarcode(barcode) {
+            const lookupUrl = `${HARMONY_URL}release?gtin=${encodeURIComponent(barcode)}&category=digital`;
+            try {
+                const response = await harmonyRequest(lookupUrl);
+                const parsed = parseHarmony(response.html, lookupUrl);
+                parsed.externalLinks = parsed.externalLinks.filter(link => providerFamily(link.url));
+                return parsed;
+            } catch (error) {
+                return {
+                    found: false,
+                    gtin: '',
+                    externalLinks: [],
+                    providers: [],
+                    errors: [error.message],
+                    lookupUrl,
+                };
+            }
+        }
+    
+        async function mapPool(items, concurrency, worker) {
+            const results = new Array(items.length);
+            let next = 0;
+    
+            async function run() {
+                while (true) {
+                    const index = next++;
+                    if (index >= items.length) return;
+                    results[index] = await worker(items[index], index);
+                }
+            }
+    
+            await Promise.all(Array.from({ length: Math.min(concurrency, Math.max(items.length, 1)) }, run));
+            return results;
+        }
+    
+        async function fetchReleaseGroupReleases(releaseGroupMbid) {
+            const releases = [];
+            let offset = 0;
+            const limit = 100;
+    
+            while (true) {
+                const url = `/ws/2/release?release-group=${encodeURIComponent(releaseGroupMbid)}` +
+                    `&inc=media+url-rels&fmt=json&limit=${limit}&offset=${offset}`;
+                const response = await fetch(url, {
+                    credentials: 'same-origin',
+                    headers: { Accept: 'application/json' },
+                });
+                if (!response.ok) throw new Error(`MusicBrainz API HTTP ${response.status}`);
+    
+                const data = await response.json();
+                const page = data.releases || [];
+                releases.push(...page);
+    
+                if (releases.length >= Number(data['release-count'] || releases.length) || page.length < limit) break;
+                offset += limit;
+                await sleep(1100);
+            }
+    
+            return releases;
+        }
+    
+        function dedupeExternalLinks(links) {
+            const map = new Map();
+            for (const link of links || []) {
+                if (!providerFamily(link.url)) continue;
+                const key = providerEntityKey(link.url);
+                if (!map.has(key)) {
+                    map.set(key, { url: link.url, types: [...new Set(link.types || [])] });
+                } else {
+                    const existing = map.get(key);
+                    existing.types = [...new Set([...existing.types, ...(link.types || [])])];
+                }
+            }
+            return [...map.values()];
+        }
+    
+        function selectReverseLinks(reverse, existingUrls, wantedFamilies = null) {
+            const existingKeys = new Set(existingUrls.map(providerEntityKey));
+            return dedupeExternalLinks(reverse?.externalLinks || []).filter(link => {
+                if (existingKeys.has(providerEntityKey(link.url))) return false;
+                if (wantedFamilies && !wantedFamilies.has(providerFamily(link.url))) return false;
+                return true;
+            });
+        }
+    
+        function uniqueGtinGroups(checks) {
+            const groups = [];
+            for (const check of checks.filter(item => item.gtin)) {
+                let group = groups.find(item => equalGtin(item.gtin, check.gtin));
+                if (!group) {
+                    group = { gtin: check.gtin, checks: [] };
+                    groups.push(group);
+                }
+                group.checks.push(check);
+            }
+            return groups;
+        }
+    
+        function stageBarcodeMatchedReplacements(correction, mismatches, reverseLinks, existingUrls) {
+            const existingKeys = new Set(existingUrls.map(providerEntityKey));
+            let staged = 0;
+    
+            for (const check of mismatches) {
+                const family = check.provider || providerFamily(check.sourceUrl);
+                if (!family) continue;
+    
+                const replacement = reverseLinks.find(link =>
+                    providerFamily(link.url) === family &&
+                    providerEntityKey(link.url) !== providerEntityKey(check.sourceUrl)
+                );
+                if (!replacement) continue;
+    
+                const wrongKey = providerEntityKey(check.sourceUrl);
+    
+                if (!correction.removeUrls.some(url => providerEntityKey(url) === wrongKey)) {
+                    correction.removeUrls.push(check.sourceUrl);
+                }
+    
+                const replacementKey = providerEntityKey(replacement.url);
+                if (
+                    !existingKeys.has(replacementKey) &&
+                    !correction.addLinks.some(link => providerEntityKey(link.url) === replacementKey)
+                ) {
+                    correction.addLinks.push(replacement);
+                }
+    
+                correction.linkActions.push({
+                    type: 'replace-wrong-link',
+                    provider: providerLabel(check.sourceUrl),
+                    url: check.sourceUrl,
+                    replacementUrl: replacement.url,
+                });
+                staged++;
+            }
+    
+            return staged;
+        }
+    
+        function buildCorrection(release, checks, reverse) {
+            const mbBarcode = release.barcode;
+            const existingUrls = releaseRelations(release);
+            const successful = checks.filter(check => check.gtin);
+            const matches = successful.filter(check => equalGtin(check.gtin, mbBarcode));
+            const mismatches = successful.filter(check => !equalGtin(check.gtin, mbBarcode));
+            const unreadable = checks.filter(check => !check.gtin);
+            const gtinGroups = uniqueGtinGroups(successful);
+            const reverseLinks = dedupeExternalLinks(reverse?.externalLinks || []);
+            const correction = {
+                mbid: release.id,
+                title: release.title,
+                oldBarcode: mbBarcode,
+                newBarcode: '',
+                addLinks: [],
+                removeUrls: [],
+                reasons: [],
+                notes: [],
+                linkActions: [],
+                evidence: checks,
+                reverse,
+                ambiguous: false,
+            };
+    
+            if (!checks.length) {
+                correction.addLinks = selectReverseLinks(reverse, existingUrls);
+                if (correction.addLinks.length) {
+                    correction.reasons.push(`No supported linked release pages were present; found ${correction.addLinks.length} link(s) by barcode ${mbBarcode}.`);
+                } else {
+                    correction.notes.push('No supported linked release pages were present, and no provider links were found by barcode.');
+                }
+                return correction;
+            }
+    
+            if (!successful.length) {
+                correction.addLinks = selectReverseLinks(reverse, existingUrls);
+                if (correction.addLinks.length) {
+                    correction.reasons.push(`Linked pages did not return a usable GTIN; found ${correction.addLinks.length} replacement/additional link(s) by barcode ${mbBarcode}.`);
+                } else {
+                    correction.notes.push('Linked pages did not return a usable GTIN, and no provider links were found by barcode.');
+                }
+                if (unreadable.length) {
+                    correction.notes.push('Unreadable/dead links are not removed automatically; MusicBrainz guidance generally prefers ending a formerly-correct dead URL relationship.');
+                }
+                return correction;
+            }
+    
+            if (!mismatches.length) {
+                if (unreadable.length) {
+                    const deadFamilies = new Set(unreadable.map(check => check.provider).filter(Boolean));
+                    correction.addLinks = selectReverseLinks(reverse, existingUrls, deadFamilies);
+                    if (correction.addLinks.length) {
+                        correction.reasons.push(`Some linked pages were unreadable; found ${correction.addLinks.length} same-provider replacement link(s) by barcode.`);
+                    }
+                    correction.notes.push('Unreadable/dead links are left in place for manual review/end-date handling.');
+                }
+                return correction;
+            }
+    
+            if (matches.length) {
+                const mismatchFamilies = new Set(mismatches.map(check => check.provider).filter(Boolean));
+                correction.addLinks = selectReverseLinks(reverse, existingUrls, mismatchFamilies);
+    
+                const replaced = stageBarcodeMatchedReplacements(
+                    correction,
+                    mismatches,
+                    reverseLinks,
+                    existingUrls
+                );
+    
+                if (replaced) {
+                    correction.reasons.push(
+                        `Replaced ${replaced} wrongly linked provider release URL(s) with barcode-matched URL(s).`
+                    );
+                }
+    
+                const unresolved = mismatches.length - replaced;
+                if (unresolved) {
+                    correction.notes.push(
+                        `${unresolved} mismatching linked page(s) had no same-provider barcode-matched replacement and were left for manual review.`
+                    );
+                }
+                return correction;
+            }
+    
+            if (gtinGroups.length === 1) {
+                const externalGtin = gtinGroups[0].gtin;
+                const distinctProviders = new Set(successful.map(check => check.provider).filter(Boolean));
+    
+                if (reverseLinks.length) {
+                    correction.addLinks = selectReverseLinks(reverse, existingUrls);
+    
+                    const replaced = stageBarcodeMatchedReplacements(
+                        correction,
+                        mismatches,
+                        reverseLinks,
+                        existingUrls
+                    );
+    
+                    if (replaced) {
+                        correction.reasons.push(
+                            `Replaced ${replaced} wrongly linked provider release URL(s) with barcode-matched URL(s).`
+                        );
+                    }
+    
+                    const unresolved = mismatches.length - replaced;
+                    if (unresolved) {
+                        correction.notes.push(
+                            `${unresolved} mismatching linked page(s) had no same-provider barcode-matched replacement and were left for manual review.`
+                        );
+                    }
+                    return correction;
+                }
+    
+                if (distinctProviders.size >= 2) {
+                    correction.newBarcode = externalGtin;
+                    correction.reasons.push(
+                        `${distinctProviders.size} independent linked providers agree on GTIN ${externalGtin}, while the barcode lookup found no provider pages for MusicBrainz barcode ${mbBarcode}; barcode ${externalGtin} is staged.`,
+                    );
+                    return correction;
+                }
+    
+                correction.ambiguous = true;
+                correction.notes.push(
+                    `The only readable linked provider reports GTIN ${externalGtin}, not ${mbBarcode}. One provider is not enough to choose automatically between a wrong barcode and a wrong link.`,
+                );
+                return correction;
+            }
+    
+            correction.ambiguous = true;
+            correction.notes.push(
+                `Linked providers disagree with each other (${gtinGroups.map(group => group.gtin).join(', ')}) and none confirms MusicBrainz barcode ${mbBarcode}; no automatic edit was prepared.`,
+            );
+            return correction;
+        }
+    
+        function reconcileAcrossReleaseGroup(results) {
+            const byBarcode = results.filter(result => result.release.barcode);
+            const safeRemovalKeys = new Map();
+    
+            const safeSetFor = mbid => {
+                let set = safeRemovalKeys.get(mbid);
+                if (!set) {
+                    set = new Set();
+                    safeRemovalKeys.set(mbid, set);
+                }
+                return set;
+            };
+    
+            // A same-provider URL found by reverse lookup of this release's barcode
+            // is sufficient evidence to replace a linked URL whose own GTIN differs.
+            // Preserve those removals during release-group reconciliation.
+            for (const result of results) {
+                for (const action of result.correction.linkActions || []) {
+                    if (action.type === 'replace-wrong-link') {
+                        safeSetFor(result.release.id).add(providerEntityKey(action.url));
+                    }
+                }
+            }
+    
+            const findByGtin = gtin =>
+                byBarcode.find(result => equalGtin(result.release.barcode, gtin));
+    
+            for (const source of results) {
+                for (const check of source.checks || []) {
+                    if (!check.gtin || equalGtin(check.gtin, source.release.barcode)) continue;
+    
+                    const target = findByGtin(check.gtin);
+                    if (!target || target.release.id === source.release.id) continue;
+    
+                    const sourceCorrection = source.correction;
+                    const targetCorrection = target.correction;
+                    const sourceKey = providerEntityKey(check.sourceUrl);
+                    const targetReleaseUrl = `https://musicbrainz.org/release/${target.release.id}`;
+                    const sourceReleaseUrl = `https://musicbrainz.org/release/${source.release.id}`;
+                    const provider = providerLabel(check.sourceUrl);
+    
+                    const alreadyOnTarget = releaseRelations(target.release)
+                        .some(url => providerEntityKey(url) === sourceKey);
+    
+                    if (alreadyOnTarget) {
+                        safeSetFor(source.release.id).add(sourceKey);
+    
+                        if (!sourceCorrection.removeUrls.some(url => providerEntityKey(url) === sourceKey)) {
+                            sourceCorrection.removeUrls.push(check.sourceUrl);
+                        }
+    
+                        sourceCorrection.linkActions.push({
+                            type: 'remove-duplicate-wrong-link',
+                            provider,
+                            url: check.sourceUrl,
+                            targetMbid: target.release.id,
+                            targetReleaseUrl,
+                        });
+                        continue;
+                    }
+    
+                    // Preserve the information by staging the same URL on the correct release
+                    // before allowing it to be removed from the wrong one.
+                    const alreadyStagedOnTarget = targetCorrection.addLinks
+                        .some(link => providerEntityKey(link.url) === sourceKey);
+    
+                    if (!alreadyStagedOnTarget) {
+                        const providerLink = (check.externalLinks || []).find(
+                            link => providerEntityKey(link.url) === sourceKey
+                        );
+                        targetCorrection.addLinks.push({
+                            url: check.sourceUrl,
+                            types: providerLink?.types || [],
+                        });
+                    }
+    
+                    const preservedOnTarget = releaseRelations(target.release)
+                        .some(url => providerEntityKey(url) === sourceKey) ||
+                        targetCorrection.addLinks
+                            .some(link => providerEntityKey(link.url) === sourceKey);
+    
+                    if (!preservedOnTarget) continue;
+    
+                    safeSetFor(source.release.id).add(sourceKey);
+    
+                    if (!sourceCorrection.removeUrls.some(url => providerEntityKey(url) === sourceKey)) {
+                        sourceCorrection.removeUrls.push(check.sourceUrl);
+                    }
+    
+                    sourceCorrection.linkActions.push({
+                        type: 'move-out',
+                        provider,
+                        url: check.sourceUrl,
+                        targetMbid: target.release.id,
+                        targetReleaseUrl,
+                    });
+    
+                    targetCorrection.linkActions.push({
+                        type: 'move-in',
+                        provider,
+                        url: check.sourceUrl,
+                        sourceMbid: source.release.id,
+                        sourceReleaseUrl,
+                    });
+                }
+            }
+    
+            for (const result of results) {
+                const safeKeys = safeRemovalKeys.get(result.release.id) || new Set();
+    
+                // Keep removals that are proven either by a same-provider
+                // barcode-matched replacement or by preserving/moving the URL to
+                // another MusicBrainz release in this release group.
+                result.correction.removeUrls = [...new Map(
+                    result.correction.removeUrls
+                        .filter(url => safeKeys.has(providerEntityKey(url)))
+                        .map(url => [providerEntityKey(url), url])
+                ).values()];
+    
+                result.correction.addLinks = dedupeExternalLinks(result.correction.addLinks);
+                result.correction.linkActions = [...new Map(
+                    result.correction.linkActions.map(action => [
+                        [action.type, providerEntityKey(action.url), action.targetMbid || action.sourceMbid || ''].join('|'),
+                        action,
+                    ])
+                ).values()];
+            }
+        }
+    
+        function hasCorrection(correction) {
+            return Boolean(correction.newBarcode || correction.addLinks.length || correction.removeUrls.length);
+        }
+    
+        async function checkRelease(release, progress) {
+            const allUrls = releaseRelations(release);
+            const supportedUrls = [...new Map(
+                allUrls
+                    .filter(providerFamily)
+                    .map(url => [providerEntityKey(url), url])
+            ).values()];
+    
+            const checks = await mapPool(supportedUrls, 3, async (url, index) => {
+                progress(`Checking ${release.title}: ${index + 1}/${supportedUrls.length} ${providerLabel(url)}`);
+                return lookupLinkedUrl(url);
+            });
+    
+            const successful = checks.filter(check => check.gtin);
+            const mismatches = successful.filter(check => !equalGtin(check.gtin, release.barcode));
+            const unreadable = checks.filter(check => !check.gtin);
+            const needsReverse = supportedUrls.length === 0 || successful.length === 0 || mismatches.length > 0 || unreadable.length > 0;
+    
+            let reverse = null;
+            if (needsReverse) {
+                progress(`Looking up barcode ${release.barcode} across providers...`);
+                const appleSeedUrl = supportedUrls.find(url => providerFamily(url) === 'apple');
+                reverse = await lookupByBarcode(release.barcode, appleSeedUrl);
+            }
+    
+            return {
+                release,
+                allUrls,
+                supportedUrls,
+                checks,
+                correction: buildCorrection(release, checks, reverse),
+            };
+        }
+    
+        function makeEditNote(correction) {
+            const lines = [];
+    
+            for (const action of correction.linkActions || []) {
+                if (action.type === 'replace-wrong-link') {
+                    lines.push(
+                        `Removed a wrongly linked ${action.provider} release URL and added the barcode-matched replacement: ${action.replacementUrl}`
+                    );
+                } else if (action.type === 'remove-duplicate-wrong-link') {
+                    lines.push(
+                        `Removed a wrongly linked ${action.provider} release URL. The same URL is already correctly linked to: ${action.targetReleaseUrl}`
+                    );
+                } else if (action.type === 'move-out') {
+                    lines.push(
+                        `Moved a wrongly linked ${action.provider} release URL to the correct MusicBrainz release: ${action.targetReleaseUrl}`
+                    );
+                } else if (action.type === 'move-in') {
+                    lines.push(
+                        `Added a ${action.provider} release URL that was wrongly linked to another MusicBrainz release: ${action.sourceReleaseUrl}`
+                    );
+                }
+            }
+    
+            if (correction.newBarcode) {
+                lines.push(
+                    `Corrected barcode from ${correction.oldBarcode} to ${correction.newBarcode} based on matching linked release metadata.`
+                );
+            }
+    
+            if (correction.addLinks.length && !(correction.linkActions || []).some(action => action.type === 'move-in')) {
+                lines.push(
+                    `Added ${correction.addLinks.length} provider release link(s) found from barcode ${correction.oldBarcode}.`
+                );
+            }
+    
+            if (!lines.length) {
+                lines.push('Checked the Digital Media release barcode against linked provider release pages.');
+            }
+    
+            lines.push(
+                '',
+                `Script: ${SCRIPT_URL}`,
+                'Harmony: https://github.com/kellnerd/harmony',
+                'Apple Music barcode method: https://github.com/ToadKing/apple-music-barcode-isrc',
+            );
+    
+            return lines.join('\n');
+        }
+    
+        function flattenSeedLinks(links) {
+            const output = [];
+            for (const link of links) {
+                const typeIds = [...new Set((link.types || []).map(type => RELEASE_LINK_TYPE_IDS.get(type)).filter(Boolean))];
+                if (!typeIds.length) {
+                    output.push({ url: link.url, linkTypeId: '' });
+                } else {
+                    for (const linkTypeId of typeIds) output.push({ url: link.url, linkTypeId });
+                }
+            }
+            return output;
+        }
+    
+        function pendingTaskKey(mbid) {
+            return `${TASK_PREFIX}pending:${mbid}`;
+        }
+    
+        function storeTask(correction) {
+            const id = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+            const task = {
+                created: Date.now(),
+                mbid: correction.mbid,
+                removeUrls: correction.removeUrls,
+                newBarcode: correction.newBarcode,
+                addLinks: correction.addLinks,
+                summary: correction.reasons,
+            };
+            localStorage.setItem(`${TASK_PREFIX}${id}`, JSON.stringify(task));
+            localStorage.setItem(pendingTaskKey(correction.mbid), id);
+            return id;
+        }
+    
+        function openCorrection(correction) {
+            if (!hasCorrection(correction)) return;
+    
+            const taskId = storeTask(correction);
+            const targetName = `mb-barcode-link-check-${taskId}`;
+            const form = document.createElement('form');
+            form.method = 'post';
+            form.target = targetName;
+            form.action = `/release/${encodeURIComponent(correction.mbid)}/edit?barcode-link-checker=${encodeURIComponent(taskId)}`;
+            form.style.display = 'none';
+    
+            const addField = (name, value) => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = name;
+                input.value = String(value);
+                form.appendChild(input);
+            };
+    
+            if (correction.newBarcode) addField('barcode', correction.newBarcode);
+    
+            const seedLinks = flattenSeedLinks(correction.addLinks);
+            seedLinks.forEach((link, index) => {
+                addField(`urls.${index}.url`, link.url);
+                if (link.linkTypeId) addField(`urls.${index}.link_type`, link.linkTypeId);
+            });
+    
+            addField('edit_note', makeEditNote(correction));
+            document.body.appendChild(form);
+            form.submit();
+            form.remove();
+        }
+    
+        function cleanupExpiredTasks() {
+            const maxAge = 60 * 60 * 1000;
+            for (let i = localStorage.length - 1; i >= 0; i--) {
+                const key = localStorage.key(i);
+                if (!key?.startsWith(TASK_PREFIX)) continue;
+                if (key.startsWith(`${TASK_PREFIX}pending:`)) continue;
+                try {
+                    const task = JSON.parse(localStorage.getItem(key));
+                    if (!task?.created || Date.now() - task.created > maxAge) {
+                        localStorage.removeItem(key);
+                        if (task?.mbid) {
+                            const pendingKey = pendingTaskKey(task.mbid);
+                            if (localStorage.getItem(pendingKey) === key.slice(TASK_PREFIX.length)) {
+                                localStorage.removeItem(pendingKey);
+                            }
+                        }
+                    }
+                } catch {
+                    localStorage.removeItem(key);
+                }
+            }
+        }
+    
+        function resolvePendingTaskId() {
+            const fromQuery = new URL(location.href).searchParams.get('barcode-link-checker');
+            if (fromQuery) return fromQuery;
+    
+            const nameMatch = String(window.name || '').match(/^mb-barcode-link-check-(.+)$/);
+            if (nameMatch?.[1]) return nameMatch[1];
+    
+            const mbid = extractMbid(location.pathname);
+            if (!mbid) return '';
+    
+            const pendingId = localStorage.getItem(pendingTaskKey(mbid)) || '';
+            if (!pendingId) return '';
+    
+            try {
+                const task = JSON.parse(localStorage.getItem(`${TASK_PREFIX}${pendingId}`));
+                if (
+                    task?.mbid === mbid &&
+                    task?.created &&
+                    Date.now() - task.created <= 60 * 60 * 1000
+                ) {
+                    return pendingId;
+                }
+            } catch {
+                // Ignore corrupt pending pointers below.
+            }
+    
+            localStorage.removeItem(pendingTaskKey(mbid));
+            return '';
+        }
+    
+        function findExistingUrlRow(url) {
+            const wantedKey = providerEntityKey(url);
+            const rows = [...document.querySelectorAll('#external-links-editor tr.external-link-item')];
+    
+            return rows.find(row => {
+                const candidates = [
+                    ...[...row.querySelectorAll('a[href]')].map(anchor => anchor.href),
+                    ...[...row.querySelectorAll('input[type="url"]')].map(input => input.value),
+                ].filter(Boolean);
+    
+                return candidates.some(candidate => {
+                    try {
+                        return providerEntityKey(candidate) === wantedKey;
+                    } catch {
+                        return false;
+                    }
+                });
+            }) || null;
+        }
+    
+        function rowIsMarkedForRemoval(row) {
+            return Boolean(row?.querySelector('a.url.rel-remove, .rel-remove'));
+        }
+    
+        function getPageMusicBrainz() {
+            try {
+                const pageWindow = typeof unsafeWindow !== 'undefined' ? unsafeWindow : window;
+                return pageWindow.MB || null;
+            } catch {
+                return null;
+            }
+        }
+    
+        function releaseEditorStateHasRemoval(url) {
+            const MB = getPageMusicBrainz();
+            const editor = MB?._releaseEditor;
+            const treeApi = MB?.tree;
+            const linksTree = editor?.externalLinksData?.();
+            if (!editor || !treeApi || !linksTree?.size) return false;
+    
+            const wantedKey = providerEntityKey(url);
+            for (const link of treeApi.iterate(linksTree)) {
+                if (link.isNew || providerEntityKey(link.url) !== wantedKey) continue;
+                return Boolean(link.relationships?.length) &&
+                    link.relationships.every(relationship => relationship.removed);
+            }
+            return false;
+        }
+    
+        function forceReleaseEditorRemoval(url) {
+            const MB = getPageMusicBrainz();
+            const editor = MB?._releaseEditor;
+            const treeApi = MB?.tree;
+            const linksTree = editor?.externalLinksData?.();
+            if (!editor || !treeApi || !linksTree?.size) return false;
+    
+            const wantedKey = providerEntityKey(url);
+            const links = [];
+            let found = false;
+            let changed = false;
+    
+            for (const link of treeApi.iterate(linksTree)) {
+                if (!link.isNew && providerEntityKey(link.url) === wantedKey) {
+                    found = true;
+                    const relationships = (link.relationships || []).map(relationship => {
+                        if (relationship.removed) return relationship;
+                        changed = true;
+                        return { ...relationship, removed: true };
+                    });
+    
+                    links.push({
+                        ...link,
+                        url: link.originalUrlEntity?.name || link.url,
+                        rawUrl: link.originalUrlEntity?.name || link.rawUrl,
+                        relationships,
+                    });
+                } else {
+                    links.push(link);
+                }
+            }
+    
+            if (!found) return false;
+    
+            if (changed) {
+                editor.externalLinksData(treeApi.fromDistinctAscArray(links));
+            }
+    
+            return releaseEditorStateHasRemoval(url);
+        }
+    
+        async function ensureUrlRemoval(url, timeout = 10000) {
+            const started = Date.now();
+    
+            while (Date.now() - started < timeout) {
+                if (releaseEditorStateHasRemoval(url)) return true;
+    
+                const row = findExistingUrlRow(url);
+                const button = row?.querySelector('button.remove-item');
+    
+                if (button && !button.disabled && !rowIsMarkedForRemoval(row)) {
+                    button.click();
+                    await sleep(150);
+                }
+    
+                // The MusicBrainz release editor generates edits from
+                // MB._releaseEditor.externalLinksData, not from the DOM/form.
+                // Write the removal into that authoritative state directly.
+                if (forceReleaseEditorRemoval(url)) return true;
+    
+                await sleep(250);
+            }
+    
+            return false;
+        }
+    
+        async function ensureTaskRemovals(task) {
+            let removed = 0;
+            const missing = [];
+    
+            for (const url of task.removeUrls || []) {
+                if (await ensureUrlRemoval(url)) removed++;
+                else missing.push(url);
+            }
+    
+            return { removed, missing };
+        }
+    
+        function installRemovalStateGuard(task) {
+            if (!(task.removeUrls || []).length) return;
+    
+            const enforce = () => {
+                for (const url of task.removeUrls || []) {
+                    forceReleaseEditorRemoval(url);
+                }
+            };
+    
+            enforce();
+            const timer = setInterval(enforce, 500);
+    
+            window.addEventListener('pagehide', () => clearInterval(timer), { once: true });
+        }
+    
+        async function waitFor(predicate, timeout = 20000, interval = 250) {
+            const started = Date.now();
+            while (Date.now() - started < timeout) {
+                const value = predicate();
+                if (value) return value;
+                await sleep(interval);
+            }
+            return null;
+        }
+    
+        function showEditBanner(task, removed, missing) {
+            document.getElementById('mb-barcode-link-checker-edit-banner')?.remove();
+    
+            const banner = document.createElement('div');
+            banner.id = 'mb-barcode-link-checker-edit-banner';
+            banner.style.cssText = [
+                'margin:10px 0',
+                'padding:10px 12px',
+                'border:1px solid #b58b00',
+                'border-radius:5px',
+                'background:#fff7cf',
+                'color:#222',
+                'font-weight:600',
+            ].join(';');
+    
+            const parts = ['Barcode/link checker staged this correction. Review every change before submitting.'];
+            if (task.newBarcode) parts.push(`Barcode staged: ${task.newBarcode}.`);
+            if (task.addLinks?.length) parts.push(`Added link seeds: ${task.addLinks.length}.`);
+            if (task.removeUrls?.length) parts.push(`Wrong links removed from editor: ${removed}/${task.removeUrls.length}.`);
+            if (missing.length) parts.push(`Could not locate for automatic removal: ${missing.join(', ')}.`);
+            banner.textContent = parts.join(' ');
+    
+            const editor = document.getElementById('release-editor');
+            if (editor?.parentElement) editor.parentElement.insertBefore(banner, editor);
+            else document.body.prepend(banner);
+        }
+    
+        async function applyPendingEditTask() {
+            cleanupExpiredTasks();
+            const taskId = resolvePendingTaskId();
+            if (!taskId) return false;
+    
+            const key = `${TASK_PREFIX}${taskId}`;
+            let task;
+            try {
+                task = JSON.parse(localStorage.getItem(key));
+            } catch {
+                task = null;
+            }
+            if (!task) return false;
+    
+            const currentMbid = extractMbid(location.pathname);
+            if (!currentMbid || task.mbid !== currentMbid) return false;
+    
+            // The pending pointer is only for locating the task after MusicBrainz
+            // handles the seeded POST. Keep the task itself until submission.
+            if (localStorage.getItem(pendingTaskKey(task.mbid)) === taskId) {
+                localStorage.removeItem(pendingTaskKey(task.mbid));
+            }
+    
+            await waitFor(() => document.querySelector('#external-links-editor'));
+            await waitFor(
+                () => document.querySelectorAll('#external-links-editor tr.external-link-item').length > 0,
+                20000
+            );
+    
+            const result = await ensureTaskRemovals(task);
+            showEditBanner(task, result.removed, result.missing);
+    
+            // MusicBrainz can re-render the external-links React component after
+            // this task runs. Keep the authoritative release-editor observable in
+            // the removed state until the page is submitted or closed.
+            installRemovalStateGuard(task);
+    
+            return true;
+        }
+    
+        function resultStatus(result) {
+            const correction = result.correction;
+            if (hasCorrection(correction)) return 'Correction prepared';
+            if (correction.ambiguous) return 'Manual review required';
+    
+            const readable = result.checks.filter(check => check.gtin);
+            const allReadableMatch = readable.length &&
+                readable.every(check => equalGtin(check.gtin, result.release.barcode));
+            const hasUnreadable = result.checks.some(check => !check.gtin);
+    
+            if (allReadableMatch && !hasUnreadable) return 'OK';
+            return correction.notes[0] || 'Manual review required';
+        }
+    
+        function problemSummary(result) {
+            const c = result.correction;
+            const action = c.linkActions?.[0];
+    
+            if (action?.type === 'remove-duplicate-wrong-link') {
+                return `${action.provider} URL is linked to the wrong release; it already exists on the correct release.`;
+            }
+            if (action?.type === 'move-out') {
+                return `${action.provider} URL is linked to the wrong release and will be moved to the correct release.`;
+            }
+            if (action?.type === 'move-in') {
+                return `${action.provider} URL will be added here because it belongs to this barcode.`;
+            }
+            if (c.newBarcode) {
+                return `Barcode should be ${c.newBarcode} instead of ${c.oldBarcode}.`;
+            }
+            if (c.addLinks.length) {
+                return `${c.addLinks.length} missing provider link(s) found by barcode.`;
+            }
+            if (c.ambiguous) {
+                return c.notes[0] || 'Barcode/link mismatch needs manual review.';
+            }
+            return c.notes[0] || c.reasons[0] || 'Needs manual review.';
+        }
+    
+        function showResults(results) {
+            document.getElementById('mb-barcode-checker-results')?.remove();
+    
+            const problematic = results
+                .map((result, index) => ({ result, index }))
+                .filter(({ result }) => resultStatus(result) !== 'OK');
+            const corrections = problematic
+                .filter(({ result }) => hasCorrection(result.correction));
+    
+            const overlay = document.createElement('div');
+            overlay.id = 'mb-barcode-checker-results';
+            overlay.innerHTML = `
+                <div class="mb-bc-dialog">
+                    <div class="mb-bc-header">
+                        <h2>Barcode/link problems</h2>
+                        <button type="button" class="mb-bc-close">Close</button>
+                    </div>
+                    <div class="mb-bc-list">
+                        ${problematic.length
+                            ? problematic.map(({ result, index }) => `
+                                <section class="mb-bc-release">
+                                    <h3><a href="/release/${escapeHtml(result.release.id)}" target="_blank">${escapeHtml(result.release.title)}</a></h3>
+                                    <div>${escapeHtml(problemSummary(result))}</div>
+                                    ${hasCorrection(result.correction)
+                                        ? `<button type="button" class="mb-bc-open-one positive" data-result-index="${index}">Open correcting edit</button>`
+                                        : ''}
+                                </section>
+                            `).join('')
+                            : '<strong>No problems found.</strong>'}
+                    </div>
+                    ${corrections.length
+                        ? `<div class="mb-bc-actions"><button type="button" class="mb-bc-open-all positive">Open correcting edits (${corrections.length})</button></div>`
+                        : ''}
+                </div>
+            `;
+    
+            const style = document.createElement('style');
+            style.textContent = `
+                #mb-barcode-checker-results { position:fixed; inset:0; z-index:100000; background:rgba(0,0,0,.55); display:flex; align-items:flex-start; justify-content:center; padding:4vh 18px; overflow:auto; }
+                #mb-barcode-checker-results .mb-bc-dialog { background:#fff; color:#222; width:min(720px, 96vw); max-height:92vh; overflow:auto; border-radius:7px; padding:16px; box-shadow:0 12px 40px rgba(0,0,0,.35); }
+                #mb-barcode-checker-results .mb-bc-header { display:flex; align-items:center; justify-content:space-between; gap:15px; border-bottom:1px solid #ccc; margin-bottom:12px; }
+                #mb-barcode-checker-results .mb-bc-header h2 { margin:0 0 10px; }
+                #mb-barcode-checker-results .mb-bc-release { border:1px solid #ccc; border-radius:5px; margin:10px 0; padding:10px; }
+                #mb-barcode-checker-results .mb-bc-release h3 { margin:0 0 6px; }
+                #mb-barcode-checker-results .mb-bc-release button { margin-top:8px; }
+                #mb-barcode-checker-results .mb-bc-actions { position:sticky; bottom:0; background:#fff; border-top:1px solid #ccc; padding:12px 0 2px; text-align:right; }
+            `;
+            document.head.appendChild(style);
+            document.body.appendChild(overlay);
+    
+            overlay.querySelector('.mb-bc-close').addEventListener('click', () => overlay.remove());
+            overlay.addEventListener('click', event => {
+                if (event.target === overlay) overlay.remove();
+            });
+    
+            for (const button of overlay.querySelectorAll('.mb-bc-open-one')) {
+                button.addEventListener('click', () => {
+                    const result = results[Number(button.dataset.resultIndex)];
+                    openCorrection(result.correction);
+                });
+            }
+    
+            overlay.querySelector('.mb-bc-open-all')?.addEventListener('click', () => {
+                for (const { result } of corrections) openCorrection(result.correction);
+            });
+        }
+    
+        function setSidebarStatus(text, kind = '') {
+            const node = document.getElementById('mb-barcode-checker-status');
+            if (!node) return;
+            node.textContent = text;
+            node.dataset.kind = kind;
+        }
+    
+        let lastCheckResults = null;
+    
+        function updateResultsButton(results) {
+            const resultButton = document.getElementById('mb-barcode-checker-results-button');
+            if (!resultButton) return;
+    
+            lastCheckResults = results;
+            const hasProblems = results.some(result =>
+                hasCorrection(result.correction) || result.correction.ambiguous
+            );
+    
+            resultButton.textContent = hasProblems ? '⚠️' : '✅';
+            resultButton.title = hasProblems ? 'Open barcode/link check results - review needed' : 'Open barcode/link check results - all passed';
+            resultButton.style.display = '';
+            resultButton.onclick = () => {
+                if (lastCheckResults) showResults(lastCheckResults);
+            };
+        }
+    
+        async function runCheck() {
+            const button = document.getElementById('mb-barcode-checker-button');
+            const resultButton = document.getElementById('mb-barcode-checker-results-button');
+            if (!button) return;
+            button.disabled = true;
+            if (resultButton) resultButton.style.display = 'none';
+    
+            try {
+                const rgid = extractMbid(location.pathname);
+                if (!rgid) throw new Error('Could not determine release-group MBID.');
+    
+                setSidebarStatus('Loading MusicBrainz releases...');
+                const releases = await fetchReleaseGroupReleases(rgid);
+                const eligible = releases.filter(release => isDigitalRelease(release) && release.barcode);
+    
+                if (!eligible.length) {
+                    setSidebarStatus('No Digital Media releases with barcodes found.', 'ok');
+                    updateResultsButton([]);
+                    return;
+                }
+    
+                const results = [];
+                for (let i = 0; i < eligible.length; i++) {
+                    const release = eligible[i];
+                    setSidebarStatus(`Checking release ${i + 1}/${eligible.length}: ${release.title}`);
+                    results.push(await checkRelease(release, message => setSidebarStatus(message)));
+                }
+    
+                reconcileAcrossReleaseGroup(results);
+    
+                const corrections = results.filter(result => hasCorrection(result.correction)).length;
+                const ambiguous = results.filter(result => result.correction.ambiguous).length;
+                setSidebarStatus(
+                    `Checked ${eligible.length} Digital Media release(s): ${corrections} correction(s), ${ambiguous} manual review.`,
+                    corrections || ambiguous ? 'warn' : 'ok',
+                );
+                updateResultsButton(results);
+            } catch (error) {
+                console.error(`[${SCRIPT_NAME}]`, error);
+                setSidebarStatus(error.message, 'bad');
+            } finally {
+                button.disabled = false;
+            }
+        }
+    
+        function makeReleaseTableBlock(releaseTable, barcodeHeader) {
+            const block = document.createElement('div');
+            block.id = 'mb-barcode-checker-block';
+            block.innerHTML = `
+                <button type="button" id="mb-barcode-checker-button">Check barcodes against links</button>
+                <button type="button" id="mb-barcode-checker-results-button" title="Open check results" style="display:none">✅</button>
+                <div id="mb-barcode-checker-status"></div>
+            `;
+    
+            const style = document.createElement('style');
+            style.textContent = `
+                #mb-barcode-checker-block { margin:0 0 6px 0; box-sizing:border-box; }
+                #mb-barcode-checker-button,
+                #mb-barcode-checker-results-button { width:100%; box-sizing:border-box; }
+                #mb-barcode-checker-results-button { margin-top:4px; font-size:18px; line-height:1.2; cursor:pointer; }
+                #mb-barcode-checker-status { margin-top:5px; text-align:left; font-size:90%; line-height:1.3; overflow-wrap:anywhere; }
+                #mb-barcode-checker-status[data-kind="bad"] { color:#b00020; }
+                #mb-barcode-checker-status[data-kind="warn"] { color:#8a5a00; }
+                #mb-barcode-checker-status[data-kind="ok"] { color:#087a28; }
+            `;
+            document.head.appendChild(style);
+    
+            const alignToBarcodeColumn = () => {
+                if (!block.isConnected || !releaseTable.isConnected || !barcodeHeader.isConnected) return;
+                const headerRect = barcodeHeader.getBoundingClientRect();
+                const parentRect = releaseTable.parentElement.getBoundingClientRect();
+                block.style.width = `${headerRect.width}px`;
+                block.style.marginLeft = `${headerRect.left - parentRect.left}px`;
+            };
+    
+            block.querySelector('#mb-barcode-checker-button').addEventListener('click', runCheck);
+            requestAnimationFrame(alignToBarcodeColumn);
+            window.addEventListener('resize', alignToBarcodeColumn, { passive: true });
+            if (typeof ResizeObserver !== 'undefined') {
+                new ResizeObserver(alignToBarcodeColumn).observe(releaseTable);
+            }
+    
+            return block;
+        }
+    
+        function insertReleaseGroupButton() {
+            if (document.getElementById('mb-barcode-checker-block')) return;
+    
+            const releaseTable = [...document.querySelectorAll('table.tbl.mergeable-table')].find(table =>
+                [...table.querySelectorAll('thead th')].some(th => /^barcode$/i.test(normalizeSpace(th.textContent)))
+            );
+            if (!releaseTable) {
+                setTimeout(insertReleaseGroupButton, 500);
+                return;
+            }
+    
+            const barcodeHeader = [...releaseTable.querySelectorAll('thead th')]
+                .find(th => /^barcode$/i.test(normalizeSpace(th.textContent)));
+            if (!barcodeHeader) {
+                setTimeout(insertReleaseGroupButton, 500);
+                return;
+            }
+    
+            releaseTable.insertAdjacentElement('beforebegin', makeReleaseTableBlock(releaseTable, barcodeHeader));
+        }
+    
+        cleanupExpiredTasks();
+    
+        if (/^\/release-group\/[0-9a-f-]{36}\/?$/i.test(location.pathname)) {
+            insertReleaseGroupButton();
+        } else if (/^\/release\/[0-9a-f-]+\/edit\/?$/i.test(location.pathname)) {
+            applyPendingEditTask().catch(error => console.error(`[${SCRIPT_NAME}]`, error));
+        }
+    })();
+    }
+
+    // ============================================================================
+    // Recording Matcher
+    // Source merged from: musicbrainz-tools/safe-recording-matcher/MusicBrainz_Safe_Recording_Matcher.user.js
+    // ============================================================================
+    if (__mbToolBoxShouldRun(["https://musicbrainz.org/release/*","https://beta.musicbrainz.org/release/*"], [])) {
+    (function () {
+        'use strict';
+    
+        const SCRIPT_URL = 'https://github.com/karpuzikov/userscripts/blob/main/musicbrainz-tools/toolbox/MusicBrainz_ToolBox.user.js';
+        const PAGE_WINDOW = typeof unsafeWindow !== 'undefined' ? unsafeWindow : window;
+        const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        const MAX_DIFFERENCE_MS = 7000;
+        const REQUEST_GAP_MS = 1000;
+        const ISRC_CHOICE_CACHE_KEY = 'mb-recording-matcher:isrc-choice:v1';
+        const GITHUB_TOKEN_KEY = 'mb-recording-matcher:github-token';
+        const GITHUB_CACHE_REPO = 'karpuzikov/userscripts';
+        const GITHUB_CACHE_PATH = 'musicbrainz-tools/safe-recording-matcher/isrc-choice-cache.json';
+        const GITHUB_API_BASE = 'https://api.github.com';
+    
+        function parseLength(value) {
+            const text = String(value ?? '').trim().replace(/^\(|\)$/g, '');
+            const match = /^(?:(\d+):)?(\d{1,2}):([0-5]\d)$/.exec(text);
+            if (!match || (match[1] && Number(match[2]) > 59)) return null;
+            return ((Number(match[1] || 0) * 3600) + (Number(match[2]) * 60) + Number(match[3])) * 1000;
+        }
+    
+        function normalize(value) {
+            return String(value ?? '')
+                .normalize('NFKC')
+                .replace(/[\u2018\u2019\u02bc]/g, "'")
+                .replace(/[\u2010-\u2015\u2212]/g, '-')
+                .replace(/\s+/g, ' ')
+                .trim()
+                .toLowerCase();
+        }
+    
+        function normalizeTitle(value) {
+            return normalize(value)
+                .replace(/\bremixed\s+by\b/gi, 'remix')
+                .replace(/\b(?:remix|rmx|mix)\b/gi, 'remix')
+                .replace(/ремикс/giu, 'remix')
+                .replace(/\b(?:featuring|feat|ft)\.?\b/gi, 'feat')
+                .replace(/\b(?:instrumental|inst)\.?\b/gi, 'instrumental')
+                .replace(/\b(?:a\s+cappella|acappella|acapella)\b/gi, 'acapella')
+                .replace(/\b(?:radio\s+version|radio\s+edit)\b/gi, 'radio')
+                .replace(/\b(?:acoustic\s+version|acoustic)\b/gi, 'acoustic')
+                .replace(/\b(?:live\s+version|live)\b/gi, 'live')
+                .replace(/[.'`´]/g, '')
+                .replace(/[^\p{L}\p{N}]+/gu, ' ')
+                .replace(/\s+/g, ' ')
+                .trim();
+        }
+    
+        function escapeLucene(value) {
+            return String(value ?? '').replace(/[+\-!(){}\[\]^"~*?:\\/|&]/g, char => '\\' + char);
+        }
+    
+        function buildArtistIdQuery(track, artistIds) {
+            const ids = [...new Set((artistIds || []).filter(id => UUID.test(id)))];
+            if (!ids.length) return null;
+            const artist = ids.length === 1
+                ? 'arid:' + ids[0]
+                : '(' + ids.map(id => 'arid:' + id).join(' OR ') + ')';
+            return 'recording:"' + escapeLucene(track.title) + '" AND ' + artist;
+        }
+    
+        function buildArtistNameQuery(track, names) {
+            const values = [...new Set((names || []).map(name => String(name ?? '').trim()).filter(Boolean))];
+            if (!values.length) return null;
+            const artist = values.length === 1
+                ? 'artist:"' + escapeLucene(values[0]) + '"'
+                : '(' + values.map(name => 'artist:"' + escapeLucene(name) + '"').join(' OR ') + ')';
+            return 'recording:"' + escapeLucene(track.title) + '" AND ' + artist;
+        }
+    
+        function buildQuery(track) {
+            return buildArtistIdQuery(track, [track.artistIds[0]]);
+        }
+    
+        function candidateCredit(candidate) {
+            if (Array.isArray(candidate.artistIds)) {
+                return {ids: candidate.artistIds, text: candidate.credit};
+            }
+            const parts = candidate['artist-credit'];
+            if (!Array.isArray(parts)) return {ids: [], text: ''};
+            return {
+                ids: parts.map(part => part?.artist?.id),
+                text: parts.map(part => (part?.name ?? part?.artist?.name ?? '') + (part?.joinphrase ?? '')).join(''),
+            };
+        }
+    
+        function evaluateCandidate(track, candidate) {
+            if (!UUID.test(candidate?.id || '')) return {ok: false, reason: 'Missing recording ID'};
+            if (candidate.video) return {ok: false, reason: 'Video recording'};
+            if (!track.title || normalizeTitle(track.title) !== normalizeTitle(candidate.title ?? candidate.name)) {
+                return {ok: false, reason: 'Different title'};
+            }
+            const credit = candidateCredit(candidate);
+            if (!track.artistIds?.length || !credit.ids.length ||
+                track.artistIds.length !== credit.ids.length ||
+                track.artistIds.some((id, index) => !UUID.test(id) || id.toLowerCase() !== credit.ids[index]?.toLowerCase())) {
+                return {ok: false, reason: 'Different or unresolved artist credit'};
+            }
+            if (!Number.isInteger(track.length) || track.length <= 0 ||
+                !Number.isInteger(candidate.length) || candidate.length <= 0) {
+                return {ok: false, reason: 'Missing length'};
+            }
+            const difference = Math.abs(track.length - candidate.length);
+            if (difference > MAX_DIFFERENCE_MS) {
+                return {ok: false, reason: 'Length differs by more than 7 seconds'};
+            }
+            return {ok: true, difference};
+        }
+    
+        function chooseRecording(track, candidates) {
+            const eligible = new Map();
+            for (const candidate of candidates) {
+                const result = evaluateCandidate(track, candidate);
+                if (!result.ok) continue;
+                const id = candidate.id.toLowerCase();
+                if (!eligible.has(id) || result.difference < eligible.get(id).difference) {
+                    eligible.set(id, {candidate, difference: result.difference});
+                }
+            }
+            const ranked = [...eligible.values()].sort((a, b) => a.difference - b.difference);
+            if (!ranked.length) return {reason: 'No safe recording found'};
+            if (ranked.length > 1 && ranked[0].difference === ranked[1].difference) {
+                return {reason: 'Two recordings are equally close; review manually'};
+            }
+            return {id: ranked[0].candidate.id, candidate: ranked[0].candidate};
+        }
+    
+        function parseIsrcInput(text, expectedCount) {
+            if (!Number.isInteger(expectedCount) || expectedCount < 1) {
+                throw new Error('Load the release tracks before matching ISRCs.');
+            }
+            const lines = String(text ?? '').split(/\r\n|\n|\r/);
+            const pattern = /(?:^|[^A-Z0-9])([A-Z]{2}-?[A-Z0-9]{3}-?\d{2}-?\d{5})(?![A-Z0-9])/gi;
+            const parsed = lines.map((line, index) => {
+                const visible = line.replace(/\]\([^)]*\)/g, ']').replace(/https?:\/\/[^\s|<>]+/gi, '');
+                const found = [...visible.matchAll(pattern)].map(match => match[1].replace(/-/g, '').toUpperCase());
+                if (found.length > 1) throw new Error(`Line ${index + 1} has more than one ISRC.`);
+                const table = line.includes('|');
+                const cells = table ? line.trim().replace(/^\|/, '').replace(/\|$/, '').split('|') : [];
+                return {
+                    code: found[0],
+                    number: Number(/^\s*\|?\s*(\d+)\s*\|/.exec(line)?.[1] ?? NaN),
+                    table,
+                    separator: cells.length > 0 && cells.every(cell => /^:?-+:?$/.test(cell.trim())),
+                };
+            });
+            let codes;
+            if (parsed.some(line => line.table)) {
+                const slots = [];
+                const numbered = parsed.some(line => Number.isInteger(line.number));
+                let previousNumber = null;
+                for (const [index, line] of parsed.entries()) {
+                    const header = !line.code && !Number.isInteger(line.number) && parsed[index + 1]?.separator;
+                    if (line.separator || header) continue;
+                    if (!line.table) {
+                        if (line.code) throw new Error(`ISRC on line ${index + 1} is outside the table.`);
+                        continue;
+                    }
+                    if (numbered) {
+                        if (Number.isInteger(line.number)) {
+                            if ((previousNumber === null && line.number > 1) ||
+                                (previousNumber !== null && line.number !== previousNumber + 1 && line.number !== 1)) {
+                                throw new Error(`Unexpected track number ${line.number} on line ${index + 1}; check table order.`);
+                            }
+                            previousNumber = line.number;
+                            slots.push(line.code || null);
+                        } else if (line.code) {
+                            if (!slots.length) throw new Error(`ISRC on line ${index + 1} is outside a numbered table row.`);
+                            if (slots.at(-1)) throw new Error(`Table row ${slots.length} has more than one ISRC.`);
+                            slots[slots.length - 1] = line.code;
+                        }
+                    } else {
+                        slots.push(line.code || null);
+                    }
+                }
+                const missing = slots.indexOf(null);
+                if (missing !== -1) throw new Error(`Table row ${missing + 1} has no ISRC.`);
+                codes = slots;
+            } else {
+                codes = parsed.flatMap(line => line.code ? [line.code] : []);
+            }
+            if (codes.length !== expectedCount) {
+                throw new Error(`Expected ${expectedCount} ISRCs for ${expectedCount} tracks; found ${codes.length} ISRCs.`);
+            }
+            return codes;
+        }
+    
+        function normalizeIsrcCode(value) {
+            return String(value ?? '').replace(/-/g, '').trim().toUpperCase();
+        }
+    
+        function readIsrcChoiceCache() {
+            try {
+                const parsed = JSON.parse(localStorage.getItem(ISRC_CHOICE_CACHE_KEY) || '{}');
+                return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+            } catch {
+                return {};
+            }
+        }
+    
+        function writeIsrcChoiceCache(cache) {
+            try {
+                localStorage.setItem(ISRC_CHOICE_CACHE_KEY, JSON.stringify(cache));
+            } catch {
+                // Matching still works without persistence if storage is unavailable.
+            }
+        }
+    
+        function cachedIsrcRecording(isrc, candidates) {
+            const code = normalizeIsrcCode(isrc);
+            if (!code) return null;
+    
+            const cache = readIsrcChoiceCache();
+            const cachedId = String(cache[code] || '').toLowerCase();
+            if (!UUID.test(cachedId)) return null;
+    
+            const candidate = (candidates || []).find(item =>
+                String(item?.id || '').toLowerCase() === cachedId
+            );
+    
+            if (candidate) return candidate;
+    
+            delete cache[code];
+            writeIsrcChoiceCache(cache);
+            return null;
+        }
+    
+        function rememberIsrcChoice(isrc, recordingId) {
+            const code = normalizeIsrcCode(isrc);
+            const id = String(recordingId || '').toLowerCase();
+            if (!code || !UUID.test(id)) return false;
+    
+            const cache = readIsrcChoiceCache();
+            cache[code] = id;
+            writeIsrcChoiceCache(cache);
+            return true;
+        }
+    
+    
+        function githubToken() {
+            try {
+                return String(GM_getValue(GITHUB_TOKEN_KEY, '') || '').trim();
+            } catch {
+                return '';
+            }
+        }
+    
+        function encodeBase64Utf8(text) {
+            const bytes = new TextEncoder().encode(String(text));
+            let binary = '';
+            for (const byte of bytes) binary += String.fromCharCode(byte);
+            return btoa(binary);
+        }
+    
+        function decodeBase64Utf8(text) {
+            const binary = atob(String(text || '').replace(/\s+/g, ''));
+            const bytes = Uint8Array.from(binary, char => char.charCodeAt(0));
+            return new TextDecoder().decode(bytes);
+        }
+    
+        function githubApi(method, url, body = null, token = githubToken()) {
+            return new Promise((resolve, reject) => {
+                if (!token) {
+                    reject(new Error('GitHub cache is not connected'));
+                    return;
+                }
+    
+                GM_xmlhttpRequest({
+                    method,
+                    url,
+                    headers: {
+                        Accept: 'application/vnd.github+json',
+                        Authorization: 'Bearer ' + token,
+                        'X-GitHub-Api-Version': '2022-11-28',
+                        ...(body ? {'Content-Type': 'application/json'} : {}),
+                    },
+                    data: body ? JSON.stringify(body) : undefined,
+                    timeout: 15000,
+                    onload: response => {
+                        let data = null;
+                        try {
+                            data = response.responseText ? JSON.parse(response.responseText) : null;
+                        } catch {
+                            data = null;
+                        }
+    
+                        if (response.status >= 200 && response.status < 300) {
+                            resolve({status: response.status, data});
+                        } else {
+                            reject(new Error(
+                                'GitHub API HTTP ' + response.status +
+                                (data?.message ? ': ' + data.message : '')
+                            ));
+                        }
+                    },
+                    ontimeout: () => reject(new Error('GitHub cache request timed out')),
+                    onerror: () => reject(new Error('GitHub cache request failed')),
+                });
+            });
+        }
+    
+        async function fetchGithubChoiceFile() {
+            const url = GITHUB_API_BASE + '/repos/' + GITHUB_CACHE_REPO +
+                '/contents/' + GITHUB_CACHE_PATH;
+            const response = await githubApi('GET', url);
+            const data = response.data || {};
+            let parsed = {version: 1, choices: {}};
+    
+            if (data.content) {
+                try {
+                    const decoded = JSON.parse(decodeBase64Utf8(data.content));
+                    if (decoded && typeof decoded === 'object') {
+                        parsed = {
+                            version: 1,
+                            choices: decoded.choices && typeof decoded.choices === 'object'
+                                ? decoded.choices
+                                : {},
+                        };
+                    }
+                } catch {
+                    throw new Error('GitHub cache JSON is invalid');
+                }
+            }
+    
+            return {
+                sha: String(data.sha || ''),
+                choices: parsed.choices,
+            };
+        }
+    
+        async function pullGithubChoices() {
+            if (!githubToken()) return {connected: false, count: 0};
+    
+            const remote = await fetchGithubChoiceFile();
+            const local = readIsrcChoiceCache();
+            const merged = {...local, ...remote.choices};
+            writeIsrcChoiceCache(merged);
+            return {connected: true, count: Object.keys(remote.choices).length};
+        }
+    
+        async function pushGithubChoices() {
+            const token = githubToken();
+            if (!token) return {connected: false, count: 0};
+    
+            const url = GITHUB_API_BASE + '/repos/' + GITHUB_CACHE_REPO +
+                '/contents/' + GITHUB_CACHE_PATH;
+    
+            for (let attempt = 0; attempt < 2; attempt++) {
+                const remote = await fetchGithubChoiceFile();
+                const local = readIsrcChoiceCache();
+                const merged = {...remote.choices, ...local};
+                const content = JSON.stringify({version: 1, choices: merged}, null, 2) + '\n';
+    
+                try {
+                    await githubApi('PUT', url, {
+                        message: 'Update Recording Matcher ISRC cache',
+                        content: encodeBase64Utf8(content),
+                        sha: remote.sha,
+                    }, token);
+                    writeIsrcChoiceCache(merged);
+                    return {connected: true, count: Object.keys(merged).length};
+                } catch (error) {
+                    if (attempt === 0 && /HTTP (409|422)/.test(error.message)) {
+                        continue;
+                    }
+                    throw error;
+                }
+            }
+    
+            throw new Error('GitHub cache update conflicted twice');
+        }
+    
+        async function configureGithubCache(panel) {
+            const current = githubToken();
+            const token = prompt(
+                'GitHub fine-grained token for Recording Matcher cache.\n\n' +
+                'Repository: ' + GITHUB_CACHE_REPO + '\n' +
+                'Required repository permission: Contents - Read and write.\n\n' +
+                'The token is stored only in Tampermonkey.',
+                current
+            );
+    
+            if (token === null) return;
+            const trimmed = token.trim();
+            if (!trimmed) {
+                GM_setValue(GITHUB_TOKEN_KEY, '');
+                panel.querySelector('.mb-safe-status').textContent =
+                    'GitHub cache disconnected. Local cache is still active.';
+                updateGithubCacheButton(panel);
+                return;
+            }
+    
+            GM_setValue(GITHUB_TOKEN_KEY, trimmed);
+            const status = panel.querySelector('.mb-safe-status');
+            status.textContent = 'Connecting GitHub cache...';
+    
+            try {
+                await pullGithubChoices();
+                const pushed = await pushGithubChoices();
+                status.textContent =
+                    'GitHub cache connected and synced: ' + pushed.count + ' saved ISRC choice(s).';
+            } catch (error) {
+                status.textContent = 'GitHub cache error: ' + error.message;
+            }
+    
+            updateGithubCacheButton(panel);
+        }
+    
+        function updateGithubCacheButton(panel) {
+            const button = panel?.querySelector('.mb-safe-github-cache');
+            if (!button) return;
+            button.textContent = githubToken() ? 'GitHub cache: connected' : 'Connect GitHub cache';
+        }
+    
+        async function syncGithubCacheQuietly(panel) {
+            if (!githubToken()) {
+                updateGithubCacheButton(panel);
+                return;
+            }
+    
+            try {
+                await pullGithubChoices();
+            } catch (error) {
+                console.warn('[MusicBrainz Recording Matcher] GitHub cache sync failed:', error);
+            }
+            updateGithubCacheButton(panel);
+        }
+    
+        function syncChoiceToGithub(panel) {
+            if (!githubToken()) {
+                if (panel) {
+                    panel.querySelector('.mb-safe-status').textContent =
+                        'Choice remembered locally. Connect GitHub cache to sync it across devices.';
+                }
+                return;
+            }
+    
+            pushGithubChoices()
+                .then(result => {
+                    if (panel) {
+                        panel.querySelector('.mb-safe-status').textContent =
+                            'Choice saved locally and synced to GitHub (' +
+                            result.count + ' cached ISRC choice(s)).';
+                    }
+                })
+                .catch(error => {
+                    console.warn('[MusicBrainz Recording Matcher] GitHub cache push failed:', error);
+                    if (panel) {
+                        panel.querySelector('.mb-safe-status').textContent =
+                            'Choice saved locally; GitHub sync failed: ' + error.message;
+                    }
+                });
+        }
+    
+        function chooseByIsrc(track, candidates, isrc = '') {
+            const unique = new Map();
+            for (const candidate of candidates || []) {
+                if (!UUID.test(candidate?.id || '') || candidate.video) continue;
+                unique.set(candidate.id.toLowerCase(), candidate);
+            }
+    
+            const all = [...unique.values()];
+            if (!all.length) return {reason: 'No recording is linked to this ISRC'};
+            if (all.length === 1) {
+                return {id: all[0].id, candidate: all[0]};
+            }
+    
+            const cached = cachedIsrcRecording(isrc, all);
+            if (cached) {
+                return {id: cached.id, candidate: cached, cached: true};
+            }
+    
+            return {
+                reason: 'ISRC is linked to ' + all.length + ' recordings; choose one manually once and it will be remembered',
+                ambiguousCandidates: all,
+            };
+        }
+    
+        function appendAttribution(note, url) {
+            if (note.includes(url)) return note;
+            return (note.trimEnd() ? note.trimEnd() + '\n\n' : '') + 'Script: ' + url;
+        }
+    
+        function bubbleTargetsRow(bubble, row) {
+            if (bubble?.visible?.() !== true || !row?.isConnected) return false;
+            return bubble.control?.closest?.('tr.track') === row;
+        }
+    
+        function readExactLength(bubble, button) {
+            if (bubble?.visible?.() !== true) return null;
+            if (button) {
+                const expectedRow = button.closest?.('tr.track');
+                const activeRow = bubble.control?.closest?.('tr.track');
+                if (expectedRow && activeRow && expectedRow !== activeRow) return null;
+            }
+            const length = bubble.currentTrack?.()?.length?.();
+            return Number.isInteger(length) && length > 0 ? length : null;
+        }
+    
+        function readAvailableTrackLength(row, bubble, button) {
+            return readExactLength(bubble, button) || readTrack(row).length;
+        }
+    
+        if (typeof document === 'undefined' && typeof module !== 'undefined' && module.exports) {
+            module.exports = {parseLength, buildQuery, evaluateCandidate, chooseRecording, parseIsrcInput, chooseByIsrc, appendAttribution, readExactLength, maySelectUnlinkedRow};
+            return;
+        }
+    
+        const IS_RELEASE_PAGE = /^\/release\/[0-9a-f-]{36}\/?$/i.test(location.pathname);
+        const IS_RELEASE_EDITOR = /^\/release\/(?:add|[0-9a-f-]{36}\/edit)\/?$/i.test(location.pathname);
+        const DUPLICATE_CLASS = 'mb-duplicate-recording';
+    
+        if (!IS_RELEASE_PAGE && !IS_RELEASE_EDITOR) return;
+    
+        const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+        const resultCache = new Map();
+        const artistCache = new Map();
+        const pendingIsrcChoices = new Map();
+        let nextRequestAt = 0;
+        let running = false;
+        let stopRequested = false;
+        let needsAttribution = false;
+    
+        function artistCreditFromCell(cell) {
+            const span = cell?.querySelector('span');
+            if (!span) return {artistIds: [], credit: ''};
+            const artistIds = [...span.querySelectorAll('a[href]')].map(link => {
+                const path = new URL(link.href, location.href).pathname;
+                return /^\/artist\/([0-9a-f-]{36})(?:\/|$)/i.exec(path)?.[1] || null;
+            });
+            return {artistIds, credit: span.textContent.trim()};
+        }
+    
+        function artistCells(row) {
+            const artistRow = row.nextElementSibling;
+            return artistRow?.matches('tr.artist')
+                ? artistRow.querySelectorAll(':scope > td[colspan="2"]')
+                : [];
+        }
+    
+        function readTrack(row) {
+            const names = row.querySelectorAll('td.name');
+            const lengths = row.querySelectorAll('td.length');
+            const creditCells = artistCells(row);
+            return {
+                title: names[0]?.querySelector('bdi')?.textContent.trim() || '',
+                length: parseLength(lengths[0]?.textContent),
+                ...artistCreditFromCell(creditCells[0]),
+            };
+        }
+    
+        function recordingIdFromCell(cell, baseUrl) {
+            for (const link of cell?.querySelectorAll('a[href]') || []) {
+                const path = new URL(link.href, baseUrl || location.href).pathname;
+                const id = /^\/recording\/([0-9a-f-]{36})(?:\/|$)/i.exec(path)?.[1];
+                if (id && UUID.test(id)) return id;
+            }
+            return null;
+        }
+    
+        function maySelectUnlinkedRow(row, baseUrl) {
+            return !recordingIdFromCell(row.querySelectorAll('td.name')[1], baseUrl);
+        }
+    
+        function readLinkedRecording(row) {
+            const names = row.querySelectorAll('td.name');
+            const lengths = row.querySelectorAll('td.length');
+            const id = recordingIdFromCell(names[1]);
+            return {
+                id,
+                title: names[1]?.querySelector('bdi')?.textContent.trim() || names[1]?.querySelector('a')?.textContent.trim() || '',
+                length: parseLength(lengths[1]?.textContent),
+                ...artistCreditFromCell(artistCells(row)[1]),
+            };
+        }
+    
+        function watchManualIsrcChoice(row, isrc, candidates) {
+            const code = normalizeIsrcCode(isrc);
+            const candidateIds = new Set(
+                (candidates || [])
+                    .map(candidate => String(candidate?.id || '').toLowerCase())
+                    .filter(id => UUID.test(id))
+            );
+            if (!row || !code || candidateIds.size < 2) return;
+    
+            pendingIsrcChoices.set(row, {code, candidateIds});
+            captureManualIsrcChoices();
+        }
+    
+        function captureManualIsrcChoices() {
+            for (const [row, pending] of pendingIsrcChoices) {
+                if (!row?.isConnected) {
+                    pendingIsrcChoices.delete(row);
+                    continue;
+                }
+    
+                const linkedId = String(readLinkedRecording(row).id || '').toLowerCase();
+                if (!linkedId) continue;
+    
+                if (pending.candidateIds.has(linkedId)) {
+                    rememberIsrcChoice(pending.code, linkedId);
+                    pendingIsrcChoices.delete(row);
+    
+                    const panel = document.getElementById('mb-safe-recording-matcher');
+                    const status = panel?.querySelector('.mb-safe-status');
+                    if (status) {
+                        status.textContent = 'Remembered ISRC choice: ' + pending.code + ' -> ' + linkedId;
+                    }
+                    syncChoiceToGithub(panel);
+                }
+            }
+        }
+        function duplicateEntries() {
+            if (IS_RELEASE_EDITOR) {
+                return [...document.querySelectorAll('#recordings tr.track')]
+                    .map(row => ({
+                        row,
+                        recordingId: recordingIdFromCell(row.querySelectorAll('td.name')[1]),
+                    }))
+                    .filter(entry => entry.recordingId);
+            }
+    
+            return [...document.querySelectorAll('table.medium tbody > tr')]
+                .filter(row => row.querySelector(':scope > td.pos.t'))
+                .map(row => {
+                    const titleCell = row.querySelector(':scope > td.wrap-anywhere, :scope > td:nth-child(2)');
+                    return {
+                        row,
+                        recordingId: recordingIdFromCell(titleCell),
+                    };
+                })
+                .filter(entry => entry.recordingId);
+        }
+    
+        function highlightedEditorRows() {
+            return [...document.querySelectorAll('#recordings tr.track.' + DUPLICATE_CLASS)];
+        }
+    
+        function updateDuplicateHighlights() {
+            document.querySelectorAll('.' + DUPLICATE_CLASS).forEach(row => {
+                row.classList.remove(DUPLICATE_CLASS);
+                row.removeAttribute('data-mb-duplicate-recording-count');
+            });
+    
+            const groups = new Map();
+            for (const entry of duplicateEntries()) {
+                const id = entry.recordingId.toLowerCase();
+                if (!groups.has(id)) groups.set(id, []);
+                groups.get(id).push(entry.row);
+            }
+    
+            let highlighted = 0;
+            for (const rows of groups.values()) {
+                const uniqueRows = [...new Set(rows)];
+                if (uniqueRows.length < 2) continue;
+                highlighted += uniqueRows.length;
+                for (const row of uniqueRows) {
+                    row.classList.add(DUPLICATE_CLASS);
+                    row.dataset.mbDuplicateRecordingCount = String(uniqueRows.length);
+                }
+            }
+    
+            const button = document.querySelector('.mb-safe-highlighted');
+            if (button) button.disabled = running || highlighted === 0;
+            return highlighted;
+        }
+    
+        const duplicateStyle = document.createElement('style');
+        duplicateStyle.textContent = `
+            .${DUPLICATE_CLASS} > td {
+                background: #ff1616 !important;
+                color: #fff !important;
+            }
+            .${DUPLICATE_CLASS} > td a,
+            .${DUPLICATE_CLASS} > td a:visited {
+                color: #fff !important;
+                font-weight: 700 !important;
+                text-decoration: underline !important;
+            }
+            .${DUPLICATE_CLASS} > td:first-child {
+                box-shadow: inset 4px 0 0 #7a0000 !important;
+            }
+    
+            #mb-safe-recording-matcher {
+                margin: 1em 0 1.2em;
+                padding: .75em 1em 1em;
+            }
+    
+            #mb-safe-recording-matcher legend {
+                padding: 0 .35em;
+            }
+    
+            #mb-safe-recording-matcher .mb-safe-actions {
+                display: flex;
+                flex-wrap: wrap;
+                align-items: center;
+                gap: .5em;
+            }
+    
+            #mb-safe-recording-matcher .mb-safe-actions button {
+                margin: 0;
+                white-space: nowrap;
+            }
+    
+            #mb-safe-recording-matcher .mb-safe-status {
+                display: block;
+                margin-top: .75em;
+                padding-top: .65em;
+                border-top: 1px solid rgba(128, 128, 128, .35);
+                line-height: 1.4;
+            }
+    
+            #mb-safe-recording-matcher .mb-safe-results {
+                margin: .75em 0 0 1.6em;
+            }
+        `;
+        document.head.appendChild(duplicateStyle);
+    
+        let duplicateUpdateTimer = null;
+        const duplicateObserver = new MutationObserver(() => {
+            clearTimeout(duplicateUpdateTimer);
+            duplicateUpdateTimer = setTimeout(() => {
+                updateDuplicateHighlights();
+                captureManualIsrcChoices();
+            }, 40);
+        });
+        duplicateObserver.observe(document.body, {
+            subtree: true,
+            childList: true,
+            attributes: true,
+            attributeFilter: ['href'],
+        });
+        updateDuplicateHighlights();
+    
+        if (!IS_RELEASE_EDITOR) return;
+    
+        async function waitFor(predicate, timeoutMs) {
+            const deadline = Date.now() + timeoutMs;
+            do {
+                const value = predicate();
+                if (value) return value;
+                await sleep(80);
+            } while (Date.now() < deadline);
+            return null;
+        }
+    
+        async function throttle() {
+            await sleep(Math.max(0, nextRequestAt - Date.now()));
+            nextRequestAt = Date.now() + REQUEST_GAP_MS;
+        }
+    
+        async function searchQuery(query) {
+            if (resultCache.has(query)) return resultCache.get(query);
+    
+            const url = '/ws/2/recording?fmt=json&limit=100&query=' + encodeURIComponent(query);
+            for (let attempt = 0; attempt < 3; attempt++) {
+                await throttle();
+                const controller = new AbortController();
+                const timeout = setTimeout(() => controller.abort(), 12000);
+                let response;
+                try {
+                    response = await fetch(url, {
+                        credentials: 'same-origin',
+                        headers: {Accept: 'application/json'},
+                        signal: controller.signal,
+                    });
+                } finally {
+                    clearTimeout(timeout);
+                }
+                if (response.status === 503 || response.status === 429) {
+                    const retrySeconds = Number(response.headers.get('Retry-After'));
+                    if (attempt === 2) throw new Error('MusicBrainz is rate limiting requests');
+                    await sleep(Math.max(5000 * (attempt + 1), Number.isFinite(retrySeconds) ? retrySeconds * 1000 : 0));
+                    continue;
+                }
+                if (!response.ok) throw new Error('MusicBrainz search returned HTTP ' + response.status);
+                const data = await response.json();
+                if (!Array.isArray(data.recordings) || !Number.isInteger(data.count)) {
+                    throw new Error('MusicBrainz returned an unexpected search response');
+                }
+                const result = data.count > 100
+                    ? {reason: 'Search has over 100 results; review manually'}
+                    : {recordings: data.recordings};
+                resultCache.set(query, result);
+                return result;
+            }
+            throw new Error('MusicBrainz search did not complete');
+        }
+    
+        function releaseArtistIds() {
+            const release = PAGE_WINDOW.MB?.releaseEditor?.rootField?.release?.();
+            const names = release?.artistCredit?.()?.names;
+            if (!Array.isArray(names)) return [];
+            return [...new Set(names.map(part => part?.artist?.gid).filter(id => UUID.test(id)))];
+        }
+    
+        async function artistInfo(id) {
+            const key = String(id ?? '').toLowerCase();
+            if (!UUID.test(key)) return null;
+            if (artistCache.has(key)) return artistCache.get(key);
+    
+            await throttle();
+            const response = await fetch('/ws/2/artist/' + key + '?fmt=json&inc=aliases', {
+                credentials: 'same-origin',
+                headers: {Accept: 'application/json'},
+            });
+            if (!response.ok) throw new Error('Artist lookup returned HTTP ' + response.status);
+            const data = await response.json();
+            const result = {
+                id: data.id,
+                name: String(data.name ?? '').trim(),
+                aliases: [...new Set((data.aliases || [])
+                    .map(alias => String(alias?.name ?? '').trim())
+                    .filter(Boolean))],
+            };
+            artistCache.set(key, result);
+            return result;
+        }
+    
+        async function searchCircle(track, query, circle) {
+            if (!query) return null;
+            const search = await searchQuery(query);
+            if (search.reason) return {reason: search.reason, circle};
+            const chosen = chooseRecording(track, search.recordings);
+            return chosen.id ? {...chosen, circle} : {...chosen, circle};
+        }
+    
+        async function searchRecordings(track) {
+            const mainIds = releaseArtistIds();
+            const effectiveMainIds = mainIds.length ? mainIds : track.artistIds.slice(0, 1);
+            const mainSet = new Set(effectiveMainIds.map(id => id.toLowerCase()));
+            const featuredIds = track.artistIds.filter(id => !mainSet.has(id.toLowerCase()));
+    
+            const c1 = await searchCircle(
+                track,
+                buildArtistIdQuery(track, effectiveMainIds),
+                'C1 main release artist',
+            );
+            if (c1?.id || (c1?.reason && c1.reason.startsWith('Two recordings'))) return c1;
+    
+            if (featuredIds.length) {
+                const c2 = await searchCircle(
+                    track,
+                    buildArtistIdQuery(track, featuredIds),
+                    'C2 featured artist',
+                );
+                if (c2?.id || (c2?.reason && c2.reason.startsWith('Two recordings'))) return c2;
+            }
+    
+            const relevantIds = [...new Set([...track.artistIds, ...effectiveMainIds])];
+            const info = (await Promise.all(relevantIds.map(artistInfo))).filter(Boolean);
+            const names = info.map(item => item.name).filter(Boolean);
+            const c3 = await searchCircle(
+                track,
+                buildArtistNameQuery(track, names),
+                'C3 exact artist name',
+            );
+            if (c3?.id || (c3?.reason && c3.reason.startsWith('Two recordings'))) return c3;
+    
+            const aliases = [...new Set(info.flatMap(item => item.aliases))]
+                .filter(alias => !names.some(name => normalize(name) === normalize(alias)));
+            const c4 = await searchCircle(
+                track,
+                buildArtistNameQuery(track, aliases),
+                'C4 artist alias',
+            );
+            if (c4?.id || (c4?.reason && c4.reason.startsWith('Two recordings'))) return c4;
+    
+            return {reason: 'No recording found in C1-C4'};
+        }
+    
+        async function searchByIsrc(code) {
+            const normalized = String(code ?? '').replace(/-/g, '').toUpperCase();
+            const cacheKey = 'isrc-lookup:' + normalized;
+            if (resultCache.has(cacheKey)) return resultCache.get(cacheKey);
+    
+            const url = '/ws/2/isrc/' + encodeURIComponent(normalized) + '?fmt=json&inc=artist-credits';
+            for (let attempt = 0; attempt < 3; attempt++) {
+                await throttle();
+                const controller = new AbortController();
+                const timeout = setTimeout(() => controller.abort(), 12000);
+                let response;
+                try {
+                    response = await fetch(url, {
+                        credentials: 'same-origin',
+                        headers: {Accept: 'application/json'},
+                        signal: controller.signal,
+                    });
+                } finally {
+                    clearTimeout(timeout);
+                }
+    
+                if (response.status === 503 || response.status === 429) {
+                    const retrySeconds = Number(response.headers.get('Retry-After'));
+                    if (attempt === 2) throw new Error('MusicBrainz is rate limiting requests');
+                    await sleep(Math.max(
+                        5000 * (attempt + 1),
+                        Number.isFinite(retrySeconds) ? retrySeconds * 1000 : 0,
+                    ));
+                    continue;
+                }
+    
+                if (response.status === 404) {
+                    const result = {recordings: []};
+                    resultCache.set(cacheKey, result);
+                    return result;
+                }
+                if (!response.ok) throw new Error('MusicBrainz ISRC lookup returned HTTP ' + response.status);
+    
+                const data = await response.json();
+                if (!Array.isArray(data.recordings)) {
+                    throw new Error('MusicBrainz returned an unexpected ISRC response');
+                }
+    
+                const result = {recordings: data.recordings};
+                resultCache.set(cacheKey, result);
+                return result;
+            }
+    
+            throw new Error('MusicBrainz ISRC lookup did not complete');
+        }
+    
+        async function verifyRecordingHasIsrc(recordingId, expectedIsrc) {
+            const id = String(recordingId || '').toLowerCase();
+            const isrc = String(expectedIsrc || '').replace(/-/g, '').toUpperCase();
+            if (!UUID.test(id) || !isrc) return false;
+    
+            const cacheKey = 'recording-isrc-check:' + id;
+            let data = resultCache.get(cacheKey);
+    
+            if (!data) {
+                for (let attempt = 0; attempt < 3; attempt++) {
+                    await throttle();
+    
+                    const controller = new AbortController();
+                    const timeout = setTimeout(() => controller.abort(), 12000);
+                    let response;
+    
+                    try {
+                        response = await fetch(
+                            '/ws/2/recording/' + encodeURIComponent(id) + '?fmt=json&inc=isrcs',
+                            {
+                                credentials: 'same-origin',
+                                headers: {Accept: 'application/json'},
+                                signal: controller.signal,
+                            },
+                        );
+                    } catch (error) {
+                        if (error?.name === 'AbortError') {
+                            if (attempt === 2) {
+                                throw new Error('Recording ISRC verification timed out');
+                            }
+                            continue;
+                        }
+                        throw error;
+                    } finally {
+                        clearTimeout(timeout);
+                    }
+    
+                    if (response.status === 503 || response.status === 429) {
+                        const retrySeconds = Number(response.headers.get('Retry-After'));
+                        if (attempt === 2) {
+                            throw new Error('MusicBrainz is rate limiting ISRC verification requests');
+                        }
+                        await sleep(Math.max(
+                            5000 * (attempt + 1),
+                            Number.isFinite(retrySeconds) ? retrySeconds * 1000 : 0,
+                        ));
+                        continue;
+                    }
+    
+                    if (!response.ok) {
+                        throw new Error('Recording ISRC verification returned HTTP ' + response.status);
+                    }
+    
+                    data = await response.json();
+                    resultCache.set(cacheKey, data);
+                    break;
+                }
+            }
+    
+            return Array.isArray(data?.isrcs) &&
+                data.isrcs.some(code => String(code).replace(/-/g, '').toUpperCase() === isrc);
+        }
+    
+        function releaseTrackModels() {
+            const release = PAGE_WINDOW.MB?.releaseEditor?.rootField?.release?.();
+            return release && typeof release.allTracks === 'function'
+                ? [...release.allTracks()]
+                : [];
+        }
+    
+        async function linkExactIsrcRecording(row, trackModel, candidate, expectedIsrc) {
+            if (!trackModel || typeof trackModel.recording !== 'function') {
+                throw new Error('MusicBrainz track model is unavailable');
+            }
+    
+            const verified = await verifyRecordingHasIsrc(candidate.id, expectedIsrc);
+            if (!verified) {
+                throw new Error(
+                    'Safety check failed: recording ' + candidate.id +
+                    ' does not contain ISRC ' + expectedIsrc
+                );
+            }
+    
+            const entity = recordingEntityFromWs(candidate);
+            trackModel.recording(entity);
+            if (typeof trackModel.hasNewRecording === 'function') {
+                trackModel.hasNewRecording(false);
+            }
+    
+            const linked = await waitFor(() => {
+                const current = readLinkedRecording(row);
+                return current.id?.toLowerCase() === candidate.id.toLowerCase() ? current : null;
+            }, 8000);
+    
+            if (!linked) {
+                throw new Error('MusicBrainz did not confirm the exact ISRC recording link');
+            }
+    
+            return linked;
+        }
+    
+        function appendNoteIfPossible() {
+            if (!needsAttribution) return;
+            const textarea = document.querySelector('#edit-note-text, #edit-note textarea.edit-note');
+            if (!textarea) return;
+            const value = appendAttribution(textarea.value, SCRIPT_URL);
+            if (value === textarea.value) return;
+            const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set;
+            if (setter) setter.call(textarea, value);
+            else textarea.value = value;
+            textarea.dispatchEvent(new Event('input', {bubbles: true}));
+            textarea.dispatchEvent(new Event('change', {bubbles: true}));
+        }
+    
+        async function openEditor(row, options = {}) {
+            const {allowLinked = false, expectedRecordingId = null} = options;
+            const button = row.querySelector('button.edit-track-recording');
+            const element = document.querySelector('#recording-assoc-bubble');
+            const model = PAGE_WINDOW.MB?.releaseEditor?.recordingBubble;
+            if (!button || !element || !model || !row.isConnected) {
+                throw new Error('The MusicBrainz recording editor is unavailable');
+            }
+            if (model.control !== button || !model.visible()) {
+                await throttle();
+                const currentId = readLinkedRecording(row).id;
+                const invalidState = allowLinked
+                    ? !currentId || (expectedRecordingId && currentId.toLowerCase() !== expectedRecordingId.toLowerCase())
+                    : !maySelectUnlinkedRow(row);
+                if (!row.isConnected || invalidState) {
+                    throw new Error('The track or recording link changed while opening the editor');
+                }
+                button.click();
+                // Opening the bubble can also start a native MusicBrainz suggestion request.
+                nextRequestAt = Math.max(nextRequestAt, Date.now() + REQUEST_GAP_MS);
+            }
+            const trackLength = await waitFor(() => {
+                if (!bubbleTargetsRow(model, row)) return null;
+                return readAvailableTrackLength(row, model, button);
+            }, 3000);
+            if (!trackLength) throw new Error('Track length is unavailable');
+            const input = element.querySelector('input.name');
+            const suggestionsIdle = await waitFor(() => !element.querySelector('tr.loading-message'), 8000);
+            if (!suggestionsIdle) throw new Error('MusicBrainz suggestions are still loading');
+            return {button, element, model, input, trackLength};
+        }
+    
+        function recordingEntityFromWs(candidate) {
+            const MB = PAGE_WINDOW.MB;
+            if (!MB?.entity || !UUID.test(candidate?.id || '')) {
+                throw new Error('MusicBrainz recording entity API is unavailable');
+            }
+    
+            const parts = Array.isArray(candidate['artist-credit'])
+                ? candidate['artist-credit']
+                : [];
+    
+            const artistCredit = {
+                names: parts.map(part => ({
+                    artist: {
+                        gid: part?.artist?.id || '',
+                        name: part?.artist?.name || '',
+                        sort_name: part?.artist?.['sort-name'] || '',
+                        entityType: 'artist',
+                    },
+                    name: part?.name || part?.artist?.name || '',
+                    joinPhrase: part?.joinphrase || '',
+                })),
+            };
+    
+            return MB.entity({
+                gid: candidate.id,
+                name: candidate.title ?? candidate.name ?? '',
+                length: candidate.length ?? null,
+                artistCredit,
+                video: Boolean(candidate.video),
+                entityType: 'recording',
+            }, 'recording');
+        }
+    
+        async function selectInEditor(row, track, candidate, editor, options = {}) {
+            const {allowLinked = false, expectedRecordingId = null, isrcMatch = false} = options;
+            const {button, element, model, input} = editor;
+            const assertCurrentTarget = () => {
+                const current = readTrack(row);
+                const currentRecordingId = readLinkedRecording(row).id;
+                const invalidLinkState = allowLinked
+                    ? !currentRecordingId || (expectedRecordingId && currentRecordingId.toLowerCase() !== expectedRecordingId.toLowerCase())
+                    : !maySelectUnlinkedRow(row);
+                if (!row.isConnected || invalidLinkState || !bubbleTargetsRow(model, row) ||
+                    normalize(current.title) !== normalize(track.title) ||
+                    normalize(current.credit) !== normalize(track.credit) ||
+                    JSON.stringify(current.artistIds) !== JSON.stringify(track.artistIds)) {
+                    throw new Error('The track or recording selector changed during matching');
+                }
+            };
+            assertCurrentTarget();
+    
+            const suggestionsIdle = await waitFor(() => !element.querySelector('tr.loading-message'), 8000);
+            if (!suggestionsIdle) throw new Error('MusicBrainz suggestions are still loading');
+            assertCurrentTarget();
+    
+            if (isrcMatch) {
+                /*
+                 * Exact ISRC lookup already resolved the recording MBID. Do not rely
+                 * on MusicBrainz's native suggestion list or autocomplete to contain
+                 * that recording: track artist credits can differ only by join phrase
+                 * (for example "GIMS & Leto" vs "GIMS feat. Leto"), which can hide the
+                 * correct recording from native suggestions.
+                 */
+                const targetTrack = model.currentTrack?.();
+                if (!targetTrack || typeof targetTrack.recording !== 'function') {
+                    throw new Error('MusicBrainz recording model is unavailable');
+                }
+                const entity = recordingEntityFromWs(candidate);
+                targetTrack.recording(entity);
+                if (typeof targetTrack.hasNewRecording === 'function') {
+                    targetTrack.hasNewRecording(false);
+                }
+            } else {
+                const suggested = [...element.querySelectorAll('input[data-change="recording"]')]
+                    .find(radio => radio.value.toLowerCase() === candidate.id.toLowerCase());
+                if (suggested) {
+                    assertCurrentTarget();
+                    suggested.click();
+                } else {
+                    if (!input) throw new Error('The recording search field is unavailable');
+                    await throttle();
+                    assertCurrentTarget();
+                    input.value = candidate.id;
+                    input.dispatchEvent(new Event('input', {bubbles: true}));
+                }
+            }
+    
+            const linked = await waitFor(() => {
+                const current = readLinkedRecording(row);
+                return current.id?.toLowerCase() === candidate.id.toLowerCase() ? current : null;
+            }, 12000);
+            if (!linked) throw new Error('MusicBrainz did not confirm the recording lookup');
+    
+            if (!isrcMatch) {
+                // Metadata matching remains strict. Exact ISRC matching is verified by
+                // the recording MBID above and must not be undone by credit/length drift.
+                const verified = evaluateCandidate(track, {...linked, length: candidate.length});
+                if (!verified.ok || linked.length === null || Math.abs(linked.length - candidate.length) > 500) {
+                    if (bubbleTargetsRow(model, row) &&
+                        readLinkedRecording(row).id?.toLowerCase() === candidate.id.toLowerCase()) {
+                        if (allowLinked && expectedRecordingId) {
+                            const original = [...element.querySelectorAll('input[data-change="recording"]')]
+                                .find(radio => radio.value.toLowerCase() === expectedRecordingId.toLowerCase());
+                            if (original) {
+                                original.click();
+                            } else if (input) {
+                                await throttle();
+                                input.value = expectedRecordingId;
+                                input.dispatchEvent(new Event('input', {bubbles: true}));
+                            }
+                            await waitFor(
+                                () => readLinkedRecording(row).id?.toLowerCase() === expectedRecordingId.toLowerCase(),
+                                8000,
+                            );
+                        } else {
+                            element.querySelector('#add-new-recording')?.click();
+                        }
+                    }
+                    throw new Error('Editor linked a recording with different metadata');
+                }
+            }
+            return linked;
+        }
+    
+        function showResult(list, row, label, detail, linkId) {
+            const item = document.createElement('li');
+            const position = row.querySelector('td.position')?.textContent.trim() || '?';
+            item.append(document.createTextNode(position + '. ' + label + ': ' + detail));
+            if (linkId) {
+                const link = document.createElement('a');
+                link.href = '/recording/' + linkId;
+                link.target = '_blank';
+                link.rel = 'noopener noreferrer';
+                link.textContent = ' [recording]';
+                item.append(link);
+            }
+            list.append(item);
+        }
+    
+        function trackRowsUnchanged(rows) {
+            const current = document.querySelectorAll('#recordings tr.track');
+            return current.length === rows.length && rows.every((row, index) => row === current[index]);
+        }
+    
+        function removeAllLinks(panel) {
+            if (running) return;
+    
+            const release = PAGE_WINDOW.MB?.releaseEditor?.rootField?.release?.();
+            const status = panel.querySelector('.mb-safe-status');
+            const list = panel.querySelector('.mb-safe-results');
+            const toggle = panel.querySelector('.mb-safe-toggle');
+    
+            if (!release || typeof release.allTracks !== 'function') {
+                status.textContent = 'MusicBrainz release track model is unavailable.';
+                return;
+            }
+    
+            // MusicBrainz Release#allTracks() is a generator, not an array.
+            const tracks = [...release.allTracks()];
+            const linked = tracks.filter(track =>
+                typeof track?.hasExistingRecording === 'function' &&
+                track.hasExistingRecording()
+            );
+    
+            if (!linked.length) {
+                const visibleLinked = [...document.querySelectorAll('#recordings tr.track')]
+                    .filter(row => Boolean(recordingIdFromCell(row.querySelectorAll('td.name')[1])));
+    
+                status.textContent = visibleLinked.length
+                    ? `Error: MusicBrainz shows ${visibleLinked.length} linked recording(s), but the release model returned none. No links were changed.`
+                    : 'No recording links to remove.';
+                return;
+            }
+    
+            if (!confirm(`Remove all ${linked.length} recording links from this release?`)) return;
+    
+            for (const track of linked) {
+                track.recording(null);
+                if (typeof track.hasNewRecording === 'function') {
+                    track.hasNewRecording(false);
+                }
+            }
+    
+            const remaining = [...release.allTracks()].filter(track =>
+                typeof track?.hasExistingRecording === 'function' &&
+                track.hasExistingRecording()
+            );
+    
+            list.replaceChildren();
+            list.hidden = true;
+            toggle.hidden = true;
+            toggle.textContent = 'Show results';
+    
+            if (remaining.length) {
+                status.textContent = `Removed ${linked.length - remaining.length}/${linked.length} recording links; ${remaining.length} remain linked.`;
+                return;
+            }
+    
+            needsAttribution = true;
+            appendNoteIfPossible();
+            status.textContent = `Removed all ${linked.length} recording links.`;
+            updateDuplicateHighlights();
+        }
+    
+        async function runMatcher(panel, isrcs = null, targetRows = null, options = {}) {
+            if (running) return;
+    
+            const allRows = [...document.querySelectorAll('#recordings tr.track')];
+            const rows = Array.isArray(targetRows)
+                ? targetRows.filter(row => row?.isConnected)
+                : allRows;
+            const allowLinked = Boolean(options.allowLinked);
+            const highlightedMode = Boolean(options.highlighted);
+            const allTrackModels = isrcs ? releaseTrackModels() : [];
+    
+            const button = panel.querySelector('.mb-safe-start');
+            const highlightedButton = panel.querySelector('.mb-safe-highlighted');
+            const isrcButton = panel.querySelector('.mb-safe-isrc');
+            const removeButton = panel.querySelector('.mb-safe-remove-links');
+            const stop = panel.querySelector('.mb-safe-stop');
+            const toggle = panel.querySelector('.mb-safe-toggle');
+            const status = panel.querySelector('.mb-safe-status');
+            const list = panel.querySelector('.mb-safe-results');
+    
+            list.replaceChildren();
+            list.hidden = true;
+            toggle.hidden = true;
+            toggle.textContent = 'Show results';
+    
+            if (!rows.length) {
+                status.textContent = highlightedMode
+                    ? 'No duplicate recording links are highlighted.'
+                    : 'No loaded tracks. Open the Recordings tab and load the medium first.';
+                return;
+            }
+    
+            if (isrcs && (
+                isrcs.length !== allRows.length ||
+                allTrackModels.length !== allRows.length ||
+                document.querySelector('#recordings .edit-recording')
+            )) {
+                status.textContent = 'The loaded track/model count changed or a medium is not loaded. Open all media and paste the ISRCs again.';
+                return;
+            }
+    
+            running = true;
+            PAGE_WINDOW.__MB_RECORDING_MATCHER_ACTIVE__ = true;
+            stopRequested = false;
+            button.disabled = true;
+            highlightedButton.disabled = true;
+            isrcButton.disabled = true;
+            removeButton.disabled = true;
+            stop.hidden = false;
+    
+            let matched = 0;
+            let unchanged = 0;
+            let review = 0;
+            let processed = 0;
+    
+            try {
+                for (const row of rows) {
+                    if (stopRequested) break;
+    
+                    if (isrcs && !trackRowsUnchanged(allRows)) {
+                        status.textContent = `Stopped: The track order changed. ${matched} matched, ${review} need review.`;
+                        break;
+                    }
+    
+                    processed++;
+                    const track = readTrack(row);
+                    const isrc = isrcs?.[allRows.indexOf(row)];
+                    const display = `${track.title || '(untitled)'}${isrc ? ' (' + isrc + ')' : ''}`;
+                    status.textContent = `Checking ${processed}/${rows.length}: ${track.title || '(untitled)'}${isrc ? ' (' + isrc + ')' : ''}`;
+    
+                    const existing = readLinkedRecording(row);
+    
+                    if (!allowLinked && existing.id) {
+                        showResult(list, row, 'Already linked', display, existing.id);
+                        continue;
+                    }
+    
+                    if (allowLinked && !existing.id) {
+                        review++;
+                        showResult(list, row, 'Review', `${display} - highlighted recording link is no longer present`);
+                        continue;
+                    }
+    
+                    let editor = null;
+    
+                    if (!isrc) {
+                        if (!track.title || !track.artistIds.length || track.artistIds.some(id => !UUID.test(id)) || !track.credit) {
+                            review++;
+                            showResult(list, row, 'Review', `${display} - missing title or artist ID`);
+                            continue;
+                        }
+    
+                        try {
+                            editor = await openEditor(row, {
+                                allowLinked,
+                                expectedRecordingId: existing.id,
+                            });
+                            track.length = editor.trackLength;
+                        } catch (error) {
+                            review++;
+                            showResult(list, row, 'Review', `${display} - ${error.message}`);
+                            continue;
+                        }
+                    }
+    
+                    let chosen;
+                    try {
+                        if (isrc) {
+                            const search = await searchByIsrc(isrc);
+                            chosen = search.reason ? {reason: search.reason} : chooseByIsrc(track, search.recordings, isrc);
+                        } else {
+                            chosen = await searchRecordings(track);
+                        }
+                    } catch (error) {
+                        review++;
+                        showResult(list, row, 'Review', `${display} - ${error.message}`);
+                        continue;
+                    }
+    
+                    if (isrcs && !trackRowsUnchanged(allRows)) {
+                        status.textContent = `Stopped: The track order changed. ${matched} matched, ${review} need review.`;
+                        break;
+                    }
+    
+                    if (!chosen.id) {
+                        if (isrc && Array.isArray(chosen.ambiguousCandidates)) {
+                            watchManualIsrcChoice(row, isrc, chosen.ambiguousCandidates);
+                        }
+                        review++;
+                        showResult(list, row, 'Review', `${display} - ${chosen.reason}`);
+                        continue;
+                    }
+    
+                    if (allowLinked && existing.id?.toLowerCase() === chosen.id.toLowerCase()) {
+                        unchanged++;
+                        showResult(
+                            list,
+                            row,
+                            'Already correct',
+                            display + (chosen.circle ? ' - ' + chosen.circle : ''),
+                            chosen.id,
+                        );
+                        continue;
+                    }
+    
+                    try {
+                        if (isrc) {
+                            const index = allRows.indexOf(row);
+                            await linkExactIsrcRecording(
+                                row,
+                                allTrackModels[index],
+                                chosen.candidate,
+                                isrc,
+                            );
+                        } else {
+                            await selectInEditor(row, track, chosen.candidate, editor, {
+                                allowLinked,
+                                expectedRecordingId: existing.id,
+                                isrcMatch: false,
+                            });
+                        }
+    
+                        matched++;
+                        needsAttribution = true;
+                        appendNoteIfPossible();
+                        showResult(
+                            list,
+                            row,
+                            chosen.cached ? 'Matched (cached ISRC choice)' : 'Matched',
+                            display + (chosen.circle ? ' - ' + chosen.circle : ''),
+                            chosen.id,
+                        );
+                    } catch (error) {
+                        review++;
+                        showResult(list, row, 'Review', `${display} - ${error.message}`);
+                    }
+                }
+    
+                if (!status.textContent.startsWith('Stopped:')) {
+                    const unchangedText = highlightedMode ? `, ${unchanged} already correct` : '';
+                    status.textContent = `${stopRequested ? 'Stopped' : 'Finished'}: ${matched} matched${unchangedText}, ${review} need review, ${processed}/${rows.length} checked. Review all associations before submitting.`;
+                }
+            } finally {
+                PAGE_WINDOW.__MB_RECORDING_MATCHER_ACTIVE__ = false;
+                running = false;
+                button.disabled = false;
+                isrcButton.disabled = false;
+                removeButton.disabled = false;
+                stop.hidden = true;
+                toggle.hidden = list.children.length === 0;
+                appendNoteIfPossible();
+                updateDuplicateHighlights();
+            }
+        }
+    
+        function runHighlightedMatcher(panel) {
+            const rows = highlightedEditorRows();
+            runMatcher(panel, null, rows, {
+                allowLinked: true,
+                highlighted: true,
+            });
+        }
+    
+        function openIsrcDialog(panel) {
+            if (running || document.getElementById('mb-safe-isrc-dialog')) return;
+            const rows = [...document.querySelectorAll('#recordings tr.track')];
+            const trigger = panel.querySelector('.mb-safe-isrc');
+            const backdrop = document.createElement('div');
+            backdrop.id = 'mb-safe-isrc-dialog';
+            backdrop.style.cssText = 'position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.65);display:flex;align-items:center;justify-content:center;padding:1rem';
+            const dialog = document.createElement('div');
+            dialog.setAttribute('role', 'dialog');
+            dialog.setAttribute('aria-modal', 'true');
+            dialog.setAttribute('aria-labelledby', 'mb-safe-isrc-title');
+            dialog.style.cssText = 'box-sizing:border-box;width:min(42rem,100%);max-height:90vh;overflow:auto;background:Canvas;color:CanvasText;padding:1.25rem;border:1px solid GrayText;border-radius:.4rem;box-shadow:0 .5rem 2rem #0008';
+            dialog.innerHTML = '<h2 id="mb-safe-isrc-title">Match by ISRC</h2>' +
+                '<p>Paste one ISRC per track in release order. A plain list or table works. Include tracks already linked.</p>' +
+                '<label for="mb-safe-isrc-input">ISRCs</label><br>' +
+                '<textarea id="mb-safe-isrc-input" rows="12" style="box-sizing:border-box;width:100%" spellcheck="false" placeholder="NLA321400132\nNLA321400141\nNLA321400142"></textarea>' +
+                '<p class="mb-safe-isrc-error" role="alert"></p>' +
+                '<button type="button" class="mb-safe-isrc-confirm">Match tracks</button> ' +
+                '<button type="button" class="mb-safe-isrc-cancel">Cancel</button>';
+            backdrop.append(dialog);
+            document.body.append(backdrop);
+            const input = dialog.querySelector('textarea');
+            const error = dialog.querySelector('.mb-safe-isrc-error');
+            const confirm = dialog.querySelector('.mb-safe-isrc-confirm');
+            const cancel = dialog.querySelector('.mb-safe-isrc-cancel');
+            const close = () => {
+                backdrop.remove();
+                trigger.focus();
+            };
+            const unavailable = !rows.length || Boolean(document.querySelector('#recordings .edit-recording'));
+            if (unavailable) {
+                error.textContent = 'Open the Recordings tab and load every medium before matching ISRCs.';
+                confirm.disabled = true;
+            } else {
+                dialog.querySelector('p').textContent += ` ${rows.length} tracks are loaded.`;
+            }
+            confirm.addEventListener('click', () => {
+                try {
+                    if (document.querySelector('#recordings .edit-recording') || !trackRowsUnchanged(rows)) {
+                        throw new Error('The track list changed. Close this window and paste the ISRCs again.');
+                    }
+                    const codes = parseIsrcInput(input.value, rows.length);
+                    close();
+                    runMatcher(panel, codes);
+                } catch (cause) {
+                    error.textContent = cause.message;
+                }
+            });
+            cancel.addEventListener('click', close);
+            backdrop.addEventListener('click', event => { if (event.target === backdrop) close(); });
+            backdrop.addEventListener('keydown', event => {
+                if (event.key === 'Escape') close();
+                if (event.key === 'Tab') {
+                    const focusables = [input, confirm, cancel].filter(element => !element.disabled);
+                    if (event.shiftKey && document.activeElement === focusables[0]) {
+                        event.preventDefault();
+                        focusables.at(-1).focus();
+                    } else if (!event.shiftKey && document.activeElement === focusables.at(-1)) {
+                        event.preventDefault();
+                        focusables[0].focus();
+                    }
+                }
+            });
+            input.focus();
+        }
+    
+        function addControls() {
+            if (document.getElementById('mb-safe-recording-matcher')) return true;
+            const container = document.querySelector('#recordings .changes');
+            if (!container) return false;
+            const panel = document.createElement('fieldset');
+            panel.id = 'mb-safe-recording-matcher';
+            panel.innerHTML = '<legend>Recording matcher</legend>' +
+                '<div class="mb-safe-actions">' +
+                    '<button type="button" class="styled-button mb-safe-start">Match unlinked recordings</button>' +
+                    '<button type="button" class="styled-button mb-safe-highlighted">Auto-match highlighted</button>' +
+                    '<button type="button" class="styled-button mb-safe-isrc">Match by ISRC</button>' +
+                    '<button type="button" class="styled-button mb-safe-github-cache">Connect GitHub cache</button>' +
+                    '<button type="button" class="styled-button negative mb-safe-remove-links">Remove all links</button>' +
+                    '<button type="button" class="styled-button mb-safe-stop" hidden>Stop after current track</button>' +
+                    '<button type="button" class="styled-button mb-safe-toggle" hidden>Show results</button>' +
+                '</div>' +
+                '<span class="mb-safe-status" role="status">Duplicate links are bright red. Metadata match: artist circles + title + max 7s. ISRC match: exact ISRC only.</span>' +
+                '<ol class="mb-safe-results" hidden></ol>';
+            panel.querySelector('.mb-safe-start').addEventListener('click', () => runMatcher(panel));
+            panel.querySelector('.mb-safe-highlighted').addEventListener('click', () => runHighlightedMatcher(panel));
+            panel.querySelector('.mb-safe-isrc').addEventListener('click', () => openIsrcDialog(panel));
+            panel.querySelector('.mb-safe-github-cache').addEventListener('click', () => configureGithubCache(panel));
+            panel.querySelector('.mb-safe-remove-links').addEventListener('click', () => removeAllLinks(panel));
+            panel.querySelector('.mb-safe-stop').addEventListener('click', () => { stopRequested = true; });
+            panel.querySelector('.mb-safe-toggle').addEventListener('click', event => {
+                const list = panel.querySelector('.mb-safe-results');
+                list.hidden = !list.hidden;
+                event.currentTarget.textContent = list.hidden ? 'Show results' : 'Hide results';
+            });
+            container.prepend(panel);
+            updateDuplicateHighlights();
+            updateGithubCacheButton(panel);
+            syncGithubCacheQuietly(panel);
+            return true;
+        }
+    
+        const noteRoot = document.getElementById('edit-note');
+        if (noteRoot) new MutationObserver(appendNoteIfPossible).observe(noteRoot, {childList: true, subtree: true});
+        document.getElementById('enter-edit')?.addEventListener('click', appendNoteIfPossible, true);
+        if (!addControls()) {
+            const observer = new MutationObserver(() => { if (addControls()) observer.disconnect(); });
+            observer.observe(document.body, {childList: true, subtree: true});
+        }
+    })();
+    }
+
+})();
