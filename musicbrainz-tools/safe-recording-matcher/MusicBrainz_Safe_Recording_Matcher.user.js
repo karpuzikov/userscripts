@@ -1,14 +1,14 @@
 // ==UserScript==
 // @name         MusicBrainz - Recording Matcher
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.4.0
+// @version      1.4.1
 // @description  Highlight duplicate recording links and match release tracks by metadata, highlighted duplicates, or pasted ISRCs.
 // @author       karpuzikov
 // @license      MIT
 // @match        https://musicbrainz.org/release/*
 // @match        https://beta.musicbrainz.org/release/*
-// @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/safe-recording-matcher/MusicBrainz_Safe_Recording_Matcher.user.js
-// @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/safe-recording-matcher/MusicBrainz_Safe_Recording_Matcher.user.js
+// @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/safe-recording-matcher/MusicBrainz_Safe_Recording_Matcher.user.js?v=1.4.1
+// @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/safe-recording-matcher/MusicBrainz_Safe_Recording_Matcher.user.js?v=1.4.1
 // @grant        none
 // @run-at       document-idle
 // ==/UserScript==
@@ -675,6 +675,39 @@
         return {button, element, model, input, trackLength};
     }
 
+    function recordingEntityFromWs(candidate) {
+        const MB = window.MB;
+        if (!MB?.entity || !UUID.test(candidate?.id || '')) {
+            throw new Error('MusicBrainz recording entity API is unavailable');
+        }
+
+        const parts = Array.isArray(candidate['artist-credit'])
+            ? candidate['artist-credit']
+            : [];
+
+        const artistCredit = {
+            names: parts.map(part => ({
+                artist: {
+                    gid: part?.artist?.id || '',
+                    name: part?.artist?.name || '',
+                    sort_name: part?.artist?.['sort-name'] || '',
+                    entityType: 'artist',
+                },
+                name: part?.name || part?.artist?.name || '',
+                joinPhrase: part?.joinphrase || '',
+            })),
+        };
+
+        return MB.entity({
+            gid: candidate.id,
+            name: candidate.title ?? candidate.name ?? '',
+            length: candidate.length ?? null,
+            artistCredit,
+            video: Boolean(candidate.video),
+            entityType: 'recording',
+        }, 'recording');
+    }
+
     async function selectInEditor(row, track, candidate, editor, options = {}) {
         const {allowLinked = false, expectedRecordingId = null, isrcMatch = false} = options;
         const {button, element, model, input} = editor;
@@ -696,18 +729,39 @@
         const suggestionsIdle = await waitFor(() => !element.querySelector('tr.loading-message'), 8000);
         if (!suggestionsIdle) throw new Error('MusicBrainz suggestions are still loading');
         assertCurrentTarget();
-        const suggested = [...element.querySelectorAll('input[data-change="recording"]')]
-            .find(radio => radio.value.toLowerCase() === candidate.id.toLowerCase());
-        if (suggested) {
-            assertCurrentTarget();
-            suggested.click();
+
+        if (isrcMatch) {
+            /*
+             * Exact ISRC lookup already resolved the recording MBID. Do not rely
+             * on MusicBrainz's native suggestion list or autocomplete to contain
+             * that recording: track artist credits can differ only by join phrase
+             * (for example "GIMS & Leto" vs "GIMS feat. Leto"), which can hide the
+             * correct recording from native suggestions.
+             */
+            const targetTrack = model.currentTrack?.();
+            if (!targetTrack || typeof targetTrack.recording !== 'function') {
+                throw new Error('MusicBrainz recording model is unavailable');
+            }
+            const entity = recordingEntityFromWs(candidate);
+            targetTrack.recording(entity);
+            if (typeof targetTrack.hasNewRecording === 'function') {
+                targetTrack.hasNewRecording(false);
+            }
         } else {
-            if (!input) throw new Error('The recording search field is unavailable');
-            await throttle();
-            assertCurrentTarget();
-            input.value = candidate.id;
-            input.dispatchEvent(new Event('input', {bubbles: true}));
+            const suggested = [...element.querySelectorAll('input[data-change="recording"]')]
+                .find(radio => radio.value.toLowerCase() === candidate.id.toLowerCase());
+            if (suggested) {
+                assertCurrentTarget();
+                suggested.click();
+            } else {
+                if (!input) throw new Error('The recording search field is unavailable');
+                await throttle();
+                assertCurrentTarget();
+                input.value = candidate.id;
+                input.dispatchEvent(new Event('input', {bubbles: true}));
+            }
         }
+
         const linked = await waitFor(() => {
             const current = readLinkedRecording(row);
             return current.id?.toLowerCase() === candidate.id.toLowerCase() ? current : null;
