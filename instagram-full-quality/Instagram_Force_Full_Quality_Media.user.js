@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Instagram Force Full Quality Media
 // @namespace    https://www.instagram.com/
-// @version      4.1.0
+// @version      4.2.0
 // @description  Forces the highest-quality Instagram post/Reel media while leaving profile/search/explore thumbnails untouched.
 // @match        https://www.instagram.com/*
 // @run-at       document-start
@@ -18,7 +18,8 @@
         RESCAN_MS: 900,
         MIN_IMAGE_SIDE: 220,
         MIN_VIDEO_SIDE: 180,
-        API_RETRY_MS: 6000
+        API_RETRY_MS: 6000,
+        DOWNLOAD_GAP_MS: 250
     };
 
     const IG_APP_ID_FALLBACK = '936619743392459';
@@ -940,6 +941,199 @@
         return false;
     }
 
+    function mediaDownloadItems(record) {
+        if (!record) return [];
+
+        const sourceItems = record.carousel_media?.length
+            ? record.carousel_media
+            : [record];
+
+        const out = [];
+
+        sourceItems.forEach((item, index) => {
+            const video = allVideoCandidates(item)[0];
+
+            if (video?.url) {
+                out.push({
+                    url: video.url,
+                    extension: 'mp4',
+                    index: index + 1
+                });
+                return;
+            }
+
+            const image = bestImage(item);
+
+            if (image?.url) {
+                out.push({
+                    url: image.url,
+                    extension: 'jpg',
+                    index: index + 1
+                });
+            }
+        });
+
+        return out;
+    }
+
+    function sleep(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    async function downloadUrl(url, filename) {
+        try {
+            const response = await fetch(url, {
+                method: 'GET',
+                credentials: 'omit',
+                cache: 'no-store'
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+
+            const blob = await response.blob();
+            const objectUrl = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+
+            link.href = objectUrl;
+            link.download = filename;
+            link.style.display = 'none';
+
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+
+            setTimeout(() => URL.revokeObjectURL(objectUrl), 30000);
+            return true;
+        } catch (error) {
+            log('blob download failed, opening direct URL', error);
+
+            const link = document.createElement('a');
+            link.href = url;
+            link.target = '_blank';
+            link.rel = 'noopener noreferrer';
+            link.style.display = 'none';
+
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+
+            return false;
+        }
+    }
+
+    async function downloadRecord(code, record, button) {
+        const items = mediaDownloadItems(record);
+        if (!items.length) return;
+
+        const originalText = button.title;
+        button.disabled = true;
+        button.style.opacity = '0.65';
+
+        try {
+            for (let i = 0; i < items.length; i++) {
+                const item = items[i];
+                const suffix = items.length > 1
+                    ? `_${String(item.index).padStart(2, '0')}`
+                    : '';
+
+                button.title = `Downloading ${i + 1}/${items.length}`;
+
+                await downloadUrl(
+                    item.url,
+                    `Instagram_${code}${suffix}.${item.extension}`
+                );
+
+                if (i + 1 < items.length) {
+                    await sleep(CFG.DOWNLOAD_GAP_MS);
+                }
+            }
+        } finally {
+            button.disabled = false;
+            button.style.opacity = '';
+            button.title = originalText;
+        }
+    }
+
+    function ensureDownloadButton(context, code, record) {
+        if (!context || !code || !record) return;
+
+        let button = context.querySelector(
+            ':scope > .__ig_hq_download_button'
+        );
+
+        if (!button) {
+            button = document.createElement('button');
+            button.type = 'button';
+            button.className = '__ig_hq_download_button';
+            button.title = 'Download highest quality media';
+            button.setAttribute(
+                'aria-label',
+                'Download highest quality media'
+            );
+
+            button.innerHTML =
+                '<svg viewBox="0 0 24 24" aria-hidden="true">' +
+                '<path d="M12 3v11m0 0 4-4m-4 4-4-4M5 18v2h14v-2" ' +
+                'fill="none" stroke="currentColor" stroke-width="2" ' +
+                'stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+            Object.assign(button.style, {
+                position: 'absolute',
+                top: '10px',
+                right: '10px',
+                zIndex: '2147483646',
+                width: '36px',
+                height: '36px',
+                display: 'grid',
+                placeItems: 'center',
+                padding: '0',
+                border: '0',
+                borderRadius: '50%',
+                background: 'rgba(0,0,0,.72)',
+                color: '#fff',
+                cursor: 'pointer',
+                boxShadow: '0 1px 4px rgba(0,0,0,.35)'
+            });
+
+            const svg = button.querySelector('svg');
+            Object.assign(svg.style, {
+                width: '20px',
+                height: '20px',
+                pointerEvents: 'none'
+            });
+
+            button.addEventListener('mouseenter', () => {
+                button.style.background = 'rgba(0,0,0,.88)';
+            });
+
+            button.addEventListener('mouseleave', () => {
+                button.style.background = 'rgba(0,0,0,.72)';
+            });
+
+            button.addEventListener('click', event => {
+                event.preventDefault();
+                event.stopPropagation();
+
+                const activeCode = button.dataset.igCode || code;
+                const activeRecord = mediaByCode.get(activeCode);
+
+                if (activeRecord) {
+                    downloadRecord(activeCode, activeRecord, button);
+                }
+            });
+
+            if (getComputedStyle(context).position === 'static') {
+                context.style.position = 'relative';
+            }
+
+            context.appendChild(button);
+        }
+
+        button.dataset.igCode = code;
+    }
+
     function contextCode(context) {
         if (!(context instanceof Element)) return null;
 
@@ -1065,6 +1259,7 @@
 
             if (record) {
                 applyRecordToContext(context, record);
+                ensureDownloadButton(context, code, record);
             }
 
             // Primary metadata path. A completed fetch schedules another pass.
@@ -1153,5 +1348,5 @@
 
     observeDom();
 
-    console.info('[IG HQ] v4.1 active');
+    console.info('[IG HQ] v4.2 active');
 })();
