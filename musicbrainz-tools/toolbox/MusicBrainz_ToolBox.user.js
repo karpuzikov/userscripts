@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MusicBrainz ToolBox
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.0.1
+// @version      1.0.2
 // @description  Combined MusicBrainz release-editor, recording, barcode, search, cover-art, Disc ID, and duplicate-edit tools.
 // @author       karpuzikov
 // @license      MIT
@@ -42,6 +42,83 @@
     function __mbToolBoxShouldRun(matches, excludes = []) {
         return matches.some(__mbToolBoxPattern) && !excludes.some(__mbToolBoxPattern);
     }
+
+    function __mbToolBoxSetStatusKind(node, kind = '') {
+        if (!node) return;
+        node.classList.remove('error', 'success');
+        if (kind === 'bad' || kind === 'error') node.classList.add('error');
+        if (kind === 'ok' || kind === 'success') node.classList.add('success');
+    }
+
+    function __mbToolBoxInstallNativeUiStyles() {
+        if (document.getElementById('mb-toolbox-native-ui-style')) return;
+
+        const style = document.createElement('style');
+        style.id = 'mb-toolbox-native-ui-style';
+        style.textContent = `
+            .mb-toolbox-native-panel { margin-bottom: 1em; }
+            .mb-toolbox-native-actions { margin: .5em 0; }
+            .mb-toolbox-native-status { display: block; margin: .5em 0; }
+            .mb-tvr-diff { display: flex; align-items: center; gap: .4em; min-width: 0; }
+            .mb-tvr-value { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+            .mb-tvr-replace.styled-button { min-width: 0; padding: 2px 6px; }
+            #mb-safe-isrc-dialog { margin-top: 1em; }
+            #mb-safe-isrc-dialog textarea { width: 100%; min-height: 12em; }
+            #mb-safe-isrc-dialog .buttons { margin-top: .5em; }
+            #mb-duplicate-edit-checker-modal,
+            #mb-barcode-checker-results {
+                position: fixed;
+                inset: 0;
+                z-index: 100000;
+                display: flex;
+                align-items: flex-start;
+                justify-content: center;
+                padding: 4vh 18px;
+                overflow: auto;
+                background: rgba(0, 0, 0, .55);
+            }
+            #mb-duplicate-edit-checker-modal .mb-dec-dialog,
+            #mb-barcode-checker-results .mb-bc-dialog {
+                box-sizing: border-box;
+                width: min(760px, 96vw);
+                max-height: 92vh;
+                overflow: auto;
+                padding: 12px;
+                background: #fff;
+                border: 1px solid #ccc;
+                border-radius: 6px;
+            }
+            #mb-duplicate-edit-checker-modal .mb-dec-summary { width: 100%; margin: .75em 0; }
+            #mb-duplicate-edit-checker-modal .mb-dec-summary th,
+            #mb-duplicate-edit-checker-modal .mb-dec-summary td { text-align: center; }
+            #mb-duplicate-edit-checker-modal .mb-dec-list { max-height: 260px; overflow: auto; }
+            #mb-duplicate-edit-checker-modal .mb-dec-buttons,
+            #mb-barcode-checker-results .mb-bc-actions,
+            #mb-barcode-checker-results .mb-bc-header-actions { margin-top: .75em; }
+            #mb-barcode-checker-results .mb-bc-release {
+                margin: .75em 0;
+                padding: .75em;
+                border: 1px solid #ccc;
+                border-radius: 6px;
+            }
+            #mb-barcode-checker-block { margin-bottom: 6px; box-sizing: border-box; }
+            #mb-barcode-checker-block .styled-button {
+                width: 100%;
+                box-sizing: border-box;
+                margin-bottom: 4px;
+            }
+            #mb-barcode-checker-status {
+                margin-top: 5px;
+                text-align: left;
+                font-size: 90%;
+                line-height: 1.3;
+                overflow-wrap: anywhere;
+            }
+        `;
+        document.head.appendChild(style);
+    }
+
+    __mbToolBoxInstallNativeUiStyles();
 
     // ============================================================================
     // Auto-Select Single Disc ID Artist
@@ -303,11 +380,12 @@
     
             const container = editor.closest('.external-links-editor-container') || editor;
             const toolbar = document.createElement('div');
-            toolbar.style.margin = '0 0 0.75em';
-    
+            toolbar.className = 'buttons mb-toolbox-native-actions';
+
             const button = document.createElement('button');
             button.type = 'button';
             button.id = BUTTON_ID;
+            button.className = 'negative';
             button.textContent = 'Remove all external links';
             button.addEventListener('click', () => removeAllExternalLinks(button));
     
@@ -439,9 +517,10 @@
                 button = document.createElement('button');
                 button.id = BUTTON_ID;
                 button.type = 'button';
+                button.className = 'styled-button';
                 button.textContent = 'Fill Dates';
                 button.style.display = 'block';
-                button.style.margin = '0 0 6px 0';
+                button.style.marginBottom = '6px';
                 button.addEventListener('click', () => fillDates(button));
             }
     
@@ -615,6 +694,7 @@
             const button = document.createElement('button');
             button.type = 'button';
             button.id = BUTTON_ID;
+            button.className = 'styled-button';
             button.textContent = 'Replace with [Worldwide]';
             button.style.marginLeft = '0.5em';
             button.addEventListener('click', () => replaceEvents(button));
@@ -920,61 +1000,9 @@
         }
     
         function installStyle() {
-            if (document.getElementById(STYLE_ID)) return;
-    
-            const style = document.createElement('style');
-            style.id = STYLE_ID;
-            style.textContent = `
-                tr.${DIFF_ROW_CLASS} > td {
-                    padding-top: 2px;
-                    padding-bottom: 6px;
-                    vertical-align: middle;
-                }
-    
-                tr.${DIFF_ROW_CLASS} > td.mb-tvr-diff-cell {
-                    font-size: 12px;
-                }
-    
-                .mb-tvr-diff {
-                    display: flex;
-                    align-items: center;
-                    gap: 6px;
-                    min-width: 0;
-                }
-    
-                .mb-tvr-value {
-                    overflow: hidden;
-                    text-overflow: ellipsis;
-                    white-space: nowrap;
-                    min-width: 0;
-                }
-    
-                .mb-tvr-track-value {
-                    text-decoration: line-through;
-                    opacity: .8;
-                }
-    
-                .mb-tvr-recording-value {
-                    font-weight: 600;
-                }
-    
-                .mb-tvr-replace {
-                    min-width: 28px;
-                    padding: 0 7px;
-                    font-weight: 700;
-                    line-height: 20px;
-                    cursor: pointer;
-                    flex: 0 0 auto;
-                }
-    
-                .mb-tvr-replace[disabled] {
-                    cursor: default;
-                    opacity: .55;
-                }
-            `;
-            document.head.appendChild(style);
+            // Shared Toolbox CSS supplies layout only; visual styling is native MusicBrainz.
         }
-    
+
         function appendScriptLinkToEditNote() {
             const ed = editor();
             const editNote = ed?.rootField?.editNote;
@@ -1220,18 +1248,21 @@
     
         function createDiffRow(track, trackRow) {
             const diffRow = document.createElement('tr');
-            diffRow.className = DIFF_ROW_CLASS;
+            diffRow.className = 'track ' + DIFF_ROW_CLASS;
             diffRow.dataset.trackId = String(track.elementID || '');
-    
+
             const reorder = document.createElement('td');
+            reorder.className = 'reorder';
             const position = document.createElement('td');
+            position.className = 'position';
             const title = document.createElement('td');
+            title.className = 'title mb-tvr-diff-cell mb-tvr-title-cell';
             const artist = document.createElement('td');
+            artist.className = 'artist mb-tvr-diff-cell mb-tvr-artist-cell';
             const length = document.createElement('td');
+            length.className = 'length';
             const icon = document.createElement('td');
-    
-            title.className = 'mb-tvr-diff-cell mb-tvr-title-cell';
-            artist.className = 'mb-tvr-diff-cell mb-tvr-artist-cell';
+            icon.className = 'icon';
     
             diffRow.append(reorder, position, title, artist, length, icon);
             trackRow.insertAdjacentElement('afterend', diffRow);
@@ -1249,7 +1280,7 @@
         function replaceButton(title, onClick) {
             const button = document.createElement('button');
             button.type = 'button';
-            button.className = 'mb-tvr-replace';
+            button.className = 'styled-button mb-tvr-replace';
             button.textContent = '<';
             button.title = title;
             button.addEventListener('click', onClick);
@@ -1853,7 +1884,7 @@
             const status = document.getElementById(STATUS_ID);
             if (!status) return;
             status.textContent = message;
-            status.dataset.kind = kind;
+            __mbToolBoxSetStatusKind(status, kind);
         }
     
         function setButtonsDisabled(disabled) {
@@ -2031,54 +2062,46 @@
     
         function insertButtons() {
             if (document.getElementById(WRAPPER_ID)) return true;
-    
+
             const tracklist = document.getElementById('tracklist');
             if (!tracklist) return false;
-    
-            const wrapper = document.createElement('div');
+
+            const wrapper = document.createElement('fieldset');
             wrapper.id = WRAPPER_ID;
-            wrapper.style.cssText = [
-                'display:flex',
-                'align-items:center',
-                'gap:8px',
-                'flex-wrap:wrap',
-                'margin:0 0 12px 0',
-                'padding:10px',
-                'border:1px solid #bbb',
-                'border-radius:4px',
-            ].join(';');
-    
+            wrapper.className = 'mb-toolbox-native-panel';
+
+            const legend = document.createElement('legend');
+            legend.textContent = 'Recording data';
+
+            const actions = document.createElement('div');
+            actions.className = 'buttons mb-toolbox-native-actions';
+
             const titleButton = document.createElement('button');
             titleButton.id = TITLE_BUTTON_ID;
             titleButton.type = 'button';
             titleButton.textContent = 'Copy recording titles to tracks';
             titleButton.title = 'Replace track titles with the titles of their linked MusicBrainz recordings';
             titleButton.addEventListener('click', copyRecordingTitles);
-    
+
             const artistButton = document.createElement('button');
             artistButton.id = ARTIST_BUTTON_ID;
             artistButton.type = 'button';
             artistButton.textContent = 'Copy recording artist credits to tracks';
             artistButton.title = 'Replace track artist credits with the exact artist credits of their linked MusicBrainz recordings';
             artistButton.addEventListener('click', copyRecordingArtistCredits);
-    
+
             const status = document.createElement('span');
             status.id = STATUS_ID;
-            status.style.marginLeft = '2px';
-    
-            wrapper.append(titleButton, artistButton, status);
+            status.className = 'mb-toolbox-native-status';
+            status.setAttribute('role', 'status');
+
+            actions.append(titleButton, artistButton);
+            wrapper.append(legend, actions, status);
             tracklist.insertBefore(wrapper, tracklist.firstChild);
-    
-            const style = document.createElement('style');
-            style.textContent = `
-                #${STATUS_ID}[data-kind="ok"] { color: #087a28; }
-                #${STATUS_ID}[data-kind="bad"] { color: #b00020; }
-            `;
-            document.head.appendChild(style);
-    
+
             return true;
         }
-    
+
         installManualRecordingChoiceCache();
     
         if (!insertButtons()) {
@@ -2182,13 +2205,11 @@
     
             status = document.createElement('span');
             status.id = STATUS_ID;
+            status.className = 'mb-toolbox-native-status';
             status.setAttribute('role', 'status');
-            status.style.cssText = [
-                'display:none',
-                'margin-right:12px',
-                'font-weight:600',
-                'vertical-align:middle',
-            ].join(';');
+            status.hidden = true;
+            status.style.display = 'inline-block';
+            status.style.marginRight = '0.75em';
             submit.parentElement.insertBefore(status, submit);
             return status;
         }
@@ -2198,12 +2219,8 @@
             if (!status) return;
     
             status.textContent = message || '';
-            status.style.display = message ? 'inline-block' : 'none';
-            status.style.color = kind === 'error'
-                ? '#a40000'
-                : kind === 'success'
-                    ? '#246b2f'
-                    : '';
+            status.hidden = !message;
+            __mbToolBoxSetStatusKind(status, kind);
         }
     
         function setSubmitButtonBusy(busy) {
@@ -2580,62 +2597,13 @@
         }
     
         function addModalStyles() {
-            if (document.getElementById('mb-duplicate-edit-checker-style')) return;
-            const style = document.createElement('style');
-            style.id = 'mb-duplicate-edit-checker-style';
-            style.textContent = `
-    #${MODAL_ID} {
-      position: fixed;
-      inset: 0;
-      z-index: 100000;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 24px;
-      background: rgba(0, 0, 0, .55);
-    }
-    #${MODAL_ID} .mb-dec-dialog {
-      width: min(760px, calc(100vw - 48px));
-      max-height: calc(100vh - 48px);
-      overflow: auto;
-      box-sizing: border-box;
-      padding: 20px;
-      border: 1px solid #aaa;
-      border-radius: 6px;
-      background: Canvas;
-      color: CanvasText;
-      box-shadow: 0 12px 40px rgba(0, 0, 0, .35);
-    }
-    #${MODAL_ID} h2 { margin: 0 0 14px; }
-    #${MODAL_ID} .mb-dec-summary {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(110px, 1fr));
-      gap: 8px;
-      margin: 12px 0 16px;
-    }
-    #${MODAL_ID} .mb-dec-stat {
-      padding: 10px;
-      border: 1px solid #bbb;
-      border-radius: 4px;
-      text-align: center;
-    }
-    #${MODAL_ID} .mb-dec-stat strong { display: block; font-size: 1.35em; }
-    #${MODAL_ID} details { margin: 12px 0; }
-    #${MODAL_ID} .mb-dec-list { max-height: 260px; overflow: auto; margin: 8px 0 0 20px; }
-    #${MODAL_ID} .mb-dec-buttons { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; margin-top: 18px; }
-    #${MODAL_ID} .mb-dec-buttons button { margin: 0; }
-    #${MODAL_ID} .mb-dec-error { color: #a40000; white-space: pre-wrap; }
-    @media (max-width: 650px) {
-      #${MODAL_ID} .mb-dec-summary { grid-template-columns: repeat(2, 1fr); }
-    }
-    `;
-            document.head.appendChild(style);
+            // Shared Toolbox native-UI CSS handles the dialog layout.
         }
-    
+
         function closeModal() {
             document.getElementById(MODAL_ID)?.remove();
         }
-    
+
         function makeButton(label, className, value, resolve) {
             const button = document.createElement('button');
             button.type = 'button';
@@ -2647,7 +2615,7 @@
             });
             return button;
         }
-    
+
         function openEditLink(id) {
             const link = document.createElement('a');
             link.href = `/edit/${id}`;
@@ -2656,64 +2624,91 @@
             link.textContent = `Edit #${id}`;
             return link;
         }
-    
+
+        function appendDialog(root) {
+            (document.getElementById('release-editor') || document.body).appendChild(root);
+        }
+
+        function createDialogShell(title) {
+            const overlay = document.createElement('div');
+            overlay.id = MODAL_ID;
+            overlay.setAttribute('role', 'dialog');
+            overlay.setAttribute('aria-modal', 'true');
+
+            const dialog = document.createElement('fieldset');
+            dialog.className = 'mb-dec-dialog';
+
+            const legend = document.createElement('legend');
+            legend.textContent = title;
+            dialog.appendChild(legend);
+            overlay.appendChild(dialog);
+
+            return {overlay, dialog};
+        }
+
+        function buildSummaryTable(result) {
+            const table = document.createElement('table');
+            table.className = 'tbl mb-dec-summary';
+
+            const head = document.createElement('thead');
+            const headRow = document.createElement('tr');
+            const body = document.createElement('tbody');
+            const valueRow = document.createElement('tr');
+
+            const stats = [
+                ['Proposed', result.total],
+                ['Already pending', result.pendingCount],
+                ['Repeated here', result.repeatedCount],
+                ['New', result.newCount],
+            ];
+
+            for (const [label, value] of stats) {
+                const th = document.createElement('th');
+                th.textContent = label;
+                headRow.appendChild(th);
+
+                const td = document.createElement('td');
+                td.textContent = String(value);
+                valueRow.appendChild(td);
+            }
+
+            head.appendChild(headRow);
+            body.appendChild(valueRow);
+            table.append(head, body);
+            return table;
+        }
+
         function showDuplicateDialog(result) {
-            addModalStyles();
             closeModal();
-    
+
             return new Promise(resolve => {
-                const overlay = document.createElement('div');
-                overlay.id = MODAL_ID;
-                overlay.setAttribute('role', 'dialog');
-                overlay.setAttribute('aria-modal', 'true');
-    
-                const dialog = document.createElement('div');
-                dialog.className = 'mb-dec-dialog';
-                overlay.appendChild(dialog);
-    
-                const heading = document.createElement('h2');
-                heading.textContent = result.newCount
-                    ? 'Duplicate pending edits found'
-                    : 'All proposed edits are duplicates';
-                dialog.appendChild(heading);
-    
+                const {overlay, dialog} = createDialogShell(
+                    result.newCount
+                        ? 'Duplicate pending edits found'
+                        : 'All proposed edits are duplicates'
+                );
+
                 const intro = document.createElement('p');
                 intro.textContent = result.newCount
                     ? 'Exact duplicates will be skipped as one batch. No existing MusicBrainz edits are cancelled or changed.'
                     : 'Nothing new needs to be submitted. No existing MusicBrainz edits are cancelled or changed.';
                 dialog.appendChild(intro);
-    
-                const summary = document.createElement('div');
-                summary.className = 'mb-dec-summary';
-                const stats = [
-                    ['Proposed', result.total],
-                    ['Already pending', result.pendingCount],
-                    ['Repeated here', result.repeatedCount],
-                    ['New', result.newCount],
-                ];
-                for (const [label, value] of stats) {
-                    const stat = document.createElement('div');
-                    stat.className = 'mb-dec-stat';
-                    const strong = document.createElement('strong');
-                    strong.textContent = String(value);
-                    stat.append(strong, document.createTextNode(label));
-                    summary.appendChild(stat);
-                }
-                dialog.appendChild(summary);
-    
+                dialog.appendChild(buildSummaryTable(result));
+
                 if (result.pendingCount) {
                     const details = document.createElement('details');
                     const summaryNode = document.createElement('summary');
                     summaryNode.textContent = `Show pending duplicates (${result.pendingCount})`;
                     details.appendChild(summaryNode);
-    
+
                     const list = document.createElement('ol');
                     list.className = 'mb-dec-list';
                     const shown = new Set();
+
                     for (const proposal of result.proposals) {
                         if (!result.pendingHashes.has(proposal.hash) || shown.has(proposal.hash)) continue;
                         shown.add(proposal.hash);
-    
+
                         const item = document.createElement('li');
                         item.append(document.createTextNode(`${proposal.editName} - `));
                         const ids = [...(result.matchesByHash.get(proposal.hash) || [])];
@@ -2723,19 +2718,20 @@
                         });
                         list.appendChild(item);
                     }
+
                     details.appendChild(list);
                     dialog.appendChild(details);
                 }
-    
+
                 if (result.repeatedCount) {
                     const note = document.createElement('p');
                     note.textContent = `${result.repeatedCount} duplicate edit${result.repeatedCount === 1 ? '' : 's'} also appear more than once in this same submission; only the first copy will be kept.`;
                     dialog.appendChild(note);
                 }
-    
+
                 const buttons = document.createElement('div');
-                buttons.className = 'mb-dec-buttons';
-    
+                buttons.className = 'buttons mb-dec-buttons';
+
                 if (result.newCount > 0) {
                     buttons.appendChild(makeButton(
                         `Submit ${result.newCount} new edit${result.newCount === 1 ? '' : 's'}`,
@@ -2746,7 +2742,7 @@
                 } else {
                     buttons.appendChild(makeButton('Close', 'positive', 'cancel', resolve));
                 }
-    
+
                 buttons.appendChild(makeButton(
                     `Submit all ${result.total} anyway`,
                     '',
@@ -2754,52 +2750,40 @@
                     resolve,
                 ));
                 buttons.appendChild(makeButton('Cancel', 'negative', 'cancel', resolve));
+
                 dialog.appendChild(buttons);
-    
-                document.body.appendChild(overlay);
+                appendDialog(overlay);
                 dialog.querySelector('button')?.focus();
             });
         }
-    
+
         function showErrorDialog(error) {
-            addModalStyles();
             closeModal();
-    
+
             return new Promise(resolve => {
-                const overlay = document.createElement('div');
-                overlay.id = MODAL_ID;
-                overlay.setAttribute('role', 'dialog');
-                overlay.setAttribute('aria-modal', 'true');
-    
-                const dialog = document.createElement('div');
-                dialog.className = 'mb-dec-dialog';
-                overlay.appendChild(dialog);
-    
-                const heading = document.createElement('h2');
-                heading.textContent = 'Duplicate check failed';
-                dialog.appendChild(heading);
-    
+                const {overlay, dialog} = createDialogShell('Duplicate check failed');
+
                 const message = document.createElement('p');
-                message.className = 'mb-dec-error';
+                message.className = 'error';
                 message.textContent = String(error?.message || error || 'Unknown error');
                 dialog.appendChild(message);
-    
+
                 const explanation = document.createElement('p');
                 explanation.textContent = 'No edits have been submitted. Retry the check, submit everything without filtering, or cancel.';
                 dialog.appendChild(explanation);
-    
+
                 const buttons = document.createElement('div');
-                buttons.className = 'mb-dec-buttons';
+                buttons.className = 'buttons mb-dec-buttons';
                 buttons.appendChild(makeButton('Retry duplicate check', 'positive', 'retry', resolve));
                 buttons.appendChild(makeButton('Submit all anyway', '', 'submit-all', resolve));
                 buttons.appendChild(makeButton('Cancel', 'negative', 'cancel', resolve));
                 dialog.appendChild(buttons);
-    
-                document.body.appendChild(overlay);
+
+                appendDialog(overlay);
                 dialog.querySelector('button')?.focus();
             });
         }
-    
+
         function installSubmissionFilters(ed) {
             if (ed.__mbDuplicateEditCheckerFiltersInstalled) return;
     
@@ -4303,31 +4287,30 @@
     
         function showEditBanner(task, removed, missing) {
             document.getElementById('mb-barcode-link-checker-edit-banner')?.remove();
-    
+
             const banner = document.createElement('div');
             banner.id = 'mb-barcode-link-checker-edit-banner';
-            banner.style.cssText = [
-                'margin:10px 0',
-                'padding:10px 12px',
-                'border:1px solid #b58b00',
-                'border-radius:5px',
-                'background:#fff7cf',
-                'color:#222',
-                'font-weight:600',
-            ].join(';');
-    
+            banner.className = 'warning';
+
+            const paragraph = document.createElement('p');
+            const label = document.createElement('strong');
+            label.textContent = 'Note: ';
+            paragraph.appendChild(label);
+
             const parts = ['Barcode/link checker staged this correction. Review every change before submitting.'];
             if (task.newBarcode) parts.push(`Barcode staged: ${task.newBarcode}.`);
             if (task.addLinks?.length) parts.push(`Added link seeds: ${task.addLinks.length}.`);
             if (task.removeUrls?.length) parts.push(`Wrong links removed from editor: ${removed}/${task.removeUrls.length}.`);
             if (missing.length) parts.push(`Could not locate for automatic removal: ${missing.join(', ')}.`);
-            banner.textContent = parts.join(' ');
-    
+
+            paragraph.appendChild(document.createTextNode(parts.join(' ')));
+            banner.appendChild(paragraph);
+
             const editor = document.getElementById('release-editor');
             if (editor?.parentElement) editor.parentElement.insertBefore(banner, editor);
             else document.body.prepend(banner);
         }
-    
+
         async function applyPendingEditTask() {
             cleanupExpiredTasks();
             const taskId = resolvePendingTaskId();
@@ -4409,76 +4392,110 @@
     
         function showResults(results) {
             document.getElementById('mb-barcode-checker-results')?.remove();
-    
+
             const problematic = results
-                .map((result, index) => ({ result, index }))
-                .filter(({ result }) => resultStatus(result) !== 'OK');
+                .map((result, index) => ({result, index}))
+                .filter(({result}) => resultStatus(result) !== 'OK');
             const corrections = problematic
-                .filter(({ result }) => hasCorrection(result.correction));
-    
+                .filter(({result}) => hasCorrection(result.correction));
+
             const overlay = document.createElement('div');
             overlay.id = 'mb-barcode-checker-results';
-            overlay.innerHTML = `
-                <div class="mb-bc-dialog">
-                    <div class="mb-bc-header">
-                        <h2>Barcode/link problems</h2>
-                        <button type="button" class="mb-bc-close">Close</button>
-                    </div>
-                    <div class="mb-bc-list">
-                        ${problematic.length
-                            ? problematic.map(({ result, index }) => `
-                                <section class="mb-bc-release">
-                                    <h3><a href="/release/${escapeHtml(result.release.id)}" target="_blank">${escapeHtml(result.release.title)}</a></h3>
-                                    <div>${escapeHtml(problemSummary(result))}</div>
-                                    ${hasCorrection(result.correction)
-                                        ? `<button type="button" class="mb-bc-open-one positive" data-result-index="${index}">Open correcting edit</button>`
-                                        : ''}
-                                </section>
-                            `).join('')
-                            : '<strong>No problems found.</strong>'}
-                    </div>
-                    ${corrections.length
-                        ? `<div class="mb-bc-actions"><button type="button" class="mb-bc-open-all positive">Open correcting edits (${corrections.length})</button></div>`
-                        : ''}
-                </div>
-            `;
-    
-            const style = document.createElement('style');
-            style.textContent = `
-                #mb-barcode-checker-results { position:fixed; inset:0; z-index:100000; background:rgba(0,0,0,.55); display:flex; align-items:flex-start; justify-content:center; padding:4vh 18px; overflow:auto; }
-                #mb-barcode-checker-results .mb-bc-dialog { background:#fff; color:#222; width:min(720px, 96vw); max-height:92vh; overflow:auto; border-radius:7px; padding:16px; box-shadow:0 12px 40px rgba(0,0,0,.35); }
-                #mb-barcode-checker-results .mb-bc-header { display:flex; align-items:center; justify-content:space-between; gap:15px; border-bottom:1px solid #ccc; margin-bottom:12px; }
-                #mb-barcode-checker-results .mb-bc-header h2 { margin:0 0 10px; }
-                #mb-barcode-checker-results .mb-bc-release { border:1px solid #ccc; border-radius:5px; margin:10px 0; padding:10px; }
-                #mb-barcode-checker-results .mb-bc-release h3 { margin:0 0 6px; }
-                #mb-barcode-checker-results .mb-bc-release button { margin-top:8px; }
-                #mb-barcode-checker-results .mb-bc-actions { position:sticky; bottom:0; background:#fff; border-top:1px solid #ccc; padding:12px 0 2px; text-align:right; }
-            `;
-            document.head.appendChild(style);
-            document.body.appendChild(overlay);
-    
-            overlay.querySelector('.mb-bc-close').addEventListener('click', () => overlay.remove());
+
+            const dialog = document.createElement('fieldset');
+            dialog.className = 'mb-bc-dialog';
+
+            const legend = document.createElement('legend');
+            legend.textContent = 'Barcode/link problems';
+            dialog.appendChild(legend);
+
+            const headerActions = document.createElement('div');
+            headerActions.className = 'buttons mb-bc-header-actions';
+            const close = document.createElement('button');
+            close.type = 'button';
+            close.className = 'mb-bc-close';
+            close.textContent = 'Close';
+            headerActions.appendChild(close);
+            dialog.appendChild(headerActions);
+
+            if (problematic.length) {
+                for (const {result, index} of problematic) {
+                    const release = document.createElement('fieldset');
+                    release.className = 'mb-bc-release';
+
+                    const releaseLegend = document.createElement('legend');
+                    const link = document.createElement('a');
+                    link.href = '/release/' + result.release.id;
+                    link.target = '_blank';
+                    link.rel = 'noopener noreferrer';
+                    link.textContent = result.release.title;
+                    releaseLegend.appendChild(link);
+                    release.appendChild(releaseLegend);
+
+                    const summary = document.createElement('p');
+                    summary.textContent = problemSummary(result);
+                    release.appendChild(summary);
+
+                    if (hasCorrection(result.correction)) {
+                        const actions = document.createElement('div');
+                        actions.className = 'buttons';
+                        const button = document.createElement('button');
+                        button.type = 'button';
+                        button.className = 'positive mb-bc-open-one';
+                        button.dataset.resultIndex = String(index);
+                        button.textContent = 'Open correcting edit';
+                        actions.appendChild(button);
+                        release.appendChild(actions);
+                    }
+
+                    dialog.appendChild(release);
+                }
+            } else {
+                const success = document.createElement('p');
+                success.className = 'success';
+                success.textContent = 'No problems found.';
+                dialog.appendChild(success);
+            }
+
+            if (corrections.length) {
+                const actions = document.createElement('div');
+                actions.className = 'buttons mb-bc-actions';
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = 'positive mb-bc-open-all';
+                button.textContent = `Open correcting edits (${corrections.length})`;
+                actions.appendChild(button);
+                dialog.appendChild(actions);
+            }
+
+            overlay.appendChild(dialog);
+            (document.getElementById('content') || document.body).appendChild(overlay);
+
+            close.addEventListener('click', () => overlay.remove());
             overlay.addEventListener('click', event => {
                 if (event.target === overlay) overlay.remove();
             });
-    
+
             for (const button of overlay.querySelectorAll('.mb-bc-open-one')) {
                 button.addEventListener('click', () => {
                     const result = results[Number(button.dataset.resultIndex)];
                     openCorrection(result.correction);
                 });
             }
-    
+
             overlay.querySelector('.mb-bc-open-all')?.addEventListener('click', () => {
-                for (const { result } of corrections) openCorrection(result.correction);
+                for (const {result} of corrections) openCorrection(result.correction);
             });
         }
-    
+
         function setSidebarStatus(text, kind = '') {
             const node = document.getElementById('mb-barcode-checker-status');
             if (!node) return;
             node.textContent = text;
-            node.dataset.kind = kind;
+            __mbToolBoxSetStatusKind(
+                node,
+                kind === 'bad' ? 'error' : kind === 'ok' ? 'success' : ''
+            );
         }
     
         let lastCheckResults = null;
@@ -4549,23 +4566,10 @@
             const block = document.createElement('div');
             block.id = 'mb-barcode-checker-block';
             block.innerHTML = `
-                <button type="button" id="mb-barcode-checker-button">Check barcodes against links</button>
-                <button type="button" id="mb-barcode-checker-results-button" title="Open check results" style="display:none">✅</button>
-                <div id="mb-barcode-checker-status"></div>
+                <button type="button" class="styled-button" id="mb-barcode-checker-button">Check barcodes against links</button>
+                <button type="button" class="styled-button" id="mb-barcode-checker-results-button" title="Open check results" style="display:none">✅</button>
+                <div id="mb-barcode-checker-status" class="mb-toolbox-native-status"></div>
             `;
-    
-            const style = document.createElement('style');
-            style.textContent = `
-                #mb-barcode-checker-block { margin:0 0 6px 0; box-sizing:border-box; }
-                #mb-barcode-checker-button,
-                #mb-barcode-checker-results-button { width:100%; box-sizing:border-box; }
-                #mb-barcode-checker-results-button { margin-top:4px; font-size:18px; line-height:1.2; cursor:pointer; }
-                #mb-barcode-checker-status { margin-top:5px; text-align:left; font-size:90%; line-height:1.3; overflow-wrap:anywhere; }
-                #mb-barcode-checker-status[data-kind="bad"] { color:#b00020; }
-                #mb-barcode-checker-status[data-kind="warn"] { color:#8a5a00; }
-                #mb-barcode-checker-status[data-kind="ok"] { color:#087a28; }
-            `;
-            document.head.appendChild(style);
     
             const alignToBarcodeColumn = () => {
                 if (!block.isConnected || !releaseTable.isConnected || !barcodeHeader.isConnected) return;
@@ -6098,45 +6102,75 @@
     
         function openIsrcDialog(panel) {
             if (running || document.getElementById('mb-safe-isrc-dialog')) return;
+
             const rows = [...document.querySelectorAll('#recordings tr.track')];
             const trigger = panel.querySelector('.mb-safe-isrc');
-            const backdrop = document.createElement('div');
-            backdrop.id = 'mb-safe-isrc-dialog';
-            backdrop.style.cssText = 'position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.65);display:flex;align-items:center;justify-content:center;padding:1rem';
-            const dialog = document.createElement('div');
-            dialog.setAttribute('role', 'dialog');
-            dialog.setAttribute('aria-modal', 'true');
-            dialog.setAttribute('aria-labelledby', 'mb-safe-isrc-title');
-            dialog.style.cssText = 'box-sizing:border-box;width:min(42rem,100%);max-height:90vh;overflow:auto;background:Canvas;color:CanvasText;padding:1.25rem;border:1px solid GrayText;border-radius:.4rem;box-shadow:0 .5rem 2rem #0008';
-            dialog.innerHTML = '<h2 id="mb-safe-isrc-title">Match by ISRC</h2>' +
-                '<p>Paste one ISRC per track in release order. A plain list or table works. Include tracks already linked.</p>' +
-                '<label for="mb-safe-isrc-input">ISRCs</label><br>' +
-                '<textarea id="mb-safe-isrc-input" rows="12" style="box-sizing:border-box;width:100%" spellcheck="false" placeholder="NLA321400132\nNLA321400141\nNLA321400142"></textarea>' +
-                '<p class="mb-safe-isrc-error" role="alert"></p>' +
-                '<button type="button" class="mb-safe-isrc-confirm">Match tracks</button> ' +
-                '<button type="button" class="mb-safe-isrc-cancel">Cancel</button>';
-            backdrop.append(dialog);
-            document.body.append(backdrop);
-            const input = dialog.querySelector('textarea');
-            const error = dialog.querySelector('.mb-safe-isrc-error');
-            const confirm = dialog.querySelector('.mb-safe-isrc-confirm');
-            const cancel = dialog.querySelector('.mb-safe-isrc-cancel');
+
+            const editorBox = document.createElement('div');
+            editorBox.id = 'mb-safe-isrc-dialog';
+            editorBox.className = 'form';
+
+            const description = document.createElement('p');
+            description.textContent =
+                'Paste one ISRC per track in release order. A plain list or table works. Include tracks already linked.';
+
+            const label = document.createElement('label');
+            label.htmlFor = 'mb-safe-isrc-input';
+            label.textContent = 'ISRCs:';
+
+            const input = document.createElement('textarea');
+            input.id = 'mb-safe-isrc-input';
+            input.rows = 12;
+            input.spellcheck = false;
+            input.placeholder = 'NLA321400132\nNLA321400141\nNLA321400142';
+
+            const error = document.createElement('p');
+            error.className = 'error mb-safe-isrc-error';
+            error.setAttribute('role', 'alert');
+
+            const buttons = document.createElement('div');
+            buttons.className = 'buttons';
+
+            const confirm = document.createElement('button');
+            confirm.type = 'button';
+            confirm.className = 'mb-safe-isrc-confirm';
+            confirm.textContent = 'Match tracks';
+
+            const cancel = document.createElement('button');
+            cancel.type = 'button';
+            cancel.className = 'negative mb-safe-isrc-cancel';
+            cancel.textContent = 'Cancel';
+
+            buttons.append(confirm, cancel);
+            editorBox.append(description, label, document.createElement('br'), input, error, buttons);
+            panel.appendChild(editorBox);
+
             const close = () => {
-                backdrop.remove();
-                trigger.focus();
+                editorBox.remove();
+                trigger?.focus();
             };
-            const unavailable = !rows.length || Boolean(document.querySelector('#recordings .edit-recording'));
+
+            const unavailable =
+                !rows.length || Boolean(document.querySelector('#recordings .edit-recording'));
+
             if (unavailable) {
                 error.textContent = 'Open the Recordings tab and load every medium before matching ISRCs.';
                 confirm.disabled = true;
             } else {
-                dialog.querySelector('p').textContent += ` ${rows.length} tracks are loaded.`;
+                description.textContent += ` ${rows.length} tracks are loaded.`;
             }
+
             confirm.addEventListener('click', () => {
                 try {
-                    if (document.querySelector('#recordings .edit-recording') || !trackRowsUnchanged(rows)) {
-                        throw new Error('The track list changed. Close this window and paste the ISRCs again.');
+                    if (
+                        document.querySelector('#recordings .edit-recording') ||
+                        !trackRowsUnchanged(rows)
+                    ) {
+                        throw new Error(
+                            'The track list changed. Close this section and paste the ISRCs again.'
+                        );
                     }
+
                     const codes = parseIsrcInput(input.value, rows.length);
                     close();
                     runMatcher(panel, codes);
@@ -6144,24 +6178,11 @@
                     error.textContent = cause.message;
                 }
             });
+
             cancel.addEventListener('click', close);
-            backdrop.addEventListener('click', event => { if (event.target === backdrop) close(); });
-            backdrop.addEventListener('keydown', event => {
-                if (event.key === 'Escape') close();
-                if (event.key === 'Tab') {
-                    const focusables = [input, confirm, cancel].filter(element => !element.disabled);
-                    if (event.shiftKey && document.activeElement === focusables[0]) {
-                        event.preventDefault();
-                        focusables.at(-1).focus();
-                    } else if (!event.shiftKey && document.activeElement === focusables.at(-1)) {
-                        event.preventDefault();
-                        focusables[0].focus();
-                    }
-                }
-            });
             input.focus();
         }
-    
+
         function addControls() {
             if (document.getElementById('mb-safe-recording-matcher')) return true;
             const container = document.querySelector('#recordings .changes');
@@ -6169,16 +6190,16 @@
             const panel = document.createElement('fieldset');
             panel.id = 'mb-safe-recording-matcher';
             panel.innerHTML = '<legend>Recording matcher</legend>' +
-                '<div class="mb-safe-actions">' +
-                    '<button type="button" class="styled-button mb-safe-start">Match unlinked recordings</button>' +
-                    '<button type="button" class="styled-button mb-safe-highlighted">Auto-match highlighted</button>' +
-                    '<button type="button" class="styled-button mb-safe-isrc">Match by ISRC</button>' +
-                    '<button type="button" class="styled-button mb-safe-github-cache">Connect GitHub cache</button>' +
-                    '<button type="button" class="styled-button negative mb-safe-remove-links">Remove all links</button>' +
-                    '<button type="button" class="styled-button mb-safe-stop" hidden>Stop after current track</button>' +
-                    '<button type="button" class="styled-button mb-safe-toggle" hidden>Show results</button>' +
+                '<div class="buttons mb-safe-actions mb-toolbox-native-actions">' +
+                    '<button type="button" class="mb-safe-start">Match unlinked recordings</button>' +
+                    '<button type="button" class="mb-safe-highlighted">Auto-match highlighted</button>' +
+                    '<button type="button" class="mb-safe-isrc">Match by ISRC</button>' +
+                    '<button type="button" class="mb-safe-github-cache">Connect GitHub cache</button>' +
+                    '<button type="button" class="negative mb-safe-remove-links">Remove all links</button>' +
+                    '<button type="button" class="mb-safe-stop" hidden>Stop after current track</button>' +
+                    '<button type="button" class="mb-safe-toggle" hidden>Show results</button>' +
                 '</div>' +
-                '<span class="mb-safe-status" role="status">Duplicate links are bright red. Metadata match: artist circles + title + max 7s. ISRC match: exact ISRC only.</span>' +
+                '<p class="mb-safe-status mb-toolbox-native-status" role="status">Duplicate links are bright red. Metadata match: artist circles + title + max 7s. ISRC match: exact ISRC only.</p>' +
                 '<ol class="mb-safe-results" hidden></ol>';
             panel.querySelector('.mb-safe-start').addEventListener('click', () => runMatcher(panel));
             panel.querySelector('.mb-safe-highlighted').addEventListener('click', () => runHighlightedMatcher(panel));
