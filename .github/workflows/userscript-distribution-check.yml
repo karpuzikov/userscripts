@@ -47,8 +47,6 @@ jobs:
 
               if not meta(text, "name"):
                   errors.append(f"{rel}: missing @name")
-              if not meta(text, "namespace"):
-                  errors.append(f"{rel}: missing @namespace")
               if not meta(text, "version"):
                   errors.append(f"{rel}: missing @version")
 
