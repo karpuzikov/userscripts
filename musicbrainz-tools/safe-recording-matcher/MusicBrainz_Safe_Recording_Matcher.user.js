@@ -1,14 +1,14 @@
 // ==UserScript==
 // @name         MusicBrainz - Recording Matcher
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.4.1
+// @version      1.4.2
 // @description  Highlight duplicate recording links and match release tracks by metadata, highlighted duplicates, or pasted ISRCs.
 // @author       karpuzikov
 // @license      MIT
 // @match        https://musicbrainz.org/release/*
 // @match        https://beta.musicbrainz.org/release/*
-// @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/safe-recording-matcher/MusicBrainz_Safe_Recording_Matcher.user.js?v=1.4.1
-// @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/safe-recording-matcher/MusicBrainz_Safe_Recording_Matcher.user.js?v=1.4.1
+// @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/safe-recording-matcher/MusicBrainz_Safe_Recording_Matcher.user.js?v=1.4.2
+// @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/safe-recording-matcher/MusicBrainz_Safe_Recording_Matcher.user.js?v=1.4.2
 // @grant        none
 // @run-at       document-idle
 // ==/UserScript==
@@ -203,60 +203,11 @@
 
         const all = [...unique.values()];
         if (!all.length) return {reason: 'No recording is linked to this ISRC'};
-
-        // An exact ISRC lookup is already a strong recording identifier.
-        // If it resolves to one recording, use it directly instead of rejecting
-        // it because of track-credit or duration differences.
-        if (all.length === 1) {
-            return {id: all[0].id, candidate: all[0]};
+        if (all.length > 1) {
+            return {reason: `ISRC is linked to ${all.length} recordings; review manually`};
         }
 
-        // Bad/duplicate ISRC assignments do happen in MusicBrainz. When one
-        // ISRC points to several recordings, title is the primary discriminator.
-        const wantedTitle = normalizeTitle(track.title);
-        const titleMatches = all.filter(candidate =>
-            wantedTitle && normalizeTitle(candidate.title ?? candidate.name) === wantedTitle
-        );
-
-        if (!titleMatches.length) {
-            return {reason: `ISRC is linked to ${all.length} recordings, but none matches the track title`};
-        }
-        if (titleMatches.length === 1) {
-            return {id: titleMatches[0].id, candidate: titleMatches[0]};
-        }
-
-        // If multiple recordings share the same title, prefer an exact artist
-        // credit match before falling back to duration.
-        const artistMatches = titleMatches.filter(candidate => {
-            const credit = candidateCredit(candidate);
-            return track.artistIds?.length &&
-                credit.ids.length === track.artistIds.length &&
-                track.artistIds.every((id, index) =>
-                    UUID.test(id) && id.toLowerCase() === credit.ids[index]?.toLowerCase()
-                );
-        });
-        const pool = artistMatches.length ? artistMatches : titleMatches;
-        if (pool.length === 1) {
-            return {id: pool[0].id, candidate: pool[0]};
-        }
-
-        if (Number.isInteger(track.length) && track.length > 0) {
-            const ranked = pool
-                .filter(candidate => Number.isInteger(candidate.length) && candidate.length > 0)
-                .map(candidate => ({
-                    candidate,
-                    difference: Math.abs(track.length - candidate.length),
-                }))
-                .sort((a, b) => a.difference - b.difference);
-
-            if (ranked.length &&
-                ranked[0].difference <= MAX_DIFFERENCE_MS &&
-                (ranked.length === 1 || ranked[0].difference < ranked[1].difference)) {
-                return {id: ranked[0].candidate.id, candidate: ranked[0].candidate};
-            }
-        }
-
-        return {reason: 'ISRC is linked to multiple recordings with the same matching title; review manually'};
+        return {id: all[0].id, candidate: all[0]};
     }
 
     function appendAttribution(note, url) {
@@ -425,6 +376,39 @@
         }
         .${DUPLICATE_CLASS} > td:first-child {
             box-shadow: inset 4px 0 0 #7a0000 !important;
+        }
+
+        #mb-safe-recording-matcher {
+            margin: 1em 0 1.2em;
+            padding: .75em 1em 1em;
+        }
+
+        #mb-safe-recording-matcher legend {
+            padding: 0 .35em;
+        }
+
+        #mb-safe-recording-matcher .mb-safe-actions {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: .5em;
+        }
+
+        #mb-safe-recording-matcher .mb-safe-actions button {
+            margin: 0;
+            white-space: nowrap;
+        }
+
+        #mb-safe-recording-matcher .mb-safe-status {
+            display: block;
+            margin-top: .75em;
+            padding-top: .65em;
+            border-top: 1px solid rgba(128, 128, 128, .35);
+            line-height: 1.4;
+        }
+
+        #mb-safe-recording-matcher .mb-safe-results {
+            margin: .75em 0 0 1.6em;
         }
     `;
     document.head.appendChild(duplicateStyle);
@@ -1097,13 +1081,15 @@
         const panel = document.createElement('fieldset');
         panel.id = 'mb-safe-recording-matcher';
         panel.innerHTML = '<legend>Recording matcher</legend>' +
-            '<button type="button" class="mb-safe-start">Match unlinked recordings</button> ' +
-            '<button type="button" class="mb-safe-highlighted">Auto-match highlighted recordings</button> ' +
-            '<button type="button" class="mb-safe-isrc">Match by ISRC</button> ' +
-            '<button type="button" class="mb-safe-remove-links">Remove all links</button> ' +
-            '<button type="button" class="mb-safe-stop" hidden>Stop after current track</button> ' +
-            '<button type="button" class="mb-safe-toggle" hidden>Show results</button> ' +
-            '<span class="mb-safe-status" role="status">Duplicate recording links are bright red. Matching uses artist circles, equivalent title wording, and a maximum 7-second length difference.</span>' +
+            '<div class="mb-safe-actions">' +
+                '<button type="button" class="styled-button mb-safe-start">Match unlinked recordings</button>' +
+                '<button type="button" class="styled-button mb-safe-highlighted">Auto-match highlighted</button>' +
+                '<button type="button" class="styled-button mb-safe-isrc">Match by ISRC</button>' +
+                '<button type="button" class="styled-button negative mb-safe-remove-links">Remove all links</button>' +
+                '<button type="button" class="styled-button mb-safe-stop" hidden>Stop after current track</button>' +
+                '<button type="button" class="styled-button mb-safe-toggle" hidden>Show results</button>' +
+            '</div>' +
+            '<span class="mb-safe-status" role="status">Duplicate links are bright red. Metadata match: artist circles + title + max 7s. ISRC match: exact ISRC only.</span>' +
             '<ol class="mb-safe-results" hidden></ol>';
         panel.querySelector('.mb-safe-start').addEventListener('click', () => runMatcher(panel));
         panel.querySelector('.mb-safe-highlighted').addEventListener('click', () => runHighlightedMatcher(panel));
