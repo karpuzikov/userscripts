@@ -281,6 +281,7 @@ run this logic automatically at the final torrent preparation stage and prepare/
 - Leave required recycle releases in the recycle folder for the next processing stage.
 - Final UI should only show a short completion summary plus Open filtered recycle / Open duplicates / Undo.
 - Technical diagnostics are optional and must not be required for normal use.
+- Every analysis run writes a detailed JSONL comparison log outside the scanned artist folder, normally under `<artist>_analysis_logs`. Each compared pair records candidate-discovery reason, track paths/titles/IDs, version qualifiers, durations, every Chromaprint metric, strict/mastering threshold pass/fail state, length-gate result, final MATCH/REJECT decision, and run summary. Logging is diagnostic only and must not change matching decisions.
 
 ## AudioChecker automation
 
