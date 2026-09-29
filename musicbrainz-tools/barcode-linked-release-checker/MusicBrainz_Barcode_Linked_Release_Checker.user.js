@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MusicBrainz - Barcode vs Linked Releases Checker
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.3.5
+// @version      1.3.6
 // @description  Checks Digital Media release barcodes against linked provider release pages through Harmony and stages MusicBrainz correction edits.
 // @author       karpuzikov
 // @license      MIT
@@ -1187,6 +1187,7 @@
         for (let i = localStorage.length - 1; i >= 0; i--) {
             const key = localStorage.key(i);
             if (!key?.startsWith(TASK_PREFIX)) continue;
+            if (key.startsWith(`${TASK_PREFIX}pending:`)) continue;
             try {
                 const task = JSON.parse(localStorage.getItem(key));
                 if (!task?.created || Date.now() - task.created > maxAge) {
