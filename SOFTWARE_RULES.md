@@ -30,18 +30,45 @@ A first-time user must be able to understand every core UI element without prior
 
 This is a blocking rule. A userscript update is not considered published until every check below passes.
 
+### Tampermonkey UPDATE vs REINSTALL
+
+- A direct `.user.js` install URL is **not** an update button. If its `@version` equals the installed version, Tampermonkey correctly shows **Reinstall**, which can reset script settings.
+- Never label, present, or describe a direct `.user.js` link as **UPDATE** unless the user's installed version is explicitly known and is lower than the linked script's verified `@version`.
+- If the installed version is equal to the target version, never tell the user to open the direct userscript URL. State that the current version is already installed.
+- If the installed version is unknown, call the direct link **Install latest** only; do not call it **Update**.
+- For already-installed scripts, the normal update path is Tampermonkey's native update mechanism using an increased `@version` plus `@updateURL`/`@downloadURL`.
+- Never manufacture a version bump solely to turn a same-version Reinstall screen into an Update screen.
+
+### Distribution URLs
+
 - Never use query-string cache busting on GitHub Raw userscript URLs. Parameters such as `?v=1.2.3` are forbidden because GitHub Raw/CDN caching has repeatedly served stale script bodies even when the query string changed.
-- Every README/manual/chat install or update link for a userscript in this repository must use an immutable `raw.githubusercontent.com` URL pinned to a full 40-character Git commit SHA that contains the exact current script.
-- `@updateURL` and `@downloadURL`, when present, must use the clean mutable `main` raw URL for the script path, with no query parameters and no commit pin. These URLs exist for Tampermonkey automatic update discovery; they are not the manual install/update link.
-- Preserve userscript identity: do not change `@name` or `@namespace` during normal updates.
-- Every behavior/code change must increase `@version`. Versions must move forward monotonically.
-- Required publish order:
-  1. Update the script, `@version`, and clean `@updateURL`/`@downloadURL`.
-  2. Commit the script.
-  3. Build the manual install/update URL from that exact commit SHA.
-  4. Fetch that immutable URL and verify its `@version` and script body match the intended release.
-  5. Update the README install link to that immutable URL in a separate commit.
-  6. Fetch the README-linked immutable URL again and verify the expected `@version` before giving the link to the user.
-- Never provide a mutable `main` raw URL as the manual update link when a commit-pinned URL can be provided.
-- If Tampermonkey shows **Reinstall** when the repository contains a newer version, treat distribution as failed: stop other work, do not tell the user to reinstall, diagnose the served source, and repair the immutable install/update link first.
+- Every README/manual install link for a userscript in this repository must use an immutable `raw.githubusercontent.com` URL pinned to a full 40-character Git commit SHA that contains the exact current script.
+- `@updateURL` and `@downloadURL`, when present, must use the clean mutable `main` raw URL for the script path, with no query parameters and no commit pin. These URLs are for Tampermonkey native update discovery/download, not for a manual "Update" button.
+- Never provide a mutable `main` raw URL as a manual install link when a commit-pinned URL can be provided.
+
+### Identity and version integrity
+
+- Preserve userscript identity across normal updates. Existing `@name` and `@namespace` values must not change.
+- Every behavior/code change must increase `@version`.
+- A changed userscript must never be committed with the same or a lower `@version` than its previous repository version.
+- Versions must move forward monotonically.
+- Do not add/remove/change grants, sandboxing, or execution context without checking whether page globals such as `window.MB` remain accessible. Privileged Tampermonkey grants can move a script into a sandbox.
+
+### Required publish order
+
+1. Update the script and increase `@version`.
+2. Preserve `@name` and `@namespace`; verify any grant/sandbox changes.
+3. Keep `@updateURL`/`@downloadURL` on the clean `main` raw URL.
+4. Commit the script.
+5. Fetch the immutable commit-pinned raw URL and verify its `@version` and body.
+6. Update the README **Install** link to that immutable URL in a separate commit.
+7. Run the repository userscript-distribution check and require success.
+8. Before giving a direct link to the user, compare the known installed version with the target. Only call it **Update** when installed < target.
+
+### Failure handling
+
+- If Tampermonkey shows **Reinstall** and the installed version is lower than the intended target, distribution has failed: stop other work and repair the served source/version.
+- If Tampermonkey shows **Reinstall** and installed version equals incoming version, do not reinstall. The user is already current.
+- Never tell the user to click **Reinstall** as a workaround for an update problem.
 - The repository userscript-distribution check must pass before a userscript update is considered complete.
+
