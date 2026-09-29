@@ -1,12 +1,12 @@
 // ==UserScript==
 // @name         MusicBrainz - Recording Data to Tracks
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.1.1
+// @version      1.2.0
 // @description  Copies linked recording titles and artist credits to the corresponding tracks in the MusicBrainz release editor.
 // @author       karpuzikov
 // @license      MIT
-// @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/recording-artist-credits-to-tracks/MusicBrainz_Recording_Artist_Credits_to_Tracks.user.js?v=1.1.1
-// @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/recording-artist-credits-to-tracks/MusicBrainz_Recording_Artist_Credits_to_Tracks.user.js?v=1.1.1
+// @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/recording-artist-credits-to-tracks/MusicBrainz_Recording_Artist_Credits_to_Tracks.user.js?v=1.2.0
+// @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/recording-artist-credits-to-tracks/MusicBrainz_Recording_Artist_Credits_to_Tracks.user.js?v=1.2.0
 // @supportURL   https://github.com/karpuzikov/userscripts
 // @match        https://musicbrainz.org/release/add*
 // @match        https://musicbrainz.org/release/*/edit*
@@ -25,8 +25,204 @@
     const TITLE_BUTTON_ID = 'mb-recording-title-to-tracks-button';
     const ARTIST_BUTTON_ID = 'mb-recording-ac-to-tracks-button';
     const STATUS_ID = 'mb-recording-data-to-tracks-status';
+    const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    const ISRC_CHOICE_CACHE_KEY = 'mb-recording-data-to-tracks:isrc-choice-cache:v1';
+    const watchedTracks = new WeakSet();
 
     const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+    function normalizeIsrc(value) {
+        const normalized = String(value || '')
+            .toUpperCase()
+            .replace(/[^A-Z0-9]/g, '');
+        return normalized.length === 12 ? normalized : '';
+    }
+
+    function recordingGid(recording) {
+        const gid = String(unwrap(recording?.gid) || '').trim().toLowerCase();
+        return UUID.test(gid) ? gid : '';
+    }
+
+    function recordingIsrcs(recording) {
+        const values = unwrap(recording?.isrcs);
+        if (!Array.isArray(values)) return [];
+
+        return [...new Set(values
+            .map(item => normalizeIsrc(
+                typeof item === 'string' ? item : unwrap(item?.isrc)
+            ))
+            .filter(Boolean))];
+    }
+
+    function loadIsrcChoiceCache() {
+        try {
+            const parsed = JSON.parse(localStorage.getItem(ISRC_CHOICE_CACHE_KEY) || '{}');
+            return parsed && typeof parsed === 'object' ? parsed : {};
+        } catch {
+            return {};
+        }
+    }
+
+    let isrcChoiceCache = loadIsrcChoiceCache();
+
+    function saveIsrcChoice(isrcs, recordingMbid) {
+        if (!UUID.test(recordingMbid)) return;
+
+        const now = Date.now();
+        let changed = false;
+
+        for (const isrc of isrcs) {
+            const normalized = normalizeIsrc(isrc);
+            if (!normalized) continue;
+
+            const current = isrcChoiceCache[normalized];
+            if (current?.recordingMbid === recordingMbid) continue;
+
+            isrcChoiceCache[normalized] = {
+                recordingMbid,
+                updated: now,
+            };
+            changed = true;
+        }
+
+        if (changed) {
+            localStorage.setItem(
+                ISRC_CHOICE_CACHE_KEY,
+                JSON.stringify(isrcChoiceCache)
+            );
+        }
+    }
+
+    function cachedCandidateForTrack(track) {
+        const candidates = unwrap(track?.suggestedRecordings) || [];
+        if (candidates.length < 2) return null;
+
+        const byIsrc = new Map();
+
+        for (const candidate of candidates) {
+            const gid = recordingGid(candidate);
+            if (!gid) continue;
+
+            for (const isrc of recordingIsrcs(candidate)) {
+                let group = byIsrc.get(isrc);
+                if (!group) {
+                    group = new Map();
+                    byIsrc.set(isrc, group);
+                }
+                group.set(gid, candidate);
+            }
+        }
+
+        const matches = [];
+
+        for (const [isrc, group] of byIsrc) {
+            if (group.size < 2) continue;
+
+            const cached = isrcChoiceCache[isrc];
+            const candidate = cached?.recordingMbid
+                ? group.get(cached.recordingMbid)
+                : null;
+
+            if (candidate) {
+                matches.push({
+                    candidate,
+                    isrc,
+                    updated: Number(cached.updated || 0),
+                });
+            }
+        }
+
+        if (!matches.length) return null;
+
+        matches.sort((a, b) => b.updated - a.updated);
+        return matches[0];
+    }
+
+    function applyCachedRecordingChoice(track) {
+        if (!track || typeof track.recording !== 'function') return false;
+        if (typeof track.hasExistingRecording === 'function' && track.hasExistingRecording()) {
+            return false;
+        }
+
+        const match = cachedCandidateForTrack(track);
+        if (!match) return false;
+
+        const gid = recordingGid(match.candidate);
+        if (!gid) return false;
+
+        track.recording(match.candidate);
+
+        console.info(
+            `[${SCRIPT_NAME}] Reused cached recording ${gid} for ISRC ${match.isrc}.`
+        );
+        return true;
+    }
+
+    function watchTrackForCachedRecordingChoice(track) {
+        if (!track || watchedTracks.has(track)) return;
+        watchedTracks.add(track);
+
+        if (typeof track.suggestedRecordings?.subscribe === 'function') {
+            track.suggestedRecordings.subscribe(() => {
+                applyCachedRecordingChoice(track);
+            });
+        }
+
+        applyCachedRecordingChoice(track);
+    }
+
+    function watchReleaseTracksForCache() {
+        const ed = editor();
+        const release = ed?.rootField?.release?.();
+        if (!release) return;
+
+        for (const medium of unwrap(release.mediums) || []) {
+            for (const track of unwrap(medium.tracks) || []) {
+                watchTrackForCachedRecordingChoice(track);
+            }
+        }
+    }
+
+    function installManualRecordingChoiceCache() {
+        document.addEventListener('change', event => {
+            if (!event.isTrusted) return;
+
+            const input = event.target;
+            if (!(input instanceof HTMLInputElement)) return;
+            if (!input.matches('#recording-assoc-bubble input[name="recording-selection"]')) {
+                return;
+            }
+
+            const selectedMbid = String(input.value || '').trim().toLowerCase();
+            if (!UUID.test(selectedMbid)) return;
+
+            setTimeout(() => {
+                const track = editor()?.recordingBubble?.currentTrack?.();
+                const recording = unwrap(track?.recording);
+                const chosenMbid = recordingGid(recording);
+
+                if (!track || chosenMbid !== selectedMbid) return;
+
+                const isrcs = recordingIsrcs(recording);
+                if (!isrcs.length) return;
+
+                saveIsrcChoice(isrcs, chosenMbid);
+
+                console.info(
+                    `[${SCRIPT_NAME}] Cached recording ${chosenMbid} for ISRC(s): ${isrcs.join(', ')}.`
+                );
+            }, 0);
+        }, true);
+
+        window.addEventListener('storage', event => {
+            if (event.key === ISRC_CHOICE_CACHE_KEY) {
+                isrcChoiceCache = loadIsrcChoiceCache();
+            }
+        });
+
+        watchReleaseTracksForCache();
+        setInterval(watchReleaseTracksForCache, 1000);
+    }
 
     function pageWindow() {
         try {
@@ -44,7 +240,6 @@
         return pageWindow().MB?._releaseEditor || null;
     }
 
-    const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
     const artistEntityCache = new Map();
 
     function artistMbid(artist) {
@@ -425,6 +620,8 @@
 
         return true;
     }
+
+    installManualRecordingChoiceCache();
 
     if (!insertButtons()) {
         const observer = new MutationObserver(() => {
