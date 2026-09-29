@@ -72,3 +72,9 @@ This is a blocking rule. A userscript update is not considered published until e
 - Never tell the user to click **Reinstall** as a workaround for an update problem.
 - The repository userscript-distribution check must pass before a userscript update is considered complete.
 
+
+## GitHub development status
+
+- New or updated software must initially use `Under construction ⚠️` in the GitHub Version/status column.
+- Do not use `Not tested! ⚠️` or `not tested ⚠️` for this status.
+- Keep `Under construction ⚠️` until the user confirms testing is complete; then replace it with the actual version.
