@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Beatport - MusicBrainz Importer
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.2.6
+// @version      1.2.7
 // @description  Import Beatport and BPTopTracker releases into MusicBrainz with Beatport enrichment, ISRC matching, and release-source handling.
 // @author       karpuzikov
 // @match        https://www.beatport.com/*
@@ -2169,27 +2169,37 @@
                 });
 
                 if (compatible) {
+                    const guarded = [];
+                    let ready = true;
+
                     for (let i = 0; i < tracks.length; i++) {
                         const expected = pending.tracks[i];
                         const track = tracks[i];
-                        if (
-                            !expected?.isrc ||
-                            !expected?.recordingId ||
-                            typeof track?.recording !== 'function'
-                        ) {
-                            continue;
+                        if (!expected?.isrc || !expected?.recordingId) continue;
+                        if (typeof track?.recording !== 'function') {
+                            ready = false;
+                            break;
                         }
 
                         const current = track.recording();
                         const gid = currentRecordingId(track);
                         if (
-                            gid === String(expected.recordingId).toLowerCase() &&
-                            current?.gid
+                            gid !== String(expected.recordingId).toLowerCase() ||
+                            !current?.gid
                         ) {
-                            keepExactIsrcAssociationAcrossTracklistEdits(track, current);
+                            ready = false;
+                            break;
                         }
+
+                        guarded.push([track, current]);
                     }
-                    return;
+
+                    if (ready) {
+                        for (const [track, recording] of guarded) {
+                            keepExactIsrcAssociationAcrossTracklistEdits(track, recording);
+                        }
+                        return;
+                    }
                 }
             }
 
