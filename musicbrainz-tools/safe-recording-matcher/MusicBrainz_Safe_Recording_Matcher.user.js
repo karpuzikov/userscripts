@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MusicBrainz - Recording Matcher
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.4.6
+// @version      1.4.7
 // @description  Highlight duplicate recording links and match release tracks by metadata, highlighted duplicates, or pasted ISRCs.
 // @author       karpuzikov
 // @license      MIT
@@ -12,6 +12,7 @@
 // @grant        GM_getValue
 // @grant        GM_setValue
 // @grant        GM_xmlhttpRequest
+// @grant        unsafeWindow
 // @connect      api.github.com
 // @run-at       document-idle
 // ==/UserScript==
@@ -20,6 +21,7 @@
     'use strict';
 
     const SCRIPT_URL = 'https://github.com/karpuzikov/userscripts/blob/main/musicbrainz-tools/safe-recording-matcher/MusicBrainz_Safe_Recording_Matcher.user.js';
+    const PAGE_WINDOW = typeof unsafeWindow !== 'undefined' ? unsafeWindow : window;
     const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     const MAX_DIFFERENCE_MS = 7000;
     const REQUEST_GAP_MS = 1200;
@@ -805,7 +807,7 @@
     }
 
     function releaseArtistIds() {
-        const release = window.MB?.releaseEditor?.rootField?.release?.();
+        const release = PAGE_WINDOW.MB?.releaseEditor?.rootField?.release?.();
         const names = release?.artistCredit?.()?.names;
         if (!Array.isArray(names)) return [];
         return [...new Set(names.map(part => part?.artist?.gid).filter(id => UUID.test(id)))];
@@ -966,7 +968,7 @@
     }
 
     function releaseTrackModels() {
-        const release = window.MB?.releaseEditor?.rootField?.release?.();
+        const release = PAGE_WINDOW.MB?.releaseEditor?.rootField?.release?.();
         return release && typeof release.allTracks === 'function'
             ? [...release.allTracks()]
             : [];
@@ -1020,7 +1022,7 @@
         const {allowLinked = false, expectedRecordingId = null} = options;
         const button = row.querySelector('button.edit-track-recording');
         const element = document.querySelector('#recording-assoc-bubble');
-        const model = window.MB?.releaseEditor?.recordingBubble;
+        const model = PAGE_WINDOW.MB?.releaseEditor?.recordingBubble;
         if (!button || !element || !model || !row.isConnected) {
             throw new Error('The MusicBrainz recording editor is unavailable');
         }
@@ -1049,7 +1051,7 @@
     }
 
     function recordingEntityFromWs(candidate) {
-        const MB = window.MB;
+        const MB = PAGE_WINDOW.MB;
         if (!MB?.entity || !UUID.test(candidate?.id || '')) {
             throw new Error('MusicBrainz recording entity API is unavailable');
         }
@@ -1195,7 +1197,7 @@
     function removeAllLinks(panel) {
         if (running) return;
 
-        const release = window.MB?.releaseEditor?.rootField?.release?.();
+        const release = PAGE_WINDOW.MB?.releaseEditor?.rootField?.release?.();
         const status = panel.querySelector('.mb-safe-status');
         const list = panel.querySelector('.mb-safe-results');
         const toggle = panel.querySelector('.mb-safe-toggle');
