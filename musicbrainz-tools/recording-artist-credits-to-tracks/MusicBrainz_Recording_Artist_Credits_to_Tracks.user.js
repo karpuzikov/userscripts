@@ -1,12 +1,12 @@
 // ==UserScript==
-// @name         MusicBrainz - Recording Artist Credits to Tracks
+// @name         MusicBrainz - Recording Data to Tracks
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.0.0
-// @description  Copies recording artist credits to the corresponding track artist credits in the MusicBrainz release editor.
+// @version      1.1.0
+// @description  Copies linked recording titles and artist credits to the corresponding tracks in the MusicBrainz release editor.
 // @author       karpuzikov
 // @license      MIT
-// @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/recording-artist-credits-to-tracks/MusicBrainz_Recording_Artist_Credits_to_Tracks.user.js
-// @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/recording-artist-credits-to-tracks/MusicBrainz_Recording_Artist_Credits_to_Tracks.user.js
+// @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/recording-artist-credits-to-tracks/MusicBrainz_Recording_Artist_Credits_to_Tracks.user.js?v=1.1.0
+// @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/recording-artist-credits-to-tracks/MusicBrainz_Recording_Artist_Credits_to_Tracks.user.js?v=1.1.0
 // @supportURL   https://github.com/karpuzikov/userscripts
 // @match        https://musicbrainz.org/release/add*
 // @match        https://musicbrainz.org/release/*/edit*
@@ -19,10 +19,12 @@
 (() => {
     'use strict';
 
-    const SCRIPT_NAME = 'MusicBrainz - Recording Artist Credits to Tracks';
+    const SCRIPT_NAME = 'MusicBrainz - Recording Data to Tracks';
     const SCRIPT_URL = 'https://github.com/karpuzikov/userscripts/blob/main/musicbrainz-tools/recording-artist-credits-to-tracks/MusicBrainz_Recording_Artist_Credits_to_Tracks.user.js';
-    const BUTTON_ID = 'mb-recording-ac-to-tracks-button';
-    const STATUS_ID = 'mb-recording-ac-to-tracks-status';
+    const WRAPPER_ID = 'mb-recording-data-to-tracks';
+    const TITLE_BUTTON_ID = 'mb-recording-title-to-tracks-button';
+    const ARTIST_BUTTON_ID = 'mb-recording-ac-to-tracks-button';
+    const STATUS_ID = 'mb-recording-data-to-tracks-status';
 
     const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -122,8 +124,43 @@
         status.dataset.kind = kind;
     }
 
-    async function copyRecordingArtistCredits() {
-        const button = document.getElementById(BUTTON_ID);
+    function setButtonsDisabled(disabled) {
+        const titleButton = document.getElementById(TITLE_BUTTON_ID);
+        const artistButton = document.getElementById(ARTIST_BUTTON_ID);
+        if (titleButton) titleButton.disabled = disabled;
+        if (artistButton) artistButton.disabled = disabled;
+    }
+
+    function recordingTitle(recording) {
+        return String(unwrap(recording?.name) || '').trim();
+    }
+
+    function trackTitle(track) {
+        return String(unwrap(track?.name) || '').trim();
+    }
+
+    function writeTrackTitle(track, title, recording) {
+        if (!title || typeof track?.name !== 'function') return false;
+
+        /*
+         * MusicBrainz watches track-title changes and can unlink a recording
+         * when the new title differs from the title saved at association time.
+         * The new value here comes from that exact linked recording, so update
+         * the saved comparison value first to preserve the association.
+         */
+        if (recording?.gid) {
+            track.name.saved = title;
+        }
+
+        if (typeof track.inputName === 'function') {
+            track.inputName(title);
+        } else {
+            track.name(title);
+        }
+        return true;
+    }
+
+    async function copyRecordingTitles() {
         const ed = editor();
         const release = ed?.rootField?.release?.();
 
@@ -132,8 +169,76 @@
             return;
         }
 
-        button.disabled = true;
-        setStatus('Loading recordings...');
+        setButtonsDisabled(true);
+        setStatus('Loading linked recordings...');
+
+        try {
+            const mediums = unwrap(release.mediums) || [];
+            let changed = 0;
+            let unchanged = 0;
+            let skipped = 0;
+            let loadFailures = 0;
+
+            for (const medium of mediums) {
+                if (!(await ensureMediumLoaded(medium))) {
+                    loadFailures++;
+                    continue;
+                }
+
+                const tracks = unwrap(medium.tracks) || [];
+                for (const track of tracks) {
+                    const recording = unwrap(track.recording);
+                    const sourceTitle = recordingTitle(recording);
+
+                    if (!recording?.gid || !sourceTitle) {
+                        skipped++;
+                        continue;
+                    }
+
+                    if (trackTitle(track) === sourceTitle) {
+                        unchanged++;
+                        continue;
+                    }
+
+                    if (writeTrackTitle(track, sourceTitle, recording)) {
+                        changed++;
+                    } else {
+                        skipped++;
+                    }
+                }
+            }
+
+            if (changed) appendEditNote(ed);
+
+            const parts = [];
+            if (changed) parts.push(`${changed} title(s) copied`);
+            if (unchanged) parts.push(`${unchanged} already identical`);
+            if (skipped) parts.push(`${skipped} skipped`);
+            if (loadFailures) parts.push(`${loadFailures} medium(s) failed to load`);
+
+            setStatus(
+                parts.length ? parts.join(' | ') : 'No tracks found.',
+                changed ? 'ok' : (loadFailures ? 'bad' : '')
+            );
+        } catch (error) {
+            console.error(`[${SCRIPT_NAME}]`, error);
+            setStatus(`Error: ${error.message}`, 'bad');
+        } finally {
+            setButtonsDisabled(false);
+        }
+    }
+
+    async function copyRecordingArtistCredits() {
+        const ed = editor();
+        const release = ed?.rootField?.release?.();
+
+        if (!release) {
+            setStatus('MusicBrainz release editor is not ready.', 'bad');
+            return;
+        }
+
+        setButtonsDisabled(true);
+        setStatus('Loading linked recordings...');
 
         try {
             const mediums = unwrap(release.mediums) || [];
@@ -171,12 +276,10 @@
                 }
             }
 
-            if (changed) {
-                appendEditNote(ed);
-            }
+            if (changed) appendEditNote(ed);
 
             const parts = [];
-            if (changed) parts.push(`${changed} copied`);
+            if (changed) parts.push(`${changed} artist credit(s) copied`);
             if (unchanged) parts.push(`${unchanged} already identical`);
             if (skipped) parts.push(`${skipped} skipped`);
             if (loadFailures) parts.push(`${loadFailures} medium(s) failed to load`);
@@ -189,40 +292,49 @@
             console.error(`[${SCRIPT_NAME}]`, error);
             setStatus(`Error: ${error.message}`, 'bad');
         } finally {
-            button.disabled = false;
+            setButtonsDisabled(false);
         }
     }
 
-    function insertButton() {
-        if (document.getElementById(BUTTON_ID)) return true;
+    function insertButtons() {
+        if (document.getElementById(WRAPPER_ID)) return true;
 
-        const nativeOption = document.getElementById('update-all-recording-artists');
-        if (!nativeOption) return false;
+        const tracklist = document.getElementById('tracklist');
+        if (!tracklist) return false;
 
-        const paragraph = nativeOption.closest('p');
-        const fieldset = nativeOption.closest('fieldset');
-        if (!fieldset) return false;
+        const wrapper = document.createElement('div');
+        wrapper.id = WRAPPER_ID;
+        wrapper.style.cssText = [
+            'display:flex',
+            'align-items:center',
+            'gap:8px',
+            'flex-wrap:wrap',
+            'margin:0 0 12px 0',
+            'padding:10px',
+            'border:1px solid #bbb',
+            'border-radius:4px',
+        ].join(';');
 
-        const wrapper = document.createElement('p');
-        wrapper.id = 'mb-recording-ac-to-tracks-wrapper';
+        const titleButton = document.createElement('button');
+        titleButton.id = TITLE_BUTTON_ID;
+        titleButton.type = 'button';
+        titleButton.textContent = 'Copy recording titles to tracks';
+        titleButton.title = 'Replace track titles with the titles of their linked MusicBrainz recordings';
+        titleButton.addEventListener('click', copyRecordingTitles);
 
-        const button = document.createElement('button');
-        button.id = BUTTON_ID;
-        button.type = 'button';
-        button.textContent = 'Copy recording artist credits to tracks';
-        button.addEventListener('click', copyRecordingArtistCredits);
+        const artistButton = document.createElement('button');
+        artistButton.id = ARTIST_BUTTON_ID;
+        artistButton.type = 'button';
+        artistButton.textContent = 'Copy recording artist credits to tracks';
+        artistButton.title = 'Replace track artist credits with the exact artist credits of their linked MusicBrainz recordings';
+        artistButton.addEventListener('click', copyRecordingArtistCredits);
 
         const status = document.createElement('span');
         status.id = STATUS_ID;
-        status.style.marginLeft = '10px';
+        status.style.marginLeft = '2px';
 
-        wrapper.append(button, status);
-
-        if (paragraph?.nextSibling) {
-            fieldset.insertBefore(wrapper, paragraph.nextSibling);
-        } else {
-            fieldset.appendChild(wrapper);
-        }
+        wrapper.append(titleButton, artistButton, status);
+        tracklist.insertBefore(wrapper, tracklist.firstChild);
 
         const style = document.createElement('style');
         style.textContent = `
@@ -234,9 +346,9 @@
         return true;
     }
 
-    if (!insertButton()) {
+    if (!insertButtons()) {
         const observer = new MutationObserver(() => {
-            if (insertButton()) observer.disconnect();
+            if (insertButtons()) observer.disconnect();
         });
         observer.observe(document.documentElement, { childList: true, subtree: true });
     }
