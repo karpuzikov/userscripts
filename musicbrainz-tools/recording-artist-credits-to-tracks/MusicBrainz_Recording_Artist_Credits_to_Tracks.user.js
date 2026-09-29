@@ -1,12 +1,12 @@
 // ==UserScript==
 // @name         MusicBrainz - Recording Data to Tracks
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.1.0
+// @version      1.1.1
 // @description  Copies linked recording titles and artist credits to the corresponding tracks in the MusicBrainz release editor.
 // @author       karpuzikov
 // @license      MIT
-// @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/recording-artist-credits-to-tracks/MusicBrainz_Recording_Artist_Credits_to_Tracks.user.js?v=1.1.0
-// @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/recording-artist-credits-to-tracks/MusicBrainz_Recording_Artist_Credits_to_Tracks.user.js?v=1.1.0
+// @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/recording-artist-credits-to-tracks/MusicBrainz_Recording_Artist_Credits_to_Tracks.user.js?v=1.1.1
+// @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/recording-artist-credits-to-tracks/MusicBrainz_Recording_Artist_Credits_to_Tracks.user.js?v=1.1.1
 // @supportURL   https://github.com/karpuzikov/userscripts
 // @match        https://musicbrainz.org/release/add*
 // @match        https://musicbrainz.org/release/*/edit*
@@ -44,16 +44,95 @@
         return pageWindow().MB?._releaseEditor || null;
     }
 
-    function cloneArtistCredit(artistCredit) {
+    const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    const artistEntityCache = new Map();
+
+    function artistMbid(artist) {
+        const entity = unwrap(artist) || {};
+        const gid = String(unwrap(entity.gid) || '').trim();
+        if (UUID.test(gid)) return gid.toLowerCase();
+
+        const id = String(unwrap(entity.id) || '').trim();
+        return UUID.test(id) ? id.toLowerCase() : '';
+    }
+
+    function hasLinkedArtistId(artist) {
+        const entity = unwrap(artist) || {};
+        const id = unwrap(entity.id);
+        return Number.isInteger(id) ? id > 0 : /^\d+$/.test(String(id || '')) && Number(id) > 0;
+    }
+
+    async function resolveArtistEntity(artist) {
+        const source = unwrap(artist) || {};
+        if (hasLinkedArtistId(source)) return source;
+
+        const gid = artistMbid(source);
+        if (!gid) return null;
+
+        const mb = pageWindow().MB;
+        const cachedMbEntity = mb?.entityCache?.[gid];
+        if (cachedMbEntity && hasLinkedArtistId(cachedMbEntity)) {
+            return cachedMbEntity;
+        }
+
+        if (artistEntityCache.has(gid)) {
+            return artistEntityCache.get(gid);
+        }
+
+        const promise = (async () => {
+            const response = await fetch('/ws/js/entity/' + encodeURIComponent(gid), {
+                credentials: 'same-origin',
+                headers: {Accept: 'application/json'},
+            });
+            if (!response.ok) {
+                throw new Error('Could not resolve artist ' + gid + ' (HTTP ' + response.status + ')');
+            }
+
+            const entity = await response.json();
+            if (!entity || entity.entityType !== 'artist' || !hasLinkedArtistId(entity)) {
+                throw new Error('MusicBrainz did not return a linkable artist for ' + gid);
+            }
+
+            if (!entity.gid) entity.gid = gid;
+            return entity;
+        })();
+
+        artistEntityCache.set(gid, promise);
+
+        try {
+            const entity = await promise;
+            artistEntityCache.set(gid, entity);
+            return entity;
+        } catch (error) {
+            artistEntityCache.delete(gid);
+            throw error;
+        }
+    }
+
+    async function cloneLinkedArtistCredit(artistCredit) {
         const source = unwrap(artistCredit);
+        const names = [];
+
+        for (const credit of source?.names || []) {
+            const artist = await resolveArtistEntity(credit.artist);
+            if (!artist) {
+                throw new Error(
+                    'Could not resolve MusicBrainz artist for credit "' +
+                    String(unwrap(credit.name) || '').trim() + '"'
+                );
+            }
+
+            names.push({
+                ...credit,
+                artist,
+                name: unwrap(credit.name) || unwrap(artist.name) || '',
+                joinPhrase: unwrap(credit.joinPhrase ?? credit.join_phrase ?? '') || '',
+            });
+        }
+
         return {
             ...(source || {}),
-            names: (source?.names || []).map(credit => ({
-                ...credit,
-                artist: unwrap(credit.artist),
-                name: unwrap(credit.name),
-                joinPhrase: unwrap(credit.joinPhrase ?? credit.join_phrase ?? ''),
-            })),
+            names,
         };
     }
 
@@ -271,7 +350,8 @@
                         continue;
                     }
 
-                    track.artistCredit(cloneArtistCredit(sourceCredit));
+                    const linkedCredit = await cloneLinkedArtistCredit(sourceCredit);
+                    track.artistCredit(linkedCredit);
                     changed++;
                 }
             }
