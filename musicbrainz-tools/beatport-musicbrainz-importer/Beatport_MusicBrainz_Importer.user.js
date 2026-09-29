@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Beatport - MusicBrainz Importer
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.2.0
+// @version      1.2.1
 // @description  Import Beatport and BPTopTracker releases into MusicBrainz with Beatport enrichment, ISRC matching, and release-source handling.
 // @author       karpuzikov
 // @match        https://www.beatport.com/*
@@ -1163,19 +1163,28 @@
     }
 
     function makeButton(text, primary = false) {
+        const nativeControl = document.querySelector(
+            'div[class^="ReleaseDetailCard-style__Controls"] button, ' +
+            'div[class^="ReleaseDetailCard-style__Controls"] a[class]'
+        );
+
         const button = document.createElement('button');
         button.type = 'button';
         button.textContent = text;
-        Object.assign(button.style, {
-            border: primary ? '1px solid #01ff95' : '1px solid #666',
-            borderRadius: '4px',
-            background: primary ? '#01ff95' : '#242424',
-            color: primary ? '#111' : '#fff',
-            padding: '8px 12px',
-            fontWeight: '700',
-            cursor: 'pointer',
-            fontSize: '13px',
-        });
+
+        if (nativeControl?.className && typeof nativeControl.className === 'string') {
+            button.className = nativeControl.className;
+        } else {
+            // Layout-only fallback. Visual properties inherit from Beatport.
+            button.style.font = 'inherit';
+            button.style.color = 'inherit';
+            button.style.background = 'transparent';
+            button.style.border = '1px solid currentColor';
+            button.style.borderRadius = 'inherit';
+            button.style.padding = '0.5em 0.85em';
+        }
+
+        button.dataset.mbImporterPrimary = primary ? '1' : '0';
         return button;
     }
 
@@ -1240,37 +1249,37 @@
 
     function makeUiBox() {
         document.getElementById(UI_ID)?.remove();
+
         const box = document.createElement('div');
         box.id = UI_ID;
+        box.setAttribute('role', 'group');
+        box.setAttribute('aria-label', 'MusicBrainz tools');
         Object.assign(box.style, {
             display: 'flex',
             alignItems: 'center',
             gap: '8px',
             flexWrap: 'wrap',
-            marginTop: '12px',
-            padding: '10px',
-            background: '#1d1d1d',
-            border: '1px solid #343434',
-            borderRadius: '6px',
-            color: '#fff',
-            fontSize: '13px',
-            zIndex: '50',
+            marginTop: '8px',
+            font: 'inherit',
+            color: 'inherit',
         });
 
         const anchor = findUiAnchor();
-        if (anchor?.parentElement) {
-            anchor.insertAdjacentElement('afterend', box);
+        if (anchor) {
+            // Keep the importer inside Beatport's own release controls instead
+            // of drawing a separate custom panel.
+            if (anchor.matches('div[class^="ReleaseDetailCard-style__Controls"]')) {
+                anchor.appendChild(box);
+            } else if (anchor.parentElement) {
+                anchor.insertAdjacentElement('afterend', box);
+            } else {
+                anchor.appendChild(box);
+            }
         } else {
-            Object.assign(box.style, {
-                position: 'fixed',
-                right: '20px',
-                bottom: '20px',
-                marginTop: '0',
-                maxWidth: 'min(760px, calc(100vw - 40px))',
-                boxShadow: '0 6px 30px rgba(0,0,0,.45)',
-            });
-            document.body.appendChild(box);
+            const main = document.querySelector('main') || document.body;
+            main.prepend(box);
         }
+
         return box;
     }
 
@@ -1285,7 +1294,7 @@
         const importButton = makeButton('Import to MusicBrainz', true);
         importButton.title = 'Start MusicBrainz lookups, then open the release editor with the enriched Beatport metadata';
 
-        const searchButton = makeButton('Search in MusicBrainz');
+        const searchButton = makeButton('Search MusicBrainz');
         searchButton.title = 'Search MusicBrainz for an existing release without running importer lookups';
         searchButton.addEventListener('click', () => openMusicBrainzSearch(baseImportData, tracks));
 
@@ -1295,11 +1304,13 @@
         isrcButton.addEventListener('click', () => openAllIsrcs(release, tracks));
 
         const status = document.createElement('span');
-        status.style.fontWeight = '700';
+        status.setAttribute('role', 'status');
+        status.style.font = 'inherit';
         status.textContent = 'Ready - no MusicBrainz lookups have been run.';
 
         const info = document.createElement('span');
-        info.style.opacity = '0.82';
+        info.style.font = 'inherit';
+        info.style.opacity = '0.72';
         info.textContent = [
             `Barcode: ${release?.upc || 'none'}`,
             `${tracks.length} tracks`,
@@ -1341,7 +1352,6 @@
             } catch (error) {
                 console.error('[Beatport MB Importer]', error);
                 setStatus(`Importer error: ${error.message}`);
-                status.style.color = '#ff8080';
                 importButton.disabled = false;
                 searchButton.disabled = false;
             }
@@ -1385,8 +1395,8 @@
             if (serial !== processSerial) return;
             const box = makeUiBox();
             const status = document.createElement('span');
+            status.setAttribute('role', 'status');
             status.textContent = `Importer error: ${error.message}`;
-            status.style.color = '#ff8080';
             box.appendChild(status);
         }
     }
@@ -1791,13 +1801,12 @@
 
         const wrapper = document.createElement('div');
         wrapper.id = 'bpt-mb-importer';
-        wrapper.style.cssText =
-            'display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;align-items:center;';
+        wrapper.className = 'g-mt-5';
 
         const importButton = document.createElement('button');
         importButton.type = 'button';
         importButton.className = 'btn u-btn-primary g-ma-2';
-        importButton.textContent = 'Import into MusicBrainz';
+        importButton.textContent = 'Import to MusicBrainz';
         importButton.title =
             'Open the MusicBrainz Add Release editor with BPTopTracker data pre-filled';
 
@@ -1808,9 +1817,8 @@
         searchButton.title =
             'Search MusicBrainz before adding the release';
 
-        const status = document.createElement('span');
-        status.style.cssText =
-            'font-size:12px;opacity:.85;margin-left:2px;';
+        const status = document.createElement('small');
+        status.className = 'g-color-gray-dark-v4 g-ml-5';
         status.textContent = release.tracks.length
             ? `${release.tracks.length} track${release.tracks.length === 1 ? '' : 's'} ready`
             : 'No tracks found';
