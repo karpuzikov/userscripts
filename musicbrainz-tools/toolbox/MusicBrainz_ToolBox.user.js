@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MusicBrainz ToolBox
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.0.0
+// @version      1.0.1
 // @description  Combined MusicBrainz release-editor, recording, barcode, search, cover-art, Disc ID, and duplicate-edit tools.
 // @author       karpuzikov
 // @license      MIT
@@ -898,6 +898,10 @@
         const watchedTracks = new WeakSet();
         const artistEntityCache = new Map();
         let scanTimer = 0;
+
+        function matcherActive() {
+            return Boolean(pageWindow().__MB_RECORDING_MATCHER_ACTIVE__);
+        }
     
         function pageWindow() {
             try {
@@ -1338,7 +1342,7 @@
         }
     
         function renderTrack(track) {
-            if (!track?.elementID) return;
+            if (matcherActive() || !track?.elementID) return;
     
             const trackRow = document.getElementById(track.elementID);
             if (!trackRow || !trackRow.matches('tr.track')) {
@@ -1380,21 +1384,23 @@
         function watchObservable(observable, track) {
             if (typeof observable?.subscribe !== 'function') return;
             observable.subscribe(() => {
+                if (matcherActive()) return;
                 queueMicrotask(() => renderTrack(track));
             });
         }
-    
+
         function watchTrack(track) {
-            if (!track || watchedTracks.has(track)) return;
+            if (!track || watchedTracks.has(track)) return false;
             watchedTracks.add(track);
-    
+
             watchObservable(track.name, track);
             watchObservable(track.artistCredit, track);
             watchObservable(track.recording, track);
-    
+
             renderTrack(track);
+            return true;
         }
-    
+
         function releaseTracks() {
             const release = editor()?.rootField?.release?.();
             if (!release) return [];
@@ -1417,33 +1423,43 @@
         }
     
         function scan() {
+            if (matcherActive()) return;
+
             const tracks = releaseTracks();
             const liveTrackIds = new Set();
-    
+
             for (const track of tracks) {
                 if (track?.elementID) liveTrackIds.add(String(track.elementID));
-                watchTrack(track);
-                renderTrack(track);
+
+                const newlyWatched = watchTrack(track);
+                if (newlyWatched || !track?.elementID) continue;
+
+                const trackRow = document.getElementById(track.elementID);
+                const diffRow = document.querySelector(
+                    `tr.${DIFF_ROW_CLASS}[data-track-id="${CSS.escape(String(track.elementID))}"]`
+                );
+
+                // Restore only a missing discrepancy row after MusicBrainz rebuilt
+                // the Tracklist DOM. Existing rows are never repainted on a timer.
+                if (trackRow && !diffRow && (titleDiffers(track) || artistDiffers(track))) {
+                    renderTrack(track);
+                }
             }
-    
+
             removeOrphanRows(liveTrackIds);
         }
-    
+
         function start() {
             installStyle();
             scan();
-    
+
+            // Low-frequency model discovery only. Do not observe the Tracklist DOM:
+            // this script inserts rows itself and a subtree observer self-triggers.
             if (!scanTimer) {
-                scanTimer = window.setInterval(scan, 800);
-            }
-    
-            const tracklist = document.getElementById('tracklist');
-            if (tracklist) {
-                const observer = new MutationObserver(() => scan());
-                observer.observe(tracklist, {childList: true, subtree: true});
+                scanTimer = window.setInterval(scan, 1500);
             }
         }
-    
+
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', start, {once: true});
         } else {
