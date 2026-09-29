@@ -1,14 +1,14 @@
 // ==UserScript==
 // @name         MusicBrainz - Recording Matcher
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.4.2
+// @version      1.4.3
 // @description  Highlight duplicate recording links and match release tracks by metadata, highlighted duplicates, or pasted ISRCs.
 // @author       karpuzikov
 // @license      MIT
 // @match        https://musicbrainz.org/release/*
 // @match        https://beta.musicbrainz.org/release/*
-// @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/safe-recording-matcher/MusicBrainz_Safe_Recording_Matcher.user.js?v=1.4.2
-// @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/safe-recording-matcher/MusicBrainz_Safe_Recording_Matcher.user.js?v=1.4.2
+// @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/safe-recording-matcher/MusicBrainz_Safe_Recording_Matcher.user.js?v=1.4.3
+// @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/safe-recording-matcher/MusicBrainz_Safe_Recording_Matcher.user.js?v=1.4.3
 // @grant        none
 // @run-at       document-idle
 // ==/UserScript==
@@ -807,17 +807,29 @@
         if (running) return;
 
         const release = window.MB?.releaseEditor?.rootField?.release?.();
-        const tracks = release?.allTracks?.();
-        const linked = Array.isArray(tracks)
-            ? tracks.filter(track => track?.hasExistingRecording?.())
-            : [];
-
         const status = panel.querySelector('.mb-safe-status');
         const list = panel.querySelector('.mb-safe-results');
         const toggle = panel.querySelector('.mb-safe-toggle');
 
+        if (!release || typeof release.allTracks !== 'function') {
+            status.textContent = 'MusicBrainz release track model is unavailable.';
+            return;
+        }
+
+        // MusicBrainz Release#allTracks() is a generator, not an array.
+        const tracks = [...release.allTracks()];
+        const linked = tracks.filter(track =>
+            typeof track?.hasExistingRecording === 'function' &&
+            track.hasExistingRecording()
+        );
+
         if (!linked.length) {
-            status.textContent = 'No recording links to remove.';
+            const visibleLinked = [...document.querySelectorAll('#recordings tr.track')]
+                .filter(row => Boolean(recordingIdFromCell(row.querySelectorAll('td.name')[1])));
+
+            status.textContent = visibleLinked.length
+                ? `Error: MusicBrainz shows ${visibleLinked.length} linked recording(s), but the release model returned none. No links were changed.`
+                : 'No recording links to remove.';
             return;
         }
 
@@ -825,14 +837,30 @@
 
         for (const track of linked) {
             track.recording(null);
-            track.hasNewRecording(false);
+            if (typeof track.hasNewRecording === 'function') {
+                track.hasNewRecording(false);
+            }
         }
+
+        const remaining = [...release.allTracks()].filter(track =>
+            typeof track?.hasExistingRecording === 'function' &&
+            track.hasExistingRecording()
+        );
 
         list.replaceChildren();
         list.hidden = true;
         toggle.hidden = true;
         toggle.textContent = 'Show results';
-        status.textContent = `Removed ${linked.length} recording link${linked.length === 1 ? '' : 's'}.`;
+
+        if (remaining.length) {
+            status.textContent = `Removed ${linked.length - remaining.length}/${linked.length} recording links; ${remaining.length} remain linked.`;
+            return;
+        }
+
+        needsAttribution = true;
+        appendNoteIfPossible();
+        status.textContent = `Removed all ${linked.length} recording links.`;
+        updateDuplicateHighlights();
     }
 
     async function runMatcher(panel, isrcs = null, targetRows = null, options = {}) {
