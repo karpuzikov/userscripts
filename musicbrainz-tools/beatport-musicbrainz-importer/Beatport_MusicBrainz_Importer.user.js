@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Beatport - MusicBrainz Importer
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.1.4
+// @version      1.1.5
 // @description  Import Beatport releases into MusicBrainz with reverse-linked artists/labels, ISRC recording matching, and barcode-based release sources.
 // @author       karpuzikov
 // @match        https://www.beatport.com/*
@@ -9,8 +9,8 @@
 // @connect      music.apple.com
 // @connect      amp-api.music.apple.com
 // @grant        GM_xmlhttpRequest
-// @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/beatport-musicbrainz-importer/Beatport_MusicBrainz_Importer.user.js?v=1.1.4
-// @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/beatport-musicbrainz-importer/Beatport_MusicBrainz_Importer.user.js?v=1.1.4
+// @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/beatport-musicbrainz-importer/Beatport_MusicBrainz_Importer.user.js?v=1.1.5
+// @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/beatport-musicbrainz-importer/Beatport_MusicBrainz_Importer.user.js?v=1.1.5
 // @run-at       document-idle
 // ==/UserScript==
 
@@ -117,12 +117,29 @@
         }
     }
 
-    function findTracksQuery(pageProps) {
-        return pageProps?.dehydratedState?.queries?.find(query => {
+    function findTracksQuery(pageProps, releaseId = pageProps?.release?.id, page = null) {
+        const queries = pageProps?.dehydratedState?.queries || [];
+        const wantedReleaseId = String(releaseId ?? '');
+
+        const exact = queries.filter(query => {
             const key = query?.queryKey;
-            if (Array.isArray(key)) return key[0] === 'tracks' || String(key[0]).includes('tracks');
-            return String(key || '').includes('tracks');
-        }) || null;
+            if (!Array.isArray(key) || key[0] !== 'tracks') return false;
+
+            const options = key[1] || {};
+            const queryReleaseId = options.release_id ?? options.releaseId;
+            if (wantedReleaseId && String(queryReleaseId ?? '') !== wantedReleaseId) return false;
+            if (page != null && Number(options.page || 1) !== Number(page)) return false;
+            return true;
+        });
+
+        if (exact.length) return exact[0];
+
+        const trackQueries = queries.filter(query => {
+            const key = query?.queryKey;
+            return Array.isArray(key) && key[0] === 'tracks';
+        });
+
+        return trackQueries.length === 1 ? trackQueries[0] : null;
     }
 
     async function fetchPageProps(buildId, parts, page = 1) {
@@ -149,68 +166,153 @@
         }
         if (!pageProps?.release) return null;
 
-        const expected = Number(pageProps.release.track_count || 0);
-        const query = findTracksQuery(pageProps);
-        const currentResults = query?.state?.data?.results || [];
+        let query = findTracksQuery(pageProps, parts.id, 1);
+        let currentResults = query?.state?.data?.results || [];
+        let expected = Number(
+            pageProps.release.track_count ||
+            query?.state?.data?.count ||
+            0
+        );
 
-        if (expected > currentResults.length && expected > 100) {
+        /*
+         * Beatport's hydrated page state can contain stale/partial track data,
+         * or more than one generic "tracks" query. Re-fetch the release payload
+         * when the selected query is incomplete before doing anything else.
+         */
+        if (!query || (expected && currentResults.length < Math.min(expected, 100))) {
+            const freshProps = await fetchPageProps(next.buildId, parts, 1);
+            if (String(freshProps?.release?.id || '') === parts.id) {
+                pageProps = freshProps;
+                query = findTracksQuery(pageProps, parts.id, 1);
+                currentResults = query?.state?.data?.results || [];
+                expected = Number(
+                    pageProps.release.track_count ||
+                    query?.state?.data?.count ||
+                    expected ||
+                    0
+                );
+            }
+        }
+
+        if (!query) {
+            throw new Error('Could not find the Beatport track query for this release');
+        }
+
+        if (expected > 100) {
             const pages = Math.ceil(expected / 100);
             const all = [];
             const seen = new Set();
 
             for (let page = 1; page <= pages; page++) {
                 const props = page === 1 ? pageProps : await fetchPageProps(next.buildId, parts, page);
-                const results = findTracksQuery(props)?.state?.data?.results || [];
+                const results = findTracksQuery(props, parts.id, page)?.state?.data?.results || [];
                 for (const track of results) {
                     const key = track?.id ?? track?.url;
-                    if (key == null || seen.has(key)) continue;
-                    seen.add(key);
+                    if (key == null || seen.has(String(key))) continue;
+                    seen.add(String(key));
                     all.push(track);
                 }
             }
 
             if (all.length) {
-                const replacement = findTracksQuery(pageProps);
-                if (replacement?.state?.data) replacement.state.data.results = all;
+                query.state.data.results = all;
+                currentResults = all;
             }
+        }
+
+        const releaseTracks = currentResults.filter(track =>
+            String(track?.release?.id || parts.id) === parts.id
+        );
+
+        if (expected && releaseTracks.length !== expected) {
+            throw new Error(
+                `Beatport returned an incomplete tracklist (${releaseTracks.length}/${expected}). Reload the page and try again.`
+            );
         }
 
         return pageProps;
     }
 
-    function orderTracks(release, trackResults) {
-        const byUrl = new Map();
-        const byId = new Map();
-        for (const track of trackResults || []) {
-            if (track?.url) byUrl.set(track.url, track);
-            if (track?.id != null) byId.set(String(track.id), track);
+    function trackIdFromHref(value) {
+        if (!value) return '';
+        try {
+            const url = new URL(value, location.href);
+            return url.pathname.match(/\/track\/[^/]+\/(\d+)\/?$/i)?.[1] || '';
+        } catch {
+            return String(value).match(/\/tracks?\/(\d+)\/?$/i)?.[1] || '';
+        }
+    }
+
+    function dominantNumericDirection(tracks) {
+        const ids = (tracks || [])
+            .map(track => Number(track?.id))
+            .filter(Number.isFinite);
+
+        if (ids.length < 4) return 0;
+
+        let ascending = 0;
+        let descending = 0;
+        for (let i = 1; i < ids.length; i++) {
+            if (ids[i] > ids[i - 1]) ascending++;
+            else if (ids[i] < ids[i - 1]) descending++;
         }
 
-        const ordered = [];
+        const comparisons = ascending + descending;
+        if (!comparisons) return 0;
+
+        if (descending / comparisons >= 0.8) return -1;
+        if (ascending / comparisons >= 0.8) return 1;
+        return 0;
+    }
+
+    function orderTracksFromDom(trackResults) {
+        const byId = new Map(
+            (trackResults || [])
+                .filter(track => track?.id != null)
+                .map(track => [String(track.id), track])
+        );
+        if (!byId.size) return null;
+
+        const ids = [];
         const seen = new Set();
-        const refs = Array.isArray(release?.tracks) ? [...release.tracks].reverse() : [];
-
-        for (const ref of refs) {
-            const url = typeof ref === 'string' ? ref : ref?.url;
-            const id = typeof ref === 'object' && ref?.id != null
-                ? String(ref.id)
-                : typeof url === 'string'
-                    ? url.match(/\/tracks\/(\d+)\/?$/)?.[1]
-                    : null;
-            const track = (url && byUrl.get(url)) || (id && byId.get(id));
-            if (!track || seen.has(track.id)) continue;
-            seen.add(track.id);
-            ordered.push(track);
+        for (const anchor of document.querySelectorAll('a[href*="/track/"]')) {
+            const id = trackIdFromHref(anchor.href);
+            if (!id || !byId.has(id) || seen.has(id)) continue;
+            seen.add(id);
+            ids.push(id);
         }
 
-        if (ordered.length === trackResults.length) return ordered;
+        return ids.length === byId.size
+            ? ids.map(id => byId.get(id))
+            : null;
+    }
 
-        for (const track of [...trackResults].reverse()) {
-            if (!track || seen.has(track.id)) continue;
-            seen.add(track.id);
-            ordered.push(track);
+    function orderTracks(release, trackResults) {
+        const releaseId = String(release?.id || '');
+        const results = (trackResults || []).filter(track =>
+            String(track?.release?.id || releaseId) === releaseId
+        );
+
+        /*
+         * Best source: the actual Beatport tracklist rendered in the browser.
+         * It reflects exactly what the user sees, so use it whenever all
+         * release tracks are present in the DOM.
+         */
+        const domOrdered = orderTracksFromDom(results);
+        if (domOrdered) return domOrdered;
+
+        /*
+         * Legacy Beatport releases return the release track query in reverse
+         * creation-ID order. Newer/reissued releases can already be in the
+         * correct order. Only reverse when the IDs strongly indicate the old
+         * descending-order behaviour; otherwise preserve Beatport's query
+         * order exactly.
+         */
+        if (dominantNumericDirection(results) === -1) {
+            return [...results].reverse();
         }
-        return ordered;
+
+        return [...results];
     }
 
     function gmTextRequest(url, { headers = {}, timeout = 60000, allow404 = false } = {}) {
@@ -1257,14 +1359,20 @@
             if (serial !== processSerial) return;
 
             const release = pageProps?.release;
-            const trackResults = findTracksQuery(pageProps)?.state?.data?.results || [];
+            const trackResults = findTracksQuery(pageProps, release?.id, 1)?.state?.data?.results || [];
             if (!release || !trackResults.length) {
                 throw new Error('Beatport release metadata or tracks were not found');
             }
 
-            const tracks = orderTracks(release, trackResults)
-                .filter(track => String(track?.release?.id || release.id) === String(release.id));
+            const tracks = orderTracks(release, trackResults);
             if (!tracks.length) throw new Error('No tracks belonging to this release were found');
+
+            const expected = Number(release.track_count || 0);
+            if (expected && tracks.length !== expected) {
+                throw new Error(
+                    `Beatport track count mismatch (${tracks.length}/${expected}). Import cancelled.`
+                );
+            }
 
             displayBarcodeBelowCatalogNumber(release);
             installIdleUi(release, tracks, serial);
