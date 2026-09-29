@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Beatport - MusicBrainz Importer
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.2.3
+// @version      1.2.4
 // @description  Import Beatport and BPTopTracker releases into MusicBrainz with Beatport enrichment, ISRC matching, and release-source handling.
 // @author       karpuzikov
 // @match        https://www.beatport.com/*
@@ -269,15 +269,6 @@
             : null;
     }
 
-    function trackIdFromReleaseEntry(value) {
-        if (value && typeof value === 'object' && value.id != null) {
-            return String(value.id);
-        }
-
-        const raw = typeof value === 'string' ? value : value?.url;
-        return String(raw || '').match(/\/tracks\/(\d+)\/?(?:[?#].*)?$/i)?.[1] || '';
-    }
-
     function orderTracks(release, trackResults) {
         const releaseId = String(release?.id || '');
         const results = (trackResults || []).filter(track =>
@@ -285,40 +276,28 @@
         );
 
         /*
-         * Best source: the actual Beatport tracklist rendered in the browser.
-         * It reflects exactly what the user sees, so use it whenever all
-         * release tracks are present in the DOM.
+         * Beatport's embedded/API track arrays are NOT guaranteed to be in the
+         * same order as the numbered tracklist shown on the release page.
+         * Use the rendered DOM order when it is complete. The fallback below is
+         * only for non-destructive page metadata/UI; importing requires the DOM
+         * order to be verified separately.
          */
-        const domOrdered = orderTracksFromDom(results);
-        if (domOrdered) return domOrdered;
+        return orderTracksFromDom(results) || [...results];
+    }
 
-        /*
-         * Beatport's release object contains its own ordered track references.
-         * Use that sequence when it covers the complete result set.
-         *
-         * Never infer track position from the numeric track ID. IDs are entity
-         * identifiers, not positions; reversing descending IDs breaks releases
-         * assembled from tracks created at different times.
-         */
-        const byId = new Map(
-            results
-                .filter(track => track?.id != null)
-                .map(track => [String(track.id), track])
-        );
-        const releaseTrackIds = (Array.isArray(release?.tracks) ? release.tracks : [])
-            .map(trackIdFromReleaseEntry)
-            .filter(Boolean);
+    async function requireRenderedTrackOrder(trackResults, timeoutMs = 15000) {
+        const deadline = Date.now() + timeoutMs;
 
-        if (
-            releaseTrackIds.length === results.length &&
-            new Set(releaseTrackIds).size === results.length &&
-            releaseTrackIds.every(id => byId.has(id))
-        ) {
-            return releaseTrackIds.map(id => byId.get(id));
+        while (Date.now() <= deadline) {
+            const ordered = orderTracksFromDom(trackResults);
+            if (ordered) return ordered;
+            await sleep(250);
         }
 
-        // Final fallback: keep the order Beatport returned.
-        return [...results];
+        throw new Error(
+            'Could not verify the complete numbered Beatport tracklist. ' +
+            'Wait for the full tracklist to finish loading, then try again.'
+        );
     }
 
     function gmTextRequest(url, { headers = {}, timeout = 60000, allow404 = false } = {}) {
@@ -1299,34 +1278,51 @@
         return box;
     }
 
-    function installIdleUi(release, tracks, serial) {
+    function installIdleUi(release, trackResults, serial) {
         const box = makeUiBox();
-        const allIsrcs = tracks.map(track => normalizeIsrc(track?.isrc)).filter(Boolean);
-        const baseImportData = buildImport(release, tracks, []);
+        const previewTracks = orderTracks(release, trackResults);
+        const allIsrcs = trackResults.map(track => normalizeIsrc(track?.isrc)).filter(Boolean);
+        const baseImportData = buildImport(release, previewTracks, []);
 
         const importButton = makeButton('Import to MusicBrainz', true);
         importButton.title = 'Start MusicBrainz lookups, then open the release editor with the enriched Beatport metadata';
 
         const searchButton = makeButton('Search MusicBrainz');
         searchButton.title = 'Search MusicBrainz for an existing release without running importer lookups';
-        searchButton.addEventListener('click', () => openMusicBrainzSearch(baseImportData, tracks));
+        searchButton.addEventListener('click', () => openMusicBrainzSearch(baseImportData, previewTracks));
 
         const isrcButton = makeButton(`Submit ISRCs (${allIsrcs.length})`);
-        isrcButton.title = 'Open MagicISRC with this Beatport release\'s ISRCs prefilled';
+        isrcButton.title = 'Open MagicISRC with this Beatport release\'s ISRCs prefilled in visible track order';
         isrcButton.disabled = allIsrcs.length === 0;
-        isrcButton.addEventListener('click', () => openAllIsrcs(release, tracks));
+        isrcButton.addEventListener('click', async () => {
+            try {
+                setNativeStatus('Verifying Beatport track order...');
+                const tracks = await requireRenderedTrackOrder(trackResults);
+                if (serial !== processSerial) return;
+                setNativeStatus('');
+                openAllIsrcs(release, tracks);
+            } catch (error) {
+                console.error('[Beatport MB Importer]', error);
+                setNativeStatus(`Importer error: ${error.message}`);
+            }
+        });
 
         importButton.addEventListener('click', async () => {
             if (serial !== processSerial) return;
 
             importButton.disabled = true;
             searchButton.disabled = true;
+            isrcButton.disabled = true;
 
             const setStatus = text => {
                 setNativeStatus(text);
             };
 
             try {
+                setStatus('Verifying Beatport track order...');
+                const tracks = await requireRenderedTrackOrder(trackResults);
+                if (serial !== processSerial) return;
+
                 setStatus('Resolving Beatport artist/label links in MusicBrainz...');
                 const reverse = await reverseResolveBeatportLinks(release, tracks, setStatus);
                 if (serial !== processSerial) return;
@@ -1352,6 +1348,7 @@
                 setStatus(`Importer error: ${error.message}`);
                 importButton.disabled = false;
                 searchButton.disabled = false;
+                isrcButton.disabled = allIsrcs.length === 0;
             }
         });
 
@@ -1389,7 +1386,7 @@
 
             displayReleaseMetadata(release, tracks);
             setNativeStatus('');
-            installIdleUi(release, tracks, serial);
+            installIdleUi(release, trackResults, serial);
         } catch (error) {
             console.error('[Beatport MB Importer]', error);
             if (serial !== processSerial) return;
