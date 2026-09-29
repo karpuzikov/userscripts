@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MusicBrainz - Recording Matcher
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.4.7
+// @version      1.4.8
 // @description  Highlight duplicate recording links and match release tracks by metadata, highlighted duplicates, or pasted ISRCs.
 // @author       karpuzikov
 // @license      MIT
@@ -24,7 +24,7 @@
     const PAGE_WINDOW = typeof unsafeWindow !== 'undefined' ? unsafeWindow : window;
     const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     const MAX_DIFFERENCE_MS = 7000;
-    const REQUEST_GAP_MS = 1200;
+    const REQUEST_GAP_MS = 1000;
     const ISRC_CHOICE_CACHE_KEY = 'mb-recording-matcher:isrc-choice:v1';
     const GITHUB_TOKEN_KEY = 'mb-recording-matcher:github-token';
     const GITHUB_CACHE_REPO = 'karpuzikov/userscripts';
