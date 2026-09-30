@@ -722,3 +722,9 @@ Do not flatten release folders into the duplicate root. After successful moves, 
 - This includes settings, Personal Picks, unusual-pattern preferences, comparison logs, undo state, and crash logs.
 - Preserve or migrate older saved state when practical instead of making the user recreate it.
 - Runtime dependencies and executable caches are not user-saved data and may remain in app-local dependency locations.
+
+### Unusual-pattern artist-title separator rule
+
+- Never treat an ordinary `Artist - Title` or `Artist: Title` separator as a version/pattern boundary just because the title happens to contain words such as `Club`, `Live`, `Edit`, or `Mix` internally.
+- A trailing separator segment may enter unusual-pattern review only when that segment itself has a clear descriptor shape, normally ending in `Mix`, `Remix`, `Version`, `Edit`, `Live`, `Session`, `Acoustic`, `Instrumental`, `Dub`, `Redux`, etc.
+- Clear song titles with no actual ETI/version descriptor must not appear in Unusual track pattern review.
