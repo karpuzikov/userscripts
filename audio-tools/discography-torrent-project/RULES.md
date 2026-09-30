@@ -728,3 +728,22 @@ Do not flatten release folders into the duplicate root. After successful moves, 
 - Never treat an ordinary `Artist - Title` or `Artist: Title` separator as a version/pattern boundary just because the title happens to contain words such as `Club`, `Live`, `Edit`, or `Mix` internally.
 - A trailing separator segment may enter unusual-pattern review only when that segment itself has a clear descriptor shape, normally ending in `Mix`, `Remix`, `Version`, `Edit`, `Live`, `Session`, `Acoustic`, `Instrumental`, `Dub`, `Redux`, etc.
 - Clear song titles with no actual ETI/version descriptor must not appear in Unusual track pattern review.
+
+### CD image rip rule
+
+- Support lossless CD rips stored as one audio image plus CUE, including FLAC, APE, WavPack and WAV images.
+- Detect image mode only when multiple `TRACK ... AUDIO` entries in a CUE reference the same physical audio file. A normal split-file CUE must remain a split-file release.
+- Treat each CUE track as a virtual track using `INDEX 01` boundaries, with CUE title/performer/ISRC metadata when available.
+- Fingerprint the actual CUE audio segment, not the whole image file, so image rips can match split-track rips track-by-track.
+- Temporary extracted segments are working files only and must be deleted after fingerprinting; they are never part of the collection.
+- The physical CD image, CUE, LOG and companion files remain one indivisible release for move/rollback purposes. Never move or delete individual tracks from a CUE image.
+- CD image tracks participate in the same Save Remixes, Save Live recordings, Personal Picks, collection-wide minimum-track, source-preference, and CD-quality rules as ordinary tracks.
+
+### CUETools verification rule
+
+- Reuse the user's CUETools installation when available; otherwise the dependency may be installed through winget package `gchudov.CUETools`.
+- For any album family containing a CD image rip, verify all CUE-based candidates in that family with `CUETools.ARCUE.exe` so image and split rips receive the same verification opportunity.
+- AccurateRip/CTDB results are never duplicate evidence. They may influence selection only after strict exact-equivalent CD audio content is already proven by the analyzer.
+- Positive CUETools verification is stronger quality evidence than EAC/XLD log-settings score for exact-equivalent CD rips.
+- Missing database entries, no match, verification errors, or unavailable CUETools are neutral and must never penalize a rip.
+- Do not automate `CUETools.exe /convert` for temporary per-track analyzer extraction; its profile command line is interactive/non-terminating. Use temporary FFmpeg segment extraction from CUE boundaries and delete every temporary file after fingerprinting.
