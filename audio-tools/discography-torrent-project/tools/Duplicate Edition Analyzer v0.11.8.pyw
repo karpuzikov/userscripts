@@ -5280,7 +5280,7 @@ class App(tk.Tk):
         self.run_btn.configure(state="disabled")
         self.progress_var.set(0)
         self.progress_detail_var.set("")
-        self.status_var.set("Preparing track pattern review")
+        self.status_var.set("Scanning phrases and track patterns")
         self._last_progress_stage = ""
         self._clear_activity()
         self._append_activity("Started")
@@ -5312,15 +5312,85 @@ class App(tk.Tk):
         try:
             releases, tracks = prepare_analysis(existing, recycle, self.update_progress)
             patterns = collect_track_patterns(tracks)
+            phrase_candidates = detect_personal_pick_phrases_from_tracks(
+                tracks,
+                include_remixes=not save_remixes,
+                include_live=not save_live,
+            )
             self.after(
                 0,
-                lambda releases=releases, tracks=tracks, patterns=patterns: self.review_patterns(
-                    existing, recycle, save_remixes, save_live, logging_enabled, releases, tracks, patterns
+                lambda releases=releases, tracks=tracks, patterns=patterns, phrase_candidates=phrase_candidates: self.review_personal_phrases(
+                    existing,
+                    recycle,
+                    save_remixes,
+                    save_live,
+                    logging_enabled,
+                    releases,
+                    tracks,
+                    patterns,
+                    phrase_candidates,
                 ),
             )
         except Exception as exc:
             error = str(exc)
             self.after(0, lambda error=error: self.failed(error))
+
+    def review_personal_phrases(
+        self,
+        existing: Optional[Path],
+        recycle: Path,
+        save_remixes: bool,
+        save_live: bool,
+        logging_enabled: bool,
+        releases: List[Release],
+        tracks: List[Track],
+        patterns: List[Dict[str, object]],
+        phrase_candidates: List[Tuple[str, int, List[str]]],
+    ):
+        self._set_running(False)
+
+        if phrase_candidates:
+            dialog = PhraseReviewWindow(self, phrase_candidates, self.personal_keep_rules)
+            self.wait_window(dialog)
+            if dialog.result is None:
+                self.run_btn.configure(state="normal")
+                self.status_var.set("Cancelled")
+                self.progress_detail_var.set("")
+                self._append_activity("Cancelled during Personal Picks review")
+                return
+
+            existing_keys = {
+                _personal_pick_normalize(str(item.get("value", "")))
+                for item in self.personal_keep_rules
+                if isinstance(item, dict)
+            }
+            added = 0
+            for phrase in dialog.result:
+                key = _personal_pick_normalize(phrase)
+                if key and key not in existing_keys:
+                    self.personal_keep_rules.append({"mode": "contains", "value": phrase})
+                    existing_keys.add(key)
+                    added += 1
+
+            if added:
+                self.personal_picks_btn.configure(text=self._personal_picks_button_text())
+                self.save_settings()
+                self._append_activity(f"Personal Picks: added {added} phrase(s)")
+            else:
+                self._append_activity("Personal Picks review complete: no new phrases added")
+        else:
+            self._append_activity("No skipped live/remix phrase candidates detected")
+
+        self.review_patterns(
+            existing,
+            recycle,
+            save_remixes,
+            save_live,
+            logging_enabled,
+            releases,
+            tracks,
+            patterns,
+        )
 
     def review_patterns(
         self,
