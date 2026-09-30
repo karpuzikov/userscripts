@@ -766,3 +766,15 @@ Do not flatten release folders into the duplicate root. After successful moves, 
 - Update implementation and documentation together in the same version.
 - Cache-busting rules apply to web/userscript delivery; they are not applicable to this native `.pyw` tool.
 - Credential rules are not currently applicable because Duplicate Edition Analyzer stores no authentication secrets.
+
+### Decision explanation rule
+
+- Every analyzed release must have a user-visible explanation of why it is retained or marked duplicate.
+- The explanation must be available visually in the application; the user must not be required to inspect a text/JSONL comparison log.
+- Show the Decision Map before proposed filesystem moves are applied so the user can inspect the reasoning first.
+- The Decision Map must support every release in the run, including KEEP, ADD, REPLACE, SKIP, REMOVE, conservative fallback, and excluded-only outcomes.
+- For retained releases, show the direct reason and, when applicable, unique/essential recording versions, required album representation, Personal Picks, source/rip-quality context, and releases it replaces.
+- For duplicate releases, show which retained releases cover its included fingerprint groups, how many groups each covers, representative track titles, and any preferred-existing relationship.
+- Show remix/live/pattern exclusions separately so skipped material is visibly distinguished from duplicate audio coverage.
+- Same-coverage/related-release metadata is explanatory context only; it must never be presented as the evidence that created duplicate identity. Duplicate identity remains audio-based.
+- Persist the latest compact Decision Map snapshot as program state under the analyzer's own `state` folder so it can be reopened without enabling detailed comparison logging.
