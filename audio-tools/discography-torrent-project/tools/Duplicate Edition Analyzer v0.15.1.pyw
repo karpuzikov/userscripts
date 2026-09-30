@@ -32,7 +32,7 @@ import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 
 APP_NAME = "Duplicate / Edition Analyzer"
-APP_VERSION = "0.15.0"
+APP_VERSION = "0.15.1"
 PROGRAM_DATA_DIR_NAME = "Duplicate Edition Analyzer"
 AUDIO_EXTS = {".m4a", ".flac", ".wav", ".ape", ".wv", ".mp3", ".aac", ".ogg", ".opus"}
 def _logical_cpu_count() -> int:
@@ -4510,9 +4510,7 @@ def analyze_prepared(
     )
     errors.extend(merge_notes)
     progress_cb("Applying saved track skips...", 0, 1)
-    applied_skip_groups = apply_persistent_track_skips(tracks)
-    if applied_skip_groups:
-        errors.append(f"Saved track skips applied to {applied_skip_groups} recording group(s).")
+    apply_persistent_track_skips(tracks)
     progress_cb("Applying saved track skips...", 1, 1)
     progress_cb("Optimizing release set...", 0, 1)
     selected = optimize_collection(releases, groups)
@@ -6175,7 +6173,7 @@ class DecisionExplorerWindow(tk.Toplevel):
         self.release_search.bind("<Return>", self._search_release)
         ToolTip(self.release_search, "Type part of a release name and press Enter, or choose a release.")
 
-        ttk.Button(toolbar, text="Fit map", command=self._fit_map).pack(side="left", padx=(0, 6))
+        ttk.Button(toolbar, text="Center selected", command=self._fit_map).pack(side="left", padx=(0, 6))
         ttk.Button(toolbar, text="Maximize", command=self._toggle_maximize).pack(side="left", padx=(0, 6))
         if self.allow_reanalyze:
             ttk.Button(toolbar, text="Analyze again", command=self._reanalyze).pack(side="right")
@@ -6604,10 +6602,19 @@ class DecisionExplorerWindow(tk.Toplevel):
         bbox = self.canvas.bbox("all")
         if not bbox:
             return
-        self.canvas.configure(scrollregion=(bbox[0] - 80, bbox[1] - 80, bbox[2] + 80, bbox[3] + 80))
+        x0, y0, x1, y1 = bbox[0] - 80, bbox[1] - 80, bbox[2] + 80, bbox[3] + 80
+        self.canvas.configure(scrollregion=(x0, y0, x1, y1))
         try:
-            self.canvas.xview_moveto(0.0)
-            self.canvas.yview_moveto(0.0)
+            view_w = max(1, self.canvas.winfo_width())
+            view_h = max(1, self.canvas.winfo_height())
+            region_w = max(view_w, x1 - x0)
+            region_h = max(view_h, y1 - y0)
+            target_left = 900 - view_w / 2
+            target_top = 520 - view_h / 2
+            x_fraction = 0.0 if region_w <= view_w else (target_left - x0) / (region_w - view_w)
+            y_fraction = 0.0 if region_h <= view_h else (target_top - y0) / (region_h - view_h)
+            self.canvas.xview_moveto(max(0.0, min(1.0, x_fraction)))
+            self.canvas.yview_moveto(max(0.0, min(1.0, y_fraction)))
         except Exception:
             pass
 
@@ -6696,6 +6703,8 @@ class DecisionExplorerWindow(tk.Toplevel):
             track = self.tracks[index]
             if track.manual_skip_rule:
                 self.track_skip_btn.configure(text="Restore track", state="normal")
+            elif bool(row.get("excluded")):
+                self.track_skip_btn.configure(text="Already skipped by options", state="disabled")
             else:
                 self.track_skip_btn.configure(text="Skip track", state="normal")
 
@@ -6806,7 +6815,7 @@ class DecisionExplorerWindow(tk.Toplevel):
             self.details_button_var.set("More details")
             self.details_open = False
         else:
-            self.more_details.pack(fill="x", pady=(0, 6), before=self.track_tree.master.master)
+            self.more_details.pack(fill="x", pady=(0, 6), before=self.track_tree.master)
             self.details_button_var.set("Hide details")
             self.details_open = True
 
@@ -6830,7 +6839,7 @@ class DecisionExplorerWindow(tk.Toplevel):
 
     def _update_summary(self) -> None:
         manual_release_count = len(self.blocked_release_ids)
-        manual_track_count = sum(1 for track in (self.tracks or []) if bool(track.manual_skip_rule))
+        manual_track_count = len(_load_manual_track_skip_rules())
         changed_count = sum(
             1
             for item in self.snapshots
