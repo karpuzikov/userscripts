@@ -459,3 +459,6 @@ Before any program/script change in this project, apply the newest stored softwa
 
 
 - v0.15.1 validation fixes: saved-track-skip application is no longer reported as an error/note; the release network centers on the selected release; already option-skipped tracks cannot create redundant manual skip rules; the collapsed More details panel inserts correctly above the track table; and the summary counts persistent skip rules rather than duplicate copies carrying the same rule.
+
+
+- v0.15.2 startup hotfix: restored the complete GUI class tail after the v0.15 Release Map refactor accidentally removed `App` and the support dialogs. The published build again contains ToolTip, phrase/pattern/personal-picks dialogs, App, startup/crash handling, and the normal analysis workflow while retaining the v0.15 Release Map and persistent track-skip features.
