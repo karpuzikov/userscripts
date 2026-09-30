@@ -823,6 +823,11 @@ Do not flatten release folders into the duplicate root. After successful moves, 
 
 ### Release Map interaction workflow
 
+- Release nodes must be rendered as compact **rectangular release cards**, not circles/bubbles. The release name is the primary visible content of the card.
+- The red/yellow/green unique-track indicator is a **small badge attached to the release card**, never the entire release node.
+- Release-card text must be high-contrast light text on a dark card. Black/dark text on the dark graph background is prohibited.
+- Relationship edges between releases must remain visibly distinguishable on the dark background at the default fitted view. Use clear mid/high-contrast lines; selecting a release strengthens its connected edges while unrelated edges may dim but must not disappear completely.
+- Layout spacing must account for card dimensions so release cards do not collapse into an unreadable pile at the default view.
 - Every visible retained release node shows a **unique-track count badge** based on the current plan:
   - **1-2 unique tracks:** red badge.
   - **3-5 unique tracks:** yellow badge.

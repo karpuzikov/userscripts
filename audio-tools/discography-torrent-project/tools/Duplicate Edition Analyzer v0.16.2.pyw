@@ -33,7 +33,7 @@ import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 
 APP_NAME = "Duplicate / Edition Analyzer"
-APP_VERSION = "0.16.1"
+APP_VERSION = "0.16.2"
 PROGRAM_DATA_DIR_NAME = "Duplicate Edition Analyzer"
 PYSIDE6_VERSION = "6.11.2"
 SIGMA_VERSION = "3.0.3"
@@ -6206,17 +6206,34 @@ button,input { font:inherit; }
 #graphWrap { position:relative; flex:1; min-width:0; background:
   radial-gradient(circle at 50% 40%,rgba(36,47,68,.34),rgba(11,12,15,0) 45%); }
 #graph { position:absolute; inset:0; }
-#badges { position:absolute; inset:0; pointer-events:none; overflow:hidden; }
-.badge {
-  position:absolute; min-width:24px; height:24px; padding:0 6px; border-radius:12px; display:flex;
-  align-items:center; justify-content:center; font-size:11px; font-weight:800; color:#0b0c0f;
-  border:2px solid rgba(255,255,255,.78); box-shadow:0 2px 8px rgba(0,0,0,.45);
-  transform:translate(-50%,-50%);
+#nodesLayer { position:absolute; inset:0; pointer-events:none; overflow:hidden; z-index:4; }
+.releaseCard {
+  position:absolute; width:228px; min-height:46px;
+  padding:8px 34px 8px 10px; border:1px solid #475569; border-radius:8px;
+  background:rgba(23,26,33,.96); color:#f8fafc; box-shadow:0 4px 16px rgba(0,0,0,.38);
+  pointer-events:auto; cursor:pointer; user-select:none; transition:border-color .12s ease,background .12s ease,opacity .12s ease;
+  overflow:hidden;
 }
-.badge.red { background:var(--red); color:#fff; }
-.badge.yellow { background:var(--yellow); }
-.badge.green { background:var(--green); }
-.badge.neutral { background:#64748b; color:#fff; }
+.releaseCard:hover { background:#202631; border-color:#7da7dc; z-index:8; }
+.releaseCard.selected { border-color:#72b3ff; background:#18283a; box-shadow:0 0 0 2px rgba(94,160,255,.22),0 8px 22px rgba(0,0,0,.45); z-index:9; }
+.releaseCard.dimmed { opacity:.34; }
+.releaseCard .releaseLabel {
+  color:#f8fafc; font-size:12px; font-weight:650; line-height:1.23;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-shadow:0 1px 1px #000;
+}
+.releaseCard .releaseSub {
+  margin-top:3px; color:#aeb8c7; font-size:10px; line-height:1.1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.releaseBadge {
+  position:absolute; right:7px; top:50%; transform:translateY(-50%);
+  min-width:22px; height:22px; padding:0 6px; border-radius:11px; display:flex;
+  align-items:center; justify-content:center; font-size:10px; font-weight:850; color:#0b0c0f;
+  border:1px solid rgba(255,255,255,.65); box-shadow:0 2px 7px rgba(0,0,0,.42);
+}
+.releaseBadge.red { background:var(--red); color:#fff; }
+.releaseBadge.yellow { background:var(--yellow); }
+.releaseBadge.green { background:var(--green); }
+.releaseBadge.neutral { background:#64748b; color:#fff; }
 #legend {
   position:absolute; left:14px; bottom:14px; display:flex; gap:12px; align-items:center;
   padding:8px 10px; border:1px solid var(--line); border-radius:10px; background:rgba(16,18,24,.90);
@@ -6290,17 +6307,18 @@ button,input { font:inherit; }
 <div id="main">
   <div id="graphWrap">
     <div id="graph"></div>
-    <div id="badges"></div>
+    <div id="nodesLayer"></div>
     <div id="legend">
-      <span><span class="dot" style="background:#ef4444"></span>1-2 unique</span>
-      <span><span class="dot" style="background:#f59e0b"></span>3-5 unique</span>
-      <span><span class="dot" style="background:#22c55e"></span>6+ unique</span>
+      <strong style="color:#e8edf5">Unique tracks:</strong>
+      <span><span class="dot" style="background:#ef4444"></span>1-2</span>
+      <span><span class="dot" style="background:#f59e0b"></span>3-5</span>
+      <span><span class="dot" style="background:#22c55e"></span>6+</span>
     </div>
     <div id="loading">Loading release graph...</div>
   </div>
   <aside id="details">
     <div id="detailsInner">
-      <div id="emptyDetails">Click a release bubble to inspect it.</div>
+      <div id="emptyDetails">Click a release to inspect it.</div>
     </div>
   </aside>
 </div>
@@ -6317,7 +6335,7 @@ let state = null;
 let graph = null;
 let renderer = null;
 let selectedId = null;
-let badgeEls = new Map();
+let cardEls = new Map();
 let rafStarted = false;
 
 function esc(v) {
@@ -6331,12 +6349,6 @@ function badgeClass(n) {
   if (n >= 1) return "red";
   return "neutral";
 }
-function nodeColor(n) {
-  if (n >= 6) return "#22c55e";
-  if (n >= 3) return "#f59e0b";
-  if (n >= 1) return "#ef4444";
-  return "#64748b";
-}
 function retainedIds() {
   return new Set((state.nodes || []).map(n => String(n.id)));
 }
@@ -6346,14 +6358,14 @@ function layoutGraph() {
   if (!count) return;
   const golden = Math.PI * (3 - Math.sqrt(5));
   ids.forEach((id, i) => {
-    const radius = 8 + Math.sqrt(i + 1) * 7;
+    const radius = 18 + Math.sqrt(i + 1) * 15;
     const angle = i * golden;
     graph.setNodeAttribute(id, "x", Math.cos(angle) * radius);
     graph.setNodeAttribute(id, "y", Math.sin(angle) * radius);
   });
-  if (count > 450) return;
-  const iterations = count < 220 ? 85 : 45;
-  const area = Math.max(1500, count * 55);
+  if (count > 650) return;
+  const iterations = count < 220 ? 110 : 65;
+  const area = Math.max(6500, count * 190);
   const k = Math.sqrt(area / count);
   const edgePairs = graph.edges().map(e => graph.extremities(e));
   for (let it = 0; it < iterations; it++) {
@@ -6378,7 +6390,7 @@ function layoutGraph() {
       let fx = (vx / dist) * force, fy = (vy / dist) * force;
       dx[a] -= fx; dy[a] -= fy; dx[b] += fx; dy[b] += fy;
     });
-    const temp = Math.max(0.12, 4.2 * (1 - it / iterations));
+    const temp = Math.max(0.18, 7.0 * (1 - it / iterations));
     ids.forEach(id => {
       const a = graph.getNodeAttributes(id);
       const d = Math.sqrt(dx[id]*dx[id] + dy[id]*dy[id]) || 1;
@@ -6387,60 +6399,76 @@ function layoutGraph() {
     });
   }
 }
-function buildBadges() {
-  const host = document.getElementById("badges");
+function buildCards() {
+  const host = document.getElementById("nodesLayer");
   host.innerHTML = "";
-  badgeEls = new Map();
+  cardEls = new Map();
   (state.nodes || []).forEach(n => {
-    const el = document.createElement("div");
-    el.className = "badge " + badgeClass(n.uniqueCount);
-    el.textContent = String(n.uniqueCount);
-    el.title = n.uniqueCount + " unique track" + (n.uniqueCount === 1 ? "" : "s");
-    host.appendChild(el);
-    badgeEls.set(String(n.id), el);
+    const card = document.createElement("div");
+    card.className = "releaseCard";
+    card.dataset.node = String(n.id);
+    card.title = n.name;
+    card.innerHTML =
+      '<div class="releaseLabel">'+esc(n.name)+'</div>'
+      +'<div class="releaseSub">'+esc(n.action)+' · '+n.includedTracks+' tracks</div>'
+      +'<div class="releaseBadge '+badgeClass(n.uniqueCount)+'">'+n.uniqueCount+'</div>';
+    card.onclick = ev => {
+      ev.stopPropagation();
+      selectRelease(Number(n.id));
+    };
+    host.appendChild(card);
+    cardEls.set(String(n.id), card);
   });
 }
-function syncBadges() {
+function syncCards() {
   if (renderer && graph) {
-    badgeEls.forEach((el,id) => {
-      if (!graph.hasNode(id)) { el.style.display = "none"; return; }
+    const cameraRatio = Math.max(.01, renderer.getCamera().getState().ratio || 1);
+    const scale = Math.max(.58, Math.min(1.0, 1 / Math.sqrt(cameraRatio)));
+    const sid = selectedId == null ? null : String(selectedId);
+    cardEls.forEach((card,id) => {
+      if (!graph.hasNode(id)) { card.style.display = "none"; return; }
       const a = graph.getNodeAttributes(id);
       const p = renderer.graphToViewport({x:a.x,y:a.y});
-      el.style.display = "";
-      el.style.left = (p.x + 10) + "px";
-      el.style.top = (p.y - 10) + "px";
+      card.style.display = "";
+      card.style.left = p.x+"px";
+      card.style.top = p.y+"px";
+      card.style.transform = "translate(-50%,-50%) scale("+scale+")";
+      const selected = sid === id;
+      const neighbor = sid == null || selected || (graph.hasNode(sid) && graph.areNeighbors(id,sid));
+      card.classList.toggle("selected",selected);
+      card.classList.toggle("dimmed",!neighbor);
     });
   }
-  requestAnimationFrame(syncBadges);
+  requestAnimationFrame(syncCards);
 }
-function buildGraph() {
+function buildGraph() {function buildGraph() {
   const container = document.getElementById("graph");
   if (renderer) { renderer.kill(); renderer = null; }
   container.innerHTML = "";
   graph = new Graph({multi:false,type:"undirected"});
   (state.nodes || []).forEach(n => {
     graph.addNode(String(n.id), {
-      label:n.name,
+      label:"",
       x:0,y:0,
-      size:Math.max(8,Math.min(18,8 + n.uniqueCount * 0.8)),
-      color:nodeColor(n.uniqueCount),
+      size:2.2,
+      color:"#64748b",
       uniqueCount:n.uniqueCount
     });
   });
   (state.edges || []).forEach((e,i) => {
     const s=String(e.source), t=String(e.target);
     if (graph.hasNode(s) && graph.hasNode(t) && s !== t && !graph.hasEdge(s,t)) {
-      graph.addUndirectedEdgeWithKey("e"+i,s,t,{size:Math.max(0.6,Math.min(3,e.shared/2)),color:"#394150"});
+      graph.addUndirectedEdgeWithKey("e"+i,s,t,{size:Math.max(1.6,Math.min(5.5,1.25 + e.shared*0.62)),color:"#71809a"});
     }
   });
   layoutGraph();
   renderer = new Sigma(graph, container, {
     renderEdgeLabels:false,
-    labelRenderedSizeThreshold:7,
-    labelDensity:1,
-    labelGridCellSize:130,
-    defaultEdgeColor:"#394150",
+    renderLabels:false,
+    defaultEdgeColor:"#71809a",
     defaultNodeColor:"#64748b",
+    minEdgeThickness:1.4,
+    hideEdgesOnMove:false,
     zIndex:true,
     nodeReducer:(node,data) => {
       const res = {...data};
@@ -6449,12 +6477,11 @@ function buildGraph() {
         const isSel = node === sid;
         const neighbor = isSel || (graph.hasNode(sid) && graph.areNeighbors(node,sid));
         if (!neighbor) {
-          res.color = "#30343e";
-          res.label = "";
+          res.color = "#252b35";
           res.zIndex = 0;
         } else {
           res.zIndex = isSel ? 3 : 2;
-          if (isSel) res.size = data.size * 1.35;
+          if (isSel) res.size = data.size * 1.8;
         }
       }
       return res;
@@ -6464,8 +6491,8 @@ function buildGraph() {
       if (selectedId != null) {
         const ext=graph.extremities(edge);
         const on=ext.includes(String(selectedId));
-        res.color=on ? "#7caeff" : "#252a34";
-        res.size=on ? Math.max(1.4,data.size*1.5) : 0.35;
+        res.color=on ? "#79b7ff" : "#495568";
+        res.size=on ? Math.max(2.8,data.size*1.8) : Math.max(0.9,data.size*0.7);
         res.zIndex=on ? 2 : 0;
       }
       return res;
@@ -6473,8 +6500,8 @@ function buildGraph() {
   });
   renderer.on("clickNode", ({node}) => selectRelease(Number(node)));
   renderer.on("clickStage", () => { selectedId=null; renderer.refresh(); closeDetails(); });
-  buildBadges();
-  if (!rafStarted) { rafStarted=true; requestAnimationFrame(syncBadges); }
+  buildCards();
+  if (!rafStarted) { rafStarted=true; requestAnimationFrame(syncCards); }
   document.getElementById("loading").style.display="none";
 }
 function getNode(id) { return (state.nodes || []).find(n => Number(n.id) === Number(id)); }
@@ -6486,7 +6513,7 @@ function selectRelease(id) {
 }
 function closeDetails() {
   document.getElementById("details").classList.remove("open");
-  document.getElementById("detailsInner").innerHTML='<div id="emptyDetails">Click a release bubble to inspect it.</div>';
+  document.getElementById("detailsInner").innerHTML='<div id="emptyDetails">Click a release to inspect it.</div>';
 }
 function trackStatus(t) {
   if (t.pendingIgnore) return "Pending ignore - Re-Analyze required";
