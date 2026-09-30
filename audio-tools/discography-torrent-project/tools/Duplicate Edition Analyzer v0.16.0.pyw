@@ -9,6 +9,7 @@ import itertools
 import json
 import math
 import os
+import pickle
 import re
 import shutil
 import struct
@@ -32,8 +33,11 @@ import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 
 APP_NAME = "Duplicate / Edition Analyzer"
-APP_VERSION = "0.15.2"
+APP_VERSION = "0.16.0"
 PROGRAM_DATA_DIR_NAME = "Duplicate Edition Analyzer"
+PYSIDE6_VERSION = "6.11.2"
+SIGMA_VERSION = "3.0.3"
+GRAPHOLOGY_VERSION = "0.26.0"
 AUDIO_EXTS = {".m4a", ".flac", ".wav", ".ape", ".wv", ".mp3", ".aac", ".ogg", ".opus"}
 def _logical_cpu_count() -> int:
     return max(1, os.cpu_count() or 1)
@@ -6087,823 +6091,863 @@ def undo_last_run() -> Tuple[int, List[str]]:
     return restored, conflicts
 
 
-class DecisionExplorerWindow(tk.Toplevel):
-    """Modern release-only dependency map with drill-down details."""
 
-    def __init__(
-        self,
-        master,
-        snapshots: List[Dict[str, object]],
-        allow_apply: bool = False,
-        summary_text: str = "",
-        releases: Optional[List[Release]] = None,
-        tracks: Optional[List[Track]] = None,
-        groups: Optional[Dict[int, List[int]]] = None,
-        selected: Optional[Set[int]] = None,
-        reviews=None,
-        decisions: Optional[List[ReleaseDecision]] = None,
-        blocked_release_ids: Optional[Set[int]] = None,
-        allow_reanalyze: bool = True,
-    ):
-        super().__init__(master)
-        self.title(f"{APP_NAME} - Release Map")
-        self.geometry("1440x900")
-        self.minsize(980, 640)
-        self.resizable(True, True)
-        self.configure(background=DARK_BG)
-        _enable_dark_titlebar(self)
+def _qt_dependency_dir() -> Path:
+    return _dependencies_dir() / f"pyside6-{PYSIDE6_VERSION}"
 
-        self.snapshots = list(snapshots)
-        self.releases = list(releases) if releases is not None else None
-        self.tracks = list(tracks) if tracks is not None else None
-        self.groups = groups if groups is not None else None
-        self.selected = set(selected or set())
-        self.reviews = list(reviews or [])
-        self.decisions = list(decisions or [])
-        self.blocked_release_ids = set(blocked_release_ids or set())
-        self.can_edit = bool(
-            allow_apply
-            and self.releases is not None
-            and self.tracks is not None
-            and self.groups is not None
-            and selected is not None
+
+def ensure_qt_release_map_dependencies() -> Path:
+    """Install the modern Qt UI runtime in this program's isolated dependency folder."""
+    deps = _qt_dependency_dir()
+    deps_text = str(deps)
+    if deps.is_dir() and deps_text not in sys.path:
+        sys.path.insert(0, deps_text)
+
+    try:
+        importlib.import_module("PySide6")
+        importlib.import_module("PySide6.QtWebEngineWidgets")
+        return deps
+    except Exception:
+        pass
+
+    bootstrap_winget()
+    pip_check = run_hidden(
+        [sys.executable, "-m", "pip", "--version"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        errors="replace",
+        check=False,
+    )
+    if pip_check.returncode != 0:
+        run_hidden(
+            [sys.executable, "-m", "ensurepip", "--upgrade"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            errors="replace",
+            check=False,
         )
-        self.allow_reanalyze = allow_reanalyze
-        self.result: Optional[str] = None
-        self.baseline_actions = {
-            int(item.get("release_id", -1)): str(item.get("action", ""))
-            for item in snapshots
+
+    deps.mkdir(parents=True, exist_ok=True)
+    cp = run_hidden(
+        [
+            sys.executable,
+            "-m",
+            "pip",
+            "install",
+            "--disable-pip-version-check",
+            "--quiet",
+            "--upgrade",
+            "--target",
+            str(deps),
+            f"PySide6=={PYSIDE6_VERSION}",
+        ],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        errors="replace",
+        check=False,
+    )
+    if cp.returncode != 0:
+        raise RuntimeError(
+            "PySide6 could not be installed automatically: "
+            + (cp.stderr.strip() or cp.stdout.strip() or "pip install failed")
+        )
+
+    if deps_text not in sys.path:
+        sys.path.insert(0, deps_text)
+    importlib.invalidate_caches()
+    importlib.import_module("PySide6")
+    importlib.import_module("PySide6.QtWebEngineWidgets")
+    return deps
+
+
+def _qt_release_map_html() -> str:
+    html = r"""<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Duplicate Edition Analyzer - Release Map</title>
+<script src="qrc:///qtwebchannel/qwebchannel.js"></script>
+<style>
+:root {
+  color-scheme: dark;
+  --bg:#0b0c0f; --panel:#12141a; --panel2:#171a21; --line:#2a2e39;
+  --text:#f5f7fb; --muted:#9aa3b2; --blue:#5ea0ff; --red:#ef4444;
+  --yellow:#f59e0b; --green:#22c55e; --purple:#a78bfa;
+}
+* { box-sizing:border-box; }
+html,body { margin:0; width:100%; height:100%; overflow:hidden; background:var(--bg); color:var(--text);
+  font-family:"Segoe UI Variable","Segoe UI",system-ui,sans-serif; }
+body { display:flex; flex-direction:column; }
+button,input { font:inherit; }
+#toolbar {
+  height:56px; min-height:56px; display:flex; align-items:center; gap:8px; padding:0 14px;
+  background:#101218; border-bottom:1px solid var(--line);
+}
+#title { font-weight:700; font-size:17px; margin-right:10px; white-space:nowrap; }
+#search {
+  width:min(540px,42vw); height:34px; border:1px solid #363b48; border-radius:9px;
+  background:#181b22; color:var(--text); padding:0 12px; outline:none;
+}
+#search:focus { border-color:var(--blue); box-shadow:0 0 0 2px rgba(94,160,255,.16); }
+.btn {
+  height:34px; border:1px solid #363b48; border-radius:9px; background:#1b1e26; color:var(--text);
+  padding:0 13px; cursor:pointer; transition:.14s ease;
+}
+.btn:hover:not(:disabled) { background:#242834; border-color:#4a5262; }
+.btn:disabled { opacity:.38; cursor:default; }
+.btn.dirty { border-color:var(--yellow); color:#ffd87a; box-shadow:0 0 0 2px rgba(245,158,11,.16); }
+.btn.apply-ready { background:#12351f; border-color:#2f9e55; color:#b8f7c9; box-shadow:0 0 0 2px rgba(34,197,94,.16); }
+#spacer { flex:1; }
+#main { min-height:0; flex:1; display:flex; position:relative; }
+#graphWrap { position:relative; flex:1; min-width:0; background:
+  radial-gradient(circle at 50% 40%,rgba(36,47,68,.34),rgba(11,12,15,0) 45%); }
+#graph { position:absolute; inset:0; }
+#badges { position:absolute; inset:0; pointer-events:none; overflow:hidden; }
+.badge {
+  position:absolute; min-width:24px; height:24px; padding:0 6px; border-radius:12px; display:flex;
+  align-items:center; justify-content:center; font-size:11px; font-weight:800; color:#0b0c0f;
+  border:2px solid rgba(255,255,255,.78); box-shadow:0 2px 8px rgba(0,0,0,.45);
+  transform:translate(-50%,-50%);
+}
+.badge.red { background:var(--red); color:#fff; }
+.badge.yellow { background:var(--yellow); }
+.badge.green { background:var(--green); }
+.badge.neutral { background:#64748b; color:#fff; }
+#legend {
+  position:absolute; left:14px; bottom:14px; display:flex; gap:12px; align-items:center;
+  padding:8px 10px; border:1px solid var(--line); border-radius:10px; background:rgba(16,18,24,.90);
+  color:var(--muted); font-size:12px; backdrop-filter:blur(8px);
+}
+.dot { width:9px; height:9px; border-radius:50%; display:inline-block; margin-right:5px; }
+#details {
+  width:0; overflow:hidden; transition:width .18s ease; border-left:0 solid var(--line);
+  background:var(--panel); display:flex; flex-direction:column;
+}
+#details.open { width:min(560px,42vw); border-left-width:1px; }
+#detailsInner { width:min(560px,42vw); min-width:430px; height:100%; display:flex; flex-direction:column; }
+#detailsHead { padding:16px 16px 12px; border-bottom:1px solid var(--line); }
+#releaseName { font-size:18px; line-height:1.25; font-weight:750; margin-bottom:6px; }
+#releaseMeta { color:var(--muted); font-size:12px; margin-bottom:12px; }
+#pathRow { display:flex; gap:8px; align-items:center; }
+#releasePath {
+  flex:1; min-width:0; color:#c7d2e3; background:#0f1116; border:1px solid #303541;
+  border-radius:8px; padding:7px 9px; font-family:"Cascadia Mono",Consolas,monospace; font-size:11px;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap; user-select:text;
+}
+#reason { margin-top:11px; color:#d8dde8; font-size:13px; line-height:1.42; }
+#releaseActions { display:flex; gap:8px; margin-top:12px; }
+#tracksTitle { padding:12px 16px 8px; font-size:13px; font-weight:700; color:#dfe5ef; }
+#tracks { min-height:0; flex:1; overflow:auto; padding:0 8px 14px; }
+.track {
+  position:relative; display:grid; grid-template-columns:42px minmax(180px,1fr) 70px 118px;
+  gap:8px; align-items:center; min-height:42px; padding:6px 10px; border-bottom:1px solid #232733;
+  border-radius:7px; color:#e9edf4; font-size:12px;
+}
+.track:hover { background:#1a1e27; }
+.track.unique { background:rgba(245,158,11,.12); box-shadow:inset 3px 0 var(--yellow); }
+.track.orphan { background:rgba(239,68,68,.14); box-shadow:inset 3px 0 var(--red); }
+.track.manual { color:#c4b5fd; }
+.track .num,.track .dur { color:var(--muted); text-align:center; }
+.track .titleText { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.track .status { color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.ignoreTrack {
+  position:absolute; right:8px; top:6px; height:30px; opacity:0; pointer-events:none;
+  border:1px solid #4b5160; border-radius:7px; background:#252a35; color:#fff; padding:0 10px;
+  transition:.12s ease; cursor:pointer;
+}
+.track:hover .ignoreTrack { opacity:1; pointer-events:auto; }
+.ignoreTrack:hover { border-color:var(--yellow); color:#ffd87a; }
+#emptyDetails { margin:auto; color:var(--muted); text-align:center; padding:30px; }
+#resultDrawer {
+  display:none; border-top:1px solid var(--line); background:#101218; padding:12px 16px 14px;
+  max-height:230px; overflow:auto;
+}
+#resultDrawer.open { display:block; }
+#resultTitle { font-weight:750; margin-bottom:8px; }
+.resultLine { color:#d9dfeb; font-size:13px; line-height:1.45; margin:3px 0; }
+.resultAdd { color:#98f5b3; }
+.resultRemove { color:#ffaaaa; }
+#loading {
+  position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+  background:#0b0c0f; color:var(--muted); z-index:20;
+}
+</style>
+</head>
+<body>
+<div id="toolbar">
+  <div id="title">Release Map</div>
+  <input id="search" placeholder="Find release...">
+  <button class="btn" id="fitBtn">Fit</button>
+  <button class="btn" id="reanalyzeBtn" disabled>Re-Analyze</button>
+  <button class="btn" id="applyBtn" disabled>Apply</button>
+  <div id="spacer"></div>
+  <button class="btn" id="closeBtn">Close</button>
+</div>
+<div id="main">
+  <div id="graphWrap">
+    <div id="graph"></div>
+    <div id="badges"></div>
+    <div id="legend">
+      <span><span class="dot" style="background:#ef4444"></span>1-2 unique</span>
+      <span><span class="dot" style="background:#f59e0b"></span>3-5 unique</span>
+      <span><span class="dot" style="background:#22c55e"></span>6+ unique</span>
+    </div>
+    <div id="loading">Loading release graph...</div>
+  </div>
+  <aside id="details">
+    <div id="detailsInner">
+      <div id="emptyDetails">Click a release bubble to inspect it.</div>
+    </div>
+  </aside>
+</div>
+<div id="resultDrawer">
+  <div id="resultTitle">Re-Analyze result</div>
+  <div id="resultBody"></div>
+</div>
+<script type="module">
+import Graph from "https://cdn.jsdelivr.net/npm/graphology@__GRAPHOLOGY_VERSION__/+esm?dea=__APP_VERSION__";
+import Sigma from "https://cdn.jsdelivr.net/npm/sigma@__SIGMA_VERSION__/+esm?dea=__APP_VERSION__";
+
+let bridge = null;
+let state = null;
+let graph = null;
+let renderer = null;
+let selectedId = null;
+let badgeEls = new Map();
+let rafStarted = false;
+
+function esc(v) {
+  return String(v == null ? "" : v)
+    .replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;").replaceAll("'","&#39;");
+}
+function badgeClass(n) {
+  if (n >= 6) return "green";
+  if (n >= 3) return "yellow";
+  if (n >= 1) return "red";
+  return "neutral";
+}
+function nodeColor(n) {
+  if (n >= 6) return "#22c55e";
+  if (n >= 3) return "#f59e0b";
+  if (n >= 1) return "#ef4444";
+  return "#64748b";
+}
+function retainedIds() {
+  return new Set((state.nodes || []).map(n => String(n.id)));
+}
+function layoutGraph() {
+  const ids = graph.nodes();
+  const count = ids.length;
+  if (!count) return;
+  const golden = Math.PI * (3 - Math.sqrt(5));
+  ids.forEach((id, i) => {
+    const radius = 8 + Math.sqrt(i + 1) * 7;
+    const angle = i * golden;
+    graph.setNodeAttribute(id, "x", Math.cos(angle) * radius);
+    graph.setNodeAttribute(id, "y", Math.sin(angle) * radius);
+  });
+  if (count > 450) return;
+  const iterations = count < 220 ? 85 : 45;
+  const area = Math.max(1500, count * 55);
+  const k = Math.sqrt(area / count);
+  const edgePairs = graph.edges().map(e => graph.extremities(e));
+  for (let it = 0; it < iterations; it++) {
+    const dx = Object.create(null), dy = Object.create(null);
+    ids.forEach(id => { dx[id] = 0; dy[id] = 0; });
+    for (let i = 0; i < count; i++) {
+      const a = ids[i], aa = graph.getNodeAttributes(a);
+      for (let j = i + 1; j < count; j++) {
+        const b = ids[j], bb = graph.getNodeAttributes(b);
+        let vx = aa.x - bb.x, vy = aa.y - bb.y;
+        let dist = Math.sqrt(vx*vx + vy*vy) + 0.05;
+        let force = (k*k) / dist;
+        let fx = (vx / dist) * force, fy = (vy / dist) * force;
+        dx[a] += fx; dy[a] += fy; dx[b] -= fx; dy[b] -= fy;
+      }
+    }
+    edgePairs.forEach(pair => {
+      const a = pair[0], b = pair[1], aa = graph.getNodeAttributes(a), bb = graph.getNodeAttributes(b);
+      let vx = aa.x - bb.x, vy = aa.y - bb.y;
+      let dist = Math.sqrt(vx*vx + vy*vy) + 0.05;
+      let force = (dist*dist) / k;
+      let fx = (vx / dist) * force, fy = (vy / dist) * force;
+      dx[a] -= fx; dy[a] -= fy; dx[b] += fx; dy[b] += fy;
+    });
+    const temp = Math.max(0.12, 4.2 * (1 - it / iterations));
+    ids.forEach(id => {
+      const a = graph.getNodeAttributes(id);
+      const d = Math.sqrt(dx[id]*dx[id] + dy[id]*dy[id]) || 1;
+      graph.setNodeAttribute(id, "x", a.x + (dx[id] / d) * Math.min(d, temp));
+      graph.setNodeAttribute(id, "y", a.y + (dy[id] / d) * Math.min(d, temp));
+    });
+  }
+}
+function buildBadges() {
+  const host = document.getElementById("badges");
+  host.innerHTML = "";
+  badgeEls = new Map();
+  (state.nodes || []).forEach(n => {
+    const el = document.createElement("div");
+    el.className = "badge " + badgeClass(n.uniqueCount);
+    el.textContent = String(n.uniqueCount);
+    el.title = n.uniqueCount + " unique track" + (n.uniqueCount === 1 ? "" : "s");
+    host.appendChild(el);
+    badgeEls.set(String(n.id), el);
+  });
+}
+function syncBadges() {
+  if (renderer && graph) {
+    badgeEls.forEach((el,id) => {
+      if (!graph.hasNode(id)) { el.style.display = "none"; return; }
+      const a = graph.getNodeAttributes(id);
+      const p = renderer.graphToViewport({x:a.x,y:a.y});
+      el.style.display = "";
+      el.style.left = (p.x + 10) + "px";
+      el.style.top = (p.y - 10) + "px";
+    });
+  }
+  requestAnimationFrame(syncBadges);
+}
+function buildGraph() {
+  const container = document.getElementById("graph");
+  if (renderer) { renderer.kill(); renderer = null; }
+  container.innerHTML = "";
+  graph = new Graph({multi:false,type:"undirected"});
+  (state.nodes || []).forEach(n => {
+    graph.addNode(String(n.id), {
+      label:n.name,
+      x:0,y:0,
+      size:Math.max(8,Math.min(18,8 + n.uniqueCount * 0.8)),
+      color:nodeColor(n.uniqueCount),
+      uniqueCount:n.uniqueCount
+    });
+  });
+  (state.edges || []).forEach((e,i) => {
+    const s=String(e.source), t=String(e.target);
+    if (graph.hasNode(s) && graph.hasNode(t) && s !== t && !graph.hasEdge(s,t)) {
+      graph.addUndirectedEdgeWithKey("e"+i,s,t,{size:Math.max(0.6,Math.min(3,e.shared/2)),color:"#394150"});
+    }
+  });
+  layoutGraph();
+  renderer = new Sigma(graph, container, {
+    renderEdgeLabels:false,
+    labelRenderedSizeThreshold:7,
+    labelDensity:1,
+    labelGridCellSize:130,
+    defaultEdgeColor:"#394150",
+    defaultNodeColor:"#64748b",
+    zIndex:true,
+    nodeReducer:(node,data) => {
+      const res = {...data};
+      if (selectedId != null) {
+        const sid = String(selectedId);
+        const isSel = node === sid;
+        const neighbor = isSel || (graph.hasNode(sid) && graph.areNeighbors(node,sid));
+        if (!neighbor) {
+          res.color = "#30343e";
+          res.label = "";
+          res.zIndex = 0;
+        } else {
+          res.zIndex = isSel ? 3 : 2;
+          if (isSel) res.size = data.size * 1.35;
         }
-        self.by_snapshot_id: Dict[int, Dict[str, object]] = {
-            int(item.get("release_id", -1)): item for item in self.snapshots
-        }
-        self.selected_release_id = self._initial_release_id()
-        self.selected_track_global_index: Optional[int] = None
-        self.details_open = False
-        self.maximized = False
-        self.base_summary_text = summary_text
+      }
+      return res;
+    },
+    edgeReducer:(edge,data) => {
+      const res={...data};
+      if (selectedId != null) {
+        const ext=graph.extremities(edge);
+        const on=ext.includes(String(selectedId));
+        res.color=on ? "#7caeff" : "#252a34";
+        res.size=on ? Math.max(1.4,data.size*1.5) : 0.35;
+        res.zIndex=on ? 2 : 0;
+      }
+      return res;
+    }
+  });
+  renderer.on("clickNode", ({node}) => selectRelease(Number(node)));
+  renderer.on("clickStage", () => { selectedId=null; renderer.refresh(); closeDetails(); });
+  buildBadges();
+  if (!rafStarted) { rafStarted=true; requestAnimationFrame(syncBadges); }
+  document.getElementById("loading").style.display="none";
+}
+function getNode(id) { return (state.nodes || []).find(n => Number(n.id) === Number(id)); }
+function selectRelease(id) {
+  const n=getNode(id); if(!n) return;
+  selectedId=id;
+  renderer.refresh();
+  openDetails(n);
+}
+function closeDetails() {
+  document.getElementById("details").classList.remove("open");
+  document.getElementById("detailsInner").innerHTML='<div id="emptyDetails">Click a release bubble to inspect it.</div>';
+}
+function trackStatus(t) {
+  if (t.pendingIgnore) return "Pending ignore - Re-Analyze required";
+  if (t.manualSkip) return "Ignored by you";
+  if (t.orphaned) return "Unique - release removal would lose it";
+  if (t.unique) return "Unique to this retained release";
+  if (t.coveredBy && t.coveredBy.length) return "Also on: " + t.coveredBy.slice(0,2).join("; ");
+  if (t.excluded) return "Skipped by active options";
+  if (t.distinction) return t.distinction;
+  return "Included";
+}
+function openDetails(n) {
+  const aside=document.getElementById("details");
+  const inner=document.getElementById("detailsInner");
+  let tracks="";
+  (n.tracks || []).forEach(t => {
+    const cls=["track"];
+    if(t.orphaned) cls.push("orphan"); else if(t.unique) cls.push("unique");
+    if(t.manualSkip || t.pendingIgnore) cls.push("manual");
+    let action="";
+    if(state.editable && !t.excluded) {
+      const label=(t.manualSkip || t.pendingIgnore) ? "Restore" : "Ignore";
+      action='<button class="ignoreTrack" data-track="'+t.index+'">'+label+'</button>';
+    }
+    tracks += '<div class="'+cls.join(" ")+'" title="'+esc(t.distinction || trackStatus(t))+'">'
+      +'<div class="num">'+esc(t.number)+'</div>'
+      +'<div class="titleText">'+esc(t.title)+'</div>'
+      +'<div class="dur">'+esc(t.duration)+'</div>'
+      +'<div class="status">'+esc(trackStatus(t))+'</div>'+action+'</div>';
+  });
+  let ignoreRelease="";
+  if(state.editable) {
+    const label=n.pendingReleaseIgnore ? "Restore release" : "Ignore release";
+    ignoreRelease='<button class="btn" id="ignoreReleaseBtn">'+label+'</button>';
+  }
+  inner.innerHTML=
+    '<div id="detailsHead"><div id="releaseName">'+esc(n.name)+'</div>'
+    +'<div id="releaseMeta">'+esc(n.action)+' · '+n.uniqueCount+' unique · '+n.includedTracks+' included</div>'
+    +'<div id="pathRow"><div id="releasePath">'+esc(n.path)+'</div>'
+    +'<button class="btn" id="copyPathBtn">Copy</button><button class="btn" id="openFolderBtn">Open folder</button></div>'
+    +'<div id="reason">'+esc(n.reason)+'</div>'
+    +'<div id="releaseActions">'+ignoreRelease+'</div></div>'
+    +'<div id="tracksTitle">Tracks</div><div id="tracks">'+tracks+'</div>';
+  aside.classList.add("open");
+  document.getElementById("copyPathBtn").onclick=()=>bridge.copyPath(n.path);
+  document.getElementById("openFolderBtn").onclick=()=>bridge.openFolder(n.path);
+  const rb=document.getElementById("ignoreReleaseBtn");
+  if(rb) rb.onclick=()=>bridge.toggleRelease(Number(n.id), receiveState);
+  inner.querySelectorAll(".ignoreTrack").forEach(btn=>{
+    btn.onclick=(ev)=>{ ev.stopPropagation(); bridge.toggleTrack(Number(btn.dataset.track), receiveState); };
+  });
+}
+function receiveState(raw) {
+  state=JSON.parse(raw);
+  updateButtons();
+  buildGraph();
+  if(selectedId != null && getNode(selectedId)) selectRelease(selectedId);
+  else closeDetails();
+  renderResult();
+}
+function updateButtons() {
+  const r=document.getElementById("reanalyzeBtn");
+  const a=document.getElementById("applyBtn");
+  r.disabled=!state.editable || !state.dirty;
+  r.classList.toggle("dirty",!!state.dirty);
+  a.disabled=!state.editable || !state.applyEnabled || !!state.dirty;
+  a.classList.toggle("apply-ready",!!state.applyHighlighted && !state.dirty);
+}
+function renderResult() {
+  const drawer=document.getElementById("resultDrawer");
+  const body=document.getElementById("resultBody");
+  if(!state.result || !state.result.show) { drawer.classList.remove("open"); body.innerHTML=""; return; }
+  let html="";
+  (state.result.causes || []).forEach(x=>{ html+='<div class="resultLine">'+esc(x)+'</div>'; });
+  if(state.result.added && state.result.added.length)
+    html+='<div class="resultLine resultAdd">THEN added: '+state.result.added.map(esc).join("; ")+'</div>';
+  if(state.result.removed && state.result.removed.length)
+    html+='<div class="resultLine resultRemove">THEN removed: '+state.result.removed.map(esc).join("; ")+'</div>';
+  if((!state.result.added || !state.result.added.length) && (!state.result.removed || !state.result.removed.length))
+    html+='<div class="resultLine">THEN no release-selection change.</div>';
+  body.innerHTML=html;
+  drawer.classList.add("open");
+}
+document.getElementById("fitBtn").onclick=()=>{ if(renderer) renderer.getCamera().animatedReset({duration:300}); };
+document.getElementById("reanalyzeBtn").onclick=()=>bridge.reanalyze(receiveState);
+document.getElementById("applyBtn").onclick=()=>bridge.apply();
+document.getElementById("closeBtn").onclick=()=>bridge.closeMap();
+document.getElementById("search").addEventListener("keydown",e=>{
+  if(e.key!=="Enter" || !renderer) return;
+  const q=e.target.value.trim().toLowerCase(); if(!q) return;
+  const n=(state.nodes || []).find(x=>x.name.toLowerCase().includes(q)); if(!n) return;
+  selectRelease(Number(n.id));
+  const a=graph.getNodeAttributes(String(n.id));
+  renderer.getCamera().animate({x:a.x,y:a.y,ratio:0.28},{duration:350});
+});
+new QWebChannel(qt.webChannelTransport, channel => {
+  bridge=channel.objects.bridge;
+  bridge.getState(receiveState);
+});
+</script>
+</body>
+</html>"""
+    return (
+        html.replace("__APP_VERSION__", APP_VERSION)
+        .replace("__SIGMA_VERSION__", SIGMA_VERSION)
+        .replace("__GRAPHOLOGY_VERSION__", GRAPHOLOGY_VERSION)
+    )
 
-        self.search_var = tk.StringVar()
-        self.summary_var = tk.StringVar()
-        self.release_title_var = tk.StringVar()
-        self.release_meta_var = tk.StringVar()
-        self.path_var = tk.StringVar()
-        self.reason_var = tk.StringVar()
-        self.track_info_var = tk.StringVar(value="Select a track for details.")
-        self.details_button_var = tk.StringVar(value="More details")
 
-        outer = ttk.Frame(self)
-        outer.pack(fill="both", expand=True, padx=14, pady=12)
-
-        toolbar = ttk.Frame(outer)
-        toolbar.pack(fill="x", pady=(0, 8))
-        ttk.Label(toolbar, text="Release Map", font=("Segoe UI", 15, "bold")).pack(side="left")
-
-        self.release_choices = self._release_choice_values()
-        self.release_choice_lookup = {label: rid for label, rid in self.release_choices}
-        self.release_search = ttk.Combobox(
-            toolbar,
-            textvariable=self.search_var,
-            values=[label for label, _rid in self.release_choices],
-            state="normal",
-            width=58,
-        )
-        self.release_search.pack(side="left", padx=(16, 8), fill="x", expand=True)
-        self.release_search.bind("<<ComboboxSelected>>", self._search_release)
-        self.release_search.bind("<Return>", self._search_release)
-        ToolTip(self.release_search, "Type part of a release name and press Enter, or choose a release.")
-
-        ttk.Button(toolbar, text="Center selected", command=self._fit_map).pack(side="left", padx=(0, 6))
-        ttk.Button(toolbar, text="Maximize", command=self._toggle_maximize).pack(side="left", padx=(0, 6))
-        if self.allow_reanalyze:
-            ttk.Button(toolbar, text="Analyze again", command=self._reanalyze).pack(side="right")
-        if self.can_edit:
-            ttk.Button(toolbar, text="Apply plan", command=self._apply).pack(side="right", padx=(0, 6))
-        ttk.Button(toolbar, text="Close", command=self._close).pack(side="right", padx=(0, 6))
-
-        ttk.Label(
-            outer,
-            textvariable=self.summary_var,
-            style="Help.TLabel",
-            wraplength=1360,
-            justify="left",
-        ).pack(fill="x", pady=(0, 8))
-
-        self.panes = tk.PanedWindow(
-            outer,
-            orient="vertical",
-            background="#3f3f46",
-            sashwidth=8,
-            sashrelief="flat",
-            bd=0,
-            relief="flat",
-        )
-        self.panes.pack(fill="both", expand=True)
-
-        map_frame = ttk.Frame(self.panes)
-        details_frame = ttk.Frame(self.panes)
-        self.panes.add(map_frame, minsize=240)
-        self.panes.add(details_frame, minsize=300)
-
-        self.canvas = tk.Canvas(
-            map_frame,
-            background="#111113",
-            highlightthickness=1,
-            highlightbackground="#3f3f46",
-            borderwidth=0,
-        )
-        xscroll = ttk.Scrollbar(map_frame, orient="horizontal", command=self.canvas.xview)
-        yscroll = ttk.Scrollbar(map_frame, orient="vertical", command=self.canvas.yview)
-        self.canvas.configure(xscrollcommand=xscroll.set, yscrollcommand=yscroll.set)
-        self.canvas.grid(row=0, column=0, sticky="nsew")
-        yscroll.grid(row=0, column=1, sticky="ns")
-        xscroll.grid(row=1, column=0, sticky="ew")
-        map_frame.rowconfigure(0, weight=1)
-        map_frame.columnconfigure(0, weight=1)
-        self.canvas.bind("<MouseWheel>", self._map_mousewheel)
-        self.canvas.bind("<Shift-MouseWheel>", self._map_shift_mousewheel)
-        self.canvas.bind("<ButtonPress-2>", lambda e: self.canvas.scan_mark(e.x, e.y))
-        self.canvas.bind("<B2-Motion>", lambda e: self.canvas.scan_dragto(e.x, e.y, gain=1))
-
-        detail_header = ttk.Frame(details_frame)
-        detail_header.pack(fill="x", pady=(2, 5))
-        title_col = ttk.Frame(detail_header)
-        title_col.pack(side="left", fill="x", expand=True)
-        ttk.Label(
-            title_col,
-            textvariable=self.release_title_var,
-            font=("Segoe UI", 12, "bold"),
-        ).pack(anchor="w")
-        ttk.Label(
-            title_col,
-            textvariable=self.release_meta_var,
-            style="Help.TLabel",
-        ).pack(anchor="w", pady=(2, 0))
-
-        release_actions = ttk.Frame(detail_header)
-        release_actions.pack(side="right")
-        self.remove_release_btn = ttk.Button(
-            release_actions,
-            text="Remove release",
-            command=self._toggle_manual_release,
-        )
-        if self.can_edit:
-            self.remove_release_btn.pack(side="right", padx=(6, 0))
-        ttk.Button(release_actions, text="Open folder", command=self._open_release_folder).pack(
-            side="right", padx=(6, 0)
-        )
-        ttk.Button(release_actions, text="Copy path", command=self._copy_release_path).pack(
-            side="right", padx=(6, 0)
-        )
-
-        path_row = ttk.Frame(details_frame)
-        path_row.pack(fill="x", pady=(0, 6))
-        ttk.Label(path_row, text="Path:", style="Help.TLabel").pack(side="left", padx=(0, 6))
-        self.path_entry = ttk.Entry(path_row, textvariable=self.path_var, state="readonly")
-        self.path_entry.pack(side="left", fill="x", expand=True)
-
-        reason_box = tk.Frame(details_frame, background="#1b1b1f", bd=0)
-        reason_box.pack(fill="x", pady=(0, 6))
-        tk.Label(
-            reason_box,
-            text="Why this release is in the current plan",
-            background="#1b1b1f",
-            foreground="#a1a1aa",
-            font=("Segoe UI", 9, "bold"),
-            anchor="w",
-        ).pack(fill="x", padx=10, pady=(8, 2))
-        tk.Label(
-            reason_box,
-            textvariable=self.reason_var,
-            background="#1b1b1f",
-            foreground="#f4f4f5",
-            font=("Segoe UI", 10),
-            justify="left",
-            anchor="w",
-            wraplength=1320,
-        ).pack(fill="x", padx=10, pady=(0, 8))
-
-        more_row = ttk.Frame(details_frame)
-        more_row.pack(fill="x", pady=(0, 5))
-        ttk.Button(
-            more_row,
-            textvariable=self.details_button_var,
-            command=self._toggle_details,
-        ).pack(side="left")
-
-        self.more_details = tk.Text(
-            details_frame,
-            height=5,
-            wrap="word",
-            background="#18181b",
-            foreground="#d4d4d8",
-            insertbackground="#f4f4f5",
-            selectbackground="#264f78",
-            relief="flat",
-            borderwidth=0,
-            padx=10,
-            pady=8,
-            font=("Segoe UI", 9),
-            state="disabled",
-        )
-
-        track_bar = ttk.Frame(details_frame)
-        track_bar.pack(fill="x", pady=(3, 5))
-        ttk.Label(track_bar, text="Tracks", style="Section.TLabel").pack(side="left")
-        ttk.Label(
-            track_bar,
-            text="Yellow = unique to this retained release. Red = manual removal would lose it.",
-            style="Help.TLabel",
-        ).pack(side="left", padx=(12, 0))
-        self.track_skip_btn = ttk.Button(
-            track_bar,
-            text="Skip track",
-            command=self._toggle_track_skip,
-        )
-        if self.can_edit:
-            self.track_skip_btn.pack(side="right")
-
-        track_frame = ttk.Frame(details_frame)
-        track_frame.pack(fill="both", expand=True)
-        self.track_tree = ttk.Treeview(
-            track_frame,
-            columns=("number", "title", "artist", "duration", "status"),
-            show="headings",
-            style="Analyzer.Treeview",
-            selectmode="browse",
-        )
-        self.track_tree.heading("number", text="#")
-        self.track_tree.heading("title", text="Track")
-        self.track_tree.heading("artist", text="Artist")
-        self.track_tree.heading("duration", text="Length")
-        self.track_tree.heading("status", text="Why / coverage")
-        self.track_tree.column("number", width=44, minwidth=38, stretch=False, anchor="center")
-        self.track_tree.column("title", width=360, minwidth=180, stretch=True)
-        self.track_tree.column("artist", width=220, minwidth=130, stretch=True)
-        self.track_tree.column("duration", width=72, minwidth=60, stretch=False, anchor="center")
-        self.track_tree.column("status", width=520, minwidth=250, stretch=True)
-        track_scroll = ttk.Scrollbar(track_frame, orient="vertical", command=self.track_tree.yview)
-        self.track_tree.configure(yscrollcommand=track_scroll.set)
-        self.track_tree.pack(side="left", fill="both", expand=True)
-        track_scroll.pack(side="right", fill="y")
-        self.track_tree.tag_configure("unique", background="#423513", foreground="#ffe08a")
-        self.track_tree.tag_configure("orphan", background="#4a1f24", foreground="#ffb4bc")
-        self.track_tree.tag_configure("manual", foreground="#c4b5fd")
-        self.track_tree.tag_configure("excluded", foreground="#a1a1aa")
-        self.track_tree.bind("<<TreeviewSelect>>", self._select_track)
-
-        tk.Label(
-            details_frame,
-            textvariable=self.track_info_var,
-            background=DARK_BG,
-            foreground="#d4d4d8",
-            font=("Segoe UI", 9),
-            justify="left",
-            anchor="w",
-            wraplength=1320,
-        ).pack(fill="x", pady=(6, 0))
-
-        self.protocol("WM_DELETE_WINDOW", self._close)
-        self.after(50, self._initialize_layout)
-
-    def _initial_release_id(self) -> int:
-        retained = [
-            int(item.get("release_id", -1))
-            for item in self.snapshots
-            if str(item.get("outcome", "")) == "RETAINED"
-        ]
-        if retained:
-            return retained[0]
-        if self.snapshots:
-            return int(self.snapshots[0].get("release_id", -1))
-        return -1
-
-    def _release_choice_values(self) -> List[Tuple[str, int]]:
-        rows: List[Tuple[str, int]] = []
-        for item in sorted(self.snapshots, key=lambda x: str(x.get("name", "")).casefold()):
-            rid = int(item.get("release_id", -1))
-            action = str(item.get("action", ""))
-            rows.append((f"[{action}] {item.get('name', '')}", rid))
-        return rows
-
-    def _initialize_layout(self) -> None:
-        try:
-            total = max(700, self.panes.winfo_height())
-            self.panes.sash_place(0, 0, max(260, int(total * 0.46)))
-        except Exception:
-            pass
-        self._update_summary()
-        self._select_release_id(self.selected_release_id)
-
-    def _map_mousewheel(self, event) -> None:
-        self.canvas.yview_scroll(-1 if event.delta > 0 else 1, "units")
-
-    def _map_shift_mousewheel(self, event) -> None:
-        self.canvas.xview_scroll(-1 if event.delta > 0 else 1, "units")
-
-    def _toggle_maximize(self) -> None:
-        try:
-            if self.state() == "zoomed":
-                self.state("normal")
-                self.maximized = False
-            else:
-                self.state("zoomed")
-                self.maximized = True
-        except Exception:
-            pass
-
-    def _search_release(self, _event=None) -> None:
-        raw = self.search_var.get().strip()
-        if not raw:
-            return
-        rid = self.release_choice_lookup.get(raw)
-        if rid is None:
-            needle = normalize_title(raw)
-            for label, candidate_id in self.release_choices:
-                if needle and needle in normalize_title(label):
-                    rid = candidate_id
-                    break
-        if rid is not None:
-            self._select_release_id(rid)
-
-    def _select_release_id(self, release_id: int) -> None:
-        if release_id not in self.by_snapshot_id:
-            return
-        self.selected_release_id = release_id
-        self.selected_track_global_index = None
-        item = self.by_snapshot_id[release_id]
-        self.release_title_var.set(str(item.get("name", "")))
-        changed = self.baseline_actions.get(release_id) not in (None, str(item.get("action", "")))
-        changed_text = " | changed by your edits" if changed else ""
-        self.release_meta_var.set(
-            f"{item.get('outcome', '')} | {item.get('action', '')} | {item.get('source', '')}"
-            f" | {item.get('included_tracks', 0)} included tracks{changed_text}"
-        )
-        self.path_var.set(str(item.get("path", "")))
-        self.reason_var.set(str(item.get("reason", "")))
-        self._fill_more_details(item)
-        self._fill_tracklist(item)
-        self._update_release_action(item)
-        self._draw_release_network(item)
-
-    def _draw_release_network(self, item: Dict[str, object]) -> None:
-        self.canvas.delete("all")
-        connected = list(item.get("affected", []) or [])
-        connected.sort(
-            key=lambda row: (
-                -int(row.get("shared_groups", 0) or 0),
-                str(row.get("name", "")).casefold(),
-            )
-        )
-
-        center_x = 900
-        center_y = 520
-        center_width = 330
-        center_height = 110
-
-        positions: List[Tuple[Dict[str, object], float, float]] = []
-        if connected:
-            index = 0
-            ring = 0
-            while index < len(connected):
-                ring += 1
-                radius_x = 520 + (ring - 1) * 400
-                radius_y = 320 + (ring - 1) * 220
-                ring_count = min(12 + (ring - 1) * 6, len(connected) - index)
-                for slot in range(ring_count):
-                    angle = (2.0 * math.pi * slot / max(1, ring_count)) - math.pi / 2.0
-                    x = center_x + math.cos(angle) * radius_x
-                    y = center_y + math.sin(angle) * radius_y
-                    positions.append((connected[index], x, y))
-                    index += 1
-
-        for row, x, y in positions:
-            self.canvas.create_line(
-                center_x,
-                center_y,
-                x,
-                y,
-                fill="#3f3f46",
-                width=1,
-            )
-
-        self._release_node(
-            center_x - center_width / 2,
-            center_y - center_height / 2,
-            center_width,
-            center_height,
-            int(item.get("release_id", -1)),
-            str(item.get("name", "")),
-            str(item.get("action", "")),
-            int(item.get("recording_groups", 0) or 0),
-            selected=True,
-            changed=self.baseline_actions.get(int(item.get("release_id", -1))) not in (
-                None,
-                str(item.get("action", "")),
-            ),
-        )
-
-        for row, x, y in positions:
-            rid = int(row.get("release_id", -1))
-            action = str(row.get("action", ""))
-            self._release_node(
-                x - 145,
-                y - 44,
-                290,
-                88,
-                rid,
-                str(row.get("name", "")),
-                action,
-                int(row.get("shared_groups", 0) or 0),
-                selected=False,
-                changed=self.baseline_actions.get(rid) not in (None, action),
-            )
-
-        if not connected:
-            self.canvas.create_text(
-                center_x,
-                center_y + 90,
-                text="No other included release shares this release's current recording groups.",
-                fill="#a1a1aa",
-                font=("Segoe UI", 10),
-                anchor="n",
-            )
-
-        bbox = self.canvas.bbox("all")
-        if bbox:
-            self.canvas.configure(
-                scrollregion=(bbox[0] - 120, bbox[1] - 120, bbox[2] + 120, bbox[3] + 120)
-            )
-        self._fit_map()
-
-    def _release_node(
-        self,
-        x: float,
-        y: float,
-        width: float,
-        height: float,
-        release_id: int,
-        name: str,
-        action: str,
-        shared_or_groups: int,
-        selected: bool,
-        changed: bool,
-    ) -> None:
-        tag = f"release_{release_id}_{int(x)}_{int(y)}"
-        outline = "#5b9bd5" if selected else "#52525b"
-        fill = "#203044" if selected else "#202024"
-        if action in {"SKIP", "REMOVE"}:
-            fill = "#2d2022"
-            outline = "#7f4a50"
-        elif action in {"ADD", "REPLACE", "KEEP"} and not selected:
-            fill = "#1d2a22"
-            outline = "#42644d"
-        if changed:
-            outline = "#d19a4a"
-
-        self.canvas.create_rectangle(
-            x, y, x + width, y + height,
-            fill=fill,
-            outline=outline,
-            width=2 if selected or changed else 1,
-            tags=(tag,),
-        )
-        prefix = "* " if changed else ""
-        display_name = textwrap.shorten(name, width=44 if selected else 38, placeholder="...")
-        self.canvas.create_text(
-            x + 12, y + 10,
-            anchor="nw",
-            text=prefix + display_name,
-            fill="#f4f4f5",
-            font=("Segoe UI", 10, "bold" if selected else "normal"),
-            width=width - 24,
-            tags=(tag,),
-        )
-        label = (
-            f"{action} | {shared_or_groups} recording groups"
-            if selected
-            else f"{action} | {shared_or_groups} shared groups"
-        )
-        self.canvas.create_text(
-            x + 12, y + height - 26,
-            anchor="nw",
-            text=label,
-            fill="#a1a1aa",
-            font=("Segoe UI", 9),
-            width=width - 24,
-            tags=(tag,),
-        )
-        self.canvas.tag_bind(tag, "<Button-1>", lambda _e, rid=release_id: self._select_release_id(rid))
-        self.canvas.tag_bind(tag, "<Enter>", lambda _e: self.canvas.configure(cursor="hand2"))
-        self.canvas.tag_bind(tag, "<Leave>", lambda _e: self.canvas.configure(cursor=""))
-
-    def _fit_map(self) -> None:
-        self.canvas.update_idletasks()
-        bbox = self.canvas.bbox("all")
-        if not bbox:
-            return
-        x0, y0, x1, y1 = bbox[0] - 80, bbox[1] - 80, bbox[2] + 80, bbox[3] + 80
-        self.canvas.configure(scrollregion=(x0, y0, x1, y1))
-        try:
-            view_w = max(1, self.canvas.winfo_width())
-            view_h = max(1, self.canvas.winfo_height())
-            region_w = max(view_w, x1 - x0)
-            region_h = max(view_h, y1 - y0)
-            target_left = 900 - view_w / 2
-            target_top = 520 - view_h / 2
-            x_fraction = 0.0 if region_w <= view_w else (target_left - x0) / (region_w - view_w)
-            y_fraction = 0.0 if region_h <= view_h else (target_top - y0) / (region_h - view_h)
-            self.canvas.xview_moveto(max(0.0, min(1.0, x_fraction)))
-            self.canvas.yview_moveto(max(0.0, min(1.0, y_fraction)))
-        except Exception:
-            pass
-
-    def _fill_tracklist(self, item: Dict[str, object]) -> None:
-        self.track_tree.delete(*self.track_tree.get_children())
-        for row in item.get("tracklist", []) or []:
-            if bool(row.get("manual_skip")):
-                status = "Skipped by you (saved)"
-                tags = ("manual",)
-            elif bool(row.get("excluded")):
-                status = "Skipped by active options"
-                tags = ("excluded",)
-            elif bool(row.get("orphaned")):
-                status = "UNIQUE - removing this release would lose it"
-                tags = ("orphan",)
-            elif bool(row.get("unique_to_release")):
-                status = "UNIQUE to this retained release"
-                tags = ("unique",)
-            elif bool(row.get("covered_by_other_retained")):
-                names = row.get("covered_by_names", []) or []
-                status = "Covered by retained release"
-                if names:
-                    status += ": " + "; ".join(names[:2])
-                tags = ()
-            elif bool(row.get("available_elsewhere")):
-                status = "Available on another release"
-                tags = ()
-            else:
-                status = "Included"
-                tags = ()
-
-            distinction = str(row.get("distinction", "")).strip()
-            if distinction and status in {"Included", "UNIQUE to this retained release"}:
-                status = status + " | " + distinction
-
-            iid = str(row.get("track_global_index", -1))
-            self.track_tree.insert(
-                "",
-                "end",
-                iid=iid if iid != "-1" else None,
-                values=(
-                    row.get("number", ""),
-                    row.get("title", ""),
-                    row.get("artist", ""),
-                    row.get("duration", ""),
-                    status,
-                ),
-                tags=tags,
-            )
-        self.track_info_var.set("Select a track for details.")
-        if self.can_edit:
-            self.track_skip_btn.configure(text="Skip track", state="disabled")
-
-    def _select_track(self, _event=None) -> None:
-        selection = self.track_tree.selection()
-        if not selection:
-            return
-        try:
-            index = int(selection[0])
-        except Exception:
-            return
-        self.selected_track_global_index = index
-        row = None
-        item = self.by_snapshot_id.get(self.selected_release_id, {})
-        for candidate in item.get("tracklist", []) or []:
-            if int(candidate.get("track_global_index", -1)) == index:
-                row = candidate
-                break
-        if row is None:
-            return
-
-        pieces = [str(row.get("title", ""))]
-        distinction = str(row.get("distinction", "")).strip()
-        if distinction:
-            pieces.append(distinction)
-        elif bool(row.get("unique_to_release")):
-            pieces.append("This recording group is supplied only by this retained release in the current plan.")
-        elif bool(row.get("covered_by_other_retained")):
-            names = row.get("covered_by_names", []) or []
-            pieces.append("Same recording is retained elsewhere" + (": " + "; ".join(names[:3]) if names else "."))
-        if bool(row.get("manual_skip")):
-            pieces.append("You chose to skip this recording. That choice is saved for future analyses.")
-        self.track_info_var.set("  ".join(pieces))
-
-        if self.can_edit and self.tracks is not None and 0 <= index < len(self.tracks):
-            track = self.tracks[index]
-            if track.manual_skip_rule:
-                self.track_skip_btn.configure(text="Restore track", state="normal")
-            elif bool(row.get("excluded")):
-                self.track_skip_btn.configure(text="Already skipped by options", state="disabled")
-            else:
-                self.track_skip_btn.configure(text="Skip track", state="normal")
-
-    def _toggle_track_skip(self) -> None:
-        if not self.can_edit or self.tracks is None or self.selected_track_global_index is None:
-            return
-        index = self.selected_track_global_index
-        if not (0 <= index < len(self.tracks)):
-            return
-        track = self.tracks[index]
-        if track.manual_skip_rule:
-            remove_persistent_track_skip(track.manual_skip_rule, self.tracks)
-        else:
-            add_persistent_track_skip(track, self.tracks)
-        self._reoptimize(preferred_release_id=self.selected_release_id, preferred_track_index=index)
-
-    def _update_release_action(self, item: Dict[str, object]) -> None:
-        if not self.can_edit:
-            return
+def _release_map_state_for_ui(
+    snapshots: List[Dict[str, object]],
+    tracks: Optional[List[Track]],
+    pending_track_indices: Set[int],
+    pending_release_ids: Set[int],
+    editable: bool,
+    dirty: bool,
+    apply_enabled: bool,
+    apply_highlighted: bool,
+    result: Optional[Dict[str, object]] = None,
+) -> Dict[str, object]:
+    visible = [
+        item for item in snapshots
+        if str(item.get("action", "")) in {"KEEP", "ADD", "REPLACE"}
+        and not bool(item.get("manual_removed"))
+    ]
+    visible_ids = {int(item.get("release_id", -1)) for item in visible}
+    nodes: List[Dict[str, object]] = []
+    for item in visible:
         rid = int(item.get("release_id", -1))
-        if rid in self.blocked_release_ids:
-            self.remove_release_btn.configure(text="Undo release removal", state="normal")
-        elif str(item.get("outcome", "")) == "RETAINED":
-            self.remove_release_btn.configure(text="Remove release", state="normal")
-        else:
-            self.remove_release_btn.configure(text="Already not retained", state="disabled")
+        ui_tracks: List[Dict[str, object]] = []
+        unique_count = 0
+        for row in item.get("tracklist", []) or []:
+            track_index = int(row.get("track_global_index", -1))
+            unique = bool(row.get("unique_to_release"))
+            if unique:
+                unique_count += 1
+            manual_skip = bool(row.get("manual_skip"))
+            if tracks is not None and 0 <= track_index < len(tracks):
+                manual_skip = bool(tracks[track_index].manual_skip_rule)
+            ui_tracks.append({
+                "index": track_index,
+                "number": row.get("number", ""),
+                "title": str(row.get("title", "")),
+                "duration": str(row.get("duration", "")),
+                "excluded": bool(row.get("excluded")),
+                "manualSkip": manual_skip,
+                "pendingIgnore": track_index in pending_track_indices,
+                "unique": unique,
+                "orphaned": bool(row.get("orphaned")),
+                "coveredBy": list(row.get("covered_by_names", []) or []),
+                "distinction": str(row.get("distinction", "")),
+            })
+        nodes.append({
+            "id": rid,
+            "name": str(item.get("name", "")),
+            "path": str(item.get("path", "")),
+            "action": str(item.get("action", "")),
+            "reason": str(item.get("reason", "")),
+            "includedTracks": int(item.get("included_tracks", 0) or 0),
+            "uniqueCount": unique_count,
+            "pendingReleaseIgnore": rid in pending_release_ids,
+            "tracks": ui_tracks,
+        })
 
-    def _toggle_manual_release(self) -> None:
-        if not self.can_edit:
-            return
-        rid = self.selected_release_id
-        item = self.by_snapshot_id.get(rid)
-        if item is None:
-            return
-        if rid in self.blocked_release_ids:
-            self.blocked_release_ids.remove(rid)
-        elif str(item.get("outcome", "")) == "RETAINED":
-            self.blocked_release_ids.add(rid)
-        else:
-            return
-        self._reoptimize(preferred_release_id=rid)
-
-    def _reoptimize(
-        self,
-        preferred_release_id: Optional[int] = None,
-        preferred_track_index: Optional[int] = None,
-    ) -> None:
-        if not self.can_edit or self.releases is None or self.tracks is None or self.groups is None:
-            return
-        self.selected = optimize_collection(self.releases, self.groups, self.blocked_release_ids)
-        self.decisions = build_release_decisions(
-            self.releases,
-            self.tracks,
-            self.selected,
-            self.reviews,
-            self.blocked_release_ids,
-        )
-        self.snapshots = build_decision_snapshot(
-            self.releases,
-            self.tracks,
-            self.selected,
-            self.decisions,
-            self.blocked_release_ids,
-        )
-        _save_decision_snapshot(self.snapshots)
-        self.by_snapshot_id = {
-            int(item.get("release_id", -1)): item for item in self.snapshots
-        }
-        self.release_choices = self._release_choice_values()
-        self.release_choice_lookup = {label: rid for label, rid in self.release_choices}
-        self.release_search.configure(values=[label for label, _rid in self.release_choices])
-        self._update_summary()
-        self._select_release_id(
-            preferred_release_id if preferred_release_id in self.by_snapshot_id else self._initial_release_id()
-        )
-        if preferred_track_index is not None:
-            iid = str(preferred_track_index)
-            if self.track_tree.exists(iid):
-                self.track_tree.selection_set(iid)
-                self.track_tree.see(iid)
-                self._select_track()
-
-    def _fill_more_details(self, item: Dict[str, object]) -> None:
-        lines: List[str] = []
-        for factor in item.get("decision_factors", []) or []:
-            lines.append("• " + str(factor))
-        for quality in item.get("quality", []) or []:
-            lines.append("• " + str(quality))
-        ignored = item.get("ignored_counts", {}) or {}
-        if any(int(ignored.get(key, 0) or 0) for key in ("remix", "live", "pattern", "manual")):
-            lines.append(
-                "• Skipped tracks: "
-                f"remix={ignored.get('remix', 0)}, live={ignored.get('live', 0)}, "
-                f"pattern={ignored.get('pattern', 0)}, saved-by-you={ignored.get('manual', 0)}"
-            )
-        alternatives = item.get("alternatives", []) or []
-        if alternatives:
-            lines.append("• Same-coverage alternatives: " + "; ".join(str(row.get("name", "")) for row in alternatives[:6]))
-        text = "\n".join(lines) if lines else "No additional decision details."
-        self.more_details.configure(state="normal")
-        self.more_details.delete("1.0", "end")
-        self.more_details.insert("1.0", text)
-        self.more_details.configure(state="disabled")
-
-    def _toggle_details(self) -> None:
-        if self.details_open:
-            self.more_details.pack_forget()
-            self.details_button_var.set("More details")
-            self.details_open = False
-        else:
-            self.more_details.pack(fill="x", pady=(0, 6), before=self.track_tree.master)
-            self.details_button_var.set("Hide details")
-            self.details_open = True
-
-    def _open_release_folder(self) -> None:
-        path = Path(self.path_var.get())
-        try:
-            if os.name == "nt":
-                os.startfile(path)
-            else:
-                subprocess.Popen(["xdg-open", str(path)])
-        except Exception as exc:
-            messagebox.showerror(APP_NAME, f"Could not open folder:\n{exc}", parent=self)
-
-    def _copy_release_path(self) -> None:
-        try:
-            self.clipboard_clear()
-            self.clipboard_append(self.path_var.get())
-            self.update_idletasks()
-        except Exception:
-            pass
-
-    def _update_summary(self) -> None:
-        manual_release_count = len(self.blocked_release_ids)
-        manual_track_count = len(_load_manual_track_skip_rules())
-        changed_count = sum(
-            1
-            for item in self.snapshots
-            if self.baseline_actions.get(int(item.get("release_id", -1))) not in (
-                None, str(item.get("action", ""))
-            )
-        )
-        orphan_count = sum(
-            int(item.get("orphan_count", 0) or 0)
-            for item in self.snapshots
-            if item.get("manual_removed")
-        )
-        parts = [self.base_summary_text] if self.base_summary_text else []
-        if manual_release_count:
-            parts.append(f"Manually removed releases: {manual_release_count}")
-        if manual_track_count:
-            parts.append(f"Saved skipped tracks: {manual_track_count}")
-        if changed_count:
-            parts.append(f"Decisions changed: {changed_count}")
-        if orphan_count:
-            parts.append(f"Uncovered unique recordings: {orphan_count}")
-        self.summary_var.set(" | ".join(parts) if parts else "Release map ready.")
-
-    def _orphan_rows(self) -> List[Tuple[str, str]]:
-        rows: List[Tuple[str, str]] = []
-        for item in self.snapshots:
-            if not item.get("manual_removed"):
+    edges: List[Dict[str, object]] = []
+    seen_edges: Set[Tuple[int, int]] = set()
+    for item in visible:
+        source = int(item.get("release_id", -1))
+        for row in item.get("affected", []) or []:
+            target = int(row.get("release_id", -1))
+            if target not in visible_ids or target == source:
                 continue
-            for row in item.get("tracklist", []) or []:
-                if row.get("orphaned"):
-                    rows.append((str(item.get("name", "")), str(row.get("title", ""))))
-        return rows
+            key = (min(source, target), max(source, target))
+            if key in seen_edges:
+                continue
+            seen_edges.add(key)
+            edges.append({
+                "source": key[0],
+                "target": key[1],
+                "shared": int(row.get("shared_groups", 1) or 1),
+            })
 
-    def _apply(self) -> None:
-        orphan_rows = self._orphan_rows()
-        if orphan_rows:
-            preview = "\n".join(
-                f"- {release_name}: {track_title}"
-                for release_name, track_title in orphan_rows[:12]
+    return {
+        "editable": bool(editable),
+        "dirty": bool(dirty),
+        "applyEnabled": bool(apply_enabled),
+        "applyHighlighted": bool(apply_highlighted),
+        "nodes": nodes,
+        "edges": edges,
+        "result": result or {"show": False, "causes": [], "added": [], "removed": []},
+    }
+
+
+def _qt_release_map_process(session_path: Path, result_path: Path) -> int:
+    ensure_qt_release_map_dependencies()
+    from PySide6.QtCore import QObject, QTimer, QUrl, Signal, Slot
+    from PySide6.QtGui import QDesktopServices
+    from PySide6.QtWidgets import QApplication, QMainWindow
+    from PySide6.QtWebChannel import QWebChannel
+    from PySide6.QtWebEngineWidgets import QWebEngineView
+
+    with session_path.open("rb") as handle:
+        session = pickle.load(handle)
+
+    class Bridge(QObject):
+        closeRequested = Signal()
+
+        def __init__(self):
+            super().__init__()
+            self.snapshots = list(session.get("snapshots", []) or [])
+            self.releases = session.get("releases")
+            self.tracks = session.get("tracks")
+            self.groups = session.get("groups")
+            self.selected = set(session.get("selected", set()) or set())
+            self.reviews = list(session.get("reviews", []) or [])
+            self.decisions = list(session.get("decisions", []) or [])
+            self.blocked_release_ids = set(session.get("blocked_release_ids", set()) or set())
+            self.editable = bool(
+                session.get("allow_apply")
+                and isinstance(self.releases, list)
+                and isinstance(self.tracks, list)
+                and isinstance(self.groups, dict)
             )
-            if len(orphan_rows) > 12:
-                preview += f"\n- +{len(orphan_rows) - 12} more"
-            if not messagebox.askyesno(
-                APP_NAME,
-                (
-                    f"{len(orphan_rows)} included recording(s) have no other allowed release after "
-                    f"your manual release removals:\n\n{preview}\n\nApply the plan anyway?"
-                ),
-                parent=self,
-            ):
+            self.dirty = False
+            self.apply_enabled = bool(self.editable)
+            self.apply_highlighted = False
+            self.pending_track_indices: Set[int] = set()
+            self.pending_release_ids: Set[int] = set()
+            self.pending_causes: List[str] = []
+            self.result = {"show": False, "causes": [], "added": [], "removed": []}
+
+        def _state(self) -> str:
+            payload = _release_map_state_for_ui(
+                self.snapshots,
+                self.tracks if isinstance(self.tracks, list) else None,
+                self.pending_track_indices,
+                self.pending_release_ids,
+                self.editable,
+                self.dirty,
+                self.apply_enabled,
+                self.apply_highlighted,
+                self.result,
+            )
+            return json.dumps(payload, ensure_ascii=False)
+
+        def _mark_dirty(self, cause: str) -> None:
+            self.dirty = True
+            self.apply_enabled = False
+            self.apply_highlighted = False
+            self.result = {"show": False, "causes": [], "added": [], "removed": []}
+            if cause:
+                self.pending_causes.append(cause)
+
+        @Slot(result=str)
+        def getState(self):
+            return self._state()
+
+        @Slot(int, result=str)
+        def toggleTrack(self, track_index: int):
+            if not self.editable or not isinstance(self.tracks, list):
+                return self._state()
+            if not (0 <= track_index < len(self.tracks)):
+                return self._state()
+            track = self.tracks[track_index]
+            if track.manual_skip_rule:
+                label = track.display_title
+                remove_persistent_track_skip(track.manual_skip_rule, self.tracks)
+                self.pending_track_indices.discard(track_index)
+                self._mark_dirty(f'IF track: "{label}" restored')
+            else:
+                label = track.display_title
+                add_persistent_track_skip(track, self.tracks)
+                self.pending_track_indices.add(track_index)
+                self._mark_dirty(f'IF track: "{label}" ignored')
+            return self._state()
+
+        @Slot(int, result=str)
+        def toggleRelease(self, release_id: int):
+            if not self.editable:
+                return self._state()
+            release = next((r for r in self.releases if r.rid == release_id), None)
+            if release is None:
+                return self._state()
+            if release_id in self.blocked_release_ids:
+                self.blocked_release_ids.remove(release_id)
+                self.pending_release_ids.discard(release_id)
+                self._mark_dirty(f'IF release: "{release.path.name}" restored')
+            else:
+                self.blocked_release_ids.add(release_id)
+                self.pending_release_ids.add(release_id)
+                self._mark_dirty(f'IF release: "{release.path.name}" ignored')
+            return self._state()
+
+        @Slot(result=str)
+        def reanalyze(self):
+            if not self.editable or not self.dirty:
+                return self._state()
+            old_selected = set(self.selected)
+            apply_persistent_track_skips(self.tracks)
+            self.selected = optimize_collection(
+                self.releases,
+                self.groups,
+                self.blocked_release_ids,
+            )
+            self.decisions = build_release_decisions(
+                self.releases,
+                self.tracks,
+                self.selected,
+                self.reviews,
+                self.blocked_release_ids,
+            )
+            self.snapshots = build_decision_snapshot(
+                self.releases,
+                self.tracks,
+                self.selected,
+                self.decisions,
+                self.blocked_release_ids,
+            )
+            _save_decision_snapshot(self.snapshots)
+
+            by_id = {r.rid: r for r in self.releases}
+            added_ids = sorted(self.selected - old_selected)
+            removed_ids = sorted(old_selected - self.selected)
+            added = [by_id[rid].path.name for rid in added_ids if rid in by_id]
+            removed = [by_id[rid].path.name for rid in removed_ids if rid in by_id]
+            self.result = {
+                "show": True,
+                "causes": list(self.pending_causes) or ["IF pending ignore changes applied"],
+                "added": added,
+                "removed": removed,
+            }
+            self.pending_causes.clear()
+            self.pending_track_indices.clear()
+            self.pending_release_ids = set(self.blocked_release_ids)
+            self.dirty = False
+            self.apply_enabled = True
+            self.apply_highlighted = bool(added or removed)
+            return self._state()
+
+        @Slot(str)
+        def openFolder(self, value: str):
+            if value:
+                QDesktopServices.openUrl(QUrl.fromLocalFile(value))
+
+        @Slot(str)
+        def copyPath(self, value: str):
+            QApplication.clipboard().setText(value or "")
+
+        @Slot()
+        def apply(self):
+            if not self.editable or self.dirty or not self.apply_enabled:
                 return
-        self.result = "apply"
-        self.destroy()
+            payload = {
+                "action": "apply",
+                "snapshots": self.snapshots,
+                "selected": self.selected,
+                "decisions": self.decisions,
+                "blocked_release_ids": self.blocked_release_ids,
+            }
+            with result_path.open("wb") as handle:
+                pickle.dump(payload, handle, protocol=pickle.HIGHEST_PROTOCOL)
+            self.closeRequested.emit()
 
-    def _reanalyze(self) -> None:
-        self.result = "reanalyze"
-        self.destroy()
+        @Slot()
+        def closeMap(self):
+            with result_path.open("wb") as handle:
+                pickle.dump(
+                    {
+                        "action": "close",
+                        "snapshots": self.snapshots,
+                        "selected": self.selected,
+                        "decisions": self.decisions,
+                        "blocked_release_ids": self.blocked_release_ids,
+                    },
+                    handle,
+                    protocol=pickle.HIGHEST_PROTOCOL,
+                )
+            self.closeRequested.emit()
 
-    def _close(self) -> None:
-        self.result = "close"
-        self.destroy()
+    app = QApplication.instance() or QApplication(sys.argv[:1])
+    app.setApplicationName(APP_NAME)
+    window = QMainWindow()
+    window.setWindowTitle(f"{APP_NAME} {APP_VERSION} - Release Map")
+    window.resize(1500, 920)
+    window.setMinimumSize(1050, 680)
+
+    view = QWebEngineView(window)
+    channel = QWebChannel(view.page())
+    bridge = Bridge()
+    channel.registerObject("bridge", bridge)
+    view.page().setWebChannel(channel)
+    view.setHtml(_qt_release_map_html(), QUrl("https://cdn.jsdelivr.net/"))
+    window.setCentralWidget(view)
+    bridge.closeRequested.connect(window.close)
+
+    def _window_closed():
+        if not result_path.exists():
+            try:
+                with result_path.open("wb") as handle:
+                    pickle.dump(
+                        {
+                            "action": "close",
+                            "snapshots": bridge.snapshots,
+                            "selected": bridge.selected,
+                            "decisions": bridge.decisions,
+                            "blocked_release_ids": bridge.blocked_release_ids,
+                        },
+                        handle,
+                        protocol=pickle.HIGHEST_PROTOCOL,
+                    )
+            except Exception:
+                pass
+        app.quit()
+
+    window.destroyed.connect(_window_closed)
+    window.show()
+    return app.exec()
 
 
-class DoneWindow(tk.Toplevel):
+def launch_qt_release_map(session: Dict[str, object]) -> Dict[str, object]:
+    ensure_qt_release_map_dependencies()
+    _migrate_legacy_app_data()
+    temp_root = _temp_dir() / f"release-map-{int(time.time() * 1000)}-{os.getpid()}"
+    temp_root.mkdir(parents=True, exist_ok=True)
+    session_path = temp_root / "session.pkl"
+    result_path = temp_root / "result.pkl"
+    with session_path.open("wb") as handle:
+        pickle.dump(session, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+    python_exe = Path(sys.executable)
+    if os.name == "nt" and python_exe.name.lower() == "python.exe":
+        pythonw = python_exe.with_name("pythonw.exe")
+        if pythonw.is_file():
+            python_exe = pythonw
+
+    cmd = [
+        str(python_exe),
+        str(Path(__file__).resolve()),
+        "--qt-release-map",
+        str(session_path),
+        str(result_path),
+    ]
+    kwargs = {"check": False}
+    if os.name == "nt":
+        kwargs["creationflags"] = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+    cp = subprocess.run(cmd, **kwargs)
+    try:
+        if result_path.is_file():
+            with result_path.open("rb") as handle:
+                result = pickle.load(handle)
+        else:
+            result = {"action": "close"}
+    finally:
+        shutil.rmtree(temp_root, ignore_errors=True)
+    if cp.returncode not in (0, None) and result.get("action") == "close":
+        raise RuntimeError(f"Release Map exited with code {cp.returncode}.")
+    return result
+
+
+
+class DoneWindow(tk.Toplevel):class DoneWindow(tk.Toplevel):
     def __init__(
         self,
         master,
@@ -7561,14 +7605,16 @@ class App(tk.Tk):
         if not snapshots:
             messagebox.showinfo(APP_NAME, "No analyzed release decisions are available yet.", parent=self)
             return
-        dialog = DecisionExplorerWindow(
-            self,
-            snapshots,
-            allow_apply=False,
-            summary_text="Last saved analysis result.",
-            allow_reanalyze=False,
-        )
-        self.wait_window(dialog)
+        try:
+            self.status_var.set("Opening Release Map")
+            launch_qt_release_map({
+                "snapshots": snapshots,
+                "allow_apply": False,
+            })
+            self.status_var.set("Ready")
+        except Exception as exc:
+            self.status_var.set("Release Map failed")
+            messagebox.showerror(APP_NAME, f"Release Map failed:\n\n{exc}", parent=self)
 
     def undo_main(self):
         if self._running:
@@ -7930,50 +7976,50 @@ class App(tk.Tk):
         self.decision_map_btn.configure(state="normal")
         self.status_var.set("Analysis complete - review Release Map")
         self._append_activity(
-            f"Release Map ready: {len(self._decision_snapshot)} release(s), "
-            f"{counts['SKIP'] + counts['REMOVE']} marked duplicate"
+            f"Release Map ready: {sum(1 for d in decisions if d.action in {'KEEP','ADD','REPLACE'})} retained release(s)"
         )
 
         summary_parts = [
             f"Retained recycle releases: {recycle_kept}",
-            f"Recycle releases marked duplicate: {counts['SKIP']}",
+            f"Hidden duplicate recycle releases: {counts['SKIP']}",
         ]
         if existing is not None:
-            summary_parts.append(f"Existing releases marked duplicate: {counts['REMOVE']}")
+            summary_parts.append(f"Hidden duplicate existing releases: {counts['REMOVE']}")
         if initial_intra_duplicates:
-            summary_parts.append(f"Duplicate files inside retained releases: {len(initial_intra_duplicates)}")
+            summary_parts.append(
+                f"Duplicate files inside retained releases: {len(initial_intra_duplicates)}"
+            )
         if comparison_log:
-            summary_parts.append("Detailed comparison logging is also enabled for this run.")
+            summary_parts.append("Detailed comparison logging is enabled.")
 
-        explorer = DecisionExplorerWindow(
-            self,
-            self._decision_snapshot,
-            allow_apply=True,
-            summary_text=" | ".join(summary_parts),
-            releases=releases,
-            tracks=tracks,
-            groups=groups,
-            selected=selected,
-            reviews=reviews,
-            decisions=decisions,
-            blocked_release_ids=blocked_release_ids,
-        )
-        self.wait_window(explorer)
-
-        self._decision_snapshot = list(explorer.snapshots)
-        _save_decision_snapshot(self._decision_snapshot)
-
-        if explorer.result == "reanalyze":
-            self.status_var.set("Starting a new analysis...")
-            self.after(50, self.start)
+        try:
+            self.status_var.set("Opening Release Map")
+            map_result = launch_qt_release_map({
+                "snapshots": self._decision_snapshot,
+                "allow_apply": True,
+                "summary_text": " | ".join(summary_parts),
+                "releases": releases,
+                "tracks": tracks,
+                "groups": groups,
+                "selected": set(selected),
+                "reviews": list(reviews),
+                "decisions": list(decisions),
+                "blocked_release_ids": set(blocked_release_ids),
+            })
+        except Exception as exc:
+            self.status_var.set("Release Map failed")
+            messagebox.showerror(APP_NAME, f"Release Map failed:\n\n{exc}", parent=self)
             return
 
-        if explorer.result not in (True, "apply"):
-            self.status_var.set("Move plan not applied.")
+        self._decision_snapshot = list(map_result.get("snapshots", self._decision_snapshot) or [])
+        _save_decision_snapshot(self._decision_snapshot)
+
+        if map_result.get("action") != "apply":
+            self.status_var.set("Analysis complete - plan not applied.")
             self._append_activity("Move plan left unapplied; Release Map remains available.")
             return
 
-        decisions = list(explorer.decisions)
+        decisions = list(map_result.get("decisions", decisions) or decisions)
         counts = action_summary(decisions)
         intra_duplicates = plan_intra_release_duplicates(releases, decisions)
         to_move = counts["SKIP"] + counts["REMOVE"] + len(intra_duplicates)
@@ -8070,15 +8116,16 @@ def _report_startup_crash(exc: BaseException) -> None:
 
 
 def main():
+    if len(sys.argv) >= 4 and sys.argv[1] == "--qt-release-map":
+        raise SystemExit(
+            _qt_release_map_process(Path(sys.argv[2]), Path(sys.argv[3]))
+        )
     try:
         app = App()
-        # Make sure a newly created root is visible and brought forward even when
-        # Windows restores focus/state oddly for a .pyw launch.
-        app.after(100, app.deiconify)
-        app.after(150, app.lift)
         app.mainloop()
-    except BaseException as exc:
+    except Exception as exc:
         _report_startup_crash(exc)
+        raise
 
 
 if __name__ == "__main__":
