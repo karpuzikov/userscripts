@@ -289,7 +289,7 @@ Current stage after duplicate filtering.
 
 Required behavior:
 
-1. Use the filtered recycle/update artist folder from the shared persistent settings when available.
+1. Use the filtered recycle/update artist folder from the appropriate per-program persistent settings when available.
 2. Recursively find folders containing AudioChecker-supported lossless audio.
 3. Treat a folder as a CD release when it contains both:
    - at least one `.cue`; and
@@ -298,7 +298,7 @@ Required behavior:
 5. Skip folders that already contain a valid `audiochecker.log` covering all supported audio files in that folder.
 6. Run the existing Dester AudioChecker (`achkgui.exe`) automatically for the remaining folders.
 7. Reuse AudioChecker's own generated `audiochecker.log`; do not fabricate/rewrite the protected log format.
-8. Remember the selected `achkgui.exe` path across launches and versions in the shared Karpuzikov Tools settings store.
+8. Remember the selected `achkgui.exe` path across launches and versions in that program's own `Documents\\Karpuzikov Tools\\<Program Name>\\settings.json`.
 9. If an existing `audiochecker.log` is stale/invalid, preserve it temporarily outside the release folder while regenerating it; restore it if generation fails.
 10. Normal UI is automatic: one folder, progress, final counts. No per-release review.
 
@@ -308,7 +308,7 @@ Current stage after AudioChecker.
 
 Required behavior:
 
-1. Reuse the filtered recycle/update artist folder from the shared persistent settings.
+1. Reuse the filtered recycle/update artist folder from the appropriate per-program persistent settings.
 2. Convert supported lossless audio to ALAC in place.
 3. Use refalac for the ALAC encode.
 4. For normal track-based releases, preserve metadata/artwork and verify decoded PCM before removing the source file.
@@ -318,7 +318,7 @@ Required behavior:
 8. Refuse lossy/unknown codecs instead of wrapping them in ALAC.
 9. Remove/replace source audio only after verified output exists.
 10. Use up to four simultaneous conversion jobs.
-11. Reuse the shared Karpuzikov Tools settings store and remember all repeatable paths.
+11. Reuse that program's own `Documents\\Karpuzikov Tools\\<Program Name>\\settings.json` and remember all repeatable paths.
 12. Bootstrap required dependencies automatically: check/install winget first when needed, install FFmpeg through winget, and obtain refalac automatically when missing.
 13. Normal UI is automatic: choose/reuse one root folder, convert, then show only summary counts/errors.
 
@@ -433,10 +433,16 @@ Next stage after this: metadata/tag normalization using the shared Picard rules.
 
 - v0.11.8 automatic phrase review: after pressing Analyze and completing the metadata scan, detect remix/live phrase families from the already-scanned tracks for categories currently disabled by `Save Remixes` / `Save Live recordings`. Show a dark review window with phrase, category, occurrence count, examples, and a per-row `Add to keep list` button. Existing Personal Picks show `In keep list`. `Continue` persists newly added phrases and proceeds to the existing unusual-pattern review and fingerprint optimization. `Personal Picks...` remains for manual add/remove management.
 
-- v0.11.8 unified saved-data folder: all user-created analyzer state is stored under the dynamically resolved Windows Documents `Karpuzikov Tools` folder. This includes `settings.json` (including Personal Picks and pattern preferences), comparison JSONL logs, the undo manifest, and startup crash log. The old LocalAppData undo manifest is copied forward automatically when needed. Runtime dependencies/caches are not user-saved data and remain app-local.
+- v0.11.8 storage layout was the older shared-root design and is superseded by v0.12.1. Legacy analyzer settings/logs/state from that layout are migrated forward automatically.
 
 - v0.11.9 unusual-pattern false-positive fix: trailing `Artist - Title` / `Artist: Title` text is no longer treated as a version descriptor merely because the song title contains a descriptor word such as `Club`. The trailing segment must itself end in a recognizable version/edit/mix/live/remix/etc. descriptor shape. This prevents clean titles such as `INNA - I Am The Club Rocker` from appearing in Unusual track pattern review while preserving real suffixes such as `Song - Radio Edit`, `Song - Ferry Corsten Mix`, and `Song - Special Version`.
 
 - v0.12.0 CD image rip support: recognize CUE sheets where multiple AUDIO tracks reference the same physical lossless audio file (FLAC/APE/WavPack/WAV) as a CD image rip. Build virtual per-track entries from CUE `TRACK`, `TITLE`, `PERFORMER`, `ISRC`, and `INDEX 01` data; use the next `INDEX 01` as the segment end. Probe technical quality from the underlying image, extract each virtual segment temporarily with FFmpeg, fingerprint it with fpcalc, then delete the temporary segment. Virtual tracks participate in all normal duplicate grouping, edition comparison, Personal Picks, remix/live filtering, minimum-track optimization, and CD rip-quality rules. A redundant image release is moved only as its complete physical folder/image+CUE+LOG set; image tracks are never individually removed. Split-file CUE sheets remain normal split tracks.
 
 - v0.12.0 CUETools integration: use an existing CUETools installation when available and locate `CUETools.ARCUE.exe`/legacy `ArCueDotNet.exe`; install CUETools through winget package `gchudov.CUETools` only when missing. For album families containing a CD image rip, run the console verifier on every CUE-based candidate in that family so image and split rips are compared fairly. Positive AccurateRip/CTDB verification is quality evidence only and is applied only after exact audio equivalence is already proven. Database absence, no-match output, CUETools failure, or unavailable CUETools is neutral, never evidence that a rip is bad. CUETools verification outranks log-settings score when choosing between otherwise exact-equivalent CD rips; EAC/XLD log score remains the next tie-break. Temporary track-segment extraction still uses FFmpeg because the documented `CUETools.exe /convert` profile mode is interactive/non-terminating and is unsuitable for unattended analyzer loops.
+
+- v0.12.1 mandatory development-standards pass: apply the newest global software rules before further feature work. `Duplicate Edition Analyzer` now owns `Documents\\Karpuzikov Tools\\Duplicate Edition Analyzer\\` with `settings.json` plus isolated `dependencies`, `logs`, `temp`, `cache`, and `state` subfolders. Older shared-root settings, comparison logs, crash log, and undo state migrate forward automatically. Analyzer-managed hey-bro-check-log and downloaded Chromaprint files use the program's `dependencies` folder; CUE segment work files use its `temp` folder; comparison/crash logs use `logs`; undo state uses `state`; dependency-check timestamps use `cache`. WinGet is bootstrapped before dependency work, FFmpeg and CUETools are installed when missing and checked for updates periodically, and the hey-bro-check-log source archive is commit-pinned instead of tracking mutable `master`. The tool remains one double-clickable `.pyw`, dark-theme by default, and `Under construction ⚠️` until confirmed complete.
+
+## Mandatory software-development preflight
+
+Before any program/script change in this project, apply the newest stored software-development rules first. Newer explicit rules override older conflicts. Current requirements include: dark UI by default for GUI tools; one `.pyw`/minimal file count where practical; dynamically resolve Windows Documents; isolate each program under `Documents\\Karpuzikov Tools\\<Program Name>\\`; keep that program's dependencies/logs/temp/cache/settings/state inside its folder; migrate older data instead of losing it; bootstrap WinGet first and install/update dependencies automatically; publish changes as updates, never as reinstall instructions; use `Under construction ⚠️` while unfinished; pin externally downloaded source archives to immutable versions/commits where practical; and update code/documentation together.
