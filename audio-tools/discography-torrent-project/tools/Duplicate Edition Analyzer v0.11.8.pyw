@@ -1194,6 +1194,88 @@ def detect_personal_pick_phrases(roots: List[Path]) -> List[Tuple[str, int, List
     return sorted(result, key=lambda item: (-item[1], item[0].casefold()))
 
 
+def detect_personal_pick_phrases_from_tracks(
+    tracks: List["Track"],
+    include_remixes: bool = True,
+    include_live: bool = True,
+) -> List[Tuple[str, int, List[str]]]:
+    """Detect reusable remix/live phrase families from already-scanned tracks."""
+    grouped: Dict[str, Dict[str, object]] = {}
+
+    for track in tracks:
+        title = track.display_title or strip_track_number(track.path.stem)
+        source = normalize_space(ascii_punctuation(title).replace("_", " "))
+
+        track_is_remix = is_remix_text(source)
+        track_is_live = is_live_text(source)
+        if not (track_is_remix or track_is_live):
+            continue
+
+        # During Analyze we only need exceptions for categories that are globally skipped.
+        if track_is_remix and not track_is_live and not include_remixes:
+            continue
+        if track_is_live and not track_is_remix and not include_live:
+            continue
+        if track_is_remix and track_is_live and not (include_remixes or include_live):
+            continue
+
+        raw_parts = [normalize_space(x) for x in re.findall(r"[\(\[]([^\)\]]+)[\)\]]", source)]
+        raw_parts.extend(_mix_descriptor_candidates(source))
+
+        for pattern in (
+            r"\bLive\s+(?:From|At)\s+.+$",
+            r"\b[^()\[\]]{0,80}\b(?:Session|Sessions|Unplugged)\b[^()\[\]]*$",
+            r"(?:^|\s+-\s+)([^-]+\b(?:Remix|Rmx|Redux|Dub|Sped\s*Up|Speed\s*Up|Slowed(?:\s*Down)?|Reverb(?:ed)?)\b.*)$",
+        ):
+            match = re.search(pattern, source, re.I)
+            if match:
+                raw_parts.append(normalize_space(match.group(1) if match.lastindex else match.group(0)))
+
+        if not raw_parts:
+            raw_parts.append(source)
+
+        seen_here: Set[str] = set()
+        for raw in raw_parts:
+            family = _personal_phrase_family(raw)
+            if not family:
+                continue
+
+            family_is_remix = is_remix_text(family)
+            family_is_live = is_live_text(family)
+            if not (family_is_remix or family_is_live):
+                continue
+            if family_is_remix and not family_is_live and not include_remixes:
+                continue
+            if family_is_live and not family_is_remix and not include_live:
+                continue
+            if family_is_remix and family_is_live and not (include_remixes or include_live):
+                continue
+
+            key = _personal_pick_normalize(family)
+            if not key or key in seen_here:
+                continue
+            seen_here.add(key)
+
+            row = grouped.setdefault(
+                key,
+                {"labels": Counter(), "count": 0, "examples": []},
+            )
+            row["labels"][family] += 1
+            row["count"] += 1
+            example = repair_mojibake(title)
+            if len(row["examples"]) < 3 and example not in row["examples"]:
+                row["examples"].append(example)
+
+    result: List[Tuple[str, int, List[str]]] = []
+    for row in grouped.values():
+        labels: Counter = row["labels"]
+        label = labels.most_common(1)[0][0] if labels else ""
+        if label:
+            result.append((label, int(row["count"]), list(row["examples"])))
+
+    return sorted(result, key=lambda item: (-item[1], item[0].casefold()))
+
+
 def _personal_pick_match(track: "Track", rules: List[Dict[str, str]]) -> str:
     """Return the matching user rule, or an empty string.
 
