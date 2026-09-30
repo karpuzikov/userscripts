@@ -803,3 +803,14 @@ Do not flatten release folders into the duplicate root. After successful moves, 
 - The user must be able to Restore track, which removes the saved preference and recomputes the plan.
 - Manual track skips must remain visibly distinct from Save Remixes / Save Live / unusual-pattern exclusions.
 
+
+
+### Release Map UI architecture
+
+- The Release Map must show **all analyzed releases at the same time in one graph**. Never replace the full graph with a selected-release subgraph, neighborhood-only view, drill-down graph, or any other sub-map.
+- The graph contains release nodes only. Selecting a release may highlight/dim relationships, but must not remove other release nodes from the map.
+- No nested navigation: no release list + map pairing, no menus within menus, no sub-maps, and no multi-level drill-down navigation. A release click opens one direct details surface for that release while the full graph remains visible.
+- The Release Map UI must no longer use Tkinter/ttk. Use a modern GPU/web-rendered UI stack suitable for a large interactive graph and normal Windows window management.
+- Preferred architecture: **PySide6 / Qt 6** as the Windows desktop shell, **Qt WebEngine** for the graph surface, and **Sigma.js + Graphology** for the full release network. Python remains the analyzer/backend and communicates with the UI through a direct Qt bridge.
+- The graph must support pan, zoom, fit/center, hover, click selection, connected-edge highlighting, search-to-node, and smooth interaction while all release nodes remain loaded and visible.
+- Selecting a release must not navigate away from the graph. Show release/track details in a single flat side or bottom panel; closing/changing selection returns focus to the same full graph state.
