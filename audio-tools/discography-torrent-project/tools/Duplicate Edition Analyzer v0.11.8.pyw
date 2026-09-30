@@ -169,8 +169,13 @@ def _documents_dir() -> Path:
     return Path.home() / "Documents"
 
 
+def _saved_data_dir() -> Path:
+    """Single persistent location for user-saved tool data."""
+    return _documents_dir() / "Karpuzikov Tools"
+
+
 def _common_settings_path() -> Path:
-    return _documents_dir() / "Karpuzikov Tools" / "settings.json"
+    return _saved_data_dir() / "settings.json"
 
 
 def _load_common_settings() -> dict:
@@ -286,25 +291,19 @@ FP_CANDIDATE_DURATION_RATIO = 0.035
 
 
 def _new_comparison_log_path(recycle: Path) -> Path:
-    """Create a per-run comparison log outside the scanned artist folder."""
+    """Create a per-run comparison log in the common saved-data folder."""
     stamp = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
-    roots = [
-        recycle.parent / f"{recycle.name}_analysis_logs",
-        Path(os.environ.get("LOCALAPPDATA") or Path.home()) / "Karpuzikov" / "Duplicate Edition Analyzer" / "logs",
-    ]
-    last_error: Optional[Exception] = None
-    for root in roots:
-        try:
-            root.mkdir(parents=True, exist_ok=True)
-            candidate = root / f"Duplicate Edition Analyzer Comparison {stamp}.jsonl"
-            suffix = 2
-            while candidate.exists():
-                candidate = root / f"Duplicate Edition Analyzer Comparison {stamp} ({suffix}).jsonl"
-                suffix += 1
-            return candidate
-        except Exception as exc:
-            last_error = exc
-    raise RuntimeError(f"Could not create comparison log folder: {last_error}")
+    root = _saved_data_dir()
+    try:
+        root.mkdir(parents=True, exist_ok=True)
+        candidate = root / f"Duplicate Edition Analyzer Comparison {stamp}.jsonl"
+        suffix = 2
+        while candidate.exists():
+            candidate = root / f"Duplicate Edition Analyzer Comparison {stamp} ({suffix}).jsonl"
+            suffix += 1
+        return candidate
+    except Exception as exc:
+        raise RuntimeError(f"Could not create comparison log: {exc}") from exc
 
 
 UNICODE_REPLACEMENTS = {
@@ -4154,9 +4153,21 @@ def _duplicates_root(recycle: Path) -> Path:
 
 
 def _last_manifest_path() -> Path:
-    base = Path(os.environ.get("LOCALAPPDATA") or Path.home()) / "Karpuzikov" / "Duplicate Edition Analyzer"
+    base = _saved_data_dir()
     base.mkdir(parents=True, exist_ok=True)
-    return base / "last_move.json"
+    current = base / "Duplicate Edition Analyzer - Last Move.json"
+    legacy = (
+        Path(os.environ.get("LOCALAPPDATA") or Path.home())
+        / "Karpuzikov"
+        / "Duplicate Edition Analyzer"
+        / "last_move.json"
+    )
+    if not current.exists() and legacy.is_file():
+        try:
+            shutil.copy2(legacy, current)
+        except Exception:
+            pass
+    return current
 
 
 def _is_ancestor(parent: Path, child: Path) -> bool:
@@ -5444,7 +5455,7 @@ class App(tk.Tk):
 
 
 def _startup_crash_log_path() -> Path:
-    return _documents_dir() / "Karpuzikov Tools" / "Duplicate Edition Analyzer - Crash.log"
+    return _saved_data_dir() / "Duplicate Edition Analyzer - Crash.log"
 
 
 def _report_startup_crash(exc: BaseException) -> None:
