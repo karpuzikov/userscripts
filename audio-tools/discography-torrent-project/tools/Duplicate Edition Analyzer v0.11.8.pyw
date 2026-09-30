@@ -4781,7 +4781,7 @@ class PhraseReviewWindow(tk.Toplevel):
 class PersonalPicksWindow(tk.Toplevel):
     """Persistent exceptions to the global Remix/Live switches."""
 
-    def __init__(self, master, rules: List[Dict[str, str]], scan_roots: Optional[List[Path]] = None):
+    def __init__(self, master, rules: List[Dict[str, str]]):
         super().__init__(master)
         self.title(f"{APP_NAME} - Personal Picks")
         self.geometry("760x500")
@@ -4789,7 +4789,6 @@ class PersonalPicksWindow(tk.Toplevel):
         self.configure(background=DARK_BG)
         _enable_dark_titlebar(self)
         self.result: Optional[List[Dict[str, str]]] = None
-        self.scan_roots = [Path(p) for p in (scan_roots or []) if p and Path(p).is_dir()]
         self.rules: List[Dict[str, str]] = [
             {"mode": str(item.get("mode", "contains")), "value": str(item.get("value", ""))}
             for item in rules
@@ -4837,8 +4836,7 @@ class PersonalPicksWindow(tk.Toplevel):
 
         toolbar = ttk.Frame(outer)
         toolbar.pack(fill="x", pady=(8, 0))
-        ttk.Button(toolbar, text="Detect phrases...", command=self._detect_phrases).pack(side="left")
-        ttk.Button(toolbar, text="Remove selected", command=self._remove).pack(side="left", padx=(8, 0))
+        ttk.Button(toolbar, text="Remove selected", command=self._remove).pack(side="left")
         ttk.Button(toolbar, text="Clear all", command=self._clear).pack(side="left", padx=(8, 0))
 
         footer = ttk.Frame(outer)
@@ -4875,46 +4873,6 @@ class PersonalPicksWindow(tk.Toplevel):
         self.value_var.set("")
         self._refresh()
         self.listbox.see("end")
-
-    def _detect_phrases(self) -> None:
-        if not self.scan_roots:
-            messagebox.showinfo(
-                APP_NAME,
-                "Select an Existing discography and/or New / update folder first.",
-                parent=self,
-            )
-            return
-
-        candidates = detect_personal_pick_phrases(self.scan_roots)
-        if not candidates:
-            messagebox.showinfo(
-                APP_NAME,
-                "No live/remix phrase candidates were found in audio filenames.",
-                parent=self,
-            )
-            return
-
-        dialog = PhraseDetectorWindow(self, candidates, self.rules)
-        self.wait_window(dialog)
-        if dialog.result is None:
-            return
-
-        existing = {
-            _personal_pick_normalize(str(item.get("value", "")))
-            for item in self.rules
-            if isinstance(item, dict)
-        }
-        added = 0
-        for phrase in dialog.result:
-            key = _personal_pick_normalize(phrase)
-            if key and key not in existing:
-                self.rules.append({"mode": "contains", "value": phrase})
-                existing.add(key)
-                added += 1
-
-        if added:
-            self._refresh()
-            self.listbox.see("end")
 
     def _remove(self) -> None:
         indexes = list(self.listbox.curselection())
@@ -5193,18 +5151,7 @@ class App(tk.Tk):
     def edit_personal_picks(self):
         if self._running:
             return
-        scan_roots: List[Path] = []
-        existing_text = self.existing_var.get().strip()
-        recycle_text = self.recycle_var.get().strip()
-        if existing_text:
-            existing_path = Path(existing_text)
-            if existing_path.is_dir():
-                scan_roots.append(existing_path)
-        if recycle_text:
-            recycle_path = Path(recycle_text)
-            if recycle_path.is_dir():
-                scan_roots.append(recycle_path)
-        dialog = PersonalPicksWindow(self, self.personal_keep_rules, scan_roots)
+        dialog = PersonalPicksWindow(self, self.personal_keep_rules)
         self.wait_window(dialog)
         if dialog.result is None:
             return
