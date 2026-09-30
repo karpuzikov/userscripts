@@ -58,6 +58,7 @@ CHROMAPRINT_URL = f"https://github.com/acoustid/chromaprint/releases/download/v{
 # its source is not vendored into this one-file tool.
 HEYBROCHECKLOG_VERSION = "1.3.2"
 HEYBROCHECKLOG_SOURCE = "https://github.com/ligh7s/hey-bro-check-log/archive/refs/heads/master.zip"
+CUETOOLS_PACKAGE_ID = "gchudov.CUETools"
 # hey-bro-check-log by ligh7s, Apache-2.0:
 # https://github.com/ligh7s/hey-bro-check-log
 
@@ -1538,6 +1539,185 @@ def ensure_ffmpeg() -> Tuple[str, str]:
     return ffmpeg, ffprobe
 
 
+def locate_cuetools_arcue() -> Optional[str]:
+    """Find CUETools' console AccurateRip/CTDB verifier."""
+    for name in ("CUETools.ARCUE", "CUETools.ARCUE.exe", "ArCueDotNet", "ArCueDotNet.exe"):
+        found = locate_executable(name)
+        if found:
+            return found
+
+    main = locate_executable("CUETools")
+    if main:
+        sibling = Path(main).with_name("CUETools.ARCUE.exe")
+        if sibling.exists():
+            return str(sibling)
+
+    roots: List[Path] = []
+    for env_name in ("ProgramFiles", "ProgramFiles(x86)", "LOCALAPPDATA"):
+        value = os.environ.get(env_name)
+        if value:
+            roots.append(Path(value))
+
+    local = os.environ.get("LOCALAPPDATA")
+    if local:
+        packages = Path(local) / "Microsoft" / "WinGet" / "Packages"
+        if packages.is_dir():
+            try:
+                for folder in packages.glob("gchudov.CUETools_*"):
+                    candidate = next(folder.rglob("CUETools.ARCUE.exe"), None)
+                    if candidate:
+                        return str(candidate)
+            except OSError:
+                pass
+
+    for root in roots:
+        for relative in (
+            Path("CUETools") / "CUETools.ARCUE.exe",
+            Path("Programs") / "CUETools" / "CUETools.ARCUE.exe",
+        ):
+            candidate = root / relative
+            if candidate.exists():
+                return str(candidate)
+    return None
+
+
+def ensure_cuetools_arcue() -> Optional[str]:
+    """Use the user's CUETools install; install it through winget only if missing."""
+    arc = locate_cuetools_arcue()
+    if arc:
+        return arc
+    if os.name != "nt":
+        return None
+
+    winget = bootstrap_winget()
+    if not winget:
+        return None
+
+    try:
+        run_hidden([
+            winget,
+            "install",
+            "--id", CUETOOLS_PACKAGE_ID,
+            "-e",
+            "--source", "winget",
+            "--accept-package-agreements",
+            "--accept-source-agreements",
+            "--silent",
+        ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, errors="replace", check=False)
+    except Exception:
+        return None
+
+    return locate_cuetools_arcue()
+
+
+def _cuetools_verify_output(arcue: str, cue_path: Path) -> Tuple[bool, int, int, str]:
+    """Return positive verification, best confidence, match-line count and raw output."""
+    cp = run_hidden(
+        [arcue, "-v", str(cue_path)],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        errors="replace",
+        check=False,
+        timeout=180,
+    )
+    output = normalize_space((cp.stdout or "") + "\n" + (cp.stderr or ""))
+    matches = len(re.findall(r"\bAccurately ripped\b", output, re.I))
+    confidences = [
+        int(value)
+        for value in re.findall(
+            r"\((\d+)(?:\+\d+)?/\d+\)\s+Accurately ripped",
+            output,
+            re.I,
+        )
+    ]
+    best_confidence = max(confidences, default=(1 if matches else 0))
+    return bool(matches), best_confidence, matches, output
+
+
+def verify_cuetools_image_families(
+    releases: List["Release"],
+    progress_cb,
+    errors: List[str],
+) -> None:
+    """Verify CUE-based rips with CUETools when an image rip is in the family.
+
+    CUETools verification is positive quality evidence only. Database absence,
+    no-match output, or CUETools failure remains neutral and never marks a rip bad.
+    """
+    image_families = {r.family for r in releases if r.has_cd_image and r.family}
+    if not image_families:
+        return
+
+    jobs = [
+        (rel, cue)
+        for rel in releases
+        if rel.has_cue and rel.family in image_families
+        for cue in rel.cue_paths
+    ]
+    if not jobs:
+        return
+
+    arcue = ensure_cuetools_arcue()
+    if not arcue:
+        errors.append("CUETools.ARCUE.exe was not found; CD-image verification skipped.")
+        return
+
+    progress_cb("Verifying CD image families with CUETools...", 0, len(jobs))
+    for index, (rel, cue) in enumerate(jobs, 1):
+        rel.cuetools_checked_cues += 1
+        try:
+            verified, confidence, match_lines, output = _cuetools_verify_output(arcue, cue)
+            rel.cuetools_match_lines += match_lines
+            if verified:
+                rel.cuetools_verified_cues += 1
+                if rel.cuetools_min_confidence <= 0:
+                    rel.cuetools_min_confidence = confidence
+                else:
+                    rel.cuetools_min_confidence = min(rel.cuetools_min_confidence, confidence)
+                rel.cuetools_notes.append(
+                    f"{cue.name}: verified, confidence {confidence}, {match_lines} match line(s)"
+                )
+            else:
+                rel.cuetools_notes.append(f"{cue.name}: no positive AccurateRip/CTDB match")
+                if output:
+                    errors.append(f"CUETools verification neutral: {cue}: no positive match")
+        except Exception as exc:
+            rel.cuetools_notes.append(f"{cue.name}: verification failed: {exc}")
+            errors.append(f"CUETools verification error: {cue}: {exc}")
+
+        progress_cb("Verifying CD image families with CUETools...", index, len(jobs))
+
+
+def cuetools_cd_quality_key(rel: "Release") -> Optional[Tuple[int, int]]:
+    """Positive CUETools verification evidence; unavailable/no-match stays neutral."""
+    if not rel.cue_paths:
+        return None
+    if rel.cuetools_checked_cues != len(rel.cue_paths):
+        return None
+    if rel.cuetools_verified_cues != len(rel.cue_paths):
+        return None
+    if rel.cuetools_verified_cues <= 0:
+        return None
+    return rel.cuetools_min_confidence, rel.cuetools_match_lines
+
+
+def cuetools_cd_quality_text(rel: "Release") -> str:
+    key = cuetools_cd_quality_key(rel)
+    if key is None:
+        if rel.cuetools_checked_cues:
+            return (
+                f"neutral ({rel.cuetools_verified_cues}/{rel.cuetools_checked_cues} "
+                "CUE file(s) positively verified)"
+            )
+        return "not checked"
+    confidence, matches = key
+    return (
+        f"verified ({rel.cuetools_verified_cues}/{rel.cuetools_checked_cues} CUE file(s), "
+        f"min confidence {confidence}, {matches} AccurateRip/CTDB match line(s))"
+    )
+
+
 def ensure_heybrochecklog():
     """Return hey-bro-check-log's score_log(), installing it app-locally if needed."""
     local = Path(os.environ.get("LOCALAPPDATA") or Path.home())
@@ -1678,6 +1858,12 @@ class Release:
     rip_log_unrecognized: List[str] = field(default_factory=list)
     has_cd_image: bool = False
     cd_image_track_count: int = 0
+    cue_paths: List[Path] = field(default_factory=list)
+    cuetools_checked_cues: int = 0
+    cuetools_verified_cues: int = 0
+    cuetools_min_confidence: int = 0
+    cuetools_match_lines: int = 0
+    cuetools_notes: List[str] = field(default_factory=list)
 
     @property
     def source_paths(self) -> List[Path]:
@@ -2467,6 +2653,7 @@ def discover_releases(root: Path, root_kind: str, start_id: int) -> List[Release
             rip_log_paths=list(rip_logs),
             has_cd_image=bool(image_specs),
             cd_image_track_count=len(image_specs),
+            cue_paths=list(cue_files),
         )
 
         track_index = 1
@@ -3134,6 +3321,29 @@ def cd_rip_log_quality_text(rel: Release) -> str:
     )
 
 
+def cd_rip_quality_key(rel: Release) -> Optional[Tuple[int, int, int, int, float, int]]:
+    """Combined positive CUETools verification and EAC/XLD log quality.
+
+    CUETools/AccurateRip/CTDB verification is stronger positive evidence than
+    log settings. Missing database entries or unverified output are neutral.
+    """
+    cue_key = cuetools_cd_quality_key(rel)
+    log_key = cd_rip_log_quality_key(rel)
+    if cue_key is None and log_key is None:
+        return None
+
+    cue_confidence, cue_matches = cue_key or (0, 0)
+    log_min, log_avg, log_flagged = log_key or (0, 0.0, 0)
+    return (
+        1 if cue_key is not None else 0,
+        cue_confidence,
+        cue_matches,
+        1 if log_key is not None else 0,
+        log_avg if log_key is not None else 0.0,
+        log_flagged if log_key is not None else 0,
+    )
+
+
 def _same_release_exact_cd_content(a: Release, b: Release) -> bool:
     """Strict identity gate for comparing CD rip log quality.
 
@@ -3163,15 +3373,15 @@ def _same_release_exact_cd_content(a: Release, b: Release) -> bool:
     return _included_group_counter(a) == _included_group_counter(b)
 
 
-def prefer_better_cd_rip_logs(releases: List[Release], selected: Set[int]) -> Set[int]:
-    """Final CD-quality pass: among exact-equivalent rips, keep the better log score."""
+def prefer_better_cd_rips(releases: List[Release], selected: Set[int]) -> Set[int]:
+    """Among exact-equivalent CD rips, keep the strongest verified/quality copy."""
     selected = set(selected)
 
     changed = True
     while changed:
         changed = False
         for current in [r for r in releases if r.rid in selected]:
-            current_quality = cd_rip_log_quality_key(current)
+            current_quality = cd_rip_quality_key(current)
             if current_quality is None:
                 continue
 
@@ -3179,8 +3389,8 @@ def prefer_better_cd_rip_logs(releases: List[Release], selected: Set[int]) -> Se
                 candidate for candidate in releases
                 if candidate.rid != current.rid
                 and _same_release_exact_cd_content(current, candidate)
-                and cd_rip_log_quality_key(candidate) is not None
-                and cd_rip_log_quality_key(candidate) > current_quality
+                and cd_rip_quality_key(candidate) is not None
+                and cd_rip_quality_key(candidate) > current_quality
             ]
             if not better:
                 continue
@@ -3188,7 +3398,7 @@ def prefer_better_cd_rip_logs(releases: List[Release], selected: Set[int]) -> Se
             best = max(
                 better,
                 key=lambda r: (
-                    cd_rip_log_quality_key(r),
+                    cd_rip_quality_key(r),
                     1 if r.root_kind == "existing" else 0,
                     -r.rid,
                 ),
@@ -3198,13 +3408,12 @@ def prefer_better_cd_rip_logs(releases: List[Release], selected: Set[int]) -> Se
             changed = True
             break
 
-    # Defensive cleanup if two exact-equivalent scored CD rips survived.
     selected_rels = [r for r in releases if r.rid in selected]
     for a, b in itertools.combinations(selected_rels, 2):
         if not _same_release_exact_cd_content(a, b):
             continue
-        qa = cd_rip_log_quality_key(a)
-        qb = cd_rip_log_quality_key(b)
+        qa = cd_rip_quality_key(a)
+        qb = cd_rip_quality_key(b)
         if qa is None or qb is None or qa == qb:
             continue
         if qa > qb:
@@ -3899,7 +4108,7 @@ def optimize_collection(releases: List[Release], groups: Dict[int, List[int]]) -
 
     # Quality of a CD rip must never create duplicate identity or override a
     # different edition. Only exact-equivalent CD rips reach this pass.
-    selected = prefer_better_cd_rip_logs(releases, selected)
+    selected = prefer_better_cd_rips(releases, selected)
 
     # Absolute last stage: when clean/explicit releases are otherwise exactly
     # identical, retain explicit and move the clean copy.
@@ -3966,8 +4175,9 @@ def prepare_analysis(
 
     finalize_release_metadata(releases)
     score_cd_rip_logs(releases, progress_cb, errors)
+    verify_cuetools_image_families(releases, progress_cb, errors)
 
-    # Store probe/log failures on the releases list wrapper is not possible, so the
+    # Store probe/log/verification failures on the releases list wrapper is not possible, so the
     # prepared analysis returns them separately through a temporary track tag.
     if errors and tracks:
         tracks[0].tags["__ANALYZER_PREPARE_ERRORS__"] = json.dumps(errors, ensure_ascii=False)
@@ -4144,6 +4354,8 @@ def report_text(existing: Optional[Path], recycle: Path, releases: List[Release]
             lines.append(
                 f"  CD image: {len(image_files)} image file(s), {rel.cd_image_track_count} CUE track(s)"
             )
+        if rel.has_cue and any(r.has_cd_image and r.family == rel.family for r in releases):
+            lines.append(f"  CUETools verification: {cuetools_cd_quality_text(rel)}")
         if rel.rip_log_paths:
             lines.append(f"  CD rip log quality: {cd_rip_log_quality_text(rel)}")
         lines.append(f"  Reason: {reason}")
@@ -4226,9 +4438,9 @@ def _preferred_existing_cover_for_recycle(rel: Release, releases: List[Release])
         # fully scored, a better recycle rip is allowed to replace an older
         # existing copy.
         if _same_release_exact_cd_content(er, rel):
-            er_log = cd_rip_log_quality_key(er)
-            rel_log = cd_rip_log_quality_key(rel)
-            if er_log is not None and rel_log is not None and rel_log > er_log:
+            er_quality = cd_rip_quality_key(er)
+            rel_quality = cd_rip_quality_key(rel)
+            if er_quality is not None and rel_quality is not None and rel_quality > er_quality:
                 continue
 
         candidates.append(er)
