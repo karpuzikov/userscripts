@@ -698,3 +698,11 @@ Do not flatten release folders into the duplicate root. After successful moves, 
 - A Personal Pick preserves the recording/version, not a particular release folder. The global optimizer must still choose the minimum-track retained release set that covers it.
 - Phrase rules match normalized track title/filename text case- and punctuation-insensitively; exact-title rules require normalized full-title equality.
 - Personal Picks do not override unrelated unusual-pattern exclusions for ordinary non-remix/non-live material.
+
+### Personal Picks phrase detector rule
+
+- Personal Picks must provide a `Detect phrases...` action that scans the currently selected Existing and New/update folders for live/remix phrases in audio filenames.
+- Detect parenthetical/bracket descriptors and named/trailing Mix descriptors; only show phrases classified as live or remix material.
+- Normalize punctuation/year suffixes and group recurring `Live From` / `Live At` venue phrases so equivalent year/location formatting does not create needless separate rules.
+- Show counts/examples and let the user add multiple detected phrases as persistent phrase rules.
+- Detection is only a convenience for creating preference rules; it never affects duplicate identity by itself.
