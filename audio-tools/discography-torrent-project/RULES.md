@@ -809,6 +809,12 @@ Do not flatten release folders into the duplicate root. After successful moves, 
 
 - The Release Map must show **all analyzed releases at the same time in one graph**. Never replace the full graph with a selected-release subgraph, neighborhood-only view, drill-down graph, or any other sub-map.
 - The graph contains release nodes only. Selecting a release may highlight/dim relationships, but must not remove other release nodes from the map.
+- **Duplicate releases must not appear on the graph.** Any release whose current optimized action is `SKIP` or `REMOVE` because it is redundant/duplicate is omitted from the Release Map entirely.
+- **Remix-only releases must not appear on the graph when Save Remixes is unchecked.** A release whose only relevant/included material is excluded by the remix setting is omitted from the graph.
+- **Live-only releases must not appear on the graph when Save Live recordings is unchecked.** A release whose only relevant/included material is excluded by the live setting is omitted from the graph.
+- These are visibility rules for the graph, not deletion rules. Hidden duplicate/remix/live releases remain part of the analyzed result/state where needed for re-optimization, explanations, undo, and future setting changes.
+- A release that contains at least one currently included non-remix/non-live recording may still appear even if some of its tracks are excluded by Remix/Live settings. The node represents the release's currently included material only.
+
 - No nested navigation: no release list + map pairing, no menus within menus, no sub-maps, and no multi-level drill-down navigation. A release click opens one direct details surface for that release while the full graph remains visible.
 - The Release Map UI must no longer use Tkinter/ttk. Use a modern GPU/web-rendered UI stack suitable for a large interactive graph and normal Windows window management.
 - Preferred architecture: **PySide6 / Qt 6** as the Windows desktop shell, **Qt WebEngine** for the graph surface, and **Sigma.js + Graphology** for the full release network. Python remains the analyzer/backend and communicates with the UI through a direct Qt bridge.
