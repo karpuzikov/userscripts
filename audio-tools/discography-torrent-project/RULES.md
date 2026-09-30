@@ -759,7 +759,7 @@ Do not flatten release folders into the duplicate root. After successful moves, 
 - Prefer one complete double-clickable `.pyw` file and the minimum practical file count.
 - Bootstrap/check WinGet before dependency setup. Install missing dependencies automatically and check installed dependencies for updates without requiring manual setup.
 - App-managed dependencies must use the program's own `dependencies` folder.
-- Keep update behavior and documentation framed as an update, never a reinstall.
+- Keep update behavior and documentation framed as an in-place update for existing installations.
 - New/unfinished GitHub software uses the status label `Under construction ⚠️`.
 - Preserve existing settings and migrate legacy storage when paths/layouts change.
 - Prefer immutable version/commit-pinned external download sources over mutable branch archives.
