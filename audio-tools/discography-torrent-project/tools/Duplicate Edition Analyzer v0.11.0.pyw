@@ -1250,16 +1250,28 @@ def ensure_ffmpeg() -> Tuple[str, str]:
 
 
 def ensure_heybrochecklog():
-    """Return hey-bro-check-log's score_log(), installing the dependency if needed."""
+    """Return hey-bro-check-log's score_log(), installing it app-locally if needed."""
+    local = Path(os.environ.get("LOCALAPPDATA") or Path.home())
+    deps = (
+        local
+        / "Karpuzikov"
+        / "Duplicate Edition Analyzer"
+        / "deps"
+        / f"heybrochecklog-{HEYBROCHECKLOG_VERSION}"
+    )
+    deps_text = str(deps)
+    if deps.is_dir() and deps_text not in sys.path:
+        sys.path.insert(0, deps_text)
+
     try:
         module = importlib.import_module("heybrochecklog")
         return module.score_log
     except Exception:
         pass
 
-    # The app already checks/repairs winget before dependency setup. Python is
-    # the currently running interpreter, so use its own pip rather than adding
-    # another system Python installation.
+    # Keep the dependency isolated from the user's normal Python environment.
+    # The app already checks/repairs winget before dependency setup; use the
+    # currently running interpreter only as the installer.
     try:
         pip_check = run_hidden(
             [sys.executable, "-m", "pip", "--version"],
@@ -1279,10 +1291,12 @@ def ensure_heybrochecklog():
                 check=False,
             )
 
+        deps.mkdir(parents=True, exist_ok=True)
         cp = run_hidden(
             [
                 sys.executable, "-m", "pip", "install",
                 "--disable-pip-version-check", "--quiet",
+                "--target", str(deps),
                 HEYBROCHECKLOG_SOURCE,
             ],
             stdout=subprocess.PIPE,
@@ -1294,7 +1308,10 @@ def ensure_heybrochecklog():
         if cp.returncode != 0:
             raise RuntimeError(cp.stderr.strip() or cp.stdout.strip() or "pip install failed")
 
+        if deps_text not in sys.path:
+            sys.path.insert(0, deps_text)
         importlib.invalidate_caches()
+        sys.modules.pop("heybrochecklog", None)
         module = importlib.import_module("heybrochecklog")
         return module.score_log
     except Exception as exc:
