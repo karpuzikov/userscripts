@@ -820,3 +820,29 @@ Do not flatten release folders into the duplicate root. After successful moves, 
 - Preferred architecture: **PySide6 / Qt 6** as the Windows desktop shell, **Qt WebEngine** for the graph surface, and **Sigma.js + Graphology** for the full release network. Python remains the analyzer/backend and communicates with the UI through a direct Qt bridge.
 - The graph must support pan, zoom, fit/center, hover, click selection, connected-edge highlighting, search-to-node, and smooth interaction while all release nodes remain loaded and visible.
 - Selecting a release must not navigate away from the graph. Show release/track details in a single flat side or bottom panel; closing/changing selection returns focus to the same full graph state.
+
+### Release Map interaction workflow
+
+- Every visible retained release node shows a **unique-track count badge** based on the current plan:
+  - **1-2 unique tracks:** red badge.
+  - **3-5 unique tracks:** yellow badge.
+  - **6+ unique tracks:** green badge.
+  - A release with zero unique tracks should normally not survive the retained-plan optimization; if it does for another explicit rule, show `0` with a neutral badge and expose the reason in details.
+- Clicking a release does not navigate away from the full graph. Its details panel unfolds in place while **all visible releases remain on the same map**.
+- The details panel must show the full currently relevant track list. Tracks that are unique to the selected retained release are visually highlighted.
+- Hovering a track exposes a compact **Ignore** action for that track. Do not permanently show Ignore buttons on every row.
+- Clicking **Ignore** on a track marks that track/recording identity as ignored for optimization and adds it to the persistent track-ignore list. The current graph does **not** silently mutate into a final state yet; instead, the global **Re-Analyze** button becomes visually highlighted/enabled to show there are unapplied analysis changes.
+- Track Ignore means: this ignored recording no longer contributes coverage, uniqueness, or release-retention value during the next re-analysis. Other tracks in the same release continue to follow normal rules.
+- Clicking **Ignore** on a release is a separate operation from track Ignore. It excludes **only that exact release** as a source candidate for the next optimization pass. It does **not** ignore or blacklist the recordings inside that release; those recordings remain eligible to be supplied by any other release according to normal matching/selection rules.
+- Any pending track-ignore or release-ignore change highlights/enables **Re-Analyze**. Re-Analyze must use the already-computed scan/probe/fingerprint/comparison data whenever possible and re-run the collection-selection logic with the new ignore constraints; do not unnecessarily rescan or re-fingerprint unchanged audio.
+- Re-Analyze must reconsider releases that were previously classified as duplicate/hidden, because they may become necessary replacement sources after a track or release is ignored.
+- After Re-Analyze, unfold one bottom **result drawer** showing the exact cause/effect delta from the previous plan. Keep the full release graph visible above it.
+- Result-drawer wording must be concrete, for example:
+  - `IF track: "Hot (Riffs & Rays Radio Edit)" ignored, THEN release: "2008 - Hot - Single [GB - none]" removed`.
+  - `IF release: "2014-10-23 - Лучшие Хиты [191018022853]" ignored, THEN releases: "2013-12-05 - In Your Eyes [5948204031992]", "2014-04-15 - Cola Song (feat. J Balvin) [075679940926]" added`.
+- The result drawer must list all release additions/removals caused by the pending ignore change, not only the first one.
+- After a successful Re-Analyze that changes the plan, **Apply** becomes visually highlighted/enabled.
+- **Apply** is the only action that commits the current proposed filesystem move plan. Ignore and Re-Analyze are planning operations only.
+- If Re-Analyze produces no plan change, say so explicitly in the result drawer and do not falsely highlight Apply as if there were new filesystem actions.
+- The graph after Re-Analyze still follows graph visibility rules: duplicate/redundant releases, remix-only releases when remixes are disabled, and live-only releases when live is disabled stay hidden unless they become retained/otherwise visible under the new plan.
+- Unique-track badges, unique-track highlighting, release details, and result-drawer deltas must all refresh from the same newly computed plan so the UI never shows stale pre-analysis values.
