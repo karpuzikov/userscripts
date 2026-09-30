@@ -33,7 +33,7 @@ import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 
 APP_NAME = "Duplicate / Edition Analyzer"
-APP_VERSION = "0.16.2"
+APP_VERSION = "0.16.3"
 PROGRAM_DATA_DIR_NAME = "Duplicate Edition Analyzer"
 PYSIDE6_VERSION = "6.11.2"
 SIGMA_VERSION = "3.0.3"
@@ -6273,11 +6273,15 @@ button,input { font:inherit; }
 .track .status { color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .ignoreTrack {
   position:absolute; right:8px; top:6px; height:30px; opacity:0; pointer-events:none;
-  border:1px solid #4b5160; border-radius:7px; background:#252a35; color:#fff; padding:0 10px;
-  transition:.12s ease; cursor:pointer;
+  border:1px solid #a33b44; border-radius:7px; background:#5b2026; color:#ffe8ea; padding:0 11px;
+  font-weight:700; transition:.12s ease; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,.35);
 }
 .track:hover .ignoreTrack { opacity:1; pointer-events:auto; }
-.ignoreTrack:hover { border-color:var(--yellow); color:#ffd87a; }
+.ignoreTrack:hover { border-color:#ff7c86; background:#742932; color:#fff; }
+#ignoreReleaseBtn {
+  background:#5b2026; border-color:#a33b44; color:#ffe8ea; font-weight:750;
+}
+#ignoreReleaseBtn:hover { background:#742932; border-color:#ff7c86; color:#fff; }
 #emptyDetails { margin:auto; color:var(--muted); text-align:center; padding:30px; }
 #resultDrawer {
   display:none; border-top:1px solid var(--line); background:#101218; padding:12px 16px 14px;
@@ -6441,7 +6445,7 @@ function syncCards() {
   }
   requestAnimationFrame(syncCards);
 }
-function buildGraph() {function buildGraph() {
+function buildGraph() {
   const container = document.getElementById("graph");
   if (renderer) { renderer.kill(); renderer = null; }
   container.innerHTML = "";
@@ -6552,10 +6556,10 @@ function openDetails(n) {
   inner.innerHTML=
     '<div id="detailsHead"><div id="releaseName">'+esc(n.name)+'</div>'
     +'<div id="releaseMeta">'+esc(n.action)+' · '+n.uniqueCount+' unique · '+n.includedTracks+' included</div>'
+    +'<div id="releaseActions">'+ignoreRelease+'</div>'
     +'<div id="pathRow"><div id="releasePath">'+esc(n.path)+'</div>'
     +'<button class="btn" id="copyPathBtn">Copy</button><button class="btn" id="openFolderBtn">Open folder</button></div>'
-    +'<div id="reason">'+esc(n.reason)+'</div>'
-    +'<div id="releaseActions">'+ignoreRelease+'</div></div>'
+    +'<div id="reason">'+esc(n.reason)+'</div></div>'
     +'<div id="tracksTitle">Tracks</div><div id="tracks">'+tracks+'</div>';
   aside.classList.add("open");
   document.getElementById("copyPathBtn").onclick=()=>bridge.copyPath(n.path);
@@ -7501,6 +7505,7 @@ class App(tk.Tk):
         self._run_started_at = 0.0
         self._last_progress_stage = ""
         self._decision_snapshot: List[Dict[str, object]] = _load_decision_snapshot()
+        self._live_release_map_session: Optional[Dict[str, object]] = None
         self._build()
         self.protocol("WM_DELETE_WINDOW", self.on_close)
 
@@ -7625,20 +7630,93 @@ class App(tk.Tk):
         self.personal_picks_btn.configure(text=self._personal_picks_button_text())
         self.save_settings()
 
+    def _update_live_release_map_session(
+        self,
+        session: Dict[str, object],
+        map_result: Dict[str, object],
+    ) -> None:
+        session["snapshots"] = list(map_result.get("snapshots", session.get("snapshots", [])) or [])
+        session["selected"] = set(map_result.get("selected", session.get("selected", set())) or set())
+        session["decisions"] = list(map_result.get("decisions", session.get("decisions", [])) or [])
+        session["blocked_release_ids"] = set(
+            map_result.get(
+                "blocked_release_ids",
+                session.get("blocked_release_ids", set()),
+            ) or set()
+        )
+        self._decision_snapshot = list(session["snapshots"])
+        _save_decision_snapshot(self._decision_snapshot)
+
+    def _apply_release_map_result(
+        self,
+        session: Dict[str, object],
+        map_result: Dict[str, object],
+    ) -> None:
+        self._update_live_release_map_session(session, map_result)
+        if map_result.get("action") != "apply":
+            self.status_var.set("Analysis complete - plan not applied.")
+            return
+
+        existing = session.get("existing")
+        recycle = session.get("recycle")
+        releases = session.get("releases")
+        decisions = list(session.get("decisions", []) or [])
+        if not isinstance(recycle, Path) or not isinstance(releases, list):
+            messagebox.showerror(
+                APP_NAME,
+                "The live analysis context is no longer available.",
+                parent=self,
+            )
+            return
+
+        counts = action_summary(decisions)
+        intra_duplicates = plan_intra_release_duplicates(releases, decisions)
+        to_move = counts["SKIP"] + counts["REMOVE"] + len(intra_duplicates)
+        if to_move == 0:
+            self.status_var.set("Analysis complete - no moves in current plan.")
+            self._append_activity("Current plan contains no filesystem moves.")
+            return
+
+        self._live_release_map_session = None
+        self.run_btn.configure(state="disabled")
+        self.progress_var.set(0)
+        self.progress_detail_var.set("")
+        self.status_var.set("Applying moves")
+        self._last_progress_stage = ""
+        self._append_activity("Applying moves")
+        self._set_running(True)
+        threading.Thread(
+            target=self.apply_worker,
+            args=(existing, recycle, releases, decisions, intra_duplicates),
+            daemon=True,
+        ).start()
+
     def open_decision_map(self):
         if self._running:
             return
-        snapshots = self._decision_snapshot or _load_decision_snapshot()
-        if not snapshots:
-            messagebox.showinfo(APP_NAME, "No analyzed release decisions are available yet.", parent=self)
-            return
-        try:
-            self.status_var.set("Opening Release Map")
-            launch_qt_release_map({
+
+        session = self._live_release_map_session
+        if session is None:
+            snapshots = self._decision_snapshot or _load_decision_snapshot()
+            if not snapshots:
+                messagebox.showinfo(
+                    APP_NAME,
+                    "No analyzed release decisions are available yet.",
+                    parent=self,
+                )
+                return
+            session = {
                 "snapshots": snapshots,
                 "allow_apply": False,
-            })
-            self.status_var.set("Ready")
+            }
+
+        try:
+            self.status_var.set("Opening Release Map")
+            map_result = launch_qt_release_map(dict(session))
+            if self._live_release_map_session is not None:
+                self._apply_release_map_result(self._live_release_map_session, map_result)
+            else:
+                self.status_var.set("Ready")
         except Exception as exc:
             self.status_var.set("Release Map failed")
             messagebox.showerror(APP_NAME, f"Release Map failed:\n\n{exc}", parent=self)
@@ -7761,6 +7839,7 @@ class App(tk.Tk):
                 pass
 
         self.save_settings()
+        self._live_release_map_session = None
         self.run_btn.configure(state="disabled")
         self.progress_var.set(0)
         self.progress_detail_var.set("")
@@ -8019,55 +8098,31 @@ class App(tk.Tk):
         if comparison_log:
             summary_parts.append("Detailed comparison logging is enabled.")
 
+        session: Dict[str, object] = {
+            "snapshots": list(self._decision_snapshot),
+            "allow_apply": True,
+            "summary_text": " | ".join(summary_parts),
+            "existing": existing,
+            "recycle": recycle,
+            "releases": releases,
+            "tracks": tracks,
+            "groups": groups,
+            "selected": set(selected),
+            "reviews": list(reviews),
+            "decisions": list(decisions),
+            "blocked_release_ids": set(blocked_release_ids),
+        }
+        self._live_release_map_session = session
+
         try:
             self.status_var.set("Opening Release Map")
-            map_result = launch_qt_release_map({
-                "snapshots": self._decision_snapshot,
-                "allow_apply": True,
-                "summary_text": " | ".join(summary_parts),
-                "releases": releases,
-                "tracks": tracks,
-                "groups": groups,
-                "selected": set(selected),
-                "reviews": list(reviews),
-                "decisions": list(decisions),
-                "blocked_release_ids": set(blocked_release_ids),
-            })
+            map_result = launch_qt_release_map(dict(session))
         except Exception as exc:
             self.status_var.set("Release Map failed")
             messagebox.showerror(APP_NAME, f"Release Map failed:\n\n{exc}", parent=self)
             return
 
-        self._decision_snapshot = list(map_result.get("snapshots", self._decision_snapshot) or [])
-        _save_decision_snapshot(self._decision_snapshot)
-
-        if map_result.get("action") != "apply":
-            self.status_var.set("Analysis complete - plan not applied.")
-            self._append_activity("Move plan left unapplied; Release Map remains available.")
-            return
-
-        decisions = list(map_result.get("decisions", decisions) or decisions)
-        counts = action_summary(decisions)
-        intra_duplicates = plan_intra_release_duplicates(releases, decisions)
-        to_move = counts["SKIP"] + counts["REMOVE"] + len(intra_duplicates)
-
-        if to_move == 0:
-            self.status_var.set("Analysis complete - no moves in current plan.")
-            self._append_activity("Current plan contains no filesystem moves.")
-            return
-
-        self.run_btn.configure(state="disabled")
-        self.progress_var.set(0)
-        self.progress_detail_var.set("")
-        self.status_var.set("Applying moves")
-        self._last_progress_stage = ""
-        self._append_activity("Applying moves")
-        self._set_running(True)
-        threading.Thread(
-            target=self.apply_worker,
-            args=(existing, recycle, releases, decisions, intra_duplicates),
-            daemon=True,
-        ).start()
+        self._apply_release_map_result(session, map_result)
 
     def apply_worker(
         self,
@@ -8093,6 +8148,7 @@ class App(tk.Tk):
 
     def applied(self, recycle: Path, result: Dict[str, object]):
         self._set_running(False)
+        self._live_release_map_session = None
         self.run_btn.configure(state="normal")
         self.progress_var.set(100)
         self.progress_detail_var.set("100%")

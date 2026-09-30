@@ -474,3 +474,6 @@ Before any program/script change in this project, apply the newest stored softwa
 
 
 - v0.16.2 graph readability correction: Sigma remains the GPU edge/network renderer, but release nodes are now compact rectangular HTML cards synchronized to Sigma graph coordinates instead of colored circular nodes. The release name is high-contrast light text, and unique-track color is confined to a small corner badge. Relationship edges are substantially brighter/thicker at default view and become stronger on selection without fully vanishing when unrelated. Force-layout world spacing is expanded to account for card dimensions and reduce the pile-up seen in v0.16.1.
+
+
+- v0.16.3 live editing controls: fixed the embedded graph JavaScript boundary, made Ignore release a prominent destructive button at the top of release details, strengthened the hover-only track Ignore action, and preserved the live editable Release Map session after the map window is closed. Reopening Release Map from the main analyzer now keeps track/release Ignore, Re-Analyze and Apply available until Apply is committed or a new Analyze starts; only historical saved snapshots are read-only.

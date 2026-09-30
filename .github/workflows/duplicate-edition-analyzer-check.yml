@@ -37,3 +37,35 @@ jobs:
           latest = max(files, key=version_key)
           print(f"Compiling {latest}")
           py_compile.compile(str(latest), doraise=True)
+
+      - name: Validate embedded Release Map JavaScript
+        shell: python
+        run: |
+          import re
+          import subprocess
+          from pathlib import Path
+
+          root = Path("audio-tools/discography-torrent-project/tools")
+          files = list(root.glob("Duplicate Edition Analyzer v*.pyw"))
+
+          def version_key(path):
+              match = re.search(r"v(\d+)\.(\d+)\.(\d+)\.pyw$", path.name)
+              return tuple(map(int, match.groups())) if match else (-1, -1, -1)
+
+          latest = max(files, key=version_key)
+          source = latest.read_text(encoding="utf-8")
+          if "function buildGraph() {function buildGraph() {" in source:
+              raise SystemExit("Duplicated buildGraph function boundary found")
+
+          html_match = re.search(r'html = r"""(.*?)"""\n\s+return \(', source, re.S)
+          if not html_match:
+              raise SystemExit("Release Map HTML block not found")
+          script_match = re.search(r'<script type="module">(.*?)</script>', html_match.group(1), re.S)
+          if not script_match:
+              raise SystemExit("Release Map module script not found")
+
+          js = script_match.group(1)
+          js = js.replace("__APP_VERSION__", "test").replace("__SIGMA_VERSION__", "3.0.3").replace("__GRAPHOLOGY_VERSION__", "0.26.0")
+          check = Path("release-map-check.mjs")
+          check.write_text(js, encoding="utf-8")
+          subprocess.run(["node", "--check", str(check)], check=True)

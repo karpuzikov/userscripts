@@ -836,6 +836,10 @@ Do not flatten release folders into the duplicate root. After successful moves, 
 - Clicking a release does not navigate away from the full graph. Its details panel unfolds in place while **all visible releases remain on the same map**.
 - The details panel must show the full currently relevant track list. Tracks that are unique to the selected retained release are visually highlighted.
 - Hovering a track exposes a compact **Ignore** action for that track. Do not permanently show Ignore buttons on every row.
+- In a live editable map, the release-level **Ignore release** action must be a prominent high-contrast destructive button at the top of the selected release details panel. It must not be hidden inside secondary details or a nested menu.
+- Track-row **Ignore** must become clearly visible on hover with destructive/high-contrast styling. It may be hidden when not hovering, but it must not be obscured by the status text.
+- Closing and reopening the Release Map after analysis must preserve the live editable analysis context until Apply or a new Analyze starts. Reopening must not silently downgrade to a read-only snapshot and remove Ignore/Re-Analyze/Apply actions.
+
 - Clicking **Ignore** on a track marks that track/recording identity as ignored for optimization and adds it to the persistent track-ignore list. The current graph does **not** silently mutate into a final state yet; instead, the global **Re-Analyze** button becomes visually highlighted/enabled to show there are unapplied analysis changes.
 - Track Ignore means: this ignored recording no longer contributes coverage, uniqueness, or release-retention value during the next re-analysis. Other tracks in the same release continue to follow normal rules.
 - Clicking **Ignore** on a release is a separate operation from track Ignore. It excludes **only that exact release** as a source candidate for the next optimization pass. It does **not** ignore or blacklist the recordings inside that release; those recordings remain eligible to be supplied by any other release according to normal matching/selection rules.
