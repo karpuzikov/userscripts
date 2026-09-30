@@ -689,3 +689,12 @@ Do not flatten release folders into the duplicate root. After successful moves, 
 - Treat `Sped Up` / `Speed Up`, `Slowed` / `Slowed Down`, and `Reverb` / `Reverbed` variants as remix material.
 - These variants follow `Save Remixes` exactly: checked means they participate normally; unchecked means they are skipped completely.
 - Redundant releases/packages identified by these labels route under `!Remixes` just like explicit remix releases.
+
+### Personal Picks rule
+
+- `Personal Picks` are persistent user preference exceptions to `Save Remixes` and `Save Live recordings`.
+- A matching Personal Pick is included even when its remix/live category is globally unchecked.
+- Personal Picks never create duplicate identity. Audio identity remains Chromaprint + duration with existing safety gates.
+- A Personal Pick preserves the recording/version, not a particular release folder. The global optimizer must still choose the minimum-track retained release set that covers it.
+- Phrase rules match normalized track title/filename text case- and punctuation-insensitively; exact-title rules require normalized full-title equality.
+- Personal Picks do not override unrelated unusual-pattern exclusions for ordinary non-remix/non-live material.
