@@ -5564,6 +5564,558 @@ def undo_last_run() -> Tuple[int, List[str]]:
     return restored, conflicts
 
 
+class DecisionExplorerWindow(tk.Toplevel):
+    """Interactive visual explanation of every release decision."""
+
+    def __init__(
+        self,
+        master,
+        snapshots: List[Dict[str, object]],
+        allow_apply: bool = False,
+        summary_text: str = "",
+    ):
+        super().__init__(master)
+        self.title(f"{APP_NAME} - Decision Map")
+        self.geometry("1320x800")
+        self.minsize(1040, 650)
+        self.configure(background=DARK_BG)
+        _enable_dark_titlebar(self)
+
+        self.snapshots = list(snapshots)
+        self.visible_items: List[Dict[str, object]] = []
+        self.result: Optional[bool] = None
+        self.allow_apply = allow_apply
+
+        self.search_var = tk.StringVar()
+        self.scope_var = tk.StringVar(value="All releases")
+        self.summary_var = tk.StringVar(value=summary_text)
+
+        outer = ttk.Frame(self)
+        outer.pack(fill="both", expand=True, padx=14, pady=12)
+
+        header = ttk.Frame(outer)
+        header.pack(fill="x")
+        ttk.Label(header, text="Decision Map", font=("Segoe UI", 16, "bold")).pack(side="left")
+        ttk.Label(
+            header,
+            text="Click any release to see exactly why it was retained or marked duplicate.",
+            style="Help.TLabel",
+        ).pack(side="left", padx=(14, 0))
+
+        if summary_text:
+            ttk.Label(
+                outer,
+                textvariable=self.summary_var,
+                style="Help.TLabel",
+                wraplength=1240,
+                justify="left",
+            ).pack(fill="x", pady=(5, 10))
+
+        body = tk.PanedWindow(
+            outer,
+            orient="horizontal",
+            background=DARK_BORDER,
+            sashwidth=5,
+            bd=0,
+            relief="flat",
+        )
+        body.pack(fill="both", expand=True)
+
+        left = ttk.Frame(body, width=350)
+        right = ttk.Frame(body)
+        body.add(left, minsize=300, width=360)
+        body.add(right, minsize=650)
+
+        ttk.Label(left, text="Releases", style="Section.TLabel").pack(anchor="w")
+
+        search = ttk.Entry(left, textvariable=self.search_var)
+        search.pack(fill="x", pady=(6, 6))
+        search.bind("<KeyRelease>", lambda _e: self._refresh_list())
+
+        scope = ttk.Combobox(
+            left,
+            textvariable=self.scope_var,
+            values=("All releases", "Retained", "Duplicates"),
+            state="readonly",
+        )
+        scope.pack(fill="x", pady=(0, 8))
+        scope.bind("<<ComboboxSelected>>", lambda _e: self._refresh_list())
+
+        list_frame = ttk.Frame(left)
+        list_frame.pack(fill="both", expand=True)
+
+        self.listbox = tk.Listbox(
+            list_frame,
+            background="#161616",
+            foreground=DARK_FG,
+            selectbackground=DARK_ACCENT,
+            selectforeground=DARK_FG,
+            relief="solid",
+            borderwidth=1,
+            font=("Segoe UI", 9),
+            activestyle="none",
+            exportselection=False,
+        )
+        list_scroll = ttk.Scrollbar(list_frame, orient="vertical", command=self.listbox.yview)
+        self.listbox.configure(yscrollcommand=list_scroll.set)
+        self.listbox.pack(side="left", fill="both", expand=True)
+        list_scroll.pack(side="right", fill="y")
+        self.listbox.bind("<<ListboxSelect>>", self._select_release)
+
+        ttk.Label(
+            left,
+            text=(
+                "RETAINED = KEEP / ADD / REPLACE\n"
+                "DUPLICATE = SKIP / REMOVE"
+            ),
+            style="Help.TLabel",
+            justify="left",
+        ).pack(anchor="w", pady=(8, 0))
+
+        ttk.Label(right, text="Why?", style="Section.TLabel").pack(anchor="w")
+
+        canvas_frame = ttk.Frame(right)
+        canvas_frame.pack(fill="both", expand=True, pady=(6, 0))
+
+        self.canvas = tk.Canvas(
+            canvas_frame,
+            background="#141414",
+            highlightthickness=1,
+            highlightbackground=DARK_BORDER,
+            borderwidth=0,
+        )
+        xscroll = ttk.Scrollbar(canvas_frame, orient="horizontal", command=self.canvas.xview)
+        yscroll = ttk.Scrollbar(canvas_frame, orient="vertical", command=self.canvas.yview)
+        self.canvas.configure(xscrollcommand=xscroll.set, yscrollcommand=yscroll.set)
+        self.canvas.grid(row=0, column=0, sticky="nsew")
+        yscroll.grid(row=0, column=1, sticky="ns")
+        xscroll.grid(row=1, column=0, sticky="ew")
+        canvas_frame.rowconfigure(0, weight=1)
+        canvas_frame.columnconfigure(0, weight=1)
+
+        self.canvas.bind(
+            "<MouseWheel>",
+            lambda e: self.canvas.yview_scroll(-1 if e.delta > 0 else 1, "units"),
+        )
+        self.canvas.bind(
+            "<Shift-MouseWheel>",
+            lambda e: self.canvas.xview_scroll(-1 if e.delta > 0 else 1, "units"),
+        )
+
+        footer = ttk.Frame(outer)
+        footer.pack(fill="x", pady=(10, 0))
+        if allow_apply:
+            ttk.Label(
+                footer,
+                text="Review as many releases as you want before applying the move plan.",
+                style="Help.TLabel",
+            ).pack(side="left")
+            ttk.Button(footer, text="Cancel", command=self._cancel).pack(side="right")
+            ttk.Button(footer, text="Apply proposed moves", command=self._apply).pack(
+                side="right", padx=(0, 8)
+            )
+        else:
+            ttk.Button(footer, text="Close", command=self._close).pack(side="right")
+
+        self.protocol("WM_DELETE_WINDOW", self._cancel if allow_apply else self._close)
+        self._refresh_list()
+
+        self.transient(master)
+        self.grab_set()
+        self.focus_force()
+
+    @staticmethod
+    def _retained(item: Dict[str, object]) -> bool:
+        return str(item.get("outcome", "")) == "RETAINED"
+
+    def _refresh_list(self) -> None:
+        query = normalize_title(self.search_var.get())
+        scope = self.scope_var.get()
+
+        previous_id = None
+        selection = self.listbox.curselection()
+        if selection and selection[0] < len(self.visible_items):
+            previous_id = self.visible_items[selection[0]].get("release_id")
+
+        self.visible_items = []
+        self.listbox.delete(0, "end")
+
+        for item in self.snapshots:
+            retained = self._retained(item)
+            if scope == "Retained" and not retained:
+                continue
+            if scope == "Duplicates" and retained:
+                continue
+
+            haystack = normalize_title(
+                " ".join(
+                    [
+                        str(item.get("name", "")),
+                        str(item.get("path", "")),
+                        str(item.get("reason", "")),
+                        str(item.get("action", "")),
+                        str(item.get("source", "")),
+                    ]
+                )
+            )
+            if query and query not in haystack:
+                continue
+
+            self.visible_items.append(item)
+            action = str(item.get("action", ""))
+            outcome = str(item.get("outcome", ""))
+            root = "EXISTING" if item.get("root_kind") == "existing" else "NEW"
+            self.listbox.insert(
+                "end",
+                f"[{outcome}] [{action}] [{root}] {item.get('name', '')}",
+            )
+
+        if not self.visible_items:
+            self._draw_empty("No releases match this filter.")
+            return
+
+        target = 0
+        if previous_id is not None:
+            for index, item in enumerate(self.visible_items):
+                if item.get("release_id") == previous_id:
+                    target = index
+                    break
+
+        self.listbox.selection_set(target)
+        self.listbox.activate(target)
+        self.listbox.see(target)
+        self._draw_release(self.visible_items[target])
+
+    def _select_release(self, _event=None) -> None:
+        selection = self.listbox.curselection()
+        if not selection:
+            return
+        index = selection[0]
+        if 0 <= index < len(self.visible_items):
+            self._draw_release(self.visible_items[index])
+
+    def _node(
+        self,
+        x: int,
+        y: int,
+        width: int,
+        title: str,
+        body: str,
+        kind: str = "normal",
+    ) -> Tuple[int, int, int, int]:
+        palette = {
+            "root": ("#2b2b30", DARK_ACCENT),
+            "retained": ("#1f3a2b", "#58a66a"),
+            "duplicate": ("#442525", "#c96a6a"),
+            "reason": ("#263549", "#638dc6"),
+            "header": ("#34343a", "#6b6b74"),
+            "normal": ("#242426", DARK_BORDER),
+        }
+        fill, outline = palette.get(kind, palette["normal"])
+
+        wrapped = []
+        for paragraph in (body or "").splitlines() or [""]:
+            lines = textwrap.wrap(paragraph, width=max(24, int(width / 8.0))) or [""]
+            wrapped.extend(lines)
+        body_text = "\n".join(wrapped)
+        height = max(74, 52 + 16 * len(wrapped))
+
+        self.canvas.create_rectangle(
+            x, y, x + width, y + height,
+            fill=fill,
+            outline=outline,
+            width=2,
+        )
+        self.canvas.create_text(
+            x + 12,
+            y + 10,
+            anchor="nw",
+            text=title,
+            fill=DARK_FG,
+            font=("Segoe UI", 10, "bold"),
+            width=width - 24,
+        )
+        self.canvas.create_text(
+            x + 12,
+            y + 36,
+            anchor="nw",
+            text=body_text,
+            fill=DARK_MUTED,
+            font=("Segoe UI", 9),
+            width=width - 24,
+        )
+        return (x, y, x + width, y + height)
+
+    def _arrow(
+        self,
+        source: Tuple[int, int, int, int],
+        target: Tuple[int, int, int, int],
+    ) -> None:
+        x1 = source[2]
+        y1 = (source[1] + source[3]) // 2
+        x2 = target[0]
+        y2 = (target[1] + target[3]) // 2
+        bend = x1 + max(30, (x2 - x1) // 2)
+        self.canvas.create_line(
+            x1,
+            y1,
+            bend,
+            y1,
+            bend,
+            y2,
+            x2,
+            y2,
+            fill=DARK_MUTED,
+            width=2,
+            arrow=tk.LAST,
+            smooth=True,
+        )
+
+    def _draw_empty(self, text: str) -> None:
+        self.canvas.delete("all")
+        self.canvas.create_text(
+            30,
+            30,
+            anchor="nw",
+            text=text,
+            fill=DARK_MUTED,
+            font=("Segoe UI", 11),
+        )
+        self.canvas.configure(scrollregion=(0, 0, 900, 600))
+
+    def _draw_release(self, item: Dict[str, object]) -> None:
+        self.canvas.delete("all")
+        self.canvas.xview_moveto(0)
+        self.canvas.yview_moveto(0)
+
+        retained = self._retained(item)
+        outcome_kind = "retained" if retained else "duplicate"
+
+        root_body = (
+            f"{item.get('path', '')}\n"
+            f"Source: {item.get('source', '?')}\n"
+            f"Type: {item.get('release_type', '?')}\n"
+            f"Included tracks: {item.get('included_tracks', 0)} | "
+            f"Skipped: {item.get('ignored_tracks', 0)} | "
+            f"Recording groups: {item.get('recording_groups', 0)}"
+        )
+        root = self._node(40, 40, 350, str(item.get("name", "Release")), root_body, "root")
+
+        outcome = self._node(
+            470,
+            55,
+            230,
+            str(item.get("outcome", "")),
+            f"Action: {item.get('action', '')}",
+            outcome_kind,
+        )
+        self._arrow(root, outcome)
+
+        reason = self._node(
+            790,
+            30,
+            390,
+            "Main decision",
+            str(item.get("reason", "")),
+            "reason",
+        )
+        self._arrow(outcome, reason)
+
+        y = max(reason[3] + 35, 180)
+
+        factors = [str(x) for x in item.get("decision_factors", []) if str(x).strip()]
+        quality = [str(x) for x in item.get("quality", []) if str(x).strip()]
+        personal = item.get("personal_matches", [])
+        essential = (
+            item.get("essential_examples", [])
+            or item.get("essential_tracks", [])
+            or []
+        )
+
+        factor_header = self._node(790, y, 260, "Decision factors", f"{len(factors) + len(quality)} factor(s)", "header")
+        self._arrow(outcome, factor_header)
+        child_y = y
+        for factor in (factors + quality)[:7]:
+            child = self._node(1130, child_y, 390, "Factor", factor, "normal")
+            self._arrow(factor_header, child)
+            child_y = child[3] + 18
+        y = max(factor_header[3], child_y) + 30
+
+        if retained and essential:
+            unique_header = self._node(
+                790,
+                y,
+                260,
+                "Unique / essential audio",
+                f"{len(essential)} shown",
+                "header",
+            )
+            self._arrow(outcome, unique_header)
+            unique_body = "\n".join(f"- {title}" for title in essential[:12])
+            unique_node = self._node(1130, y, 390, "Keeps these recordings", unique_body, "normal")
+            self._arrow(unique_header, unique_node)
+            y = max(unique_header[3], unique_node[3]) + 30
+
+        if personal:
+            pick_header = self._node(
+                790,
+                y,
+                260,
+                "Personal Picks",
+                f"{len(personal)} matched track(s)",
+                "header",
+            )
+            self._arrow(outcome, pick_header)
+            pick_lines = []
+            for row in personal[:10]:
+                pick_lines.append(f"- {row.get('title', '')}  <-  {row.get('rule', '')}")
+            pick_node = self._node(1130, y, 390, "Explicitly preserved", "\n".join(pick_lines), "normal")
+            self._arrow(pick_header, pick_node)
+            y = max(pick_header[3], pick_node[3]) + 30
+
+        coverage = item.get("coverage", []) or []
+        if coverage:
+            cover_header = self._node(
+                790,
+                y,
+                260,
+                "Covered by retained releases",
+                f"{len(coverage)} release(s)",
+                "header",
+            )
+            self._arrow(outcome, cover_header)
+            cover_y = y
+            for row in coverage[:8]:
+                examples = row.get("examples", []) or []
+                body = (
+                    f"{row.get('groups', 0)} recording group(s)\n"
+                    + ("Examples: " + "; ".join(examples[:5]) if examples else "")
+                )
+                cover = self._node(
+                    1130,
+                    cover_y,
+                    390,
+                    str(row.get("name", "")),
+                    body,
+                    "normal",
+                )
+                self._arrow(cover_header, cover)
+                cover_y = cover[3] + 18
+            y = max(cover_header[3], cover_y) + 30
+
+        related = item.get("related", []) or []
+        if related:
+            related_header = self._node(
+                790,
+                y,
+                260,
+                "Direct relationship",
+                f"{len(related)} release(s)",
+                "header",
+            )
+            self._arrow(outcome, related_header)
+            related_y = y
+            for row in related[:6]:
+                body = (
+                    f"Action: {row.get('action', '')}\n"
+                    f"Source: {row.get('source', '')}\n"
+                    f"Included tracks: {row.get('included_tracks', 0)}"
+                )
+                rel_node = self._node(
+                    1130,
+                    related_y,
+                    390,
+                    str(row.get("name", "")),
+                    body,
+                    "normal",
+                )
+                self._arrow(related_header, rel_node)
+                related_y = rel_node[3] + 18
+            y = max(related_header[3], related_y) + 30
+
+        alternatives = item.get("alternatives", []) or []
+        if alternatives:
+            alt_header = self._node(
+                790,
+                y,
+                260,
+                "Same-coverage alternatives",
+                "Context only - audio groups are the identity basis",
+                "header",
+            )
+            self._arrow(outcome, alt_header)
+            alt_y = y
+            for row in alternatives[:6]:
+                body = (
+                    f"Action: {row.get('action', '')}\n"
+                    f"Source: {row.get('source', '')}\n"
+                    f"Included tracks: {row.get('included_tracks', 0)} | "
+                    f"{str(row.get('root_kind', '')).title()}"
+                )
+                alt = self._node(
+                    1130,
+                    alt_y,
+                    390,
+                    str(row.get("name", "")),
+                    body,
+                    "normal",
+                )
+                self._arrow(alt_header, alt)
+                alt_y = alt[3] + 18
+            y = max(alt_header[3], alt_y) + 30
+
+        ignored = item.get("ignored_counts", {}) or {}
+        if any(int(ignored.get(key, 0) or 0) for key in ("remix", "live", "pattern")):
+            ignored_header = self._node(
+                790,
+                y,
+                260,
+                "Skipped by options",
+                "These tracks did not help the release survive",
+                "header",
+            )
+            self._arrow(outcome, ignored_header)
+            ignored_node = self._node(
+                1130,
+                y,
+                390,
+                "Excluded from optimization",
+                (
+                    f"Remix-classified: {ignored.get('remix', 0)}\n"
+                    f"Live-classified: {ignored.get('live', 0)}\n"
+                    f"Unusual-pattern exclusions: {ignored.get('pattern', 0)}"
+                ),
+                "normal",
+            )
+            self._arrow(ignored_header, ignored_node)
+            y = max(ignored_header[3], ignored_node[3]) + 30
+
+        bbox = self.canvas.bbox("all")
+        if bbox:
+            self.canvas.configure(
+                scrollregion=(
+                    max(0, bbox[0] - 30),
+                    max(0, bbox[1] - 30),
+                    bbox[2] + 60,
+                    bbox[3] + 60,
+                )
+            )
+        else:
+            self.canvas.configure(scrollregion=(0, 0, 1600, max(800, y)))
+
+    def _apply(self) -> None:
+        self.result = True
+        self.destroy()
+
+    def _cancel(self) -> None:
+        self.result = False
+        self.destroy()
+
+    def _close(self) -> None:
+        self.result = None
+        self.destroy()
+
+
 class DoneWindow(tk.Toplevel):
     def __init__(self, master, recycle: Path, result: Dict[str, object]):
         super().__init__(master)
