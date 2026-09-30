@@ -683,3 +683,9 @@ Do not flatten release folders into the duplicate root. After successful moves, 
 - An extra track on a larger edition adds no selection value when the same high-confidence recording group is already retained on another release.
 - After assembling the retained collection, test smaller related album editions as replacements. Accept a replacement only when its source class is not worse, every included recording group remains covered globally, and total included track count strictly decreases.
 - Re-run redundancy pruning after such swaps.
+
+### Tempo/effect remix rule
+
+- Treat `Sped Up` / `Speed Up`, `Slowed` / `Slowed Down`, and `Reverb` / `Reverbed` variants as remix material.
+- These variants follow `Save Remixes` exactly: checked means they participate normally; unchecked means they are skipped completely.
+- Redundant releases/packages identified by these labels route under `!Remixes` just like explicit remix releases.
