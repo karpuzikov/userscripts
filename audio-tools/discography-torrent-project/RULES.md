@@ -660,3 +660,10 @@ Do not flatten release folders into the duplicate root. After successful moves, 
 - For multi-disc releases compare worst-disc score first, then average score; unflagged wins an otherwise equal tie.
 - A higher log score may replace an already-processed existing CD rip when the rips are exact equivalents. If log quality ties or is unavailable, existing-copy precedence remains.
 - Clean/explicit preference remains the absolute final tie-break after CD-rip log quality.
+
+### Absolute Save Remixes / Save Live rule
+
+- When `Save Remixes` is unchecked, every remix is completely invisible to release selection and track counting. There are no featured-artist exceptions.
+- When `Save Live recordings` is unchecked, live-performance material is completely invisible to release selection and track counting. Treat explicit `Live`, `Session`/`Sessions`, and `Unplugged` labels as live-performance material.
+- Excluded tracks must not affect wanted track count, release-type heuristics, edition/superset comparison, minimum-file optimization, source/existing tie-breaks, CD-rip-log exact-equivalence checks, or clean/explicit exact-equivalence checks.
+- Excluded tracks may remain physically in a retained mixed release; they simply cannot help or hurt that release during selection.
