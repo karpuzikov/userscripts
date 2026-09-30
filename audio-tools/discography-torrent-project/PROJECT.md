@@ -462,3 +462,5 @@ Before any program/script change in this project, apply the newest stored softwa
 
 
 - v0.15.2 startup hotfix: restored the complete GUI class tail after the v0.15 Release Map refactor accidentally removed `App` and the support dialogs. The published build again contains ToolTip, phrase/pattern/personal-picks dialogs, App, startup/crash handling, and the normal analysis workflow while retaining the v0.15 Release Map and persistent track-skip features.
+
+- UI migration requirement: replace Tkinter Release Map with a PySide6/Qt 6 desktop shell and a Sigma.js/Graphology graph rendered through Qt WebEngine. The graph is one persistent all-releases network: every analyzed release is present simultaneously; selection only highlights relationships and opens one flat details panel, never a sub-map or nested navigation.
