@@ -1,6 +1,6 @@
 # Discography Torrent Project - Rules
 
-Last updated: 2026-09-27
+Last updated: 2026-09-30
 
 This file is the canonical rulebook for the Discography Builder and Duplicate / Edition Analyzer.
 When implementation behavior conflicts with this file, this file wins.
@@ -13,7 +13,7 @@ Priority order:
 
 1. Preserve ideally every unique song/recording/version that is available.
 2. Keep every album represented.
-3. Ignore excluded remix/live tracks when comparing release coverage when those options are enabled.
+3. Save Remixes / Save Live recordings are direct inclusion switches: checked categories participate normally; unchecked categories are skipped except for explicit Personal Picks.
 4. Prefer CD / physical-media sources over equivalent WEB sources.
 5. Prefer the existing processed copy when source class and included audio are otherwise equivalent.
 6. Then minimize duplicated included tracks, total included audio files, and retained release count.
