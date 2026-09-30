@@ -4,7 +4,7 @@ Complete project source and workflow assets for the discography torrent automati
 
 ## Current tools
 
-- `tools/Duplicate Edition Analyzer v0.11.9.pyw` - optimized audio candidate filtering, Analyze-time live/remix phrase review with per-phrase Add to keep list, persistent Personal Picks, safer unusual-pattern detection that ignores ordinary artist-title separators, direct Save Remixes/Save Live filters, collection-wide minimum-track edition selection, optional detailed comparison logging, intra-release audio deduplication, hey-bro-check-log CD-rip quality scoring, and unified saved-data storage under Documents/Karpuzikov Tools. Under construction ⚠️
+- `tools/Duplicate Edition Analyzer v0.12.0.pyw` - adds CUE-based CD image rip support: single-image FLAC/APE/WavPack/WAV releases are expanded into virtual per-track CUE segments for normal Chromaprint comparison against split-track releases. CUETools.ARCUE is used as positive AccurateRip/CTDB quality evidence for image-rip families, while EAC/XLD log scoring remains available. Includes Analyze-time Personal Picks, collection-wide minimum-track optimization, and unified saved-data storage under Documents/Karpuzikov Tools. Under construction ⚠️
 - `tools/AudioChecker Automation v0.1.pyw` - AudioChecker batch automation.
 - `tools/ALAC Conversion Automation v0.2.pyw` - lossless -> ALAC conversion. Under construction ⚠️
 - `tools/CUE Corrector - MusicBrainz DiscID 1.3.pyw` - MusicBrainz DiscID/CUE workflow.
