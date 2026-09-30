@@ -207,36 +207,47 @@ def _score_order(order: List[int], matrix: List[List[int]]) -> int:
 
 
 def _exact_kemeny_order(items: List[str], matrix: List[List[int]]) -> Tuple[List[int], int]:
-    """Exact best-fit pairwise order for modest lists using subset DP."""
+    """Exact best-fit pairwise order for modest lists using memory-efficient subset DP."""
     n = len(items)
     size = 1 << n
     dp = [-1] * size
     parent = [-1] * size
     dp[0] = 0
 
-    # If item i is appended at the end of subset S, every earlier item j agrees
-    # with the order when j directly beat i.
-    gain = [[0] * size for _ in range(n)]
+    # If item i is appended at the end, every earlier item that directly beat i
+    # contributes one agreement. Bit masks avoid a large O(n * 2^n) gain table.
+    beaters_mask = [0] * n
+    wins = [sum(row) for row in matrix]
     for i in range(n):
-        for mask in range(1, size):
-            low = mask & -mask
-            j = low.bit_length() - 1
-            gain[i][mask] = gain[i][mask ^ low] + matrix[j][i]
+        mask = 0
+        for j in range(n):
+            if matrix[j][i]:
+                mask |= 1 << j
+        beaters_mask[i] = mask
 
     for mask in range(1, size):
-        candidates = []
+        best_value = -1
+        best_item = -1
         bits = mask
         while bits:
             low = bits & -bits
             i = low.bit_length() - 1
             prev = mask ^ low
-            value = dp[prev] + gain[i][prev]
-            wins_i = sum(matrix[i])
-            candidates.append((value, wins_i, items[i].casefold(), i))
+            value = dp[prev] + (prev & beaters_mask[i]).bit_count()
+            if (
+                value > best_value
+                or (
+                    value == best_value
+                    and best_item >= 0
+                    and (wins[i], items[i].casefold()) > (wins[best_item], items[best_item].casefold())
+                )
+                or best_item < 0
+            ):
+                best_value = value
+                best_item = i
             bits ^= low
-        best = max(candidates, key=lambda x: (x[0], x[1], x[2]))
-        dp[mask] = best[0]
-        parent[mask] = best[3]
+        dp[mask] = best_value
+        parent[mask] = best_item
 
     order_rev: List[int] = []
     mask = size - 1
