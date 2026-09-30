@@ -15,8 +15,8 @@ Priority order:
 2. Keep every album represented.
 3. Ignore excluded remix/live tracks when comparing release coverage when those options are enabled.
 4. Prefer CD / physical-media sources over equivalent WEB sources.
-5. Prefer the existing processed copy when source class and wanted audio are otherwise equivalent.
-6. Then minimize duplicated wanted tracks, total wanted audio files, and retained release count.
+5. Prefer the existing processed copy when source class and included audio are otherwise equivalent.
+6. Then minimize duplicated included tracks, total included audio files, and retained release count.
 7. Never automatically discard material when the audio match is uncertain.
 
 The analyzer must optimize the collection as a whole, not judge each release independently.
@@ -72,44 +72,44 @@ When several singles/EPs overlap:
 
 ## 4. Remixes
 
-- When `Save Remixes` is unchecked, ordinary remixes are ignored for wanted coverage. A remix that adds featured performer(s) not present on the matching non-remix version remains wanted. If no matching non-remix version is present, a remix with an explicit featured credit is kept conservatively.
+- `Save Remixes` is a direct inclusion switch. Checked: remixes participate normally. Unchecked: remixes are skipped completely by release comparison, coverage, counting, optimization, and tie-breaks.
+- `Save Live recordings` follows the same rule for live-performance material.
+- There are no featured-artist exceptions to an unchecked `Save Remixes` option.
 
-`Save Remixes` and `Save Live recordings` are user-selectable analyzer options. Unchecked categories do not count toward wanted coverage.
-
-Before fingerprint comparison, the analyzer may show only unusual/non-standard non-remix/non-live descriptor families that normal rules do not already classify. Examples include `The Matrix Mix`, `Tom Lord-Alge Mix`, and the grouped callout family (`Suggested Call Out Research Hook`, `Suggested Callout Hook`, etc.). Ordinary known patterns such as `Acoustic`, `Instrumental`, `Instrumental Excerpt`, language versions (`German Version`, `Japanese Version`, `Mandarin Version`, etc.), `Radio Edit`, any `Extended Mix` including named forms, `Original Mix`, any `VIP Mix` including named forms, `Clean Edition`, `Single Version`, and similar standard variants must not appear. Remix/live remain controlled only by `Save Remixes` and `Save Live recordings`. Pattern choices affect wanted coverage only and never duplicate identity.
+Before fingerprint comparison, the analyzer may show only unusual/non-standard non-remix/non-live descriptor families that normal rules do not already classify. Examples include `The Matrix Mix`, `Tom Lord-Alge Mix`, and the grouped callout family (`Suggested Call Out Research Hook`, `Suggested Callout Hook`, etc.). Ordinary known patterns such as `Acoustic`, `Instrumental`, `Instrumental Excerpt`, language versions (`German Version`, `Japanese Version`, `Mandarin Version`, etc.), `Radio Edit`, any `Extended Mix` including named forms, `Original Mix`, any `VIP Mix` including named forms, `Clean Edition`, `Single Version`, and similar standard variants must not appear. Remix/live remain controlled only by `Save Remixes` and `Save Live recordings`. Pattern choices affect included coverage only and never duplicate identity.
 
 Rules:
 
 - only an explicit `Remix`, `Remixes`, `Remixed`, or `Dub` marker classifies a track as remix material;
 - the word `Mix` by itself is NOT a remix marker;
-- `Original Mix`, `Extended Mix`, `12" Mix`, `7" Mix`, and similar non-club mix labels are wanted versions, not remixes;
+- `Original Mix`, `Extended Mix`, `12" Mix`, `7" Mix`, and similar non-club mix labels are included versions, not remixes;
 - `Club Mix` / `Club Mixes` are remix material;
-- `Instrumental` and `A Capella` / `Acapella` are wanted distinct versions, not remixes;
-- a release named `Remixes` does NOT automatically make every track inside it unwanted; classify the tracks individually;
-- the presence of remix tracks does NOT make the entire release unwanted;
-- compare the release again after removing only explicitly identified remix tracks from wanted coverage;
-- a mixed release can still be retained when it contains wanted non-remix material;
+- `Instrumental` and `A Capella` / `Acapella` are included distinct versions, not remixes;
+- a release named `Remixes` does NOT automatically make every track inside it ignored; classify the tracks individually;
+- the presence of remix tracks does NOT make the entire release ignored;
+- compare the release again after removing only explicitly identified remix tracks from included coverage;
+- a mixed release can still be retained when it contains included non-remix material;
 - if a redundant release contains explicit remix material, or is itself explicitly titled as a remix package, move the whole redundant release folder under `<artist>_duplicates/!Remixes/`;
 - do not delete remix releases permanently; archive them in `!Remixes`.
 
 ### Equivalent album-source tie-break
 
-When two editions provide equivalent wanted non-remix album content:
+When two editions provide equivalent included non-remix album content:
 
 1. ignore explicitly identified remix tracks;
-2. compare the remaining wanted recording/version coverage;
+2. compare the remaining included recording/version coverage;
 3. prefer CD / physical media over WEB;
 4. prefer the existing processed ALAC copy when source class is otherwise equivalent;
-5. only then use duplicated wanted-track/file count as the tie-break.
+5. only then use duplicated included-track/file count as the tie-break.
 
-A CD edition must not lose to a WEB edition merely because the CD contains extra unwanted remix tracks.
+A CD edition must not lose to a WEB edition merely because the CD contains extra ignored remix tracks.
 
 Example:
 
 - `Want (Deluxe Edition)` - CD + LOG/CUE, core album tracks plus remix extras
-- `WANT` - WEB, same wanted core album tracks
+- `WANT` - WEB, same included core album tracks
 
-After remix tracks are ignored, if wanted coverage is equivalent, keep the CD edition and move the WEB edition to duplicates.
+After remix tracks are ignored, if included coverage is equivalent, keep the CD edition and move the WEB edition to duplicates.
 
 ### Analyzer exclusion checkboxes
 
@@ -118,7 +118,7 @@ The analyzer provides two persistent affirmative checkboxes:
 - `Save Remixes`
 - `Save Live recordings`
 
-Both are unchecked by default. Checked categories count as wanted content and may keep a release. Unchecked categories are ignored for coverage/optimization. These options never create duplicate identity; track identity still requires a high-confidence audio match.
+Both are unchecked by default. Checked means the category participates normally in release comparison and selection. Unchecked means the category is skipped completely by comparison, coverage, counting, optimization, source/log tie-breaks, and clean/explicit tie-breaks. These options never create duplicate identity; track identity still requires a high-confidence audio match.
 
 ## 5. Explicit vs clean - future implementation
 
@@ -127,7 +127,7 @@ Explicit/clean preference is a future rule, not an active analyzer criterion yet
 Current behavior:
 - do not detect or rank releases by explicit/clean status;
 - do not let explicit/clean metadata influence KEEP/SKIP/REPLACE decisions;
-- compare using wanted content, source medium, existing-vs-recycle precedence, and duplication minimization.
+- compare using included content, source medium, existing-vs-recycle precedence, and duplication minimization.
 
 Future behavior, once a reliable detector exists:
 - explicit/clean state may be used as a preference only after reliable detection is implemented;
@@ -163,7 +163,7 @@ Titles never create duplicate identity, but clear version/language/featured-cred
 
 ## 7. Source preference
 
-When the same wanted recording/version exists in multiple sources, preference is:
+When the same included recording/version exists in multiple sources, preference is:
 
 1. CD rip with valid LOG + CUE
 2. other verified lossless physical-media source
@@ -173,18 +173,18 @@ CD detection rule:
 - if a release folder contains at least one `.cue` file AND at least one `.log` file other than `audiochecker.log`, treat that release as CD;
 - `audiochecker.log` by itself does NOT make a release CD.
 
-A WEB copy can be removed when the same wanted recording is already preserved from a preferred CD source.
+A WEB copy can be removed when the same included recording is already preserved from a preferred CD source.
 
 Do not replace a unique WEB recording merely because another release is on CD if the actual recording/version is different.
 
 
 ## Existing discography precedence
 
-The existing ALAC discography is already processed material and is preferred over an equivalent recycle/update copy when wanted content/version and source class are equal.
+The existing ALAC discography is already processed material and is preferred over an equivalent recycle/update copy when included content/version and source class are equal.
 
 A recycle release should replace an existing release only when it is objectively better by the project rules, for example:
 
-- it preserves wanted unique material the existing release does not;
+- it preserves included unique material the existing release does not;
 - it is CD/physical while the existing equivalent is WEB.
 
 For equivalent WEB vs WEB content, keep the existing ALAC release and move/skip the recycle copy.
@@ -233,8 +233,8 @@ Rules:
 - release discovery is recursive through organizational folders such as `Albums`, `Other`, `Singles`, and per-title grouping folders;
 - internal `CD1` / `CD2` / `Disc 1` subfolders remain one release;
 - sibling folders with the same release base plus `CD 1`, `CD 2`, etc. are also one logical multi-disc release and must be kept/moved together;
-- wanted track coverage is compared using audio-derived fingerprint groups;
-- a release covers another only when every wanted target track has a high-confidence audio match;
+- included track coverage is compared using audio-derived fingerprint groups;
+- a release covers another only when every included target track has a high-confidence audio match;
 - folder names, file names, title text, barcode text in folder names, MBIDs, ISRCs, and metadata typo tolerance must never create a duplicate result; strong contradictory recording/version metadata may conservatively block an audio merge;
 - uncertain audio remains distinct and therefore keeps the material.
 
@@ -246,8 +246,8 @@ Before a recycle release can be kept over an existing release:
 
 - compare release-container context;
 - compare normalized track filenames directly;
-- ignore unwanted remix tracks;
-- if the existing release covers all wanted recycle tracks and is equal or better on explicit/source quality, force:
+- ignore ignored remix tracks;
+- if the existing release covers all included recycle tracks and is equal or better on explicit/source quality, force:
   - existing -> KEEP;
   - recycle -> SKIP.
 
@@ -259,13 +259,13 @@ Resolve obvious same-album duplicates before running the global set-cover optimi
 
 For related album releases:
 
-- if both releases cover the same wanted non-remix content, choose by:
+- if both releases cover the same included non-remix content, choose by:
   1. explicit over clean;
   2. CD/physical over WEB;
   3. existing ALAC over recycle when otherwise tied;
-- if one release is a wanted-content superset of the other, the superset makes the subset redundant when its explicit/source class is not worse;
+- if one release is a included-content superset of the other, the superset makes the subset redundant when its explicit/source class is not worse;
 - remix tracks are ignored when determining this coverage;
-- dominated releases are excluded from the optimizer's wanted-group universe so stricter fingerprint grouping cannot force an inferior duplicate back into the retained set.
+- dominated releases are excluded from the optimizer's included-group universe so stricter fingerprint grouping cannot force an inferior duplicate back into the retained set.
 
 Examples:
 - existing WEB Omens vs identical recycle WEB Omens -> keep existing, skip recycle;
@@ -301,7 +301,7 @@ Use:
 - REPLACE - another source should replace the currently retained copy.
 - NEW - candidate adds material not currently represented.
 
-There is no normal manual REVIEW state for duplicate identity. The software must perform the track-by-track audio comparison itself. If equivalence cannot be established with enough confidence, treat the tracks as different and keep both. A grouped pre-analysis track-pattern review is allowed only to decide which descriptor families count as wanted coverage; it must never create, block, or override an audio duplicate match.
+There is no normal manual REVIEW state for duplicate identity. The software must perform the track-by-track audio comparison itself. If equivalence cannot be established with enough confidence, treat the tracks as different and keep both. A grouped pre-analysis track-pattern review is allowed only to decide which descriptor families count as included coverage; it must never create, block, or override an audio duplicate match.
 
 Every REDUNDANT/REPLACE decision must explain what retained release/track covers it.
 
@@ -317,7 +317,7 @@ Examples of high confidence:
 
 When confidence is insufficient:
 
-- do not ask the user to review duplicate identity track-by-track; a single grouped pattern-family wanted-content review is allowed before fingerprint comparison;
+- do not ask the user to review duplicate identity track-by-track; a single grouped pattern-family included-content review is allowed before fingerprint comparison;
 - treat the tracks as distinct;
 - keep both so unique material cannot be lost;
 - record the uncertainty only in optional diagnostics.
@@ -415,7 +415,7 @@ For this dataset:
 
 - compare recycle WEB releases against existing ALAC and against each other;
 - eliminate complete subsets when recordings are equivalent;
-- keep releases that contribute unique wanted non-remix songs/versions;
+- keep releases that contribute unique included non-remix songs/versions;
 - prefer explicit over clean;
 - keep all albums represented;
 - minimize duplicated audio files across album editions/singles/EPs.
@@ -590,7 +590,7 @@ Do not implement this hierarchy as filename guessing. Parse/score the actual log
 
 ### Album-edition clustering
 
-Alternate album editions are grouped primarily from audio-derived wanted-track overlap and track order, not edition/folder names. Strong ordered overlap between fingerprint groups identifies related editions even when labels such as Limited, Special Bonus, Sketch Book, regional names, or other edition wording differ.
+Alternate album editions are grouped primarily from audio-derived included-track overlap and track order, not edition/folder names. Strong ordered overlap between fingerprint groups identifies related editions even when labels such as Limited, Special Bonus, Sketch Book, regional names, or other edition wording differ.
 
 ### Duplicate archive structure
 
@@ -598,7 +598,7 @@ Redundant folders must preserve their source-relative hierarchy under `<artist>_
 
 Do not flatten release folders into the duplicate root. After successful moves, remove organizational directories that became empty.
 
-- After the main optimizer, run a final selected-set redundancy prune. A non-album release that contributes no wanted audio beyond other retained releases must be removed when equal-or-better source copies remain. Album releases may be pruned only when another retained release still represents the same audio-derived album cluster.
+- After the main optimizer, run a final selected-set redundancy prune. A non-album release that contributes no included audio beyond other retained releases must be removed when equal-or-better source copies remain. Album releases may be pruned only when another retained release still represents the same audio-derived album cluster.
 
 - When the unusual-pattern classifier changes materially, stale review choices from older classifier generations must not be reused; start the new classifier generation with clean defaults while preserving new choices thereafter.
 
@@ -641,13 +641,13 @@ Do not flatten release folders into the duplicate root. After successful moves, 
 - `ITUNESADVISORY=0` means clean; `ITUNESADVISORY=1` means explicit.
 - Advisory state must not create or block duplicate identity and must not affect normal coverage, source selection, or track-count minimization.
 - Apply advisory preference only as the absolute final release-selection tie-break.
-- A clean release may be replaced by an explicit release only when they are otherwise exact equivalents: same release identity after advisory wording is stripped, same release type, same source class, same total/wanted track count, same wanted track order, and the same audio-group multiset.
+- A clean release may be replaced by an explicit release only when they are otherwise exact equivalents: same release identity after advisory wording is stripped, same release type, same source class, same total/included track count, same included track order, and the same audio-group multiset.
 - When that exact-equivalence test passes, retain explicit and move clean.
 - If clean and explicit audio differs, preserve both as distinct material.
 
 ### Intra-release dedupe tag-fallback rule
 
-- Fingerprint all audio files even when they are excluded from wanted coverage; exclusions affect optimization, not the ability to prove duplicate files inside a retained release.
+- Fingerprint all audio files even when they are excluded from included coverage; exclusions affect optimization, not the ability to prove duplicate files inside a retained release.
 - For intra-release cleanup, duplicate identity still requires the same high-confidence audio group.
 - Same-track safety requires the same physical folder and compatible track position, but title agreement may come from either the embedded title or normalized filename. A bad TITLE tag must not block cleanup when the filename and audio identity agree.
 
@@ -655,7 +655,7 @@ Do not flatten release folders into the duplicate root. After successful moves, 
 
 - Use `ligh7s/hey-bro-check-log` (Apache-2.0) to score supported EAC/XLD rip logs; ignore `audiochecker.log` for this purpose.
 - Rip-log score is never duplicate evidence and must never merge recordings/releases by itself.
-- Apply log quality only between otherwise exact-equivalent CD rips: same release identity/type/source class, same total/wanted track count, same wanted audio-group order, and the same wanted audio-group multiset.
+- Apply log quality only between otherwise exact-equivalent CD rips: same release identity/type/source class, same total/included track count, same included audio-group order, and the same included audio-group multiset.
 - Require all non-AudioChecker rip logs belonging to a release to be recognized before that release receives a comparable log-quality key. Unsupported/unrecognized logs are neutral, not automatically bad.
 - For multi-disc releases compare worst-disc score first, then average score; unflagged wins an otherwise equal tie.
 - A higher log score may replace an already-processed existing CD rip when the rips are exact equivalents. If log quality ties or is unavailable, existing-copy precedence remains.
@@ -665,5 +665,13 @@ Do not flatten release folders into the duplicate root. After successful moves, 
 
 - When `Save Remixes` is unchecked, every remix is completely invisible to release selection and track counting. There are no featured-artist exceptions.
 - When `Save Live recordings` is unchecked, live-performance material is completely invisible to release selection and track counting. Treat explicit `Live`, `Session`/`Sessions`, and `Unplugged` labels as live-performance material.
-- Excluded tracks must not affect wanted track count, release-type heuristics, edition/superset comparison, minimum-file optimization, source/existing tie-breaks, CD-rip-log exact-equivalence checks, or clean/explicit exact-equivalence checks.
+- Excluded tracks must not affect included track count, release-type heuristics, edition/superset comparison, minimum-file optimization, source/existing tie-breaks, CD-rip-log exact-equivalence checks, or clean/explicit exact-equivalence checks.
 - Excluded tracks may remain physically in a retained mixed release; they simply cannot help or hurt that release during selection.
+
+### Direct checkbox inclusion rule
+
+- Use direct include/skip checkbox semantics only.
+- `Save Remixes` checked: remixes participate normally in all release-selection logic. Unchecked: remixes are skipped completely.
+- `Save Live recordings` checked: live recordings participate normally in all release-selection logic. Unchecked: live recordings are skipped completely.
+- A skipped track contributes nothing to release coverage, counts, edition comparison, optimization, CD-log quality comparison, existing-vs-recycle precedence, or clean/explicit tie-breaks.
+- Skipped tracks may physically remain inside a mixed release that is retained for other included tracks.
