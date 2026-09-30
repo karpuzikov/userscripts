@@ -4,7 +4,7 @@ Complete project source and workflow assets for the discography torrent automati
 
 ## Current tools
 
-- `tools/Duplicate Edition Analyzer v0.11.7.pyw` - optimized audio candidate filtering, persistent Personal Picks with automatic phrase detection from collection filenames, direct Save Remixes/Save Live filters, Remix/Redux/Sped Up/Slowed/Reverb handling, collection-wide minimum-track edition selection, optional detailed comparison logging, intra-release audio deduplication, hey-bro-check-log CD-rip quality scoring, and final ITUNESADVISORY explicit-over-clean tie-breaking. Under construction ⚠️
+- `tools/Duplicate Edition Analyzer v0.11.8.pyw` - optimized audio candidate filtering, Analyze-time live/remix phrase review with per-phrase Add to keep list, persistent Personal Picks, direct Save Remixes/Save Live filters, collection-wide minimum-track edition selection, optional detailed comparison logging, intra-release audio deduplication, hey-bro-check-log CD-rip quality scoring, and unified saved-data storage under Documents/Karpuzikov Tools. Under construction ⚠️
 - `tools/AudioChecker Automation v0.1.pyw` - AudioChecker batch automation.
 - `tools/ALAC Conversion Automation v0.2.pyw` - lossless -> ALAC conversion. Under construction ⚠️
 - `tools/CUE Corrector - MusicBrainz DiscID 1.3.pyw` - MusicBrainz DiscID/CUE workflow.
