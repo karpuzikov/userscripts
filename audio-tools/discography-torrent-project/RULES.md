@@ -675,3 +675,11 @@ Do not flatten release folders into the duplicate root. After successful moves, 
 - `Save Live recordings` checked: live recordings participate normally in all release-selection logic. Unchecked: live recordings are skipped completely.
 - A skipped track contributes nothing to release coverage, counts, edition comparison, optimization, CD-log quality comparison, existing-vs-recycle precedence, or clean/explicit tie-breaks.
 - Skipped tracks may physically remain inside a mixed release that is retained for other included tracks.
+
+### Collection-wide minimum-track rule
+
+- The optimization target is the minimum total number of included tracks across the retained collection after unique recording/version coverage and source-quality requirements are satisfied.
+- Never let a larger album edition eliminate a smaller related edition merely because the larger edition is a pairwise superset.
+- An extra track on a larger edition adds no selection value when the same high-confidence recording group is already retained on another release.
+- After assembling the retained collection, test smaller related album editions as replacements. Accept a replacement only when its source class is not worse, every included recording group remains covered globally, and total included track count strictly decreases.
+- Re-run redundancy pruning after such swaps.
