@@ -6616,6 +6616,7 @@ class App(tk.Tk):
         self._running = False
         self._run_started_at = 0.0
         self._last_progress_stage = ""
+        self._decision_snapshot: List[Dict[str, object]] = _load_decision_snapshot()
         self._build()
         self.protocol("WM_DELETE_WINDOW", self.on_close)
 
@@ -6715,6 +6716,13 @@ class App(tk.Tk):
         self.run_btn = ttk.Button(actions, text="Analyze", command=self.start)
         self.run_btn.pack(side="left")
         ttk.Button(actions, text="Undo last run", command=self.undo_main).pack(side="left", padx=(8, 0))
+        self.decision_map_btn = ttk.Button(
+            actions,
+            text="Decision Map...",
+            command=self.open_decision_map,
+            state="normal" if self._decision_snapshot else "disabled",
+        )
+        self.decision_map_btn.pack(side="left", padx=(8, 0))
         ttk.Button(actions, text="Close", command=self.on_close).pack(side="right")
 
 
@@ -6732,6 +6740,20 @@ class App(tk.Tk):
         self.personal_keep_rules = dialog.result
         self.personal_picks_btn.configure(text=self._personal_picks_button_text())
         self.save_settings()
+
+    def open_decision_map(self):
+        if self._running:
+            return
+        snapshots = self._decision_snapshot or _load_decision_snapshot()
+        if not snapshots:
+            messagebox.showinfo(APP_NAME, "No analyzed release decisions are available yet.", parent=self)
+            return
+        DecisionExplorerWindow(
+            self,
+            snapshots,
+            allow_apply=False,
+            summary_text="Last analyzed release decisions. This view is independent of the text comparison log.",
+        )
 
     def undo_main(self):
         if self._running:
@@ -7057,6 +7079,7 @@ class App(tk.Tk):
         self.progress_var.set(100)
         self.progress_detail_var.set("100%")
         self._append_activity("Analysis complete")
+
         releases, tracks, groups, selected, reviews, notes = result
         comparison_log = next(
             (n.split("COMPARISON LOG:", 1)[1].strip() for n in notes if n.startswith("COMPARISON LOG:")),
@@ -7064,6 +7087,7 @@ class App(tk.Tk):
         )
         if comparison_log:
             self._append_activity(f"Comparison log: {comparison_log}")
+
         decisions = build_release_decisions(releases, tracks, selected, reviews)
         counts = action_summary(decisions)
         recycle_kept = sum(
@@ -7073,42 +7097,42 @@ class App(tk.Tk):
         )
         intra_duplicates = plan_intra_release_duplicates(releases, decisions)
         to_move = counts["SKIP"] + counts["REMOVE"] + len(intra_duplicates)
-        self.status_var.set("Analysis complete.")
+
+        self._decision_snapshot = build_decision_snapshot(releases, tracks, selected, decisions)
+        _save_decision_snapshot(self._decision_snapshot)
+        self.decision_map_btn.configure(state="normal")
+        self.status_var.set("Analysis complete - review Decision Map")
+        self._append_activity(
+            f"Decision Map ready: {len(self._decision_snapshot)} release(s), "
+            f"{counts['SKIP'] + counts['REMOVE']} marked duplicate"
+        )
+
+        summary_parts = [
+            f"Retained recycle releases: {recycle_kept}",
+            f"Recycle releases marked duplicate: {counts['SKIP']}",
+        ]
+        if existing is not None:
+            summary_parts.append(f"Existing releases marked duplicate: {counts['REMOVE']}")
+        if intra_duplicates:
+            summary_parts.append(f"Duplicate files inside retained releases: {len(intra_duplicates)}")
+        if comparison_log:
+            summary_parts.append("Detailed comparison logging is also enabled for this run.")
+
+        explorer = DecisionExplorerWindow(
+            self,
+            self._decision_snapshot,
+            allow_apply=to_move > 0,
+            summary_text=" | ".join(summary_parts),
+        )
+        self.wait_window(explorer)
 
         if to_move == 0:
-            messagebox.showinfo(
-                APP_NAME,
-                (
-                    f"No redundant releases or duplicate files found.\n"
-                    f"Recycle releases kept: {recycle_kept}"
-                    + (f"\n\nComparison log:\n{comparison_log}" if comparison_log else "")
-                ),
-                parent=self,
-            )
+            self.status_var.set("Analysis complete.")
             return
 
-        confirm_text = (
-            "Apply proposed moves?\n\n"
-            f"Recycle releases kept: {recycle_kept}\n"
-            f"Recycle releases moved as redundant: {counts['SKIP']}\n"
-            f"Duplicate files inside retained releases: {len(intra_duplicates)}\n"
-        )
-        if existing is not None:
-            confirm_text += f"Existing releases moved as redundant: {counts['REMOVE']}\n"
-        confirm_text += (
-            f"\nMove destination:\n{_duplicates_root(recycle)}\n"
-            "Redundant releases containing remixes are placed under !Remixes.\n"
-            "Redundant files inside retained releases are moved under !Duplicate Files."
-        )
-        if comparison_log:
-            confirm_text += f"\n\nComparison log:\n{comparison_log}"
-        confirm = messagebox.askyesno(
-            APP_NAME,
-            confirm_text,
-            parent=self,
-        )
-        if not confirm:
-            self.status_var.set("Cancelled.")
+        if explorer.result is not True:
+            self.status_var.set("Move plan not applied.")
+            self._append_activity("Move plan left unapplied; Decision Map remains available.")
             return
 
         self.run_btn.configure(state="disabled")
