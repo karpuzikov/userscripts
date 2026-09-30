@@ -4644,7 +4644,9 @@ class ToolTip:
             self.tip = None
 
 
-class PhraseDetectorWindow(tk.Toplevel):
+class PhraseReviewWindow(tk.Toplevel):
+    """Analyze-time review of detected remix/live phrase families."""
+
     def __init__(
         self,
         master,
@@ -4652,15 +4654,16 @@ class PhraseDetectorWindow(tk.Toplevel):
         existing_rules: List[Dict[str, str]],
     ):
         super().__init__(master)
-        self.title(f"{APP_NAME} - Phrase Detector")
-        self.geometry("820x560")
-        self.minsize(700, 460)
+        self.title(f"{APP_NAME} - Personal Picks Review")
+        self.geometry("900x650")
+        self.minsize(760, 520)
         self.configure(background=DARK_BG)
         _enable_dark_titlebar(self)
         self.result: Optional[List[str]] = None
-        self.candidates = candidates
+        self.candidates = list(candidates)
+        self.added: Set[str] = set()
 
-        existing = {
+        self.existing = {
             _personal_pick_normalize(str(item.get("value", "")))
             for item in existing_rules
             if isinstance(item, dict) and str(item.get("value", "")).strip()
@@ -4669,71 +4672,104 @@ class PhraseDetectorWindow(tk.Toplevel):
         outer = ttk.Frame(self)
         outer.pack(fill="both", expand=True, padx=16, pady=14)
 
-        ttk.Label(outer, text="Detected live/remix phrases", font=("Segoe UI", 15, "bold")).pack(anchor="w")
+        ttk.Label(outer, text="Live / remix phrase review", font=("Segoe UI", 15, "bold")).pack(anchor="w")
         ttk.Label(
             outer,
             text=(
-                "Scanned audio filenames from the selected Existing and New / update folders. "
-                "Select phrases to add as Personal Picks. Years and punctuation are normalized, "
-                "and recurring Live From/Live At venue phrases are grouped."
+                "Detected from this analysis. Add only the live/remix families you personally want preserved. "
+                "Existing Personal Picks are marked automatically. Continue starts the normal duplicate analysis."
             ),
             style="Help.TLabel",
-            wraplength=780,
+            wraplength=850,
             justify="left",
         ).pack(anchor="w", pady=(5, 10))
 
         body = ttk.Frame(outer)
         body.pack(fill="both", expand=True)
-
-        self.listbox = tk.Listbox(
-            body,
-            selectmode="extended",
-            background="#161616",
-            foreground=DARK_FG,
-            selectbackground=DARK_ACCENT,
-            selectforeground=DARK_FG,
-            relief="solid",
-            borderwidth=1,
-            font=("Segoe UI", 10),
-            activestyle="none",
-        )
-        scroll = ttk.Scrollbar(body, orient="vertical", command=self.listbox.yview)
-        self.listbox.configure(yscrollcommand=scroll.set)
-        self.listbox.pack(side="left", fill="both", expand=True)
+        canvas = tk.Canvas(body, background=DARK_BG, highlightthickness=0, borderwidth=0)
+        scroll = ttk.Scrollbar(body, orient="vertical", command=canvas.yview)
+        canvas.configure(yscrollcommand=scroll.set)
+        canvas.pack(side="left", fill="both", expand=True)
         scroll.pack(side="right", fill="y")
 
-        self.visible: List[Tuple[str, int, List[str]]] = []
-        for phrase, count, examples in candidates:
-            if _personal_pick_normalize(phrase) in existing:
-                continue
-            self.visible.append((phrase, count, examples))
-            suffix = f"  ({count})"
+        rows = ttk.Frame(canvas)
+        window_id = canvas.create_window((0, 0), window=rows, anchor="nw")
+
+        def sync_scroll(_event=None):
+            canvas.configure(scrollregion=canvas.bbox("all"))
+            canvas.itemconfigure(window_id, width=canvas.winfo_width())
+
+        rows.bind("<Configure>", sync_scroll)
+        canvas.bind("<Configure>", sync_scroll)
+        canvas.bind("<MouseWheel>", lambda e: canvas.yview_scroll(int(-e.delta / 120), "units"))
+
+        self.buttons: Dict[str, ttk.Button] = {}
+
+        for row_index, (phrase, count, examples) in enumerate(self.candidates):
+            key = _personal_pick_normalize(phrase)
+            row = ttk.Frame(rows)
+            row.grid(row=row_index, column=0, sticky="ew", pady=(0, 10))
+            row.columnconfigure(0, weight=1)
+            rows.columnconfigure(0, weight=1)
+
+            kinds = []
+            if is_live_text(phrase):
+                kinds.append("Live")
+            if is_remix_text(phrase):
+                kinds.append("Remix")
+            kind = " / ".join(kinds) if kinds else "Version"
+
+            ttk.Label(
+                row,
+                text=f"{phrase}  [{kind}]  ({count})",
+                font=("Segoe UI", 10, "bold"),
+            ).grid(row=0, column=0, sticky="w")
+
             if examples:
-                suffix += "  -  " + "; ".join(examples[:2])
-            self.listbox.insert("end", phrase + suffix)
+                ttk.Label(
+                    row,
+                    text="Examples: " + "; ".join(examples[:3]),
+                    style="Help.TLabel",
+                    wraplength=650,
+                    justify="left",
+                ).grid(row=1, column=0, sticky="w", pady=(2, 0))
 
-        if not self.visible:
-            self.listbox.insert("end", "No new phrases found.")
+            if key in self.existing:
+                ttk.Label(row, text="In keep list", style="Help.TLabel").grid(
+                    row=0, column=1, rowspan=2, sticky="e", padx=(12, 0)
+                )
+            else:
+                button = ttk.Button(
+                    row,
+                    text="Add to keep list",
+                    command=lambda p=phrase, k=key: self._add_phrase(p, k),
+                )
+                button.grid(row=0, column=1, rowspan=2, sticky="e", padx=(12, 0))
+                self.buttons[key] = button
 
-        buttons = ttk.Frame(outer)
-        buttons.pack(fill="x", pady=(12, 0))
-        ttk.Button(buttons, text="Cancel", command=self._cancel).pack(side="right")
-        add_btn = ttk.Button(buttons, text="Add selected", command=self._accept)
-        add_btn.pack(side="right", padx=(0, 8))
-        if not self.visible:
-            add_btn.configure(state="disabled")
+        footer = ttk.Frame(outer)
+        footer.pack(fill="x", pady=(12, 0))
+        ttk.Button(footer, text="Cancel", command=self._cancel).pack(side="right")
+        ttk.Button(footer, text="Continue", command=self._accept).pack(side="right", padx=(0, 8))
 
         self.protocol("WM_DELETE_WINDOW", self._cancel)
         self.transient(master)
         self.grab_set()
         self.focus_force()
 
+    def _add_phrase(self, phrase: str, key: str) -> None:
+        if not key or key in self.existing or key in self.added:
+            return
+        self.added.add(key)
+        button = self.buttons.get(key)
+        if button is not None:
+            button.configure(text="Added", state="disabled")
+
     def _accept(self) -> None:
-        indexes = self.listbox.curselection()
         self.result = [
-            self.visible[i][0]
-            for i in indexes
-            if 0 <= i < len(self.visible)
+            phrase
+            for phrase, _count, _examples in self.candidates
+            if _personal_pick_normalize(phrase) in self.added
         ]
         self.destroy()
 
