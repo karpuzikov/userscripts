@@ -706,3 +706,19 @@ Do not flatten release folders into the duplicate root. After successful moves, 
 - Normalize punctuation/year suffixes and group recurring `Live From` / `Live At` venue phrases so equivalent year/location formatting does not create needless separate rules.
 - Show counts/examples and let the user add multiple detected phrases as persistent phrase rules.
 - Detection is only a convenience for creating preference rules; it never affects duplicate identity by itself.
+
+### Automatic Personal Picks review rule
+
+- Pressing Analyze must automatically detect live/remix phrase families after metadata scanning and before fingerprint optimization.
+- Only review categories currently disabled by `Save Remixes` / `Save Live recordings`; globally enabled categories need no exception review.
+- Show phrase, category, count and examples, with an `Add to keep list` action for each phrase.
+- Existing Personal Picks must be marked as already in the keep list.
+- Added phrases persist immediately and participate in the same analysis run.
+- The review changes preference inclusion only; it never creates duplicate identity.
+
+### Unified saved-data folder rule
+
+- All user-saved analyzer data must live in the same dynamically resolved Windows Documents location: `Documents\\Karpuzikov Tools`.
+- This includes settings, Personal Picks, unusual-pattern preferences, comparison logs, undo state, and crash logs.
+- Preserve or migrate older saved state when practical instead of making the user recreate it.
+- Runtime dependencies and executable caches are not user-saved data and may remain in app-local dependency locations.
