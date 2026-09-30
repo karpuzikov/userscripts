@@ -6117,7 +6117,13 @@ class DecisionExplorerWindow(tk.Toplevel):
 
 
 class DoneWindow(tk.Toplevel):
-    def __init__(self, master, recycle: Path, result: Dict[str, object]):
+    def __init__(
+        self,
+        master,
+        recycle: Path,
+        result: Dict[str, object],
+        decision_callback=None,
+    ):
         super().__init__(master)
         self.title(f"{APP_NAME} - Done")
         self.resizable(False, False)
@@ -6125,6 +6131,7 @@ class DoneWindow(tk.Toplevel):
         _enable_dark_titlebar(self)
         self.recycle = recycle
         self.duplicates = Path(str(result["duplicates"]))
+        self.decision_callback = decision_callback
 
         frame = ttk.Frame(self)
         frame.pack(fill="both", expand=True, padx=18, pady=18)
@@ -6149,11 +6156,30 @@ class DoneWindow(tk.Toplevel):
         ttk.Button(buttons, text="Open recycle", command=lambda: os.startfile(self.recycle)).pack(side="left")
         ttk.Button(buttons, text="Open duplicates", command=lambda: os.startfile(self.duplicates)).pack(side="left", padx=8)
         ttk.Button(buttons, text="Undo last run", command=self.undo).pack(side="left", padx=8)
+        if self.decision_callback is not None:
+            ttk.Button(buttons, text="Decision Map...", command=self.open_decision_map).pack(side="left", padx=8)
         ttk.Button(buttons, text="Close", command=self.destroy).pack(side="right")
 
         self.transient(master)
         self.grab_set()
         self.focus_force()
+
+    def open_decision_map(self):
+        if self.decision_callback is None:
+            return
+        try:
+            self.grab_release()
+        except Exception:
+            pass
+        try:
+            self.decision_callback()
+        finally:
+            try:
+                if self.winfo_exists():
+                    self.grab_set()
+                    self.focus_force()
+            except Exception:
+                pass
 
     def undo(self):
         if not messagebox.askyesno(APP_NAME, "Undo last run?", parent=self):
@@ -6748,12 +6774,13 @@ class App(tk.Tk):
         if not snapshots:
             messagebox.showinfo(APP_NAME, "No analyzed release decisions are available yet.", parent=self)
             return
-        DecisionExplorerWindow(
+        dialog = DecisionExplorerWindow(
             self,
             snapshots,
             allow_apply=False,
             summary_text="Last analyzed release decisions. This view is independent of the text comparison log.",
         )
+        self.wait_window(dialog)
 
     def undo_main(self):
         if self._running:
@@ -7177,7 +7204,7 @@ class App(tk.Tk):
         self.progress_detail_var.set("100%")
         self.status_var.set("Complete")
         self._append_activity("Moves complete")
-        DoneWindow(self, recycle, result)
+        DoneWindow(self, recycle, result, self.open_decision_map)
 
     def failed(self, error: str):
         self._set_running(False)
