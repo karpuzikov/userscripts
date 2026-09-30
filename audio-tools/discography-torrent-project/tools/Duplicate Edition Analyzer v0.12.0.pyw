@@ -4129,11 +4129,21 @@ def report_text(existing: Optional[Path], recycle: Path, releases: List[Release]
         else:
             lines.append(f"[{status}] {rel.path}")
         lines.append(f"  Type: {rel.release_type} ({rel.type_source}); family: {rel.family or '?'}")
-        src = "CD+LOG+CUE" if rel.has_cue and rel.has_rip_log else "CUE" if rel.has_cue else "WEB/AudioChecker" if rel.has_audiochecker else "WEB/unknown"
+        if rel.has_cd_image and rel.has_rip_log:
+            src = "CD IMAGE+LOG+CUE"
+        elif rel.has_cd_image:
+            src = "CD IMAGE+CUE"
+        else:
+            src = "CD+LOG+CUE" if rel.has_cue and rel.has_rip_log else "CUE" if rel.has_cue else "WEB/AudioChecker" if rel.has_audiochecker else "WEB/unknown"
         lines.append(
             f"  Source: {src}; included tracks: {rel.included_track_count}; "
-            f"skipped by options: {rel.ignored_track_count}; physical tracks: {rel.track_count}"
+            f"skipped by options: {rel.ignored_track_count}; tracks: {rel.track_count}"
         )
+        if rel.has_cd_image:
+            image_files = sorted({t.path.name for t in rel.tracks if t.virtual_from_cue})
+            lines.append(
+                f"  CD image: {len(image_files)} image file(s), {rel.cd_image_track_count} CUE track(s)"
+            )
         if rel.rip_log_paths:
             lines.append(f"  CD rip log quality: {cd_rip_log_quality_text(rel)}")
         lines.append(f"  Reason: {reason}")
@@ -4171,7 +4181,7 @@ def report_text(existing: Optional[Path], recycle: Path, releases: List[Release]
 
     lines.append("IMPORTANT")
     lines.append("This is a proposal only. No files were changed, moved, or deleted.")
-    lines.append("Chromaprint fingerprint similarity plus duration is the duplicate-identity signal. Titles, filenames, MBIDs and ISRCs are not used to prove duplicates.")
+    lines.append("Chromaprint fingerprint similarity plus duration is the duplicate-identity signal. CUE-image tracks are fingerprinted as their CUE time segments. Titles, filenames, MBIDs and ISRCs are not used to prove duplicates.")
     lines.append("Filename/title similarity does not participate in duplicate identity.")
     return "\n".join(lines) + "\n"
 
