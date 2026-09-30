@@ -635,3 +635,12 @@ Do not flatten release folders into the duplicate root. After successful moves, 
 - Prefer the technically better survivor (lossless over lossy, then sample rate/bit depth/channels, then deterministic codec/container preference). Move redundant files to `!Duplicate Files`; never delete them.
 - Do not automatically remove files from CUE-based releases because exact filenames can be referenced by the CUE sheet.
 - Treat `Rmx` as a remix alias equivalent to `Remix` for Save Remixes handling and `!Remixes` routing.
+
+### ITUNESADVISORY clean/explicit rule
+
+- `ITUNESADVISORY=0` means clean; `ITUNESADVISORY=1` means explicit.
+- Advisory state must not create or block duplicate identity and must not affect normal coverage, source selection, or track-count minimization.
+- Apply advisory preference only as the absolute final release-selection tie-break.
+- A clean release may be replaced by an explicit release only when they are otherwise exact equivalents: same release identity after advisory wording is stripped, same release type, same source class, same total/wanted track count, same wanted track order, and the same audio-group multiset.
+- When that exact-equivalence test passes, retain explicit and move clean.
+- If clean and explicit audio differs, preserve both as distinct material.
