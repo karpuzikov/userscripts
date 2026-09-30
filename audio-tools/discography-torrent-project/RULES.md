@@ -716,12 +716,15 @@ Do not flatten release folders into the duplicate root. After successful moves, 
 - Added phrases persist immediately and participate in the same analysis run.
 - The review changes preference inclusion only; it never creates duplicate identity.
 
-### Unified saved-data folder rule
+### Per-program persistent-data rule
 
-- All user-saved analyzer data must live in the same dynamically resolved Windows Documents location: `Documents\\Karpuzikov Tools`.
-- This includes settings, Personal Picks, unusual-pattern preferences, comparison logs, undo state, and crash logs.
-- Preserve or migrate older saved state when practical instead of making the user recreate it.
-- Runtime dependencies and executable caches are not user-saved data and may remain in app-local dependency locations.
+- Every program must own its own folder under the dynamically resolved Windows Documents library: `Documents\\Karpuzikov Tools\\<Program Name>\\`.
+- Duplicate Edition Analyzer uses `Documents\\Karpuzikov Tools\\Duplicate Edition Analyzer\\`.
+- Keep `settings.json`, dependencies, logs, temporary working files, caches, comparison data, undo/state data, and every other analyzer-owned persistent/working file inside that program folder.
+- Use the standard subfolders `dependencies`, `logs`, `temp`, `cache`, and `state` when those categories exist.
+- Do not place analyzer-owned files directly in the shared `Documents\\Karpuzikov Tools` root.
+- Preserve and migrate older shared-root/LocalAppData state automatically where practical instead of making the user recreate it.
+- System-wide dependencies installed by Windows/WinGet may remain in their normal system locations; any dependency files downloaded and owned by this program must live under its own `dependencies` folder.
 
 ### Unusual-pattern artist-title separator rule
 
@@ -747,3 +750,19 @@ Do not flatten release folders into the duplicate root. After successful moves, 
 - Positive CUETools verification is stronger quality evidence than EAC/XLD log-settings score for exact-equivalent CD rips.
 - Missing database entries, no match, verification errors, or unavailable CUETools are neutral and must never penalize a rip.
 - Do not automate `CUETools.exe /convert` for temporary per-track analyzer extraction; its profile command line is interactive/non-terminating. Use temporary FFmpeg segment extraction from CUE boundaries and delete every temporary file after fingerprinting.
+
+### Mandatory software-development rule
+
+- Apply the user's newest stored software-development standards as a required preflight before every software/program/script change. They are requirements, not optional defaults.
+- Newer explicit rules override older conflicting rules.
+- GUI software is dark-theme by default unless explicitly overridden.
+- Prefer one complete double-clickable `.pyw` file and the minimum practical file count.
+- Bootstrap/check WinGet before dependency setup. Install missing dependencies automatically and check installed dependencies for updates without requiring manual setup.
+- App-managed dependencies must use the program's own `dependencies` folder.
+- Keep update behavior and documentation framed as an update, never a reinstall.
+- New/unfinished GitHub software uses the status label `Under construction ⚠️`.
+- Preserve existing settings and migrate legacy storage when paths/layouts change.
+- Prefer immutable version/commit-pinned external download sources over mutable branch archives.
+- Update implementation and documentation together in the same version.
+- Cache-busting rules apply to web/userscript delivery; they are not applicable to this native `.pyw` tool.
+- Credential rules are not currently applicable because Duplicate Edition Analyzer stores no authentication secrets.
