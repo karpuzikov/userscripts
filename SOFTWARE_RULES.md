@@ -4,6 +4,12 @@ These rules apply to all current and future software in this repository.
 
 ## Unified software design
 
+### Dark-theme UI
+
+- All new and updated GUI software uses a dark theme by default unless the user explicitly requests otherwise.
+- Related GUI tools must reuse the established visual language of the closest existing tool, including palette, font family, font sizes, spacing, control sizing, progress/status presentation, and activity/log styling.
+- When a specific existing tool is named as the UI reference, match its typography hierarchy as well as its colors. For the Duplicate Edition Analyzer family, use Segoe UI 9 for normal text, Segoe UI 10 bold for section headings, Segoe UI 15 bold for major headings, and Cascadia Mono 9 for activity/log text where monospaced text is appropriate.
+
 ### Self-explanatory UI
 
 A first-time user must be able to understand every core UI element without prior chat context, a README, or remembering how the tool works.
