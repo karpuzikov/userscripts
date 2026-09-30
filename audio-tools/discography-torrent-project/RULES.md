@@ -650,3 +650,13 @@ Do not flatten release folders into the duplicate root. After successful moves, 
 - Fingerprint all audio files even when they are excluded from wanted coverage; exclusions affect optimization, not the ability to prove duplicate files inside a retained release.
 - For intra-release cleanup, duplicate identity still requires the same high-confidence audio group.
 - Same-track safety requires the same physical folder and compatible track position, but title agreement may come from either the embedded title or normalized filename. A bad TITLE tag must not block cleanup when the filename and audio identity agree.
+
+### CD rip log quality rule
+
+- Use `ligh7s/hey-bro-check-log` (Apache-2.0) to score supported EAC/XLD rip logs; ignore `audiochecker.log` for this purpose.
+- Rip-log score is never duplicate evidence and must never merge recordings/releases by itself.
+- Apply log quality only between otherwise exact-equivalent CD rips: same release identity/type/source class, same total/wanted track count, same wanted audio-group order, and the same wanted audio-group multiset.
+- Require all non-AudioChecker rip logs belonging to a release to be recognized before that release receives a comparable log-quality key. Unsupported/unrecognized logs are neutral, not automatically bad.
+- For multi-disc releases compare worst-disc score first, then average score; unflagged wins an otherwise equal tie.
+- A higher log score may replace an already-processed existing CD rip when the rips are exact equivalents. If log quality ties or is unavailable, existing-copy precedence remains.
+- Clean/explicit preference remains the absolute final tie-break after CD-rip log quality.
