@@ -4,7 +4,7 @@ Complete project source and workflow assets for the discography torrent automati
 
 ## Current tools
 
-- `tools/Duplicate Edition Analyzer v0.12.0.pyw` - adds CUE-based CD image rip support: single-image FLAC/APE/WavPack/WAV releases are expanded into virtual per-track CUE segments for normal Chromaprint comparison against split-track releases. CUETools.ARCUE is used as positive AccurateRip/CTDB quality evidence for image-rip families, while EAC/XLD log scoring remains available. Includes Analyze-time Personal Picks, collection-wide minimum-track optimization, and unified saved-data storage under Documents/Karpuzikov Tools. Under construction ⚠️
+- `tools/Duplicate Edition Analyzer v0.12.1.pyw` - CUE-based CD image/split-rip comparison with CUETools AccurateRip/CTDB verification, EAC/XLD log scoring, Analyze-time Personal Picks, and collection-wide minimum-track optimization. All analyzer-owned settings, dependencies, logs, temp, cache and state are isolated under `Documents\\Karpuzikov Tools\\Duplicate Edition Analyzer\\`. Under construction ⚠️
 - `tools/AudioChecker Automation v0.1.pyw` - AudioChecker batch automation.
 - `tools/ALAC Conversion Automation v0.2.pyw` - lossless -> ALAC conversion. Under construction ⚠️
 - `tools/CUE Corrector - MusicBrainz DiscID 1.3.pyw` - MusicBrainz DiscID/CUE workflow.
@@ -30,4 +30,4 @@ Third-party applications and binaries such as AudioChecker, CUETools, refalac, F
 
 ## CD rip log scoring
 
-Duplicate Edition Analyzer uses [hey-bro-check-log](https://github.com/ligh7s/hey-bro-check-log) v1.3.2 (Apache-2.0) as an auto-installed runtime dependency for supported EAC/XLD logs. Log score is only a quality tie-break between otherwise exact-equivalent CD rips; it never creates duplicate identity or replaces a different edition.
+Duplicate Edition Analyzer uses [hey-bro-check-log](https://github.com/ligh7s/hey-bro-check-log) v1.3.2 (Apache-2.0), pinned to commit `d3192ad2764f2682cffce4db2abc419f8ac68c69`, as an auto-installed runtime dependency for supported EAC/XLD logs. Log score is only a quality tie-break between otherwise exact-equivalent CD rips; it never creates duplicate identity or replaces a different edition.
