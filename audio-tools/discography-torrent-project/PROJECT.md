@@ -255,13 +255,13 @@ run this logic automatically at the final torrent preparation stage and prepare/
 
 ## Duplicate / Edition Analyzer UX\n\n- Startup failures are never silent: the analyzer shows the exception when possible and writes `Documents\\Karpuzikov Tools\\Duplicate Edition Analyzer - Crash.log`.\n\n- Release discovery is recursive: organizational folders such as Albums/Other/Singles and per-single grouping folders are traversed, while CD1/CD2/Disc subfolders remain grouped as one release.
 
-- Remix exclusion exception: remixes with newly added featured performers remain wanted; if no matching non-remix base is present, an explicitly featured remix is kept conservatively.\n\n- Analyzer UI uses a unified dark theme by default, including dark Windows title bars when supported.
+- Remix exclusion exception: remixes with newly added featured performers remain included; if no matching non-remix base is present, an explicitly featured remix is kept conservatively.\n\n- Analyzer UI uses a unified dark theme by default, including dark Windows title bars when supported.
 
 - Release discovery is recursive through organizational folders. Internal CD1/CD2 folders and sibling `... CD 1` / `... CD 2` folders are treated as one logical release and kept/moved together.
 
 - Existing discography is optional: when blank, the analyzer optimizes Recycle against itself; when supplied, it compares Existing + Recycle together.
 
-- Source detection: `.cue` + any `.log` except `audiochecker.log` = CD. Equivalent existing ALAC content wins over equivalent recycle content unless recycle is objectively better by current active rules (for example CD vs WEB) or adds unique wanted audio.
+- Source detection: `.cue` + any `.log` except `audiochecker.log` = CD. Equivalent existing ALAC content wins over equivalent recycle content unless recycle is objectively better by current active rules (for example CD vs WEB) or adds unique included audio.
 
 - Do not show a per-release review/results table as the normal workflow.
 - The software performs the track-by-track duplicate/version analysis and release optimization itself.
@@ -270,14 +270,14 @@ run this logic automatically at the final torrent preparation stage and prepare/
 - On confirmation, automatically move redundant release folders as-is into `<artist>_duplicates`; never rename the release folders.
 - Create `<artist>_duplicates` as a sibling of the selected artist folder, e.g. `...\!recycle\3OH!3_duplicates`.
 - Redundant folders containing remix material go under `<artist>_duplicates/!Remixes/`.
-- `Save Remixes` and `Save Live recordings` are persistent affirmative checkboxes, unchecked by default; checked categories count as wanted coverage.
+- `Save Remixes` and `Save Live recordings` are persistent affirmative checkboxes, unchecked by default; checked categories count as included coverage.
 - Before Chromaprint comparison, show an unusual-pattern review only for non-standard non-remix/non-live descriptors that normal rules do not already understand. Standard families are recognized structurally, not by exact phrases: arbitrary prefixes must not make ordinary Radio Edit/Mix, Instrumental, Acoustic, Demo, Session, Remaster, Edit/Re-Edit, Extended/VIP/Vocal Mix, 7-inch/12-inch forms, common Version/Edition labels, etc. appear. Named/ambiguous plain mixes such as `The Matrix Mix` / `Tom Lord-Alge Mix` may remain review candidates. Similar callout labels are grouped. Remix/live remain controlled only by their existing checkboxes.
-- `Mix` alone is not a remix marker: Original/Extended/12-inch/7-inch mixes and Instrumental/A-Capella versions stay wanted unless redundant for other reasons; Club Mix is remix material.
+- `Mix` alone is not a remix marker: Original/Extended/12-inch/7-inch mixes and Instrumental/A-Capella versions stay included unless redundant for other reasons; Club Mix is remix material.
 - Version/language labels never create duplicate identity, but strong conflicts may conservatively veto an otherwise-valid audio match.
 - Track duplicate identity still requires strict Chromaprint similarity; metadata can never create a match. A post-audio safety gate now blocks merges when strong contradictory evidence indicates a distinct recording/version (for example different recording MBIDs, semantic version/language conflicts, or different ISRCs combined with conflicting titles/credits).
 - Candidate discovery may use exact identifiers and same-base-title + duration only as hints; every final duplicate still requires the audio matcher.
 - Large fingerprint offsets are allowed so long silence/hidden-track padding can be ignored; substantial non-silent extra audio remains a distinct version.
-- Remix tracks are excluded from wanted coverage, but a release containing remixes is not automatically unwanted. For equivalent wanted album content, CD/physical media wins over WEB before file-count minimization. Explicit/clean is deferred until a reliable detector exists.
+- Remix tracks are excluded from included coverage, but a release containing remixes is not automatically ignored. For equivalent included album content, CD/physical media wins over WEB before file-count minimization. Explicit/clean is deferred until a reliable detector exists.
 - Leave required recycle releases in the recycle folder for the next processing stage.
 - Final UI should only show a short completion summary plus Open filtered recycle / Open duplicates / Undo.
 - Technical diagnostics are optional and must not be required for normal use.
@@ -386,7 +386,7 @@ Next stage after this: metadata/tag normalization using the shared Picard rules.
 - Existing user rules/scripts are the source of truth.
 - Prefer one `.pyw` application and minimal file count for the final tool.
 
-- Chromaprint generation auto-scales parallel fpcalc workers to logical CPU count (up to 32) instead of a fixed 4, and skips tracks already excluded from wanted coverage by the remix/live options.
+- Chromaprint generation auto-scales parallel fpcalc workers to logical CPU count (up to 32) instead of a fixed 4, and skips tracks already excluded from included coverage by the remix/live options.
 
 - Post-fingerprint matching now shows explicit Indexing/Finding candidates/Comparing audio/Optimizing stages. Candidate discovery uses an inverted fingerprint-token index and similarity checks use multi-process CPU parallelism instead of silently running on one Python thread.
 
@@ -400,7 +400,7 @@ Next stage after this: metadata/tag normalization using the shared Picard rules.
 - Chromaprint candidate discovery uses strong token overlap, a weaker token+duration fallback, exact MBID/ISRC candidate indexes, and same-base-title + close-duration fallback. Pure duration-only all-pairs comparison is prohibited because it caused near-quadratic comparison volume.
 - Audio matching always evaluates zero/near-zero fingerprint alignment as well as histogram-derived offsets, preventing mastering differences from hiding the correct alignment.
 - A second mastering/pressing-tolerant Chromaprint threshold handles near-identical-duration copies of the same recording without using filenames/titles.
-- A final redundancy-prune pass removes selected singles/EPs that add no wanted audio when equal-or-better retained sources already cover them.
+- A final redundancy-prune pass removes selected singles/EPs that add no included audio when equal-or-better retained sources already cover them.
 - Named person/DJ/producer/act `Mix` labels (for example `Ferry Corsten Mix`, `Tom Lord-Alge Mix`, `Madlib's Mix`) are remix material and are controlled by `Save Remixes`; they must not appear in the unusual-pattern review.
 
 - v0.9.8 classifier refinement: hide standard suffix families regardless of prefix (12-inch, Extended Version, Full Version, style Mixes such as Ambient/Chillout/Downtempo/Garage/House/Trance, instrument versions, etc.); ignore year-only parser fragments; group bare `hook` with Call Out/Callout Hook; treat `Mix by <name>` and handle-style named mixes as remixes; repair mojibake in displayed examples.
@@ -411,10 +411,12 @@ Next stage after this: metadata/tag normalization using the shared Picard rules.
 
 - Logging checkbox: detailed JSONL comparison logging is optional from the main UI and persists with the other analyzer settings. Unchecked means no comparison log is created; checked means the existing detailed comparison log is written for that run.
 
-- ITUNESADVISORY final preference: `ITUNESADVISORY=0` is clean and `ITUNESADVISORY=1` is explicit. Clean/explicit remains neutral during fingerprint comparison, coverage, album/source optimization, and track-count minimization. At the absolute final selection stage only, if clean and explicit copies are the same release with identical source class, track count, wanted track order, and exact audio-group multiset, retain explicit and move clean. If the audio differs (for example a genuinely censored edit), both remain distinct.
+- ITUNESADVISORY final preference: `ITUNESADVISORY=0` is clean and `ITUNESADVISORY=1` is explicit. Clean/explicit remains neutral during fingerprint comparison, coverage, album/source optimization, and track-count minimization. At the absolute final selection stage only, if clean and explicit copies are the same release with identical source class, track count, included track order, and exact audio-group multiset, retain explicit and move clean. If the audio differs (for example a genuinely censored edit), both remain distinct.
 
-- v0.10.3 intra-release dedupe fix: fingerprint all tracks, including tracks excluded from wanted coverage, so retained releases can still be deduplicated safely. Same-track safety now accepts agreement from either embedded title or normalized filename while still requiring the same physical folder, same track position, and the same high-confidence audio group. This fixes missed pairs such as `01 - Mask Off (Marshmello Remix)` vs `01 Mask Off (Marshmello Remix)` when tags differ.
+- v0.10.3 intra-release dedupe fix: fingerprint all tracks, including tracks excluded from included coverage, so retained releases can still be deduplicated safely. Same-track safety now accepts agreement from either embedded title or normalized filename while still requiring the same physical folder, same track position, and the same high-confidence audio group. This fixes missed pairs such as `01 - Mask Off (Marshmello Remix)` vs `01 Mask Off (Marshmello Remix)` when tags differ.
 
 - hey-bro-check-log CD rip quality: integrate `ligh7s/hey-bro-check-log` v1.3.2 as an auto-installed runtime dependency. Score every non-`audiochecker.log` EAC/XLD rip log. A multi-disc release is compared by worst-disc score first, then average, then flagged status. Unrecognized/unsupported logs remain neutral. Log quality is used only after audio/content/source equivalence is proven, so it cannot create duplicate identity or remove a different edition. A higher-scoring exact-equivalent CD rip may replace an existing lower-scoring CD rip; existing wins when log quality ties or is unavailable. ITUNESADVISORY explicit-over-clean remains the absolute final tie-break.
 
-- v0.11.1 absolute exclusion semantics: unchecked `Save Remixes` / `Save Live recordings` makes those tracks invisible to all release-selection logic, not just fingerprint coverage. They do not contribute to wanted counts, album/EP/single heuristic type, edition equivalence, CD-log tie-break eligibility, clean/explicit equivalence, minimum-file scoring, or later tie-breaks. Removed the remix featured-artist exception. `Session`/`Sessions` and `Unplugged` are treated as live-performance material for this option. Ignored files remain physically inside a retained mixed release but can never make that release win.
+- v0.11.1 absolute exclusion semantics: unchecked `Save Remixes` / `Save Live recordings` makes those tracks invisible to all release-selection logic, not just fingerprint coverage. They do not contribute to included counts, album/EP/single heuristic type, edition equivalence, CD-log tie-break eligibility, clean/explicit equivalence, minimum-file scoring, or later tie-breaks. Removed the remix featured-artist exception. `Session`/`Sessions` and `Unplugged` are treated as live-performance material for this option. Ignored files remain physically inside a retained mixed release but can never make that release win.
+
+- v0.11.2 checkbox semantics: use direct checkbox inclusion semantics. `Save Remixes` and `Save Live recordings` are direct inclusion switches. Checked means that category participates normally in release comparison, coverage, counts, optimization, and tie-breaks. Unchecked means that category is skipped completely by those stages. Mixed releases may still physically contain skipped tracks, but skipped tracks have zero influence on which release is kept.
