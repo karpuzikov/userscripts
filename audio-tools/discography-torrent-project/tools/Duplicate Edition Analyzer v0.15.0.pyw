@@ -3,12 +3,15 @@
 
 from __future__ import annotations
 
+import hashlib
 import importlib
 import itertools
 import json
+import math
 import os
 import re
 import shutil
+import struct
 import subprocess
 import sys
 import tempfile
@@ -29,7 +32,7 @@ import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 
 APP_NAME = "Duplicate / Edition Analyzer"
-APP_VERSION = "0.14.0"
+APP_VERSION = "0.15.0"
 PROGRAM_DATA_DIR_NAME = "Duplicate Edition Analyzer"
 AUDIO_EXTS = {".m4a", ".flac", ".wav", ".ape", ".wv", ".mp3", ".aac", ".ogg", ".opus"}
 def _logical_cpu_count() -> int:
@@ -157,6 +160,34 @@ def _apply_dark_theme(root) -> None:
         bordercolor=DARK_BORDER,
         lightcolor=DARK_ACCENT,
         darkcolor=DARK_ACCENT,
+    )
+    style.configure(
+        "Analyzer.Treeview",
+        background="#18181b",
+        fieldbackground="#18181b",
+        foreground="#f4f4f5",
+        borderwidth=0,
+        relief="flat",
+        rowheight=30,
+        font=("Segoe UI", 9),
+    )
+    style.map(
+        "Analyzer.Treeview",
+        background=[("selected", "#264f78")],
+        foreground=[("selected", "#ffffff")],
+    )
+    style.configure(
+        "Analyzer.Treeview.Heading",
+        background="#27272a",
+        foreground="#f4f4f5",
+        bordercolor="#3f3f46",
+        relief="flat",
+        font=("Segoe UI", 9, "bold"),
+        padding=(8, 7),
+    )
+    style.map(
+        "Analyzer.Treeview.Heading",
+        background=[("active", "#3f3f46")],
     )
     _enable_dark_titlebar(root)
 
@@ -1122,6 +1153,38 @@ def _candidate_duration_close(a: Track, b: Track) -> bool:
     )
 
 
+def _descriptor_family_set(values: Set[str]) -> Set[str]:
+    """Collapse wording aliases into semantic families for metadata safety.
+
+    Metadata is only allowed to veto a proven audio match when both sides state
+    genuinely incompatible version families. Wording aliases such as
+    "Radio Edit" vs "Play & Win Radio Version" are the same radio family.
+    """
+    families: Set[str] = set()
+    for value in values:
+        text = normalize_space(ascii_punctuation(value or "").lower())
+        if not text:
+            continue
+        if "radio" in text:
+            families.add("radio")
+        elif "acoustic" in text or "unplugged" in text:
+            families.add("acoustic")
+        elif "instrumental" in text:
+            families.add("instrumental")
+        elif "a capella" in text or "acapella" in text or "acappella" in text:
+            families.add("acapella")
+        elif "live" in text:
+            families.add("live")
+        elif "remix" in text or "dub" in text or "club mix" in text:
+            families.add("remix")
+        elif "extended" in text:
+            families.add("extended")
+        else:
+            # Preserve language/named-version distinctions when both sides state them.
+            families.add(re.sub(r"[^a-z0-9]+", " ", text).strip())
+    return families
+
+
 def _metadata_match_conflict(a: Track, b: Track) -> str:
     """Return a conservative reason to veto an otherwise-valid audio match.
 
@@ -1152,11 +1215,14 @@ def _metadata_match_conflict(a: Track, b: Track) -> str:
 
     semantic_a = _semantic_version_descriptors(a.display_title)
     semantic_b = _semantic_version_descriptors(b.display_title)
-    if semantic_a != semantic_b and (semantic_a or semantic_b):
-        return (
-            "conflicting semantic version descriptors "
-            f"({sorted(semantic_a)} vs {sorted(semantic_b)})"
-        )
+    if semantic_a and semantic_b:
+        semantic_families_a = _descriptor_family_set(semantic_a)
+        semantic_families_b = _descriptor_family_set(semantic_b)
+        if semantic_families_a != semantic_families_b:
+            return (
+                "conflicting semantic version descriptors "
+                f"({sorted(semantic_a)} vs {sorted(semantic_b)})"
+            )
 
     featured_a = _featured_credit_signature(a.display_title)
     featured_b = _featured_credit_signature(b.display_title)
@@ -1182,8 +1248,9 @@ def _metadata_match_conflict(a: Track, b: Track) -> str:
     descriptors_a = _version_descriptors(a.display_title)
     descriptors_b = _version_descriptors(b.display_title)
     if (
-        descriptors_a != descriptors_b
-        and (descriptors_a or descriptors_b)
+        descriptors_a
+        and descriptors_b
+        and _descriptor_family_set(descriptors_a) != _descriptor_family_set(descriptors_b)
         and isrc_a and isrc_b and isrc_a != isrc_b
     ):
         return (
@@ -1967,6 +2034,8 @@ class Track:
     exclude_from_coverage: bool = False
     excluded_by_pattern: str = ""
     personal_keep_rule: str = ""
+    base_excluded_from_coverage: bool = False
+    manual_skip_rule: str = ""
     codec_name: str = ""
     sample_rate: int = 0
     bit_depth: int = 0
@@ -4408,6 +4477,9 @@ def analyze_prepared(
     # additional material; a checked pattern does not override Save Remixes/Live.
     configure_exclusions(releases, exclude_remixes, exclude_live, personal_keep_rules)
     apply_pattern_exclusions(releases, set(excluded_pattern_keys or set()))
+    for track in tracks:
+        track.base_excluded_from_coverage = bool(track.exclude_from_coverage)
+        track.manual_skip_rule = ""
     refresh_heuristic_release_types(releases)
 
     fpcalc = ensure_fpcalc() if use_fingerprint else None
@@ -4437,6 +4509,11 @@ def analyze_prepared(
         comparison_log_path,
     )
     errors.extend(merge_notes)
+    progress_cb("Applying saved track skips...", 0, 1)
+    applied_skip_groups = apply_persistent_track_skips(tracks)
+    if applied_skip_groups:
+        errors.append(f"Saved track skips applied to {applied_skip_groups} recording group(s).")
+    progress_cb("Applying saved track skips...", 1, 1)
     progress_cb("Optimizing release set...", 0, 1)
     selected = optimize_collection(releases, groups)
     progress_cb("Optimizing release set...", 1, 1)
@@ -4743,6 +4820,8 @@ def build_release_decisions(
                 kinds.append("remix")
             if any(t.is_live for t in rel.tracks):
                 kinds.append("live")
+            if any(t.manual_skip_rule for t in rel.tracks):
+                kinds.append("saved track skip")
             pattern_keys = sorted({t.excluded_by_pattern for t in rel.tracks if t.excluded_by_pattern})
             if pattern_keys:
                 kinds.append("pattern: " + "; ".join(pattern_keys))
@@ -4819,25 +4898,24 @@ def build_release_decisions(
                     reason = "Use this recycle release instead of: " + "; ".join(r.path.name for r in replaced[:4])
                 else:
                     action = "ADD"
-                    if new_groups:
-                        new_titles: List[str] = []
-                        seen: Set[str] = set()
-                        for t in rel.tracks:
-                            if t.group_id in new_groups:
-                                k = normalize_title(t.display_title)
-                                if k not in seen:
-                                    seen.add(k)
-                                    new_titles.append(t.display_title)
-                        preview = ", ".join(new_titles[:4])
-                        if len(new_titles) > 4:
-                            preview += f", +{len(new_titles)-4} more"
-                        reason = f"Add: {len(new_groups)} recording(s) are not present in the current discography"
+                    if essential_tracks:
+                        preview = ", ".join(essential_tracks[:4])
+                        if len(essential_tracks) > 4:
+                            preview += f", +{len(essential_tracks)-4} more"
+                        reason = (
+                            f"Add: {len(essential_tracks)} recording(s) are supplied only by this "
+                            "retained release in the current plan"
+                        )
                         if preview:
                             reason += f": {preview}"
                     elif rel.release_type == "album":
-                        reason = "Add: chosen album edition minimizes duplicated files while keeping the album represented."
+                        reason = (
+                            "Add: this is the selected edition representing the album after "
+                            "collection-wide optimization; its included recordings are covered "
+                            "elsewhere in the retained set."
+                        )
                     else:
-                        reason = "Add: selected by the automatic minimum-file coverage solution."
+                        reason = "Add: selected by the global minimum-file coverage solution."
         else:
             covered = (bool(rel.groups) and rel.groups <= selected_groups) or (not rel.groups and rel.excluded_only)
             if covered:
@@ -4879,6 +4957,12 @@ def build_release_decisions(
             ]
             if personal_matches:
                 factors.append(f"Personal Picks restored {len(personal_matches)} track(s) that global remix/live options would otherwise skip.")
+
+            new_groups_for_factor = rel.groups - existing_groups
+            if rel.root_kind == "recycle" and new_groups_for_factor:
+                factors.append(
+                    f"{len(new_groups_for_factor)} included recording group(s) are not present in the pre-analysis existing discography."
+                )
 
             if action == "REPLACE":
                 related_release_ids = [
@@ -4951,6 +5035,166 @@ def _release_source_description(rel: Release) -> str:
     return "WEB / unknown"
 
 
+def _manual_track_skips_path() -> Path:
+    _migrate_legacy_app_data()
+    return _state_dir() / "manual_track_skips.json"
+
+
+def _track_fingerprint_hash(track: Track) -> str:
+    if not track.fingerprint:
+        return ""
+    digest = hashlib.sha256()
+    for value in track.fingerprint:
+        digest.update(struct.pack("<I", int(value) & 0xFFFFFFFF))
+    return digest.hexdigest()
+
+
+def _load_manual_track_skip_rules() -> List[Dict[str, object]]:
+    path = _manual_track_skips_path()
+    try:
+        if not path.is_file():
+            return []
+        data = json.loads(path.read_text(encoding="utf-8"))
+        rows = data.get("rules", []) if isinstance(data, dict) else []
+        return [dict(row) for row in rows if isinstance(row, dict)]
+    except Exception:
+        return []
+
+
+def _save_manual_track_skip_rules(rules: List[Dict[str, object]]) -> None:
+    _atomic_write_json(
+        _manual_track_skips_path(),
+        {
+            "app": APP_NAME,
+            "version": APP_VERSION,
+            "updated": datetime.now().isoformat(timespec="seconds"),
+            "rules": rules,
+        },
+    )
+
+
+def _manual_skip_rule_matches_track(rule: Dict[str, object], track: Track) -> bool:
+    fp_hash = _track_fingerprint_hash(track)
+    fingerprint_hashes = {str(x) for x in rule.get("fingerprint_hashes", []) if str(x)}
+    if fp_hash and fp_hash in fingerprint_hashes:
+        return True
+
+    mbid = _normalized_identifier(track.mbid)
+    mbids = {_normalized_identifier(str(x)) for x in rule.get("mbids", []) if str(x)}
+    if mbid and mbid in mbids:
+        return True
+
+    isrc = _normalized_identifier(track.isrc)
+    isrcs = {_normalized_identifier(str(x)) for x in rule.get("isrcs", []) if str(x)}
+    base = _base_title_identity(track.display_title)
+    bases = {str(x) for x in rule.get("base_titles", []) if str(x)}
+    if isrc and isrc in isrcs and base and base in bases:
+        return True
+
+    return False
+
+
+def apply_persistent_track_skips(tracks: List[Track]) -> int:
+    """Apply saved user track exclusions after audio groups have been built."""
+    for track in tracks:
+        track.manual_skip_rule = ""
+        track.exclude_from_coverage = bool(track.base_excluded_from_coverage)
+
+    rules = _load_manual_track_skip_rules()
+    if not rules:
+        return 0
+
+    group_members: Dict[int, List[Track]] = defaultdict(list)
+    for track in tracks:
+        if track.group_id >= 0:
+            group_members[track.group_id].append(track)
+
+    applied_groups: Set[int] = set()
+    for rule in rules:
+        rule_id = str(rule.get("id", "")).strip()
+        if not rule_id:
+            continue
+        matched_groups: Set[int] = set()
+        direct_matches: List[Track] = []
+        for track in tracks:
+            if _manual_skip_rule_matches_track(rule, track):
+                if track.group_id >= 0:
+                    matched_groups.add(track.group_id)
+                else:
+                    direct_matches.append(track)
+
+        for group_id in matched_groups:
+            applied_groups.add(group_id)
+            for member in group_members.get(group_id, []):
+                member.manual_skip_rule = rule_id
+                member.exclude_from_coverage = True
+
+        for track in direct_matches:
+            track.manual_skip_rule = rule_id
+            track.exclude_from_coverage = True
+
+    return len(applied_groups)
+
+
+def add_persistent_track_skip(track: Track, tracks: List[Track]) -> str:
+    members = (
+        [candidate for candidate in tracks if candidate.group_id == track.group_id]
+        if track.group_id >= 0
+        else [track]
+    )
+    fingerprint_hashes = sorted({
+        value for value in (_track_fingerprint_hash(member) for member in members) if value
+    })
+    mbids = sorted({
+        _normalized_identifier(member.mbid) for member in members if _normalized_identifier(member.mbid)
+    })
+    isrcs = sorted({
+        _normalized_identifier(member.isrc) for member in members if _normalized_identifier(member.isrc)
+    })
+    base_titles = sorted({
+        _base_title_identity(member.display_title)
+        for member in members
+        if _base_title_identity(member.display_title)
+    })
+
+    identity_payload = "|".join(fingerprint_hashes + mbids + isrcs + base_titles)
+    if not identity_payload:
+        identity_payload = (
+            f"{_base_title_identity(track.display_title)}|"
+            f"{normalize_artist(track.artist)}|{track.duration:.3f}"
+        )
+    rule_id = "skip-" + hashlib.sha256(identity_payload.encode("utf-8")).hexdigest()[:20]
+
+    rules = _load_manual_track_skip_rules()
+    existing = next((row for row in rules if str(row.get("id", "")) == rule_id), None)
+    if existing is None:
+        rules.append(
+            {
+                "id": rule_id,
+                "label": track.display_title,
+                "created": datetime.now().isoformat(timespec="seconds"),
+                "fingerprint_hashes": fingerprint_hashes,
+                "mbids": mbids,
+                "isrcs": isrcs,
+                "base_titles": base_titles,
+            }
+        )
+        _save_manual_track_skip_rules(rules)
+
+    apply_persistent_track_skips(tracks)
+    return rule_id
+
+
+def remove_persistent_track_skip(rule_id: str, tracks: List[Track]) -> None:
+    rules = [
+        row
+        for row in _load_manual_track_skip_rules()
+        if str(row.get("id", "")).strip() != str(rule_id).strip()
+    ]
+    _save_manual_track_skip_rules(rules)
+    apply_persistent_track_skips(tracks)
+
+
 def _decision_snapshot_path() -> Path:
     _migrate_legacy_app_data()
     return _state_dir() / "last_decision_map.json"
@@ -4984,6 +5228,84 @@ def _load_decision_snapshot() -> List[Dict[str, object]]:
     return []
 
 
+def _duration_display(seconds: float) -> str:
+    if seconds <= 0:
+        return "?:??"
+    total = int(round(seconds))
+    return f"{total // 60}:{total % 60:02d}"
+
+
+def _track_distinction_summary(
+    track: Track,
+    candidates: List[Track],
+    by_release_id: Dict[int, Release],
+) -> str:
+    """Explain why same/similar titled tracks remain separate recording groups."""
+    choices = [
+        other
+        for other in candidates
+        if other is not track
+        and other.release_id != track.release_id
+        and other.group_id >= 0
+        and other.group_id != track.group_id
+    ]
+    if not choices:
+        return ""
+
+    choices.sort(
+        key=lambda other: (
+            0 if identity_title(other.display_title) == identity_title(track.display_title) else 1,
+            abs((track.duration or 0.0) - (other.duration or 0.0)),
+            other.display_title.casefold(),
+        )
+    )
+    other = choices[0]
+    other_release = by_release_id.get(other.release_id)
+    other_name = other_release.path.name if other_release is not None else other.album or "another release"
+    audio_match, _sim = fingerprint_auto_match(track, other)
+    metadata_conflict = _metadata_match_conflict(track, other) if audio_match else ""
+
+    artists_a = _artist_signature(track.artist)
+    artists_b = _artist_signature(other.artist)
+    delta = abs((track.duration or 0.0) - (other.duration or 0.0))
+
+    if audio_match and metadata_conflict:
+        if artists_a and artists_b and artists_a != artists_b:
+            return (
+                f"Same audio as '{other.display_title}' on {other_name}, but kept separate because "
+                f"artist credit differs ({track.artist or '?'} vs {other.artist or '?'})"
+                + (" and ISRC differs." if track.isrc and other.isrc and track.isrc != other.isrc else ".")
+            )
+        return (
+            f"Same audio as '{other.display_title}' on {other_name}, but kept separate by metadata safety: "
+            f"{metadata_conflict}."
+        )
+
+    if not audio_match:
+        details: List[str] = []
+        if artists_a and artists_b and artists_a != artists_b:
+            details.append(f"artist credit differs ({track.artist or '?'} vs {other.artist or '?'})")
+        if delta >= 1.0:
+            details.append(
+                f"length {_duration_display(track.duration)} vs {_duration_display(other.duration)} "
+                f"({delta:.1f}s difference)"
+            )
+        if track.isrc and other.isrc and track.isrc != other.isrc:
+            details.append("ISRC differs")
+        if details:
+            return (
+                f"Different audio from '{other.display_title}' on {other_name}: "
+                + "; ".join(details)
+                + "; Chromaprint did not match."
+            )
+        return (
+            f"Same visible metadata/length as '{other.display_title}' on {other_name}, "
+            "but Chromaprint did not match."
+        )
+
+    return ""
+
+
 def build_decision_snapshot(
     releases: List[Release],
     tracks: List[Track],
@@ -5005,6 +5327,13 @@ def build_decision_snapshot(
             all_group_carriers[gid].add(carrier.rid)
             if carrier.rid not in blocked:
                 eligible_group_carriers[gid].add(carrier.rid)
+
+    track_global_index = {id(track): index for index, track in enumerate(tracks)}
+    same_title_index: Dict[str, List[Track]] = defaultdict(list)
+    for candidate in tracks:
+        key = _base_title_identity(candidate.display_title)
+        if key:
+            same_title_index[key].append(candidate)
 
     snapshots: List[Dict[str, object]] = []
 
@@ -5090,6 +5419,7 @@ def build_decision_snapshot(
             "remix": sum(1 for t in rel.tracks if t.exclude_from_coverage and t.is_remix),
             "live": sum(1 for t in rel.tracks if t.exclude_from_coverage and t.is_live),
             "pattern": sum(1 for t in rel.tracks if t.exclude_from_coverage and bool(t.excluded_by_pattern)),
+            "manual": sum(1 for t in rel.tracks if bool(t.manual_skip_rule)),
         }
 
         quality_bits: List[str] = []
@@ -5121,25 +5451,49 @@ def build_decision_snapshot(
             available_elsewhere = bool(
                 included and any(rid != rel.rid for rid in eligible_carriers)
             )
-            covered_by_other_retained = bool(
-                included and track.group_id in other_selected_groups
-            )
+            covering_releases = [
+                other
+                for other in selected_rels
+                if other.rid != rel.rid and track.group_id >= 0 and track.group_id in other.groups
+            ]
+            covered_by_other_retained = bool(covering_releases)
             orphaned = bool(
                 manual_removed
                 and included
                 and not available_elsewhere
             )
+            unique_to_release = bool(
+                retained and included and track.group_id in essential_groups
+            )
+            base_key = _base_title_identity(track.display_title)
+            distinction = ""
+            if included and not covered_by_other_retained and base_key:
+                distinction = _track_distinction_summary(
+                    track,
+                    same_title_index.get(base_key, []),
+                    by_id,
+                )
             track_number = _track_number_key(track)
             tracklist.append(
                 {
                     "number": track_number if track_number is not None else fallback_number,
                     "title": track.display_title,
+                    "artist": track.artist,
+                    "duration": _duration_display(track.duration),
+                    "duration_seconds": round(track.duration, 3),
+                    "path": str(track.path),
+                    "track_global_index": track_global_index.get(id(track), -1),
                     "group_id": track.group_id,
                     "included": included,
                     "excluded": bool(track.exclude_from_coverage),
+                    "manual_skip": bool(track.manual_skip_rule),
+                    "manual_skip_rule": track.manual_skip_rule,
                     "available_elsewhere": available_elsewhere,
                     "covered_by_other_retained": covered_by_other_retained,
+                    "covered_by_names": [other.path.name for other in covering_releases[:4]],
+                    "unique_to_release": unique_to_release,
                     "orphaned": orphaned,
+                    "distinction": distinction,
                 }
             )
 
@@ -5736,7 +6090,7 @@ def undo_last_run() -> Tuple[int, List[str]]:
 
 
 class DecisionExplorerWindow(tk.Toplevel):
-    """Interactive release dependency map with reversible manual re-optimization."""
+    """Modern release-only dependency map with drill-down details."""
 
     def __init__(
         self,
@@ -5751,19 +6105,17 @@ class DecisionExplorerWindow(tk.Toplevel):
         reviews=None,
         decisions: Optional[List[ReleaseDecision]] = None,
         blocked_release_ids: Optional[Set[int]] = None,
+        allow_reanalyze: bool = True,
     ):
         super().__init__(master)
-        self.title(f"{APP_NAME} - Decision Map")
-        self.geometry("1420x900")
-        self.minsize(1080, 700)
+        self.title(f"{APP_NAME} - Release Map")
+        self.geometry("1440x900")
+        self.minsize(980, 640)
+        self.resizable(True, True)
         self.configure(background=DARK_BG)
         _enable_dark_titlebar(self)
 
         self.snapshots = list(snapshots)
-        self.visible_items: List[Dict[str, object]] = []
-        self.result: Optional[bool] = None
-        self.allow_apply = allow_apply
-
         self.releases = list(releases) if releases is not None else None
         self.tracks = list(tracks) if tracks is not None else None
         self.groups = groups if groups is not None else None
@@ -5771,831 +6123,736 @@ class DecisionExplorerWindow(tk.Toplevel):
         self.reviews = list(reviews or [])
         self.decisions = list(decisions or [])
         self.blocked_release_ids = set(blocked_release_ids or set())
-        self.can_reoptimize = (
-            self.releases is not None
+        self.can_edit = bool(
+            allow_apply
+            and self.releases is not None
             and self.tracks is not None
             and self.groups is not None
             and selected is not None
         )
+        self.allow_reanalyze = allow_reanalyze
+        self.result: Optional[str] = None
         self.baseline_actions = {
             int(item.get("release_id", -1)): str(item.get("action", ""))
             for item in snapshots
         }
+        self.by_snapshot_id: Dict[int, Dict[str, object]] = {
+            int(item.get("release_id", -1)): item for item in self.snapshots
+        }
+        self.selected_release_id = self._initial_release_id()
+        self.selected_track_global_index: Optional[int] = None
+        self.details_open = False
+        self.maximized = False
+        self.base_summary_text = summary_text
 
         self.search_var = tk.StringVar()
-        self.scope_var = tk.StringVar(value="All releases")
-        self.summary_var = tk.StringVar(value=summary_text)
-        self.manual_status_var = tk.StringVar()
-        self.base_summary_text = summary_text
+        self.summary_var = tk.StringVar()
+        self.release_title_var = tk.StringVar()
+        self.release_meta_var = tk.StringVar()
+        self.path_var = tk.StringVar()
+        self.reason_var = tk.StringVar()
+        self.track_info_var = tk.StringVar(value="Select a track for details.")
+        self.details_button_var = tk.StringVar(value="More details")
 
         outer = ttk.Frame(self)
         outer.pack(fill="both", expand=True, padx=14, pady=12)
 
-        header = ttk.Frame(outer)
-        header.pack(fill="x")
-        ttk.Label(header, text="Decision Map", font=("Segoe UI", 15, "bold")).pack(side="left")
-        ttk.Label(
-            header,
-            text="Click connected release nodes to navigate. Manual removals re-optimize instantly using the existing fingerprints.",
-            style="Help.TLabel",
-        ).pack(side="left", padx=(14, 0))
+        toolbar = ttk.Frame(outer)
+        toolbar.pack(fill="x", pady=(0, 8))
+        ttk.Label(toolbar, text="Release Map", font=("Segoe UI", 15, "bold")).pack(side="left")
+
+        self.release_choices = self._release_choice_values()
+        self.release_choice_lookup = {label: rid for label, rid in self.release_choices}
+        self.release_search = ttk.Combobox(
+            toolbar,
+            textvariable=self.search_var,
+            values=[label for label, _rid in self.release_choices],
+            state="normal",
+            width=58,
+        )
+        self.release_search.pack(side="left", padx=(16, 8), fill="x", expand=True)
+        self.release_search.bind("<<ComboboxSelected>>", self._search_release)
+        self.release_search.bind("<Return>", self._search_release)
+        ToolTip(self.release_search, "Type part of a release name and press Enter, or choose a release.")
+
+        ttk.Button(toolbar, text="Fit map", command=self._fit_map).pack(side="left", padx=(0, 6))
+        ttk.Button(toolbar, text="Maximize", command=self._toggle_maximize).pack(side="left", padx=(0, 6))
+        if self.allow_reanalyze:
+            ttk.Button(toolbar, text="Analyze again", command=self._reanalyze).pack(side="right")
+        if self.can_edit:
+            ttk.Button(toolbar, text="Apply plan", command=self._apply).pack(side="right", padx=(0, 6))
+        ttk.Button(toolbar, text="Close", command=self._close).pack(side="right", padx=(0, 6))
 
         ttk.Label(
             outer,
             textvariable=self.summary_var,
             style="Help.TLabel",
-            wraplength=1340,
+            wraplength=1360,
             justify="left",
-        ).pack(fill="x", pady=(5, 10))
+        ).pack(fill="x", pady=(0, 8))
 
-        body = tk.PanedWindow(
+        self.panes = tk.PanedWindow(
             outer,
-            orient="horizontal",
-            background=DARK_BORDER,
-            sashwidth=5,
+            orient="vertical",
+            background="#3f3f46",
+            sashwidth=8,
+            sashrelief="flat",
             bd=0,
             relief="flat",
         )
-        body.pack(fill="both", expand=True)
+        self.panes.pack(fill="both", expand=True)
 
-        left = ttk.Frame(body, width=360)
-        right = ttk.Frame(body)
-        body.add(left, minsize=310, width=370)
-        body.add(right, minsize=680)
-
-        ttk.Label(left, text="Releases", style="Section.TLabel").pack(anchor="w")
-
-        search = ttk.Entry(left, textvariable=self.search_var)
-        search.pack(fill="x", pady=(6, 6))
-        search.bind("<KeyRelease>", lambda _e: self._refresh_list())
-
-        scope = ttk.Combobox(
-            left,
-            textvariable=self.scope_var,
-            values=("All releases", "Retained", "Duplicates", "Manually removed"),
-            state="readonly",
-        )
-        scope.pack(fill="x", pady=(0, 8))
-        scope.bind("<<ComboboxSelected>>", lambda _e: self._refresh_list())
-
-        list_frame = ttk.Frame(left)
-        list_frame.pack(fill="both", expand=True)
-
-        self.listbox = tk.Listbox(
-            list_frame,
-            background="#161616",
-            foreground=DARK_FG,
-            selectbackground=DARK_ACCENT,
-            selectforeground=DARK_FG,
-            relief="solid",
-            borderwidth=1,
-            font=("Segoe UI", 9),
-            activestyle="none",
-            exportselection=False,
-        )
-        list_scroll = ttk.Scrollbar(list_frame, orient="vertical", command=self.listbox.yview)
-        self.listbox.configure(yscrollcommand=list_scroll.set)
-        self.listbox.pack(side="left", fill="both", expand=True)
-        list_scroll.pack(side="right", fill="y")
-        self.listbox.bind("<<ListboxSelect>>", self._select_release)
-
-        ttk.Label(
-            left,
-            text=(
-                "RETAINED = KEEP / ADD / REPLACE\n"
-                "DUPLICATE = SKIP / REMOVE\n"
-                "MANUAL = explicitly excluded from the retained set"
-            ),
-            style="Help.TLabel",
-            justify="left",
-        ).pack(anchor="w", pady=(8, 6))
-
-        self.manual_button = ttk.Button(
-            left,
-            text="Remove selected release and re-optimize",
-            command=self._toggle_manual_release,
-        )
-        self.manual_button.pack(fill="x", pady=(0, 5))
-        ttk.Label(
-            left,
-            textvariable=self.manual_status_var,
-            style="Help.TLabel",
-            wraplength=330,
-            justify="left",
-        ).pack(fill="x")
-
-        ttk.Label(right, text="Release dependency web", style="Section.TLabel").pack(anchor="w")
-
-        canvas_frame = ttk.Frame(right)
-        canvas_frame.pack(fill="both", expand=True, pady=(6, 8))
+        map_frame = ttk.Frame(self.panes)
+        details_frame = ttk.Frame(self.panes)
+        self.panes.add(map_frame, minsize=240)
+        self.panes.add(details_frame, minsize=300)
 
         self.canvas = tk.Canvas(
-            canvas_frame,
-            background="#141414",
+            map_frame,
+            background="#111113",
             highlightthickness=1,
-            highlightbackground=DARK_BORDER,
+            highlightbackground="#3f3f46",
             borderwidth=0,
         )
-        xscroll = ttk.Scrollbar(canvas_frame, orient="horizontal", command=self.canvas.xview)
-        yscroll = ttk.Scrollbar(canvas_frame, orient="vertical", command=self.canvas.yview)
+        xscroll = ttk.Scrollbar(map_frame, orient="horizontal", command=self.canvas.xview)
+        yscroll = ttk.Scrollbar(map_frame, orient="vertical", command=self.canvas.yview)
         self.canvas.configure(xscrollcommand=xscroll.set, yscrollcommand=yscroll.set)
         self.canvas.grid(row=0, column=0, sticky="nsew")
         yscroll.grid(row=0, column=1, sticky="ns")
         xscroll.grid(row=1, column=0, sticky="ew")
-        canvas_frame.rowconfigure(0, weight=1)
-        canvas_frame.columnconfigure(0, weight=1)
+        map_frame.rowconfigure(0, weight=1)
+        map_frame.columnconfigure(0, weight=1)
+        self.canvas.bind("<MouseWheel>", self._map_mousewheel)
+        self.canvas.bind("<Shift-MouseWheel>", self._map_shift_mousewheel)
+        self.canvas.bind("<ButtonPress-2>", lambda e: self.canvas.scan_mark(e.x, e.y))
+        self.canvas.bind("<B2-Motion>", lambda e: self.canvas.scan_dragto(e.x, e.y, gain=1))
 
-        self.canvas.bind(
-            "<MouseWheel>",
-            lambda e: self.canvas.yview_scroll(-1 if e.delta > 0 else 1, "units"),
-        )
-        self.canvas.bind(
-            "<Shift-MouseWheel>",
-            lambda e: self.canvas.xview_scroll(-1 if e.delta > 0 else 1, "units"),
-        )
-
-        track_header = ttk.Frame(right)
-        track_header.pack(fill="x")
-        ttk.Label(track_header, text="Track list", style="Section.TLabel").pack(side="left")
+        detail_header = ttk.Frame(details_frame)
+        detail_header.pack(fill="x", pady=(2, 5))
+        title_col = ttk.Frame(detail_header)
+        title_col.pack(side="left", fill="x", expand=True)
         ttk.Label(
-            track_header,
-            text="Red = included recording has no other allowed release carrying it.",
+            title_col,
+            textvariable=self.release_title_var,
+            font=("Segoe UI", 12, "bold"),
+        ).pack(anchor="w")
+        ttk.Label(
+            title_col,
+            textvariable=self.release_meta_var,
+            style="Help.TLabel",
+        ).pack(anchor="w", pady=(2, 0))
+
+        release_actions = ttk.Frame(detail_header)
+        release_actions.pack(side="right")
+        self.remove_release_btn = ttk.Button(
+            release_actions,
+            text="Remove release",
+            command=self._toggle_manual_release,
+        )
+        if self.can_edit:
+            self.remove_release_btn.pack(side="right", padx=(6, 0))
+        ttk.Button(release_actions, text="Open folder", command=self._open_release_folder).pack(
+            side="right", padx=(6, 0)
+        )
+        ttk.Button(release_actions, text="Copy path", command=self._copy_release_path).pack(
+            side="right", padx=(6, 0)
+        )
+
+        path_row = ttk.Frame(details_frame)
+        path_row.pack(fill="x", pady=(0, 6))
+        ttk.Label(path_row, text="Path:", style="Help.TLabel").pack(side="left", padx=(0, 6))
+        self.path_entry = ttk.Entry(path_row, textvariable=self.path_var, state="readonly")
+        self.path_entry.pack(side="left", fill="x", expand=True)
+
+        reason_box = tk.Frame(details_frame, background="#1b1b1f", bd=0)
+        reason_box.pack(fill="x", pady=(0, 6))
+        tk.Label(
+            reason_box,
+            text="Why this release is in the current plan",
+            background="#1b1b1f",
+            foreground="#a1a1aa",
+            font=("Segoe UI", 9, "bold"),
+            anchor="w",
+        ).pack(fill="x", padx=10, pady=(8, 2))
+        tk.Label(
+            reason_box,
+            textvariable=self.reason_var,
+            background="#1b1b1f",
+            foreground="#f4f4f5",
+            font=("Segoe UI", 10),
+            justify="left",
+            anchor="w",
+            wraplength=1320,
+        ).pack(fill="x", padx=10, pady=(0, 8))
+
+        more_row = ttk.Frame(details_frame)
+        more_row.pack(fill="x", pady=(0, 5))
+        ttk.Button(
+            more_row,
+            textvariable=self.details_button_var,
+            command=self._toggle_details,
+        ).pack(side="left")
+
+        self.more_details = tk.Text(
+            details_frame,
+            height=5,
+            wrap="word",
+            background="#18181b",
+            foreground="#d4d4d8",
+            insertbackground="#f4f4f5",
+            selectbackground="#264f78",
+            relief="flat",
+            borderwidth=0,
+            padx=10,
+            pady=8,
+            font=("Segoe UI", 9),
+            state="disabled",
+        )
+
+        track_bar = ttk.Frame(details_frame)
+        track_bar.pack(fill="x", pady=(3, 5))
+        ttk.Label(track_bar, text="Tracks", style="Section.TLabel").pack(side="left")
+        ttk.Label(
+            track_bar,
+            text="Yellow = unique to this retained release. Red = manual removal would lose it.",
             style="Help.TLabel",
         ).pack(side="left", padx=(12, 0))
+        self.track_skip_btn = ttk.Button(
+            track_bar,
+            text="Skip track",
+            command=self._toggle_track_skip,
+        )
+        if self.can_edit:
+            self.track_skip_btn.pack(side="right")
 
-        track_frame = ttk.Frame(right)
-        track_frame.pack(fill="x", pady=(5, 0))
+        track_frame = ttk.Frame(details_frame)
+        track_frame.pack(fill="both", expand=True)
         self.track_tree = ttk.Treeview(
             track_frame,
-            columns=("number", "title", "coverage"),
+            columns=("number", "title", "artist", "duration", "status"),
             show="headings",
-            height=8,
+            style="Analyzer.Treeview",
+            selectmode="browse",
         )
         self.track_tree.heading("number", text="#")
         self.track_tree.heading("title", text="Track")
-        self.track_tree.heading("coverage", text="Coverage after current plan")
-        self.track_tree.column("number", width=48, minwidth=40, stretch=False, anchor="center")
-        self.track_tree.column("title", width=430, minwidth=220, stretch=True)
-        self.track_tree.column("coverage", width=300, minwidth=220, stretch=True)
+        self.track_tree.heading("artist", text="Artist")
+        self.track_tree.heading("duration", text="Length")
+        self.track_tree.heading("status", text="Why / coverage")
+        self.track_tree.column("number", width=44, minwidth=38, stretch=False, anchor="center")
+        self.track_tree.column("title", width=360, minwidth=180, stretch=True)
+        self.track_tree.column("artist", width=220, minwidth=130, stretch=True)
+        self.track_tree.column("duration", width=72, minwidth=60, stretch=False, anchor="center")
+        self.track_tree.column("status", width=520, minwidth=250, stretch=True)
         track_scroll = ttk.Scrollbar(track_frame, orient="vertical", command=self.track_tree.yview)
         self.track_tree.configure(yscrollcommand=track_scroll.set)
-        self.track_tree.pack(side="left", fill="x", expand=True)
+        self.track_tree.pack(side="left", fill="both", expand=True)
         track_scroll.pack(side="right", fill="y")
-        self.track_tree.tag_configure("orphan", foreground="#ff6b6b")
-        self.track_tree.tag_configure("unique", foreground="#e6b85c")
-        self.track_tree.tag_configure("excluded", foreground=DARK_MUTED)
+        self.track_tree.tag_configure("unique", background="#423513", foreground="#ffe08a")
+        self.track_tree.tag_configure("orphan", background="#4a1f24", foreground="#ffb4bc")
+        self.track_tree.tag_configure("manual", foreground="#c4b5fd")
+        self.track_tree.tag_configure("excluded", foreground="#a1a1aa")
+        self.track_tree.bind("<<TreeviewSelect>>", self._select_track)
 
-        footer = ttk.Frame(outer)
-        footer.pack(fill="x", pady=(10, 0))
-        if allow_apply:
-            ttk.Label(
-                footer,
-                text="Manual removals only change the plan until you click Apply current move plan.",
-                style="Help.TLabel",
-            ).pack(side="left")
-            ttk.Button(footer, text="Cancel", command=self._cancel).pack(side="right")
-            ttk.Button(footer, text="Apply current move plan", command=self._apply).pack(
-                side="right", padx=(0, 8)
-            )
-        else:
-            ttk.Button(footer, text="Close", command=self._close).pack(side="right")
+        tk.Label(
+            details_frame,
+            textvariable=self.track_info_var,
+            background=DARK_BG,
+            foreground="#d4d4d8",
+            font=("Segoe UI", 9),
+            justify="left",
+            anchor="w",
+            wraplength=1320,
+        ).pack(fill="x", pady=(6, 0))
 
-        self.protocol("WM_DELETE_WINDOW", self._cancel if allow_apply else self._close)
-        self._refresh_list()
-        self._update_summary()
+        self.protocol("WM_DELETE_WINDOW", self._close)
+        self.after(50, self._initialize_layout)
 
-        self.transient(master)
-        self.grab_set()
-        self.focus_force()
+    def _initial_release_id(self) -> int:
+        retained = [
+            int(item.get("release_id", -1))
+            for item in self.snapshots
+            if str(item.get("outcome", "")) == "RETAINED"
+        ]
+        if retained:
+            return retained[0]
+        if self.snapshots:
+            return int(self.snapshots[0].get("release_id", -1))
+        return -1
 
-    @staticmethod
-    def _retained(item: Dict[str, object]) -> bool:
-        return str(item.get("outcome", "")) == "RETAINED"
-
-    def _current_item(self) -> Optional[Dict[str, object]]:
-        selection = self.listbox.curselection()
-        if not selection:
-            return None
-        index = selection[0]
-        if 0 <= index < len(self.visible_items):
-            return self.visible_items[index]
-        return None
-
-    def _refresh_list(self, preferred_id: Optional[int] = None) -> None:
-        query = normalize_title(self.search_var.get())
-        scope = self.scope_var.get()
-
-        previous_id = preferred_id
-        if previous_id is None:
-            selection = self.listbox.curselection()
-            if selection and selection[0] < len(self.visible_items):
-                previous_id = self.visible_items[selection[0]].get("release_id")
-
-        self.visible_items = []
-        self.listbox.delete(0, "end")
-
-        for item in self.snapshots:
-            retained = self._retained(item)
-            manual_removed = bool(item.get("manual_removed"))
-            if scope == "Retained" and not retained:
-                continue
-            if scope == "Duplicates" and (retained or manual_removed):
-                continue
-            if scope == "Manually removed" and not manual_removed:
-                continue
-
-            haystack = normalize_title(
-                " ".join(
-                    [
-                        str(item.get("name", "")),
-                        str(item.get("path", "")),
-                        str(item.get("reason", "")),
-                        str(item.get("action", "")),
-                        str(item.get("source", "")),
-                    ]
-                )
-            )
-            if query and query not in haystack:
-                continue
-
-            self.visible_items.append(item)
-            release_id = int(item.get("release_id", -1))
+    def _release_choice_values(self) -> List[Tuple[str, int]]:
+        rows: List[Tuple[str, int]] = []
+        for item in sorted(self.snapshots, key=lambda x: str(x.get("name", "")).casefold()):
+            rid = int(item.get("release_id", -1))
             action = str(item.get("action", ""))
-            outcome = str(item.get("outcome", ""))
-            root = "EXISTING" if item.get("root_kind") == "existing" else "NEW"
-            changed = self.baseline_actions.get(release_id) not in (None, action)
-            marker = "* " if changed else ""
-            self.listbox.insert(
-                "end",
-                f"{marker}[{outcome}] [{action}] [{root}] {item.get('name', '')}",
-            )
+            rows.append((f"[{action}] {item.get('name', '')}", rid))
+        return rows
 
-        if not self.visible_items:
-            self._draw_empty("No releases match this filter.")
-            self._refresh_tracklist(None)
-            self._update_manual_controls(None)
-            return
-
-        target = 0
-        if previous_id is not None:
-            for index, item in enumerate(self.visible_items):
-                if item.get("release_id") == previous_id:
-                    target = index
-                    break
-
-        self.listbox.selection_set(target)
-        self.listbox.activate(target)
-        self.listbox.see(target)
-        item = self.visible_items[target]
-        self._draw_release(item)
-        self._refresh_tracklist(item)
-        self._update_manual_controls(item)
-
-    def _select_release(self, _event=None) -> None:
-        item = self._current_item()
-        if item is None:
-            return
-        self._draw_release(item)
-        self._refresh_tracklist(item)
-        self._update_manual_controls(item)
-
-    def _select_release_by_id(self, release_id: int) -> None:
-        for index, item in enumerate(self.visible_items):
-            if int(item.get("release_id", -1)) == int(release_id):
-                self.listbox.selection_clear(0, "end")
-                self.listbox.selection_set(index)
-                self.listbox.activate(index)
-                self.listbox.see(index)
-                self._select_release()
-                return
-
-        self.search_var.set("")
-        self.scope_var.set("All releases")
-        self._refresh_list(preferred_id=release_id)
-
-    def _refresh_tracklist(self, item: Optional[Dict[str, object]]) -> None:
-        self.track_tree.delete(*self.track_tree.get_children())
-        if item is None:
-            return
-
-        for row in item.get("tracklist", []) or []:
-            if bool(row.get("excluded")):
-                coverage = "Skipped by active options"
-                tags = ("excluded",)
-            elif bool(row.get("orphaned")):
-                coverage = "UNIQUE - not found in another allowed release"
-                tags = ("orphan",)
-            elif bool(row.get("covered_by_other_retained")):
-                coverage = "Covered by another retained release"
-                tags = ()
-            elif bool(row.get("available_elsewhere")):
-                coverage = "Available on another release"
-                tags = ()
-            else:
-                coverage = "Unique to this release"
-                tags = ("unique",)
-
-            self.track_tree.insert(
-                "",
-                "end",
-                values=(row.get("number", ""), row.get("title", ""), coverage),
-                tags=tags,
-            )
-
-    def _update_manual_controls(self, item: Optional[Dict[str, object]]) -> None:
-        if not self.can_reoptimize:
-            self.manual_button.configure(
-                text="Re-optimization available only immediately after Analyze",
-                state="disabled",
-            )
-            self.manual_status_var.set("This saved Decision Map is read-only.")
-            return
-
-        if item is None:
-            self.manual_button.configure(text="Remove selected release and re-optimize", state="disabled")
-            self.manual_status_var.set("")
-            return
-
-        rid = int(item.get("release_id", -1))
-        if rid in self.blocked_release_ids:
-            self.manual_button.configure(text="Undo manual removal and re-optimize", state="normal")
-            orphan_count = int(item.get("orphan_count", 0) or 0)
-            if orphan_count:
-                self.manual_status_var.set(
-                    f"{orphan_count} included recording(s) would be lost if this manual removal is applied."
-                )
-            else:
-                self.manual_status_var.set(
-                    "All included recordings from this release are currently covered elsewhere."
-                )
-        elif self._retained(item):
-            self.manual_button.configure(text="Remove selected release and re-optimize", state="normal")
-            self.manual_status_var.set(
-                "This changes only the current plan. No files move until Apply current move plan."
-            )
-        else:
-            self.manual_button.configure(text="Release is already not retained", state="disabled")
-            self.manual_status_var.set(
-                "The automatic plan already removes/skips this release."
-            )
-
-    def _toggle_manual_release(self) -> None:
-        if not self.can_reoptimize:
-            return
-        item = self._current_item()
-        if item is None:
-            return
-
-        rid = int(item.get("release_id", -1))
-        was_blocked = rid in self.blocked_release_ids
-        if was_blocked:
-            self.blocked_release_ids.remove(rid)
-        else:
-            if not self._retained(item):
-                return
-            self.blocked_release_ids.add(rid)
-            if self.scope_var.get() == "Retained":
-                self.scope_var.set("All releases")
-
-        self.selected = optimize_collection(
-            self.releases or [],
-            self.groups or {},
-            self.blocked_release_ids,
-        )
-        self.decisions = build_release_decisions(
-            self.releases or [],
-            self.tracks or [],
-            self.selected,
-            self.reviews,
-            self.blocked_release_ids,
-        )
-        self.snapshots = build_decision_snapshot(
-            self.releases or [],
-            self.tracks or [],
-            self.selected,
-            self.decisions,
-            self.blocked_release_ids,
-        )
-        _save_decision_snapshot(self.snapshots)
+    def _initialize_layout(self) -> None:
+        try:
+            total = max(700, self.panes.winfo_height())
+            self.panes.sash_place(0, 0, max(260, int(total * 0.46)))
+        except Exception:
+            pass
         self._update_summary()
-        self._refresh_list(preferred_id=rid)
+        self._select_release_id(self.selected_release_id)
 
-    def _update_summary(self) -> None:
-        manual_count = len(self.blocked_release_ids)
-        orphan_count = sum(
-            int(item.get("orphan_count", 0) or 0)
-            for item in self.snapshots
-            if item.get("manual_removed")
+    def _map_mousewheel(self, event) -> None:
+        self.canvas.yview_scroll(-1 if event.delta > 0 else 1, "units")
+
+    def _map_shift_mousewheel(self, event) -> None:
+        self.canvas.xview_scroll(-1 if event.delta > 0 else 1, "units")
+
+    def _toggle_maximize(self) -> None:
+        try:
+            if self.state() == "zoomed":
+                self.state("normal")
+                self.maximized = False
+            else:
+                self.state("zoomed")
+                self.maximized = True
+        except Exception:
+            pass
+
+    def _search_release(self, _event=None) -> None:
+        raw = self.search_var.get().strip()
+        if not raw:
+            return
+        rid = self.release_choice_lookup.get(raw)
+        if rid is None:
+            needle = normalize_title(raw)
+            for label, candidate_id in self.release_choices:
+                if needle and needle in normalize_title(label):
+                    rid = candidate_id
+                    break
+        if rid is not None:
+            self._select_release_id(rid)
+
+    def _select_release_id(self, release_id: int) -> None:
+        if release_id not in self.by_snapshot_id:
+            return
+        self.selected_release_id = release_id
+        self.selected_track_global_index = None
+        item = self.by_snapshot_id[release_id]
+        self.release_title_var.set(str(item.get("name", "")))
+        changed = self.baseline_actions.get(release_id) not in (None, str(item.get("action", "")))
+        changed_text = " | changed by your edits" if changed else ""
+        self.release_meta_var.set(
+            f"{item.get('outcome', '')} | {item.get('action', '')} | {item.get('source', '')}"
+            f" | {item.get('included_tracks', 0)} included tracks{changed_text}"
         )
-        changed_count = sum(
-            1
-            for item in self.snapshots
-            if self.baseline_actions.get(int(item.get("release_id", -1))) not in (
+        self.path_var.set(str(item.get("path", "")))
+        self.reason_var.set(str(item.get("reason", "")))
+        self._fill_more_details(item)
+        self._fill_tracklist(item)
+        self._update_release_action(item)
+        self._draw_release_network(item)
+
+    def _draw_release_network(self, item: Dict[str, object]) -> None:
+        self.canvas.delete("all")
+        connected = list(item.get("affected", []) or [])
+        connected.sort(
+            key=lambda row: (
+                -int(row.get("shared_groups", 0) or 0),
+                str(row.get("name", "")).casefold(),
+            )
+        )
+
+        center_x = 900
+        center_y = 520
+        center_width = 330
+        center_height = 110
+
+        positions: List[Tuple[Dict[str, object], float, float]] = []
+        if connected:
+            index = 0
+            ring = 0
+            while index < len(connected):
+                ring += 1
+                radius_x = 520 + (ring - 1) * 400
+                radius_y = 320 + (ring - 1) * 220
+                ring_count = min(12 + (ring - 1) * 6, len(connected) - index)
+                for slot in range(ring_count):
+                    angle = (2.0 * math.pi * slot / max(1, ring_count)) - math.pi / 2.0
+                    x = center_x + math.cos(angle) * radius_x
+                    y = center_y + math.sin(angle) * radius_y
+                    positions.append((connected[index], x, y))
+                    index += 1
+
+        for row, x, y in positions:
+            self.canvas.create_line(
+                center_x,
+                center_y,
+                x,
+                y,
+                fill="#3f3f46",
+                width=1,
+            )
+
+        self._release_node(
+            center_x - center_width / 2,
+            center_y - center_height / 2,
+            center_width,
+            center_height,
+            int(item.get("release_id", -1)),
+            str(item.get("name", "")),
+            str(item.get("action", "")),
+            int(item.get("recording_groups", 0) or 0),
+            selected=True,
+            changed=self.baseline_actions.get(int(item.get("release_id", -1))) not in (
                 None,
                 str(item.get("action", "")),
-            )
+            ),
         )
-        parts = [self.base_summary_text] if self.base_summary_text else []
-        if manual_count:
-            parts.append(f"Manual removals: {manual_count}")
-        if changed_count:
-            parts.append(f"Release decisions changed: {changed_count}")
-        if orphan_count:
-            parts.append(f"Unique recordings without another release: {orphan_count}")
-        self.summary_var.set(" | ".join(parts) if parts else "Decision Map ready.")
 
-    def _node(
+        for row, x, y in positions:
+            rid = int(row.get("release_id", -1))
+            action = str(row.get("action", ""))
+            self._release_node(
+                x - 145,
+                y - 44,
+                290,
+                88,
+                rid,
+                str(row.get("name", "")),
+                action,
+                int(row.get("shared_groups", 0) or 0),
+                selected=False,
+                changed=self.baseline_actions.get(rid) not in (None, action),
+            )
+
+        if not connected:
+            self.canvas.create_text(
+                center_x,
+                center_y + 90,
+                text="No other included release shares this release's current recording groups.",
+                fill="#a1a1aa",
+                font=("Segoe UI", 10),
+                anchor="n",
+            )
+
+        bbox = self.canvas.bbox("all")
+        if bbox:
+            self.canvas.configure(
+                scrollregion=(bbox[0] - 120, bbox[1] - 120, bbox[2] + 120, bbox[3] + 120)
+            )
+        self._fit_map()
+
+    def _release_node(
         self,
-        x: int,
-        y: int,
-        width: int,
-        title: str,
-        body: str,
-        kind: str = "normal",
-        release_id: Optional[int] = None,
-    ) -> Tuple[int, int, int, int]:
-        palette = {
-            "root": ("#2b2b30", DARK_ACCENT),
-            "retained": ("#1f3a2b", "#58a66a"),
-            "duplicate": ("#442525", "#c96a6a"),
-            "warning": ("#4b3022", "#d9905f"),
-            "reason": ("#263549", "#638dc6"),
-            "header": ("#34343a", "#6b6b74"),
-            "normal": ("#242426", DARK_BORDER),
-        }
-        fill, outline = palette.get(kind, palette["normal"])
-
-        wrapped = []
-        for paragraph in (body or "").splitlines() or [""]:
-            lines = textwrap.wrap(paragraph, width=max(24, int(width / 8.0))) or [""]
-            wrapped.extend(lines)
-        body_text = "\n".join(wrapped)
-        height = max(74, 52 + 16 * len(wrapped))
-
-        tag = ""
-        tags = ()
-        if release_id is not None:
-            tag = f"release_node_{release_id}_{x}_{y}"
-            tags = (tag,)
+        x: float,
+        y: float,
+        width: float,
+        height: float,
+        release_id: int,
+        name: str,
+        action: str,
+        shared_or_groups: int,
+        selected: bool,
+        changed: bool,
+    ) -> None:
+        tag = f"release_{release_id}_{int(x)}_{int(y)}"
+        outline = "#5b9bd5" if selected else "#52525b"
+        fill = "#203044" if selected else "#202024"
+        if action in {"SKIP", "REMOVE"}:
+            fill = "#2d2022"
+            outline = "#7f4a50"
+        elif action in {"ADD", "REPLACE", "KEEP"} and not selected:
+            fill = "#1d2a22"
+            outline = "#42644d"
+        if changed:
+            outline = "#d19a4a"
 
         self.canvas.create_rectangle(
             x, y, x + width, y + height,
             fill=fill,
             outline=outline,
-            width=2,
-            tags=tags,
+            width=2 if selected or changed else 1,
+            tags=(tag,),
         )
+        prefix = "* " if changed else ""
+        display_name = textwrap.shorten(name, width=44 if selected else 38, placeholder="...")
         self.canvas.create_text(
-            x + 12,
-            y + 10,
+            x + 12, y + 10,
             anchor="nw",
-            text=title,
-            fill=DARK_FG,
-            font=("Segoe UI", 10, "bold"),
+            text=prefix + display_name,
+            fill="#f4f4f5",
+            font=("Segoe UI", 10, "bold" if selected else "normal"),
             width=width - 24,
-            tags=tags,
+            tags=(tag,),
+        )
+        label = (
+            f"{action} | {shared_or_groups} recording groups"
+            if selected
+            else f"{action} | {shared_or_groups} shared groups"
         )
         self.canvas.create_text(
-            x + 12,
-            y + 36,
+            x + 12, y + height - 26,
             anchor="nw",
-            text=body_text,
-            fill=DARK_MUTED,
+            text=label,
+            fill="#a1a1aa",
             font=("Segoe UI", 9),
             width=width - 24,
-            tags=tags,
+            tags=(tag,),
         )
-        if release_id is not None:
-            self.canvas.tag_bind(
-                tag,
-                "<Button-1>",
-                lambda _e, rid=release_id: self._select_release_by_id(rid),
-            )
-            self.canvas.tag_bind(tag, "<Enter>", lambda _e: self.canvas.configure(cursor="hand2"))
-            self.canvas.tag_bind(tag, "<Leave>", lambda _e: self.canvas.configure(cursor=""))
-        return (x, y, x + width, y + height)
+        self.canvas.tag_bind(tag, "<Button-1>", lambda _e, rid=release_id: self._select_release_id(rid))
+        self.canvas.tag_bind(tag, "<Enter>", lambda _e: self.canvas.configure(cursor="hand2"))
+        self.canvas.tag_bind(tag, "<Leave>", lambda _e: self.canvas.configure(cursor=""))
 
-    def _arrow(
+    def _fit_map(self) -> None:
+        self.canvas.update_idletasks()
+        bbox = self.canvas.bbox("all")
+        if not bbox:
+            return
+        self.canvas.configure(scrollregion=(bbox[0] - 80, bbox[1] - 80, bbox[2] + 80, bbox[3] + 80))
+        try:
+            self.canvas.xview_moveto(0.0)
+            self.canvas.yview_moveto(0.0)
+        except Exception:
+            pass
+
+    def _fill_tracklist(self, item: Dict[str, object]) -> None:
+        self.track_tree.delete(*self.track_tree.get_children())
+        for row in item.get("tracklist", []) or []:
+            if bool(row.get("manual_skip")):
+                status = "Skipped by you (saved)"
+                tags = ("manual",)
+            elif bool(row.get("excluded")):
+                status = "Skipped by active options"
+                tags = ("excluded",)
+            elif bool(row.get("orphaned")):
+                status = "UNIQUE - removing this release would lose it"
+                tags = ("orphan",)
+            elif bool(row.get("unique_to_release")):
+                status = "UNIQUE to this retained release"
+                tags = ("unique",)
+            elif bool(row.get("covered_by_other_retained")):
+                names = row.get("covered_by_names", []) or []
+                status = "Covered by retained release"
+                if names:
+                    status += ": " + "; ".join(names[:2])
+                tags = ()
+            elif bool(row.get("available_elsewhere")):
+                status = "Available on another release"
+                tags = ()
+            else:
+                status = "Included"
+                tags = ()
+
+            distinction = str(row.get("distinction", "")).strip()
+            if distinction and status in {"Included", "UNIQUE to this retained release"}:
+                status = status + " | " + distinction
+
+            iid = str(row.get("track_global_index", -1))
+            self.track_tree.insert(
+                "",
+                "end",
+                iid=iid if iid != "-1" else None,
+                values=(
+                    row.get("number", ""),
+                    row.get("title", ""),
+                    row.get("artist", ""),
+                    row.get("duration", ""),
+                    status,
+                ),
+                tags=tags,
+            )
+        self.track_info_var.set("Select a track for details.")
+        if self.can_edit:
+            self.track_skip_btn.configure(text="Skip track", state="disabled")
+
+    def _select_track(self, _event=None) -> None:
+        selection = self.track_tree.selection()
+        if not selection:
+            return
+        try:
+            index = int(selection[0])
+        except Exception:
+            return
+        self.selected_track_global_index = index
+        row = None
+        item = self.by_snapshot_id.get(self.selected_release_id, {})
+        for candidate in item.get("tracklist", []) or []:
+            if int(candidate.get("track_global_index", -1)) == index:
+                row = candidate
+                break
+        if row is None:
+            return
+
+        pieces = [str(row.get("title", ""))]
+        distinction = str(row.get("distinction", "")).strip()
+        if distinction:
+            pieces.append(distinction)
+        elif bool(row.get("unique_to_release")):
+            pieces.append("This recording group is supplied only by this retained release in the current plan.")
+        elif bool(row.get("covered_by_other_retained")):
+            names = row.get("covered_by_names", []) or []
+            pieces.append("Same recording is retained elsewhere" + (": " + "; ".join(names[:3]) if names else "."))
+        if bool(row.get("manual_skip")):
+            pieces.append("You chose to skip this recording. That choice is saved for future analyses.")
+        self.track_info_var.set("  ".join(pieces))
+
+        if self.can_edit and self.tracks is not None and 0 <= index < len(self.tracks):
+            track = self.tracks[index]
+            if track.manual_skip_rule:
+                self.track_skip_btn.configure(text="Restore track", state="normal")
+            else:
+                self.track_skip_btn.configure(text="Skip track", state="normal")
+
+    def _toggle_track_skip(self) -> None:
+        if not self.can_edit or self.tracks is None or self.selected_track_global_index is None:
+            return
+        index = self.selected_track_global_index
+        if not (0 <= index < len(self.tracks)):
+            return
+        track = self.tracks[index]
+        if track.manual_skip_rule:
+            remove_persistent_track_skip(track.manual_skip_rule, self.tracks)
+        else:
+            add_persistent_track_skip(track, self.tracks)
+        self._reoptimize(preferred_release_id=self.selected_release_id, preferred_track_index=index)
+
+    def _update_release_action(self, item: Dict[str, object]) -> None:
+        if not self.can_edit:
+            return
+        rid = int(item.get("release_id", -1))
+        if rid in self.blocked_release_ids:
+            self.remove_release_btn.configure(text="Undo release removal", state="normal")
+        elif str(item.get("outcome", "")) == "RETAINED":
+            self.remove_release_btn.configure(text="Remove release", state="normal")
+        else:
+            self.remove_release_btn.configure(text="Already not retained", state="disabled")
+
+    def _toggle_manual_release(self) -> None:
+        if not self.can_edit:
+            return
+        rid = self.selected_release_id
+        item = self.by_snapshot_id.get(rid)
+        if item is None:
+            return
+        if rid in self.blocked_release_ids:
+            self.blocked_release_ids.remove(rid)
+        elif str(item.get("outcome", "")) == "RETAINED":
+            self.blocked_release_ids.add(rid)
+        else:
+            return
+        self._reoptimize(preferred_release_id=rid)
+
+    def _reoptimize(
         self,
-        source: Tuple[int, int, int, int],
-        target: Tuple[int, int, int, int],
+        preferred_release_id: Optional[int] = None,
+        preferred_track_index: Optional[int] = None,
     ) -> None:
-        x1 = source[2]
-        y1 = (source[1] + source[3]) // 2
-        x2 = target[0]
-        y2 = (target[1] + target[3]) // 2
-        bend = x1 + max(30, (x2 - x1) // 2)
-        self.canvas.create_line(
-            x1,
-            y1,
-            bend,
-            y1,
-            bend,
-            y2,
-            x2,
-            y2,
-            fill=DARK_MUTED,
-            width=2,
-            arrow=tk.LAST,
-            smooth=True,
+        if not self.can_edit or self.releases is None or self.tracks is None or self.groups is None:
+            return
+        self.selected = optimize_collection(self.releases, self.groups, self.blocked_release_ids)
+        self.decisions = build_release_decisions(
+            self.releases,
+            self.tracks,
+            self.selected,
+            self.reviews,
+            self.blocked_release_ids,
         )
-
-    def _draw_empty(self, text: str) -> None:
-        self.canvas.delete("all")
-        self.canvas.create_text(
-            30,
-            30,
-            anchor="nw",
-            text=text,
-            fill=DARK_MUTED,
-            font=("Segoe UI", 11),
+        self.snapshots = build_decision_snapshot(
+            self.releases,
+            self.tracks,
+            self.selected,
+            self.decisions,
+            self.blocked_release_ids,
         )
-        self.canvas.configure(scrollregion=(0, 0, 900, 600))
-
-    def _draw_release(self, item: Dict[str, object]) -> None:
-        self.canvas.delete("all")
-        self.canvas.xview_moveto(0)
-        self.canvas.yview_moveto(0)
-
-        retained = self._retained(item)
-        manual_removed = bool(item.get("manual_removed"))
-        outcome_kind = "warning" if manual_removed else ("retained" if retained else "duplicate")
-
-        root_body = (
-            f"{item.get('path', '')}\n"
-            f"Source: {item.get('source', '?')}\n"
-            f"Type: {item.get('release_type', '?')}\n"
-            f"Included tracks: {item.get('included_tracks', 0)} | "
-            f"Skipped: {item.get('ignored_tracks', 0)} | "
-            f"Recording groups: {item.get('recording_groups', 0)}"
+        _save_decision_snapshot(self.snapshots)
+        self.by_snapshot_id = {
+            int(item.get("release_id", -1)): item for item in self.snapshots
+        }
+        self.release_choices = self._release_choice_values()
+        self.release_choice_lookup = {label: rid for label, rid in self.release_choices}
+        self.release_search.configure(values=[label for label, _rid in self.release_choices])
+        self._update_summary()
+        self._select_release_id(
+            preferred_release_id if preferred_release_id in self.by_snapshot_id else self._initial_release_id()
         )
-        root = self._node(
-            40,
-            40,
-            350,
-            str(item.get("name", "Release")),
-            root_body,
-            "root",
-        )
+        if preferred_track_index is not None:
+            iid = str(preferred_track_index)
+            if self.track_tree.exists(iid):
+                self.track_tree.selection_set(iid)
+                self.track_tree.see(iid)
+                self._select_track()
 
-        outcome = self._node(
-            470,
-            55,
-            230,
-            str(item.get("outcome", "")),
-            f"Action: {item.get('action', '')}",
-            outcome_kind,
-        )
-        self._arrow(root, outcome)
-
-        reason = self._node(
-            790,
-            30,
-            390,
-            "Main decision",
-            str(item.get("reason", "")),
-            "reason",
-        )
-        self._arrow(outcome, reason)
-
-        y = max(reason[3] + 35, 180)
-
-        factors = [str(x) for x in item.get("decision_factors", []) if str(x).strip()]
-        quality = [str(x) for x in item.get("quality", []) if str(x).strip()]
-        personal = item.get("personal_matches", [])
-        essential = (
-            item.get("essential_examples", [])
-            or item.get("essential_tracks", [])
-            or []
-        )
-
-        factor_header = self._node(
-            790,
-            y,
-            260,
-            "Decision factors",
-            f"{len(factors) + len(quality)} factor(s)",
-            "header",
-        )
-        self._arrow(outcome, factor_header)
-        child_y = y
-        for factor in (factors + quality)[:7]:
-            child = self._node(1130, child_y, 390, "Factor", factor, "normal")
-            self._arrow(factor_header, child)
-            child_y = child[3] + 18
-        y = max(factor_header[3], child_y) + 30
-
-        if essential and (retained or manual_removed):
-            title = "Orphaned audio after manual removal" if manual_removed else "Unique / essential audio"
-            body_title = "No replacement release has these recordings" if manual_removed else "Keeps these recordings"
-            unique_header = self._node(
-                790,
-                y,
-                260,
-                title,
-                f"{len(essential)} shown",
-                "warning" if manual_removed else "header",
+    def _fill_more_details(self, item: Dict[str, object]) -> None:
+        lines: List[str] = []
+        for factor in item.get("decision_factors", []) or []:
+            lines.append("• " + str(factor))
+        for quality in item.get("quality", []) or []:
+            lines.append("• " + str(quality))
+        ignored = item.get("ignored_counts", {}) or {}
+        if any(int(ignored.get(key, 0) or 0) for key in ("remix", "live", "pattern", "manual")):
+            lines.append(
+                "• Skipped tracks: "
+                f"remix={ignored.get('remix', 0)}, live={ignored.get('live', 0)}, "
+                f"pattern={ignored.get('pattern', 0)}, saved-by-you={ignored.get('manual', 0)}"
             )
-            self._arrow(outcome, unique_header)
-            unique_body = "\n".join(f"- {track_title}" for track_title in essential[:12])
-            unique_node = self._node(
-                1130,
-                y,
-                390,
-                body_title,
-                unique_body,
-                "warning" if manual_removed else "normal",
-            )
-            self._arrow(unique_header, unique_node)
-            y = max(unique_header[3], unique_node[3]) + 30
-
-        affected = item.get("affected", []) or []
-        if affected:
-            affected_header = self._node(
-                790,
-                y,
-                260,
-                "Connected releases",
-                f"{len(affected)} release(s) share included audio",
-                "header",
-            )
-            self._arrow(root, affected_header)
-            affected_y = y
-            for row in affected:
-                examples = row.get("examples", []) or []
-                release_id = int(row.get("release_id"))
-                current_action = str(row.get("action", ""))
-                body = (
-                    f"Shared recording groups: {row.get('shared_groups', 0)}\n"
-                    f"Current: {row.get('outcome', '')} / {current_action}"
-                )
-                baseline_action = self.baseline_actions.get(release_id)
-                if baseline_action is not None and baseline_action != current_action:
-                    body += f"\nChanged from initial action: {baseline_action}"
-                if examples:
-                    body += "\nExamples: " + "; ".join(examples[:4])
-                affected_node = self._node(
-                    1130,
-                    affected_y,
-                    390,
-                    str(row.get("name", "")),
-                    body,
-                    "warning" if row.get("manual_removed") else "normal",
-                    release_id,
-                )
-                self._arrow(affected_header, affected_node)
-                affected_y = affected_node[3] + 18
-            y = max(affected_header[3], affected_y) + 30
-
-        if personal:
-            pick_header = self._node(
-                790,
-                y,
-                260,
-                "Personal Picks",
-                f"{len(personal)} matched track(s)",
-                "header",
-            )
-            self._arrow(outcome, pick_header)
-            pick_lines = []
-            for row in personal[:10]:
-                pick_lines.append(f"- {row.get('title', '')}  <-  {row.get('rule', '')}")
-            pick_node = self._node(1130, y, 390, "Explicitly preserved", "\n".join(pick_lines), "normal")
-            self._arrow(pick_header, pick_node)
-            y = max(pick_header[3], pick_node[3]) + 30
-
-        coverage = item.get("coverage", []) or []
-        if coverage:
-            cover_header = self._node(
-                790,
-                y,
-                260,
-                "Covered by retained releases",
-                f"{len(coverage)} release(s)",
-                "header",
-            )
-            self._arrow(outcome, cover_header)
-            cover_y = y
-            for row in coverage[:10]:
-                examples = row.get("examples", []) or []
-                body = (
-                    f"{row.get('groups', 0)} recording group(s)\n"
-                    + ("Examples: " + "; ".join(examples[:5]) if examples else "")
-                )
-                cover = self._node(
-                    1130,
-                    cover_y,
-                    390,
-                    str(row.get("name", "")),
-                    body,
-                    "normal",
-                    int(row.get("release_id")),
-                )
-                self._arrow(cover_header, cover)
-                cover_y = cover[3] + 18
-            y = max(cover_header[3], cover_y) + 30
-
-        related = item.get("related", []) or []
-        if related:
-            related_header = self._node(
-                790,
-                y,
-                260,
-                "Direct relationship",
-                f"{len(related)} release(s)",
-                "header",
-            )
-            self._arrow(outcome, related_header)
-            related_y = y
-            for row in related[:8]:
-                body = (
-                    f"Action: {row.get('action', '')}\n"
-                    f"Source: {row.get('source', '')}\n"
-                    f"Included tracks: {row.get('included_tracks', 0)}"
-                )
-                rel_node = self._node(
-                    1130,
-                    related_y,
-                    390,
-                    str(row.get("name", "")),
-                    body,
-                    "normal",
-                    int(row.get("release_id")),
-                )
-                self._arrow(related_header, rel_node)
-                related_y = rel_node[3] + 18
-            y = max(related_header[3], related_y) + 30
-
         alternatives = item.get("alternatives", []) or []
         if alternatives:
-            alt_header = self._node(
-                790,
-                y,
-                260,
-                "Same-coverage alternatives",
-                "Context only - audio groups are the identity basis",
-                "header",
-            )
-            self._arrow(outcome, alt_header)
-            alt_y = y
-            for row in alternatives[:8]:
-                body = (
-                    f"Action: {row.get('action', '')}\n"
-                    f"Source: {row.get('source', '')}\n"
-                    f"Included tracks: {row.get('included_tracks', 0)} | "
-                    f"{str(row.get('root_kind', '')).title()}"
-                )
-                alt = self._node(
-                    1130,
-                    alt_y,
-                    390,
-                    str(row.get("name", "")),
-                    body,
-                    "normal",
-                    int(row.get("release_id")),
-                )
-                self._arrow(alt_header, alt)
-                alt_y = alt[3] + 18
-            y = max(alt_header[3], alt_y) + 30
+            lines.append("• Same-coverage alternatives: " + "; ".join(str(row.get("name", "")) for row in alternatives[:6]))
+        text = "\n".join(lines) if lines else "No additional decision details."
+        self.more_details.configure(state="normal")
+        self.more_details.delete("1.0", "end")
+        self.more_details.insert("1.0", text)
+        self.more_details.configure(state="disabled")
 
-        ignored = item.get("ignored_counts", {}) or {}
-        if any(int(ignored.get(key, 0) or 0) for key in ("remix", "live", "pattern")):
-            ignored_header = self._node(
-                790,
-                y,
-                260,
-                "Skipped by options",
-                "These tracks did not help the release survive",
-                "header",
-            )
-            self._arrow(outcome, ignored_header)
-            ignored_node = self._node(
-                1130,
-                y,
-                390,
-                "Excluded from optimization",
-                (
-                    f"Remix-classified: {ignored.get('remix', 0)}\n"
-                    f"Live-classified: {ignored.get('live', 0)}\n"
-                    f"Unusual-pattern exclusions: {ignored.get('pattern', 0)}"
-                ),
-                "normal",
-            )
-            self._arrow(ignored_header, ignored_node)
-            y = max(ignored_header[3], ignored_node[3]) + 30
-
-        bbox = self.canvas.bbox("all")
-        if bbox:
-            self.canvas.configure(
-                scrollregion=(
-                    max(0, bbox[0] - 30),
-                    max(0, bbox[1] - 30),
-                    bbox[2] + 60,
-                    bbox[3] + 60,
-                )
-            )
+    def _toggle_details(self) -> None:
+        if self.details_open:
+            self.more_details.pack_forget()
+            self.details_button_var.set("More details")
+            self.details_open = False
         else:
-            self.canvas.configure(scrollregion=(0, 0, 1600, max(800, y)))
+            self.more_details.pack(fill="x", pady=(0, 6), before=self.track_tree.master.master)
+            self.details_button_var.set("Hide details")
+            self.details_open = True
+
+    def _open_release_folder(self) -> None:
+        path = Path(self.path_var.get())
+        try:
+            if os.name == "nt":
+                os.startfile(path)
+            else:
+                subprocess.Popen(["xdg-open", str(path)])
+        except Exception as exc:
+            messagebox.showerror(APP_NAME, f"Could not open folder:\n{exc}", parent=self)
+
+    def _copy_release_path(self) -> None:
+        try:
+            self.clipboard_clear()
+            self.clipboard_append(self.path_var.get())
+            self.update_idletasks()
+        except Exception:
+            pass
+
+    def _update_summary(self) -> None:
+        manual_release_count = len(self.blocked_release_ids)
+        manual_track_count = sum(1 for track in (self.tracks or []) if bool(track.manual_skip_rule))
+        changed_count = sum(
+            1
+            for item in self.snapshots
+            if self.baseline_actions.get(int(item.get("release_id", -1))) not in (
+                None, str(item.get("action", ""))
+            )
+        )
+        orphan_count = sum(
+            int(item.get("orphan_count", 0) or 0)
+            for item in self.snapshots
+            if item.get("manual_removed")
+        )
+        parts = [self.base_summary_text] if self.base_summary_text else []
+        if manual_release_count:
+            parts.append(f"Manually removed releases: {manual_release_count}")
+        if manual_track_count:
+            parts.append(f"Saved skipped tracks: {manual_track_count}")
+        if changed_count:
+            parts.append(f"Decisions changed: {changed_count}")
+        if orphan_count:
+            parts.append(f"Uncovered unique recordings: {orphan_count}")
+        self.summary_var.set(" | ".join(parts) if parts else "Release map ready.")
 
     def _orphan_rows(self) -> List[Tuple[str, str]]:
         rows: List[Tuple[str, str]] = []
@@ -6619,22 +6876,21 @@ class DecisionExplorerWindow(tk.Toplevel):
             if not messagebox.askyesno(
                 APP_NAME,
                 (
-                    f"{len(orphan_rows)} included recording(s) are not available in any other "
-                    "allowed release after your manual removals:\n\n"
-                    f"{preview}\n\nApply the move plan anyway?"
+                    f"{len(orphan_rows)} included recording(s) have no other allowed release after "
+                    f"your manual release removals:\n\n{preview}\n\nApply the plan anyway?"
                 ),
                 parent=self,
             ):
                 return
-        self.result = True
+        self.result = "apply"
         self.destroy()
 
-    def _cancel(self) -> None:
-        self.result = False
+    def _reanalyze(self) -> None:
+        self.result = "reanalyze"
         self.destroy()
 
     def _close(self) -> None:
-        self.result = None
+        self.result = "close"
         self.destroy()
 
 
@@ -6679,7 +6935,7 @@ class DoneWindow(tk.Toplevel):
         ttk.Button(buttons, text="Open duplicates", command=lambda: os.startfile(self.duplicates)).pack(side="left", padx=8)
         ttk.Button(buttons, text="Undo last run", command=self.undo).pack(side="left", padx=8)
         if self.decision_callback is not None:
-            ttk.Button(buttons, text="Decision Map...", command=self.open_decision_map).pack(side="left", padx=8)
+            ttk.Button(buttons, text="Release Map...", command=self.open_decision_map).pack(side="left", padx=8)
         ttk.Button(buttons, text="Close", command=self.destroy).pack(side="right")
 
         self.transient(master)
@@ -6687,622 +6943,94 @@ class DoneWindow(tk.Toplevel):
         self.focus_force()
 
     def open_decision_map(self):
-        if self.decision_callback is None:
-            return
-        try:
-            self.grab_release()
-        except Exception:
-            pass
-        try:
-            self.decision_callback()
-        finally:
-            try:
-                if self.winfo_exists():
-                    self.grab_set()
-                    self.focus_force()
-            except Exception:
-                pass
-
-    def undo(self):
-        if not messagebox.askyesno(APP_NAME, "Undo last run?", parent=self):
-            return
-        try:
-            restored, conflicts = undo_last_run()
-        except Exception as exc:
-            messagebox.showerror(APP_NAME, str(exc), parent=self)
-            return
-        if conflicts:
-            messagebox.showwarning(
-                APP_NAME,
-                f"Restored: {restored}\nConflicts: {len(conflicts)}",
-                parent=self,
-            )
-        else:
-            messagebox.showinfo(APP_NAME, f"Restored: {restored}", parent=self)
-        self.destroy()
-
-
-
-class ToolTip:
-    def __init__(self, widget, text: str):
-        self.widget = widget
-        self.text = text
-        self.tip = None
-        widget.bind("<Enter>", self._show, add="+")
-        widget.bind("<Leave>", self._hide, add="+")
-        widget.bind("<ButtonPress>", self._hide, add="+")
-
-    def _show(self, _event=None):
-        if self.tip or not self.text:
-            return
-        try:
-            x = self.widget.winfo_rootx() + 14
-            y = self.widget.winfo_rooty() + self.widget.winfo_height() + 6
-            self.tip = tk.Toplevel(self.widget)
-            self.tip.wm_overrideredirect(True)
-            self.tip.wm_geometry(f"+{x}+{y}")
-            label = tk.Label(
-                self.tip,
-                text=self.text,
-                justify="left",
-                background=DARK_FIELD,
-                foreground=DARK_FG,
-                relief="solid",
-                borderwidth=1,
-                padx=8,
-                pady=5,
-                font=("Segoe UI", 9),
-            )
-            label.pack()
-        except Exception:
-            self.tip = None
-
-    def _hide(self, _event=None):
-        if self.tip is not None:
-            try:
-                self.tip.destroy()
-            except Exception:
-                pass
-            self.tip = None
-
-
-class PhraseReviewWindow(tk.Toplevel):
-    """Analyze-time review of detected remix/live phrase families."""
-
-    def __init__(
-        self,
-        master,
-        candidates: List[Tuple[str, int, List[str]]],
-        existing_rules: List[Dict[str, str]],
-    ):
-        super().__init__(master)
-        self.title(f"{APP_NAME} - Personal Picks Review")
-        self.geometry("900x650")
-        self.minsize(760, 520)
-        self.configure(background=DARK_BG)
-        _enable_dark_titlebar(self)
-        self.result: Optional[List[str]] = None
-        self.candidates = list(candidates)
-        self.added: Set[str] = set()
-
-        self.existing = {
-            _personal_pick_normalize(str(item.get("value", "")))
-            for item in existing_rules
-            if isinstance(item, dict) and str(item.get("value", "")).strip()
-        }
-
-        outer = ttk.Frame(self)
-        outer.pack(fill="both", expand=True, padx=16, pady=14)
-
-        ttk.Label(outer, text="Live / remix phrase review", font=("Segoe UI", 15, "bold")).pack(anchor="w")
-        ttk.Label(
-            outer,
-            text=(
-                "Detected from this analysis. Add only the live/remix families you personally want preserved. "
-                "Existing Personal Picks are marked automatically. Continue starts the normal duplicate analysis."
-            ),
-            style="Help.TLabel",
-            wraplength=850,
-            justify="left",
-        ).pack(anchor="w", pady=(5, 10))
-
-        body = ttk.Frame(outer)
-        body.pack(fill="both", expand=True)
-        canvas = tk.Canvas(body, background=DARK_BG, highlightthickness=0, borderwidth=0)
-        scroll = ttk.Scrollbar(body, orient="vertical", command=canvas.yview)
-        canvas.configure(yscrollcommand=scroll.set)
-        canvas.pack(side="left", fill="both", expand=True)
-        scroll.pack(side="right", fill="y")
-
-        rows = ttk.Frame(canvas)
-        window_id = canvas.create_window((0, 0), window=rows, anchor="nw")
-
-        def sync_scroll(_event=None):
-            canvas.configure(scrollregion=canvas.bbox("all"))
-            canvas.itemconfigure(window_id, width=canvas.winfo_width())
-
-        rows.bind("<Configure>", sync_scroll)
-        canvas.bind("<Configure>", sync_scroll)
-        canvas.bind("<MouseWheel>", lambda e: canvas.yview_scroll(int(-e.delta / 120), "units"))
-
-        self.buttons: Dict[str, ttk.Button] = {}
-
-        for row_index, (phrase, count, examples) in enumerate(self.candidates):
-            key = _personal_pick_normalize(phrase)
-            row = ttk.Frame(rows)
-            row.grid(row=row_index, column=0, sticky="ew", pady=(0, 10))
-            row.columnconfigure(0, weight=1)
-            rows.columnconfigure(0, weight=1)
-
-            kinds = []
-            if is_live_text(phrase):
-                kinds.append("Live")
-            if is_remix_text(phrase):
-                kinds.append("Remix")
-            kind = " / ".join(kinds) if kinds else "Version"
-
-            ttk.Label(
-                row,
-                text=f"{phrase}  [{kind}]  ({count})",
-                font=("Segoe UI", 10, "bold"),
-            ).grid(row=0, column=0, sticky="w")
-
-            if examples:
-                ttk.Label(
-                    row,
-                    text="Examples: " + "; ".join(examples[:3]),
-                    style="Help.TLabel",
-                    wraplength=650,
-                    justify="left",
-                ).grid(row=1, column=0, sticky="w", pady=(2, 0))
-
-            if key in self.existing:
-                ttk.Label(row, text="In keep list", style="Help.TLabel").grid(
-                    row=0, column=1, rowspan=2, sticky="e", padx=(12, 0)
-                )
-            else:
-                button = ttk.Button(
-                    row,
-                    text="Add to keep list",
-                    command=lambda p=phrase, k=key: self._add_phrase(p, k),
-                )
-                button.grid(row=0, column=1, rowspan=2, sticky="e", padx=(12, 0))
-                self.buttons[key] = button
-
-        footer = ttk.Frame(outer)
-        footer.pack(fill="x", pady=(12, 0))
-        ttk.Button(footer, text="Cancel", command=self._cancel).pack(side="right")
-        ttk.Button(footer, text="Continue", command=self._accept).pack(side="right", padx=(0, 8))
-
-        self.protocol("WM_DELETE_WINDOW", self._cancel)
-        self.transient(master)
-        self.grab_set()
-        self.focus_force()
-
-    def _add_phrase(self, phrase: str, key: str) -> None:
-        if not key or key in self.existing or key in self.added:
-            return
-        self.added.add(key)
-        button = self.buttons.get(key)
-        if button is not None:
-            button.configure(text="Added", state="disabled")
-
-    def _accept(self) -> None:
-        self.result = [
-            phrase
-            for phrase, _count, _examples in self.candidates
-            if _personal_pick_normalize(phrase) in self.added
-        ]
-        self.destroy()
-
-    def _cancel(self) -> None:
-        self.result = None
-        self.destroy()
-
-
-class PersonalPicksWindow(tk.Toplevel):
-    """Persistent exceptions to the global Remix/Live switches."""
-
-    def __init__(self, master, rules: List[Dict[str, str]]):
-        super().__init__(master)
-        self.title(f"{APP_NAME} - Personal Picks")
-        self.geometry("760x500")
-        self.minsize(660, 430)
-        self.configure(background=DARK_BG)
-        _enable_dark_titlebar(self)
-        self.result: Optional[List[Dict[str, str]]] = None
-        self.rules: List[Dict[str, str]] = [
-            {"mode": str(item.get("mode", "contains")), "value": str(item.get("value", ""))}
-            for item in rules
-            if isinstance(item, dict) and str(item.get("value", "")).strip()
-        ]
-
-        outer = ttk.Frame(self)
-        outer.pack(fill="both", expand=True, padx=16, pady=14)
-
-        ttk.Label(outer, text="Personal Picks", font=("Segoe UI", 15, "bold")).pack(anchor="w")
-        ttk.Label(
-            outer,
-            text=(
-                "These are exceptions to unchecked Save Remixes / Save Live recordings. "
-                "A matched track participates normally in optimization; it does not force a specific release to stay. "
-                "Phrase rules ignore case and punctuation, so 'Live From Capitol Studios' also matches year/punctuation variants."
-            ),
-            style="Help.TLabel",
-            wraplength=720,
-            justify="left",
-        ).pack(anchor="w", pady=(5, 10))
-
-        self.listbox = tk.Listbox(
-            outer,
-            background="#161616",
-            foreground=DARK_FG,
-            selectbackground=DARK_ACCENT,
-            selectforeground=DARK_FG,
-            relief="solid",
-            borderwidth=1,
-            font=("Segoe UI", 10),
-            activestyle="none",
-        )
-        self.listbox.pack(fill="both", expand=True)
-        self._refresh()
-
-        entry_row = ttk.Frame(outer)
-        entry_row.pack(fill="x", pady=(10, 0))
-        self.value_var = tk.StringVar()
-        entry = ttk.Entry(entry_row, textvariable=self.value_var)
-        entry.pack(side="left", fill="x", expand=True)
-        entry.bind("<Return>", lambda _e: self._add("contains"))
-        ttk.Button(entry_row, text="Add phrase", command=lambda: self._add("contains")).pack(side="left", padx=(8, 0))
-        ttk.Button(entry_row, text="Add exact title", command=lambda: self._add("exact")).pack(side="left", padx=(6, 0))
-
-        toolbar = ttk.Frame(outer)
-        toolbar.pack(fill="x", pady=(8, 0))
-        ttk.Button(toolbar, text="Remove selected", command=self._remove).pack(side="left")
-        ttk.Button(toolbar, text="Clear all", command=self._clear).pack(side="left", padx=(8, 0))
-
-        footer = ttk.Frame(outer)
-        footer.pack(fill="x", pady=(12, 0))
-        ttk.Button(footer, text="Cancel", command=self._cancel).pack(side="right")
-        ttk.Button(footer, text="Save", command=self._accept).pack(side="right", padx=(0, 8))
-
-        self.protocol("WM_DELETE_WINDOW", self._cancel)
-        self.transient(master)
-        self.grab_set()
-        entry.focus_set()
-
-    def _refresh(self) -> None:
-        self.listbox.delete(0, "end")
-        for item in self.rules:
-            mode = "Phrase" if item.get("mode") != "exact" else "Exact title"
-            self.listbox.insert("end", f"{mode}: {item.get('value', '')}")
-
-    def _add(self, mode: str) -> None:
-        value = self.value_var.get().strip()
-        if not value:
-            return
-        normalized = _personal_pick_normalize(value)
-        if not normalized:
-            return
-        for item in self.rules:
-            if (
-                str(item.get("mode", "contains")).lower() == mode
-                and _personal_pick_normalize(str(item.get("value", ""))) == normalized
-            ):
-                self.value_var.set("")
-                return
-        self.rules.append({"mode": mode, "value": value})
-        self.value_var.set("")
-        self._refresh()
-        self.listbox.see("end")
-
-    def _remove(self) -> None:
-        indexes = list(self.listbox.curselection())
-        for index in reversed(indexes):
-            if 0 <= index < len(self.rules):
-                del self.rules[index]
-        self._refresh()
-
-    def _clear(self) -> None:
-        self.rules.clear()
-        self._refresh()
-
-    def _accept(self) -> None:
-        self.result = [dict(item) for item in self.rules]
-        self.destroy()
-
-    def _cancel(self) -> None:
-        self.result = None
-        self.destroy()
-
-
-class PatternReviewWindow(tk.Toplevel):
-    def __init__(self, master, patterns: List[Dict[str, object]], preferences: Dict[str, bool]):
-        super().__init__(master)
-        self.title(f"{APP_NAME} - Track Pattern Review")
-        self.geometry("860x640")
-        self.minsize(720, 480)
-        self.configure(background=DARK_BG)
-        _enable_dark_titlebar(self)
-        self.result: Optional[Dict[str, bool]] = None
-        self.vars: Dict[str, tk.BooleanVar] = {}
-
-        outer = ttk.Frame(self)
-        outer.pack(fill="both", expand=True, padx=16, pady=14)
-
-        ttk.Label(outer, text="Unusual track pattern review", font=("Segoe UI", 15, "bold")).pack(anchor="w")
-        ttk.Label(
-            outer,
-            text=(
-                "Only unusual / non-standard patterns are shown. Standard families are recognized structurally, so prefixes "
-                "such as artist/remixer names do not make Radio Edit, Instrumental, Acoustic, Demo, Session, "
-                "Extended/VIP/Vocal Mix, 7\"/12\" versions, etc. appear here. "
-                "Remix/live tracks stay controlled by Save Remixes / Save Live recordings."
-            ),
-            style="Help.TLabel",
-            wraplength=810,
-            justify="left",
-        ).pack(anchor="w", pady=(5, 10))
-
-        toolbar = ttk.Frame(outer)
-        toolbar.pack(fill="x", pady=(0, 8))
-        ttk.Button(toolbar, text="Check all", command=lambda: self._set_all(True)).pack(side="left")
-        ttk.Button(toolbar, text="Uncheck all", command=lambda: self._set_all(False)).pack(side="left", padx=(8, 0))
-
-        body = ttk.Frame(outer)
-        body.pack(fill="both", expand=True)
-        canvas = tk.Canvas(body, background=DARK_BG, highlightthickness=0, borderwidth=0)
-        scroll = ttk.Scrollbar(body, orient="vertical", command=canvas.yview)
-        canvas.configure(yscrollcommand=scroll.set)
-        canvas.pack(side="left", fill="both", expand=True)
-        scroll.pack(side="right", fill="y")
-
-        rows = ttk.Frame(canvas)
-        window_id = canvas.create_window((0, 0), window=rows, anchor="nw")
-
-        def sync_scroll(_event=None):
-            canvas.configure(scrollregion=canvas.bbox("all"))
-            canvas.itemconfigure(window_id, width=canvas.winfo_width())
-
-        rows.bind("<Configure>", sync_scroll)
-        canvas.bind("<Configure>", sync_scroll)
-        canvas.bind("<MouseWheel>", lambda e: canvas.yview_scroll(int(-e.delta / 120), "units"))
-
-        for row_index, item in enumerate(patterns):
-            key = str(item["key"])
-            default = bool(preferences.get(key, True))
-            var = tk.BooleanVar(value=default)
-            self.vars[key] = var
-
-            row = ttk.Frame(rows)
-            row.grid(row=row_index, column=0, sticky="ew", pady=(0, 9))
-            rows.columnconfigure(0, weight=1)
-
-            count = int(item.get("count", 0))
-            label = str(item.get("label", key))
-            ttk.Checkbutton(row, text=f"{label} ({count})", variable=var).pack(anchor="w")
-
-            variants = [str(x) for x in item.get("variants", [])]
-            examples = [str(x) for x in item.get("examples", [])]
-            details = []
-            if len(variants) > 1:
-                details.append("Variants: " + "; ".join(variants[:6]))
-            if examples:
-                details.append("Examples: " + "; ".join(examples[:3]))
-            if details:
-                ttk.Label(
-                    row,
-                    text=" | ".join(details),
-                    style="Help.TLabel",
-                    wraplength=790,
-                    justify="left",
-                ).pack(anchor="w", padx=(24, 0), pady=(2, 0))
-
-        footer = ttk.Frame(outer)
-        footer.pack(fill="x", pady=(12, 0))
-        ttk.Button(footer, text="Cancel", command=self._cancel).pack(side="right")
-        ttk.Button(footer, text="Continue", command=self._accept).pack(side="right", padx=(0, 8))
-
-        self.protocol("WM_DELETE_WINDOW", self._cancel)
-        self.transient(master)
-        self.grab_set()
-        self.focus_force()
-
-    def _set_all(self, value: bool) -> None:
-        for var in self.vars.values():
-            var.set(value)
-
-    def _accept(self) -> None:
-        self.result = {key: bool(var.get()) for key, var in self.vars.items()}
-        self.destroy()
-
-    def _cancel(self) -> None:
-        self.result = None
-        self.destroy()
-
-
-class App(tk.Tk):
-    def __init__(self):
-        super().__init__()
-        self.title(f"{APP_NAME} {APP_VERSION}")
-        self.geometry("920x620")
-        self.minsize(820, 560)
-        _apply_dark_theme(self)
-        saved = _load_app_settings()
-        self.existing_var = tk.StringVar(value=saved.get("existing_discography", ""))
-        self.recycle_var = tk.StringVar(value=saved.get("recycle_update_folder", ""))
-
-        if "save_remixes" in saved:
-            save_remixes = bool(saved.get("save_remixes"))
-        else:
-            save_remixes = not bool(saved.get("exclude_remixes", True))
-        if "save_live" in saved:
-            save_live = bool(saved.get("save_live"))
-        else:
-            save_live = not bool(saved.get("exclude_live", True))
-
-        self.save_remixes_var = tk.BooleanVar(value=save_remixes)
-        self.save_live_var = tk.BooleanVar(value=save_live)
-        self.logging_var = tk.BooleanVar(value=bool(saved.get("logging_enabled", False)))
-        saved_patterns = saved.get("unusual_pattern_preferences_v5", {})
-        self.pattern_preferences: Dict[str, bool] = (
-            {str(k): bool(v) for k, v in saved_patterns.items()} if isinstance(saved_patterns, dict) else {}
-        )
-        saved_personal = saved.get("personal_keep_rules_v1", [])
-        self.personal_keep_rules: List[Dict[str, str]] = []
-        if isinstance(saved_personal, list):
-            for item in saved_personal:
-                if not isinstance(item, dict):
-                    continue
-                mode = str(item.get("mode", "contains")).strip().lower()
-                value = str(item.get("value", "")).strip()
-                if mode in {"contains", "exact"} and value:
-                    self.personal_keep_rules.append({"mode": mode, "value": value})
-        self.status_var = tk.StringVar(value="Ready")
-        self.progress_detail_var = tk.StringVar(value="")
-        self.progress_var = tk.DoubleVar(value=0)
-        self._running = False
-        self._run_started_at = 0.0
-        self._last_progress_stage = ""
-        self._decision_snapshot: List[Dict[str, object]] = _load_decision_snapshot()
-        self._build()
-        self.protocol("WM_DELETE_WINDOW", self.on_close)
-
-    def _build(self):
-        frm = ttk.Frame(self)
-        frm.pack(fill="both", expand=True, padx=16, pady=14)
-        frm.columnconfigure(0, weight=1)
-        frm.rowconfigure(11, weight=1)
-
-        ttk.Label(frm, text="Existing discography (optional)").grid(row=0, column=0, sticky="w", pady=(0, 3))
-        existing_entry = ttk.Entry(frm, textvariable=self.existing_var)
-        existing_entry.grid(row=1, column=0, sticky="ew")
-        existing_buttons = ttk.Frame(frm)
-        existing_buttons.grid(row=1, column=1, padx=(10, 0), sticky="e")
-        ttk.Button(existing_buttons, text="Browse...", command=lambda: self.browse(self.existing_var)).pack(side="left")
-        ttk.Button(existing_buttons, text="Clear", command=self.clear_existing).pack(side="left", padx=(6, 0))
-        ToolTip(existing_entry, "Already processed collection. Leave blank to analyze only the new/update folder.")
-
-        ttk.Label(frm, text="New / update releases").grid(row=2, column=0, sticky="w", pady=(12, 3))
-        recycle_entry = ttk.Entry(frm, textvariable=self.recycle_var)
-        recycle_entry.grid(row=3, column=0, sticky="ew")
-        ttk.Button(frm, text="Browse...", command=lambda: self.browse(self.recycle_var)).grid(
-            row=3, column=1, padx=(10, 0), sticky="e"
-        )
-        ToolTip(recycle_entry, "Folder containing releases to analyze and filter.")
-
-        options = ttk.Frame(frm)
-        options.grid(row=4, column=0, columnspan=2, sticky="w", pady=(14, 8))
-        remix_cb = ttk.Checkbutton(
-            options,
-            text="Save Remixes",
-            variable=self.save_remixes_var,
-            command=self.save_settings,
-        )
-        remix_cb.pack(side="left")
-        live_cb = ttk.Checkbutton(
-            options,
-            text="Save Live recordings",
-            variable=self.save_live_var,
-            command=self.save_settings,
-        )
-        live_cb.pack(side="left", padx=(18, 0))
-        self.personal_picks_btn = ttk.Button(
-            options,
-            text=self._personal_picks_button_text(),
-            command=self.edit_personal_picks,
-        )
-        self.personal_picks_btn.pack(side="left", padx=(18, 0))
-        logging_cb = ttk.Checkbutton(
-            options,
-            text="Logging",
-            variable=self.logging_var,
-            command=self.save_settings,
-        )
-        logging_cb.pack(side="left", padx=(18, 0))
-        ToolTip(remix_cb, "Checked: remixes are included in comparison and selection. Unchecked: remixes are skipped.")
-        ToolTip(live_cb, "Checked: live recordings are included in comparison and selection. Unchecked: live recordings are skipped.")
-        ToolTip(self.personal_picks_btn, "Persistent exceptions: matching remix/live tracks are included even when their global checkbox is unchecked.")
-        ToolTip(logging_cb, "Checked: write a detailed JSONL log for the audio comparison process.")
-
-        match_label = ttk.Label(frm, text="Match: Chromaprint + duration (audio only)", style="Help.TLabel")
-        match_label.grid(row=5, column=0, columnspan=2, sticky="w", pady=(0, 10))
-        ToolTip(match_label, "Titles, filenames, tags, barcodes, and folder names do not decide duplicate identity.")
-
-        ttk.Label(frm, text="Progress", style="Section.TLabel").grid(
-            row=6, column=0, columnspan=2, sticky="w", pady=(2, 5)
-        )
-        ttk.Label(frm, textvariable=self.status_var).grid(
-            row=7, column=0, columnspan=2, sticky="w"
-        )
-        self.progress = ttk.Progressbar(frm, variable=self.progress_var, maximum=100)
-        self.progress.grid(row=8, column=0, columnspan=2, sticky="ew", pady=(5, 3))
-        ttk.Label(frm, textvariable=self.progress_detail_var, style="Help.TLabel").grid(
-            row=9, column=0, columnspan=2, sticky="w"
-        )
-
-        ttk.Label(frm, text="Activity", style="Section.TLabel").grid(
-            row=10, column=0, columnspan=2, sticky="w", pady=(12, 5)
-        )
-        self.activity = tk.Text(
-            frm,
-            height=9,
-            wrap="word",
-            background="#161616",
-            foreground=DARK_FG,
-            insertbackground=DARK_FG,
-            selectbackground=DARK_ACCENT,
-            relief="solid",
-            borderwidth=1,
-            font=("Cascadia Mono", 9),
-            state="disabled",
-        )
-        self.activity.grid(row=11, column=0, columnspan=2, sticky="nsew")
-
-        actions = ttk.Frame(frm)
-        actions.grid(row=12, column=0, columnspan=2, sticky="ew", pady=(12, 0))
-        self.run_btn = ttk.Button(actions, text="Analyze", command=self.start)
-        self.run_btn.pack(side="left")
-        ttk.Button(actions, text="Undo last run", command=self.undo_main).pack(side="left", padx=(8, 0))
-        self.decision_map_btn = ttk.Button(
-            actions,
-            text="Decision Map...",
-            command=self.open_decision_map,
-            state="normal" if self._decision_snapshot else "disabled",
-        )
-        self.decision_map_btn.pack(side="left", padx=(8, 0))
-        ttk.Button(actions, text="Close", command=self.on_close).pack(side="right")
-
-
-    def _personal_picks_button_text(self) -> str:
-        count = len(self.personal_keep_rules)
-        return f"Personal Picks... ({count})" if count else "Personal Picks..."
-
-    def edit_personal_picks(self):
         if self._running:
             return
-        dialog = PersonalPicksWindow(self, self.personal_keep_rules)
-        self.wait_window(dialog)
-        if dialog.result is None:
-            return
-        self.personal_keep_rules = dialog.result
-        self.personal_picks_btn.configure(text=self._personal_picks_button_text())
-        self.save_settings()
 
-    def open_decision_map(self):
-        if self._running:
-            return
-        snapshots = self._decision_snapshot or _load_decision_snapshot()
+        context = self._live_decision_context
+        if context is not None:
+            snapshots = list(context.get("snapshots", []) or [])
+        else:
+            snapshots = self._decision_snapshot or _load_decision_snapshot()
+
         if not snapshots:
             messagebox.showinfo(APP_NAME, "No analyzed release decisions are available yet.", parent=self)
             return
-        dialog = DecisionExplorerWindow(
-            self,
-            snapshots,
-            allow_apply=False,
-            summary_text="Last analyzed release decisions. This view is independent of the text comparison log.",
-        )
+
+        if context is not None:
+            dialog = DecisionExplorerWindow(
+                self,
+                snapshots,
+                allow_apply=True,
+                summary_text=str(context.get("summary_text", "")),
+                releases=context.get("releases"),
+                tracks=context.get("tracks"),
+                groups=context.get("groups"),
+                selected=set(context.get("selected", set())),
+                reviews=context.get("reviews"),
+                decisions=context.get("decisions"),
+                blocked_release_ids=set(context.get("blocked_release_ids", set())),
+                allow_reanalyze=True,
+            )
+        else:
+            dialog = DecisionExplorerWindow(
+                self,
+                snapshots,
+                allow_apply=False,
+                summary_text="Last saved analysis result.",
+                allow_reanalyze=True,
+            )
+
         self.wait_window(dialog)
+
+        self._decision_snapshot = list(dialog.snapshots)
+        _save_decision_snapshot(self._decision_snapshot)
+
+        if context is not None:
+            context["snapshots"] = list(dialog.snapshots)
+            context["selected"] = set(dialog.selected)
+            context["decisions"] = list(dialog.decisions)
+            context["blocked_release_ids"] = set(dialog.blocked_release_ids)
+
+        if dialog.result == "reanalyze":
+            self._live_decision_context = None
+            self.after(50, self.start)
+            return
+
+        if dialog.result == "apply" and context is not None:
+            self._apply_live_decision_context(context)
+            return
+
+        self.status_var.set("Analysis complete - plan not applied.")
+
+    def _apply_live_decision_context(self, context: Dict[str, object]) -> None:
+        existing = context.get("existing")
+        recycle = context.get("recycle")
+        releases = context.get("releases")
+        decisions = list(context.get("decisions", []) or [])
+        if not isinstance(recycle, Path) or not isinstance(releases, list):
+            messagebox.showerror(APP_NAME, "The current analysis context is no longer available.", parent=self)
+            return
+
+        counts = action_summary(decisions)
+        intra_duplicates = plan_intra_release_duplicates(releases, decisions)
+        to_move = counts["SKIP"] + counts["REMOVE"] + len(intra_duplicates)
+        if to_move == 0:
+            self.status_var.set("Analysis complete - no moves in current plan.")
+            self._append_activity("Current plan contains no filesystem moves.")
+            return
+
+        self.run_btn.configure(state="disabled")
+        self.progress_var.set(0)
+        self.progress_detail_var.set("")
+        self.status_var.set("Applying moves")
+        self._last_progress_stage = ""
+        self._append_activity("Applying moves")
+        self._set_running(True)
+        threading.Thread(
+            target=self.apply_worker,
+            args=(existing, recycle, releases, decisions, intra_duplicates),
+            daemon=True,
+        ).start()
 
     def undo_main(self):
         if self._running:
@@ -7422,6 +7150,7 @@ class App(tk.Tk):
                 pass
 
         self.save_settings()
+        self._live_decision_context = None
         self.run_btn.configure(state="disabled")
         self.progress_var.set(0)
         self.progress_detail_var.set("")
@@ -7662,9 +7391,9 @@ class App(tk.Tk):
         )
         _save_decision_snapshot(self._decision_snapshot)
         self.decision_map_btn.configure(state="normal")
-        self.status_var.set("Analysis complete - review Decision Map")
+        self.status_var.set("Analysis complete - review Release Map")
         self._append_activity(
-            f"Decision Map ready: {len(self._decision_snapshot)} release(s), "
+            f"Release Map ready: {len(self._decision_snapshot)} release(s), "
             f"{counts['SKIP'] + counts['REMOVE']} marked duplicate"
         )
 
@@ -7677,53 +7406,22 @@ class App(tk.Tk):
         if initial_intra_duplicates:
             summary_parts.append(f"Duplicate files inside retained releases: {len(initial_intra_duplicates)}")
         if comparison_log:
-            summary_parts.append("Detailed comparison logging is also enabled for this run.")
+            summary_parts.append("Detailed comparison logging is enabled for this run.")
 
-        explorer = DecisionExplorerWindow(
-            self,
-            self._decision_snapshot,
-            allow_apply=True,
-            summary_text=" | ".join(summary_parts),
-            releases=releases,
-            tracks=tracks,
-            groups=groups,
-            selected=selected,
-            reviews=reviews,
-            decisions=decisions,
-            blocked_release_ids=blocked_release_ids,
-        )
-        self.wait_window(explorer)
-
-        self._decision_snapshot = list(explorer.snapshots)
-        _save_decision_snapshot(self._decision_snapshot)
-
-        if explorer.result is not True:
-            self.status_var.set("Move plan not applied.")
-            self._append_activity("Move plan left unapplied; Decision Map remains available.")
-            return
-
-        decisions = list(explorer.decisions)
-        counts = action_summary(decisions)
-        intra_duplicates = plan_intra_release_duplicates(releases, decisions)
-        to_move = counts["SKIP"] + counts["REMOVE"] + len(intra_duplicates)
-
-        if to_move == 0:
-            self.status_var.set("Analysis complete - no moves in current plan.")
-            self._append_activity("Current plan contains no filesystem moves.")
-            return
-
-        self.run_btn.configure(state="disabled")
-        self.progress_var.set(0)
-        self.progress_detail_var.set("")
-        self.status_var.set("Applying moves")
-        self._last_progress_stage = ""
-        self._append_activity("Applying moves")
-        self._set_running(True)
-        threading.Thread(
-            target=self.apply_worker,
-            args=(existing, recycle, releases, decisions, intra_duplicates),
-            daemon=True,
-        ).start()
+        self._live_decision_context = {
+            "existing": existing,
+            "recycle": recycle,
+            "releases": releases,
+            "tracks": tracks,
+            "groups": groups,
+            "selected": set(selected),
+            "reviews": list(reviews),
+            "decisions": list(decisions),
+            "blocked_release_ids": set(blocked_release_ids),
+            "snapshots": list(self._decision_snapshot),
+            "summary_text": " | ".join(summary_parts),
+        }
+        self.open_decision_map()
 
     def apply_worker(
         self,
@@ -7749,6 +7447,7 @@ class App(tk.Tk):
 
     def applied(self, recycle: Path, result: Dict[str, object]):
         self._set_running(False)
+        self._live_decision_context = None
         self.run_btn.configure(state="normal")
         self.progress_var.set(100)
         self.progress_detail_var.set("100%")

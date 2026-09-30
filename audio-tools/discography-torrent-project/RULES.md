@@ -785,3 +785,21 @@ Do not flatten release folders into the duplicate root. After successful moves, 
 - The selected release must expose its full track list. If a manually excluded release contains an included recording group with no non-blocked carrier anywhere else in the analyzed collection, highlight that track clearly in red as unique/unavailable elsewhere.
 - Applying a plan that would lose such manually orphaned included audio requires an explicit second confirmation that identifies the affected recordings. Never hide or silently accept this loss.
 - Manual exclusions may be undone before Apply. Saved Decision Map snapshots may be reopened read-only when the in-memory analysis objects are no longer available.
+- The visual graph is release-only. Do not place Factor, Reason, Track, or other non-release nodes in the network. Detailed reasoning belongs in the selected-release details panel and is collapsed by default.
+- Do not pair a permanent side list with the graph. Navigation is by release nodes plus a compact search/jump control.
+- The release details area must contain a large high-contrast track table and use a draggable pane/sash so the user can increase or decrease track-list height.
+- The selected release path must be selectable/copyable and have an Open folder action.
+- The Release Map must be a normal resizable/maximizable top-level window without transient/modal grab behavior so Windows window managers such as FancyZones can position it.
+- A live Release Map must expose obvious Apply plan, Analyze again, and Close actions. Do not show disabled/confusing text such as "Re-optimization available only immediately after Analyze"; when editing context is unavailable, simply omit edit controls and present the saved map read-only.
+- Unique tracks responsible for retaining a release must be visually highlighted. When same/similar titled tracks remain separate groups, expose the reason using available concrete evidence: artist/featured credit, ISRC, duration difference, or explicit Chromaprint mismatch.
+- Optimizer/source factors are secondary detail and must be hidden behind an expandable More details control by default.
+
+### Persistent manual track skip
+
+- In the live Release Map the user may select a track and choose Skip track. This is a preference to exclude that proven recording group from coverage/optimization, not a duplicate-identity assertion.
+- Save track-skip preferences under the Duplicate Edition Analyzer program state folder, never in the shared Karpuzikov Tools root.
+- Persist exact fingerprint hashes for the currently proven audio group and available MBID/ISRC/base-title identity evidence. On later analyses, apply saved skips only after fingerprints/groups are built, then exclude the matched group from optimization.
+- Skipping a track must immediately re-run only collection optimization; do not rescan/re-probe/re-fingerprint audio.
+- The user must be able to Restore track, which removes the saved preference and recomputes the plan.
+- Manual track skips must remain visibly distinct from Save Remixes / Save Live / unusual-pattern exclusions.
+
