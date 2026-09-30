@@ -29,7 +29,7 @@ import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 
 APP_NAME = "Duplicate / Edition Analyzer"
-APP_VERSION = "0.13.0"
+APP_VERSION = "0.14.0"
 PROGRAM_DATA_DIR_NAME = "Duplicate Edition Analyzer"
 AUDIO_EXTS = {".m4a", ".flac", ".wav", ".ape", ".wv", ".mp3", ".aac", ".ogg", ".opus"}
 def _logical_cpu_count() -> int:
@@ -4251,14 +4251,26 @@ def prefer_explicit_exact_equivalents(releases: List[Release], selected: Set[int
     return selected
 
 
-def optimize_collection(releases: List[Release], groups: Dict[int, List[int]]) -> Set[int]:
-    dominated = find_dominated_releases(releases)
-    active = [r for r in releases if r.rid not in dominated]
+def optimize_collection(
+    releases: List[Release],
+    groups: Dict[int, List[int]],
+    blocked_release_ids: Optional[Set[int]] = None,
+) -> Set[int]:
+    """Optimize the retained set, optionally forbidding user-removed releases.
+
+    Manual Decision Map removals are planning constraints only. Fingerprints and
+    recording groups are reused; the expensive audio-analysis stage is not rerun.
+    """
+    blocked = set(blocked_release_ids or set())
+    eligible = [r for r in releases if r.rid not in blocked]
+
+    dominated = find_dominated_releases(eligible)
+    active = [r for r in eligible if r.rid not in dominated]
 
     selected = choose_album_families(active)
     # Only recording groups not excluded by the active checkboxes are included.
-    # This is critical: a semantically duplicate recycle copy must not create
-    # synthetic "missing" groups just because fingerprint grouping was stricter.
+    # When a release is manually blocked, groups that also exist on another
+    # eligible release remain in this universe and are reassigned automatically.
     all_groups: Set[int] = set()
     for rel in active:
         all_groups |= rel.groups
@@ -4280,23 +4292,26 @@ def optimize_collection(releases: List[Release], groups: Dict[int, List[int]]) -
                 selected.add(chosen.rid)
 
     selected = stabilize_equivalent_sources(active, selected)
-    selected = enforce_existing_precedence(releases, selected)
-    selected = prune_redundant_selected(releases, selected)
+    selected = enforce_existing_precedence(active, selected)
+    selected = prune_redundant_selected(active, selected)
 
     # Now that the whole retained set exists, minimize total included tracks.
     # Bonus tracks on one edition have zero value here if another retained
     # release already supplies those same recording groups.
-    selected = minimize_collection_track_count(releases, selected)
-    selected = prune_redundant_selected(releases, selected)
+    selected = minimize_collection_track_count(active, selected)
+    selected = prune_redundant_selected(active, selected)
 
     # Quality of a CD rip must never create duplicate identity or override a
     # different edition. Only exact-equivalent CD rips reach this pass.
-    selected = prefer_better_cd_rips(releases, selected)
+    selected = prefer_better_cd_rips(active, selected)
 
     # Absolute last stage: when clean/explicit releases are otherwise exactly
     # identical, retain explicit and move the clean copy.
-    selected = prefer_explicit_exact_equivalents(releases, selected)
-    return selected
+    selected = prefer_explicit_exact_equivalents(active, selected)
+
+    # Defensive invariant: a manually blocked release must never leak back in
+    # through a later preference/stabilization pass.
+    return selected - blocked
 
 
 def review_candidates(tracks: List[Track]) -> List[Tuple[int, int, str]]:
@@ -4643,7 +4658,13 @@ def _preferred_existing_cover_for_recycle(rel: Release, releases: List[Release])
     )
 
 
-def build_release_decisions(releases: List[Release], tracks: List[Track], selected: Set[int], reviews) -> List[ReleaseDecision]:
+def build_release_decisions(
+    releases: List[Release],
+    tracks: List[Track],
+    selected: Set[int],
+    reviews,
+    blocked_release_ids: Optional[Set[int]] = None,
+) -> List[ReleaseDecision]:
     selected_rels = [r for r in releases if r.rid in selected]
     selected_groups = _selected_group_union(releases, selected)
 
@@ -4653,8 +4674,65 @@ def build_release_decisions(releases: List[Release], tracks: List[Track], select
             existing_groups |= r.groups
 
     decisions: List[ReleaseDecision] = []
+    blocked = set(blocked_release_ids or set())
 
     for rel in releases:
+        if rel.rid in blocked:
+            covered_groups = rel.groups & selected_groups
+            uncovered_groups = rel.groups - selected_groups
+
+            orphan_titles: List[str] = []
+            seen_orphans: Set[str] = set()
+            for track in rel.tracks:
+                if track.exclude_from_coverage or track.group_id not in uncovered_groups:
+                    continue
+                key = normalize_title(track.display_title)
+                if key not in seen_orphans:
+                    seen_orphans.add(key)
+                    orphan_titles.append(track.display_title)
+
+            selected_by_id = {other.rid: other for other in selected_rels}
+            cover_ids = sorted(
+                (
+                    other.rid
+                    for other in selected_rels
+                    if other.rid != rel.rid and bool(rel.groups & other.groups)
+                ),
+                key=lambda rid: (
+                    -len(rel.groups & selected_by_id[rid].groups),
+                    selected_by_id[rid].path.name.casefold(),
+                ),
+            )
+
+            action = "REMOVE" if rel.root_kind == "existing" else "SKIP"
+            if uncovered_groups:
+                reason = (
+                    "Manually removed in Decision Map and collection re-optimized. "
+                    f"WARNING: {len(uncovered_groups)} recording group(s) are not available "
+                    "from any other retained release."
+                )
+            else:
+                reason = (
+                    "Manually removed in Decision Map and collection re-optimized. "
+                    "All included recordings were reassigned to other retained releases."
+                )
+
+            decisions.append(
+                ReleaseDecision(
+                    release_id=rel.rid,
+                    action=action,
+                    reason=reason,
+                    essential_tracks=orphan_titles,
+                    related_release_ids=cover_ids,
+                    decision_factors=[
+                        "Manual Decision Map removal is an explicit user constraint.",
+                        f"Recording groups reassigned elsewhere: {len(covered_groups)}.",
+                        f"Recording groups with no retained replacement: {len(uncovered_groups)}.",
+                    ],
+                )
+            )
+            continue
+
         # A release containing only tracks excluded by the active checkboxes is
         # automatically removed/skipped. Mixed releases can still be retained for
         # unique included audio.
@@ -4911,18 +4989,29 @@ def build_decision_snapshot(
     tracks: List[Track],
     selected: Set[int],
     decisions: List[ReleaseDecision],
+    blocked_release_ids: Optional[Set[int]] = None,
 ) -> List[Dict[str, object]]:
     """Build a compact explanation model for the visual Decision Map."""
     by_id = {r.rid: r for r in releases}
     by_decision = {d.release_id: d for d in decisions}
     selected_rels = [r for r in releases if r.rid in selected]
     selected_groups = _selected_group_union(releases, selected)
+    blocked = set(blocked_release_ids or set())
+
+    all_group_carriers: Dict[int, Set[int]] = defaultdict(set)
+    eligible_group_carriers: Dict[int, Set[int]] = defaultdict(set)
+    for carrier in releases:
+        for gid in carrier.groups:
+            all_group_carriers[gid].add(carrier.rid)
+            if carrier.rid not in blocked:
+                eligible_group_carriers[gid].add(carrier.rid)
 
     snapshots: List[Dict[str, object]] = []
 
     for rel in releases:
         decision = by_decision[rel.rid]
         retained = decision.action in {"KEEP", "ADD", "REPLACE"}
+        manual_removed = rel.rid in blocked
 
         track_titles_by_group: Dict[int, List[str]] = defaultdict(list)
         for track in rel.tracks:
@@ -5024,6 +5113,84 @@ def build_decision_snapshot(
                 }
             )
 
+        other_selected_groups = _selected_group_union(releases, selected, exclude=rel.rid)
+        tracklist: List[Dict[str, object]] = []
+        for fallback_number, track in enumerate(rel.tracks, start=1):
+            included = not track.exclude_from_coverage and track.group_id >= 0
+            eligible_carriers = eligible_group_carriers.get(track.group_id, set())
+            available_elsewhere = bool(
+                included and any(rid != rel.rid for rid in eligible_carriers)
+            )
+            covered_by_other_retained = bool(
+                included and track.group_id in other_selected_groups
+            )
+            orphaned = bool(
+                manual_removed
+                and included
+                and not available_elsewhere
+            )
+            track_number = _track_number_key(track)
+            tracklist.append(
+                {
+                    "number": track_number if track_number is not None else fallback_number,
+                    "title": track.display_title,
+                    "group_id": track.group_id,
+                    "included": included,
+                    "excluded": bool(track.exclude_from_coverage),
+                    "available_elsewhere": available_elsewhere,
+                    "covered_by_other_retained": covered_by_other_retained,
+                    "orphaned": orphaned,
+                }
+            )
+
+        affected_ids: Set[int] = set()
+        for gid in rel.groups:
+            affected_ids |= all_group_carriers.get(gid, set())
+        affected_ids.discard(rel.rid)
+
+        affected: List[Dict[str, object]] = []
+        for other_id in affected_ids:
+            other = by_id.get(other_id)
+            if other is None:
+                continue
+            overlap = rel.groups & other.groups
+            if not overlap:
+                continue
+            examples: List[str] = []
+            for gid in sorted(overlap):
+                for title in track_titles_by_group.get(gid, []):
+                    if title not in examples:
+                        examples.append(title)
+                    if len(examples) >= 5:
+                        break
+                if len(examples) >= 5:
+                    break
+            other_decision = by_decision.get(other.rid)
+            affected.append(
+                {
+                    "release_id": other.rid,
+                    "name": other.path.name,
+                    "action": other_decision.action if other_decision is not None else "",
+                    "outcome": (
+                        "RETAINED"
+                        if other_decision is not None
+                        and other_decision.action in {"KEEP", "ADD", "REPLACE"}
+                        else "MANUALLY REMOVED"
+                        if other.rid in blocked
+                        else "DUPLICATE"
+                    ),
+                    "shared_groups": len(overlap),
+                    "examples": examples,
+                    "manual_removed": other.rid in blocked,
+                }
+            )
+        affected.sort(
+            key=lambda row: (
+                -int(row.get("shared_groups", 0)),
+                str(row.get("name", "")).casefold(),
+            )
+        )
+
         # Show exact/same-coverage alternatives as supporting context without
         # pretending that metadata alone created the duplicate relationship.
         alternatives: List[Dict[str, object]] = []
@@ -5049,7 +5216,7 @@ def build_decision_snapshot(
                 )
         alternatives = alternatives[:8]
 
-        outcome = "RETAINED" if retained else "DUPLICATE"
+        outcome = "MANUALLY REMOVED" if manual_removed else ("RETAINED" if retained else "DUPLICATE")
         snapshots.append(
             {
                 "release_id": rel.rid,
@@ -5076,13 +5243,17 @@ def build_decision_snapshot(
                 "related": related,
                 "alternatives": alternatives,
                 "selected_group_coverage_complete": bool(rel.groups and rel.groups <= selected_groups),
+                "manual_removed": manual_removed,
+                "orphan_count": sum(1 for row in tracklist if bool(row.get("orphaned"))),
+                "tracklist": tracklist,
+                "affected": affected,
             }
         )
 
     return sorted(
         snapshots,
         key=lambda item: (
-            0 if item.get("outcome") == "DUPLICATE" else 1,
+            0 if item.get("manual_removed") else 1 if item.get("outcome") == "DUPLICATE" else 2,
             str(item.get("name", "")).casefold(),
         ),
     )
@@ -5565,7 +5736,7 @@ def undo_last_run() -> Tuple[int, List[str]]:
 
 
 class DecisionExplorerWindow(tk.Toplevel):
-    """Interactive visual explanation of every release decision."""
+    """Interactive release dependency map with reversible manual re-optimization."""
 
     def __init__(
         self,
@@ -5573,11 +5744,18 @@ class DecisionExplorerWindow(tk.Toplevel):
         snapshots: List[Dict[str, object]],
         allow_apply: bool = False,
         summary_text: str = "",
+        releases: Optional[List[Release]] = None,
+        tracks: Optional[List[Track]] = None,
+        groups: Optional[Dict[int, List[int]]] = None,
+        selected: Optional[Set[int]] = None,
+        reviews=None,
+        decisions: Optional[List[ReleaseDecision]] = None,
+        blocked_release_ids: Optional[Set[int]] = None,
     ):
         super().__init__(master)
         self.title(f"{APP_NAME} - Decision Map")
-        self.geometry("1320x800")
-        self.minsize(1040, 650)
+        self.geometry("1420x900")
+        self.minsize(1080, 700)
         self.configure(background=DARK_BG)
         _enable_dark_titlebar(self)
 
@@ -5586,30 +5764,49 @@ class DecisionExplorerWindow(tk.Toplevel):
         self.result: Optional[bool] = None
         self.allow_apply = allow_apply
 
+        self.releases = list(releases) if releases is not None else None
+        self.tracks = list(tracks) if tracks is not None else None
+        self.groups = groups if groups is not None else None
+        self.selected = set(selected or set())
+        self.reviews = list(reviews or [])
+        self.decisions = list(decisions or [])
+        self.blocked_release_ids = set(blocked_release_ids or set())
+        self.can_reoptimize = (
+            self.releases is not None
+            and self.tracks is not None
+            and self.groups is not None
+            and selected is not None
+        )
+        self.baseline_actions = {
+            int(item.get("release_id", -1)): str(item.get("action", ""))
+            for item in snapshots
+        }
+
         self.search_var = tk.StringVar()
         self.scope_var = tk.StringVar(value="All releases")
         self.summary_var = tk.StringVar(value=summary_text)
+        self.manual_status_var = tk.StringVar()
+        self.base_summary_text = summary_text
 
         outer = ttk.Frame(self)
         outer.pack(fill="both", expand=True, padx=14, pady=12)
 
         header = ttk.Frame(outer)
         header.pack(fill="x")
-        ttk.Label(header, text="Decision Map", font=("Segoe UI", 16, "bold")).pack(side="left")
+        ttk.Label(header, text="Decision Map", font=("Segoe UI", 15, "bold")).pack(side="left")
         ttk.Label(
             header,
-            text="Click any release to see exactly why it was retained or marked duplicate.",
+            text="Click connected release nodes to navigate. Manual removals re-optimize instantly using the existing fingerprints.",
             style="Help.TLabel",
         ).pack(side="left", padx=(14, 0))
 
-        if summary_text:
-            ttk.Label(
-                outer,
-                textvariable=self.summary_var,
-                style="Help.TLabel",
-                wraplength=1240,
-                justify="left",
-            ).pack(fill="x", pady=(5, 10))
+        ttk.Label(
+            outer,
+            textvariable=self.summary_var,
+            style="Help.TLabel",
+            wraplength=1340,
+            justify="left",
+        ).pack(fill="x", pady=(5, 10))
 
         body = tk.PanedWindow(
             outer,
@@ -5621,10 +5818,10 @@ class DecisionExplorerWindow(tk.Toplevel):
         )
         body.pack(fill="both", expand=True)
 
-        left = ttk.Frame(body, width=350)
+        left = ttk.Frame(body, width=360)
         right = ttk.Frame(body)
-        body.add(left, minsize=300, width=360)
-        body.add(right, minsize=650)
+        body.add(left, minsize=310, width=370)
+        body.add(right, minsize=680)
 
         ttk.Label(left, text="Releases", style="Section.TLabel").pack(anchor="w")
 
@@ -5635,7 +5832,7 @@ class DecisionExplorerWindow(tk.Toplevel):
         scope = ttk.Combobox(
             left,
             textvariable=self.scope_var,
-            values=("All releases", "Retained", "Duplicates"),
+            values=("All releases", "Retained", "Duplicates", "Manually removed"),
             state="readonly",
         )
         scope.pack(fill="x", pady=(0, 8))
@@ -5666,16 +5863,31 @@ class DecisionExplorerWindow(tk.Toplevel):
             left,
             text=(
                 "RETAINED = KEEP / ADD / REPLACE\n"
-                "DUPLICATE = SKIP / REMOVE"
+                "DUPLICATE = SKIP / REMOVE\n"
+                "MANUAL = explicitly excluded from the retained set"
             ),
             style="Help.TLabel",
             justify="left",
-        ).pack(anchor="w", pady=(8, 0))
+        ).pack(anchor="w", pady=(8, 6))
 
-        ttk.Label(right, text="Why?", style="Section.TLabel").pack(anchor="w")
+        self.manual_button = ttk.Button(
+            left,
+            text="Remove selected release and re-optimize",
+            command=self._toggle_manual_release,
+        )
+        self.manual_button.pack(fill="x", pady=(0, 5))
+        ttk.Label(
+            left,
+            textvariable=self.manual_status_var,
+            style="Help.TLabel",
+            wraplength=330,
+            justify="left",
+        ).pack(fill="x")
+
+        ttk.Label(right, text="Release dependency web", style="Section.TLabel").pack(anchor="w")
 
         canvas_frame = ttk.Frame(right)
-        canvas_frame.pack(fill="both", expand=True, pady=(6, 0))
+        canvas_frame.pack(fill="both", expand=True, pady=(6, 8))
 
         self.canvas = tk.Canvas(
             canvas_frame,
@@ -5702,16 +5914,47 @@ class DecisionExplorerWindow(tk.Toplevel):
             lambda e: self.canvas.xview_scroll(-1 if e.delta > 0 else 1, "units"),
         )
 
+        track_header = ttk.Frame(right)
+        track_header.pack(fill="x")
+        ttk.Label(track_header, text="Track list", style="Section.TLabel").pack(side="left")
+        ttk.Label(
+            track_header,
+            text="Red = included recording has no other allowed release carrying it.",
+            style="Help.TLabel",
+        ).pack(side="left", padx=(12, 0))
+
+        track_frame = ttk.Frame(right)
+        track_frame.pack(fill="x", pady=(5, 0))
+        self.track_tree = ttk.Treeview(
+            track_frame,
+            columns=("number", "title", "coverage"),
+            show="headings",
+            height=8,
+        )
+        self.track_tree.heading("number", text="#")
+        self.track_tree.heading("title", text="Track")
+        self.track_tree.heading("coverage", text="Coverage after current plan")
+        self.track_tree.column("number", width=48, minwidth=40, stretch=False, anchor="center")
+        self.track_tree.column("title", width=430, minwidth=220, stretch=True)
+        self.track_tree.column("coverage", width=300, minwidth=220, stretch=True)
+        track_scroll = ttk.Scrollbar(track_frame, orient="vertical", command=self.track_tree.yview)
+        self.track_tree.configure(yscrollcommand=track_scroll.set)
+        self.track_tree.pack(side="left", fill="x", expand=True)
+        track_scroll.pack(side="right", fill="y")
+        self.track_tree.tag_configure("orphan", foreground="#ff6b6b")
+        self.track_tree.tag_configure("unique", foreground="#e6b85c")
+        self.track_tree.tag_configure("excluded", foreground=DARK_MUTED)
+
         footer = ttk.Frame(outer)
         footer.pack(fill="x", pady=(10, 0))
         if allow_apply:
             ttk.Label(
                 footer,
-                text="Review as many releases as you want before applying the move plan.",
+                text="Manual removals only change the plan until you click Apply current move plan.",
                 style="Help.TLabel",
             ).pack(side="left")
             ttk.Button(footer, text="Cancel", command=self._cancel).pack(side="right")
-            ttk.Button(footer, text="Apply proposed moves", command=self._apply).pack(
+            ttk.Button(footer, text="Apply current move plan", command=self._apply).pack(
                 side="right", padx=(0, 8)
             )
         else:
@@ -5719,6 +5962,7 @@ class DecisionExplorerWindow(tk.Toplevel):
 
         self.protocol("WM_DELETE_WINDOW", self._cancel if allow_apply else self._close)
         self._refresh_list()
+        self._update_summary()
 
         self.transient(master)
         self.grab_set()
@@ -5728,23 +5972,36 @@ class DecisionExplorerWindow(tk.Toplevel):
     def _retained(item: Dict[str, object]) -> bool:
         return str(item.get("outcome", "")) == "RETAINED"
 
-    def _refresh_list(self) -> None:
+    def _current_item(self) -> Optional[Dict[str, object]]:
+        selection = self.listbox.curselection()
+        if not selection:
+            return None
+        index = selection[0]
+        if 0 <= index < len(self.visible_items):
+            return self.visible_items[index]
+        return None
+
+    def _refresh_list(self, preferred_id: Optional[int] = None) -> None:
         query = normalize_title(self.search_var.get())
         scope = self.scope_var.get()
 
-        previous_id = None
-        selection = self.listbox.curselection()
-        if selection and selection[0] < len(self.visible_items):
-            previous_id = self.visible_items[selection[0]].get("release_id")
+        previous_id = preferred_id
+        if previous_id is None:
+            selection = self.listbox.curselection()
+            if selection and selection[0] < len(self.visible_items):
+                previous_id = self.visible_items[selection[0]].get("release_id")
 
         self.visible_items = []
         self.listbox.delete(0, "end")
 
         for item in self.snapshots:
             retained = self._retained(item)
+            manual_removed = bool(item.get("manual_removed"))
             if scope == "Retained" and not retained:
                 continue
-            if scope == "Duplicates" and retained:
+            if scope == "Duplicates" and (retained or manual_removed):
+                continue
+            if scope == "Manually removed" and not manual_removed:
                 continue
 
             haystack = normalize_title(
@@ -5762,16 +6019,21 @@ class DecisionExplorerWindow(tk.Toplevel):
                 continue
 
             self.visible_items.append(item)
+            release_id = int(item.get("release_id", -1))
             action = str(item.get("action", ""))
             outcome = str(item.get("outcome", ""))
             root = "EXISTING" if item.get("root_kind") == "existing" else "NEW"
+            changed = self.baseline_actions.get(release_id) not in (None, action)
+            marker = "* " if changed else ""
             self.listbox.insert(
                 "end",
-                f"[{outcome}] [{action}] [{root}] {item.get('name', '')}",
+                f"{marker}[{outcome}] [{action}] [{root}] {item.get('name', '')}",
             )
 
         if not self.visible_items:
             self._draw_empty("No releases match this filter.")
+            self._refresh_tracklist(None)
+            self._update_manual_controls(None)
             return
 
         target = 0
@@ -5784,15 +6046,163 @@ class DecisionExplorerWindow(tk.Toplevel):
         self.listbox.selection_set(target)
         self.listbox.activate(target)
         self.listbox.see(target)
-        self._draw_release(self.visible_items[target])
+        item = self.visible_items[target]
+        self._draw_release(item)
+        self._refresh_tracklist(item)
+        self._update_manual_controls(item)
 
     def _select_release(self, _event=None) -> None:
-        selection = self.listbox.curselection()
-        if not selection:
+        item = self._current_item()
+        if item is None:
             return
-        index = selection[0]
-        if 0 <= index < len(self.visible_items):
-            self._draw_release(self.visible_items[index])
+        self._draw_release(item)
+        self._refresh_tracklist(item)
+        self._update_manual_controls(item)
+
+    def _select_release_by_id(self, release_id: int) -> None:
+        for index, item in enumerate(self.visible_items):
+            if int(item.get("release_id", -1)) == int(release_id):
+                self.listbox.selection_clear(0, "end")
+                self.listbox.selection_set(index)
+                self.listbox.activate(index)
+                self.listbox.see(index)
+                self._select_release()
+                return
+
+        self.search_var.set("")
+        self.scope_var.set("All releases")
+        self._refresh_list(preferred_id=release_id)
+
+    def _refresh_tracklist(self, item: Optional[Dict[str, object]]) -> None:
+        self.track_tree.delete(*self.track_tree.get_children())
+        if item is None:
+            return
+
+        for row in item.get("tracklist", []) or []:
+            if bool(row.get("excluded")):
+                coverage = "Skipped by active options"
+                tags = ("excluded",)
+            elif bool(row.get("orphaned")):
+                coverage = "UNIQUE - not found in another allowed release"
+                tags = ("orphan",)
+            elif bool(row.get("covered_by_other_retained")):
+                coverage = "Covered by another retained release"
+                tags = ()
+            elif bool(row.get("available_elsewhere")):
+                coverage = "Available on another release"
+                tags = ()
+            else:
+                coverage = "Unique to this release"
+                tags = ("unique",)
+
+            self.track_tree.insert(
+                "",
+                "end",
+                values=(row.get("number", ""), row.get("title", ""), coverage),
+                tags=tags,
+            )
+
+    def _update_manual_controls(self, item: Optional[Dict[str, object]]) -> None:
+        if not self.can_reoptimize:
+            self.manual_button.configure(
+                text="Re-optimization available only immediately after Analyze",
+                state="disabled",
+            )
+            self.manual_status_var.set("This saved Decision Map is read-only.")
+            return
+
+        if item is None:
+            self.manual_button.configure(text="Remove selected release and re-optimize", state="disabled")
+            self.manual_status_var.set("")
+            return
+
+        rid = int(item.get("release_id", -1))
+        if rid in self.blocked_release_ids:
+            self.manual_button.configure(text="Undo manual removal and re-optimize", state="normal")
+            orphan_count = int(item.get("orphan_count", 0) or 0)
+            if orphan_count:
+                self.manual_status_var.set(
+                    f"{orphan_count} included recording(s) would be lost if this manual removal is applied."
+                )
+            else:
+                self.manual_status_var.set(
+                    "All included recordings from this release are currently covered elsewhere."
+                )
+        elif self._retained(item):
+            self.manual_button.configure(text="Remove selected release and re-optimize", state="normal")
+            self.manual_status_var.set(
+                "This changes only the current plan. No files move until Apply current move plan."
+            )
+        else:
+            self.manual_button.configure(text="Release is already not retained", state="disabled")
+            self.manual_status_var.set(
+                "The automatic plan already removes/skips this release."
+            )
+
+    def _toggle_manual_release(self) -> None:
+        if not self.can_reoptimize:
+            return
+        item = self._current_item()
+        if item is None:
+            return
+
+        rid = int(item.get("release_id", -1))
+        was_blocked = rid in self.blocked_release_ids
+        if was_blocked:
+            self.blocked_release_ids.remove(rid)
+        else:
+            if not self._retained(item):
+                return
+            self.blocked_release_ids.add(rid)
+            if self.scope_var.get() == "Retained":
+                self.scope_var.set("All releases")
+
+        self.selected = optimize_collection(
+            self.releases or [],
+            self.groups or {},
+            self.blocked_release_ids,
+        )
+        self.decisions = build_release_decisions(
+            self.releases or [],
+            self.tracks or [],
+            self.selected,
+            self.reviews,
+            self.blocked_release_ids,
+        )
+        self.snapshots = build_decision_snapshot(
+            self.releases or [],
+            self.tracks or [],
+            self.selected,
+            self.decisions,
+            self.blocked_release_ids,
+        )
+        _save_decision_snapshot(self.snapshots)
+        self._update_summary()
+        self._refresh_list(preferred_id=rid)
+
+    def _update_summary(self) -> None:
+        manual_count = len(self.blocked_release_ids)
+        orphan_count = sum(
+            int(item.get("orphan_count", 0) or 0)
+            for item in self.snapshots
+            if item.get("manual_removed")
+        )
+        changed_count = sum(
+            1
+            for item in self.snapshots
+            if self.baseline_actions.get(int(item.get("release_id", -1))) not in (
+                None,
+                str(item.get("action", "")),
+            )
+        )
+        parts = [self.base_summary_text] if self.base_summary_text else []
+        if manual_count:
+            parts.append(f"Manual removals: {manual_count}")
+        if changed_count:
+            parts.append(f"Release decisions changed: {changed_count}")
+        if orphan_count:
+            parts.append(f"Unique recordings without another release: {orphan_count}")
+        self.summary_var.set(" | ".join(parts) if parts else "Decision Map ready.")
 
     def _node(
         self,
@@ -5802,11 +6212,13 @@ class DecisionExplorerWindow(tk.Toplevel):
         title: str,
         body: str,
         kind: str = "normal",
+        release_id: Optional[int] = None,
     ) -> Tuple[int, int, int, int]:
         palette = {
             "root": ("#2b2b30", DARK_ACCENT),
             "retained": ("#1f3a2b", "#58a66a"),
             "duplicate": ("#442525", "#c96a6a"),
+            "warning": ("#4b3022", "#d9905f"),
             "reason": ("#263549", "#638dc6"),
             "header": ("#34343a", "#6b6b74"),
             "normal": ("#242426", DARK_BORDER),
@@ -5820,11 +6232,18 @@ class DecisionExplorerWindow(tk.Toplevel):
         body_text = "\n".join(wrapped)
         height = max(74, 52 + 16 * len(wrapped))
 
+        tag = ""
+        tags = ()
+        if release_id is not None:
+            tag = f"release_node_{release_id}_{x}_{y}"
+            tags = (tag,)
+
         self.canvas.create_rectangle(
             x, y, x + width, y + height,
             fill=fill,
             outline=outline,
             width=2,
+            tags=tags,
         )
         self.canvas.create_text(
             x + 12,
@@ -5834,6 +6253,7 @@ class DecisionExplorerWindow(tk.Toplevel):
             fill=DARK_FG,
             font=("Segoe UI", 10, "bold"),
             width=width - 24,
+            tags=tags,
         )
         self.canvas.create_text(
             x + 12,
@@ -5843,7 +6263,16 @@ class DecisionExplorerWindow(tk.Toplevel):
             fill=DARK_MUTED,
             font=("Segoe UI", 9),
             width=width - 24,
+            tags=tags,
         )
+        if release_id is not None:
+            self.canvas.tag_bind(
+                tag,
+                "<Button-1>",
+                lambda _e, rid=release_id: self._select_release_by_id(rid),
+            )
+            self.canvas.tag_bind(tag, "<Enter>", lambda _e: self.canvas.configure(cursor="hand2"))
+            self.canvas.tag_bind(tag, "<Leave>", lambda _e: self.canvas.configure(cursor=""))
         return (x, y, x + width, y + height)
 
     def _arrow(
@@ -5889,7 +6318,8 @@ class DecisionExplorerWindow(tk.Toplevel):
         self.canvas.yview_moveto(0)
 
         retained = self._retained(item)
-        outcome_kind = "retained" if retained else "duplicate"
+        manual_removed = bool(item.get("manual_removed"))
+        outcome_kind = "warning" if manual_removed else ("retained" if retained else "duplicate")
 
         root_body = (
             f"{item.get('path', '')}\n"
@@ -5899,7 +6329,14 @@ class DecisionExplorerWindow(tk.Toplevel):
             f"Skipped: {item.get('ignored_tracks', 0)} | "
             f"Recording groups: {item.get('recording_groups', 0)}"
         )
-        root = self._node(40, 40, 350, str(item.get("name", "Release")), root_body, "root")
+        root = self._node(
+            40,
+            40,
+            350,
+            str(item.get("name", "Release")),
+            root_body,
+            "root",
+        )
 
         outcome = self._node(
             470,
@@ -5932,7 +6369,14 @@ class DecisionExplorerWindow(tk.Toplevel):
             or []
         )
 
-        factor_header = self._node(790, y, 260, "Decision factors", f"{len(factors) + len(quality)} factor(s)", "header")
+        factor_header = self._node(
+            790,
+            y,
+            260,
+            "Decision factors",
+            f"{len(factors) + len(quality)} factor(s)",
+            "header",
+        )
         self._arrow(outcome, factor_header)
         child_y = y
         for factor in (factors + quality)[:7]:
@@ -5941,20 +6385,67 @@ class DecisionExplorerWindow(tk.Toplevel):
             child_y = child[3] + 18
         y = max(factor_header[3], child_y) + 30
 
-        if retained and essential:
+        if essential and (retained or manual_removed):
+            title = "Orphaned audio after manual removal" if manual_removed else "Unique / essential audio"
+            body_title = "No replacement release has these recordings" if manual_removed else "Keeps these recordings"
             unique_header = self._node(
                 790,
                 y,
                 260,
-                "Unique / essential audio",
+                title,
                 f"{len(essential)} shown",
-                "header",
+                "warning" if manual_removed else "header",
             )
             self._arrow(outcome, unique_header)
-            unique_body = "\n".join(f"- {title}" for title in essential[:12])
-            unique_node = self._node(1130, y, 390, "Keeps these recordings", unique_body, "normal")
+            unique_body = "\n".join(f"- {track_title}" for track_title in essential[:12])
+            unique_node = self._node(
+                1130,
+                y,
+                390,
+                body_title,
+                unique_body,
+                "warning" if manual_removed else "normal",
+            )
             self._arrow(unique_header, unique_node)
             y = max(unique_header[3], unique_node[3]) + 30
+
+        affected = item.get("affected", []) or []
+        if affected:
+            affected_header = self._node(
+                790,
+                y,
+                260,
+                "Connected releases",
+                f"{len(affected)} release(s) share included audio",
+                "header",
+            )
+            self._arrow(root, affected_header)
+            affected_y = y
+            for row in affected:
+                examples = row.get("examples", []) or []
+                release_id = int(row.get("release_id"))
+                current_action = str(row.get("action", ""))
+                body = (
+                    f"Shared recording groups: {row.get('shared_groups', 0)}\n"
+                    f"Current: {row.get('outcome', '')} / {current_action}"
+                )
+                baseline_action = self.baseline_actions.get(release_id)
+                if baseline_action is not None and baseline_action != current_action:
+                    body += f"\nChanged from initial action: {baseline_action}"
+                if examples:
+                    body += "\nExamples: " + "; ".join(examples[:4])
+                affected_node = self._node(
+                    1130,
+                    affected_y,
+                    390,
+                    str(row.get("name", "")),
+                    body,
+                    "warning" if row.get("manual_removed") else "normal",
+                    release_id,
+                )
+                self._arrow(affected_header, affected_node)
+                affected_y = affected_node[3] + 18
+            y = max(affected_header[3], affected_y) + 30
 
         if personal:
             pick_header = self._node(
@@ -5985,7 +6476,7 @@ class DecisionExplorerWindow(tk.Toplevel):
             )
             self._arrow(outcome, cover_header)
             cover_y = y
-            for row in coverage[:8]:
+            for row in coverage[:10]:
                 examples = row.get("examples", []) or []
                 body = (
                     f"{row.get('groups', 0)} recording group(s)\n"
@@ -5998,6 +6489,7 @@ class DecisionExplorerWindow(tk.Toplevel):
                     str(row.get("name", "")),
                     body,
                     "normal",
+                    int(row.get("release_id")),
                 )
                 self._arrow(cover_header, cover)
                 cover_y = cover[3] + 18
@@ -6015,7 +6507,7 @@ class DecisionExplorerWindow(tk.Toplevel):
             )
             self._arrow(outcome, related_header)
             related_y = y
-            for row in related[:6]:
+            for row in related[:8]:
                 body = (
                     f"Action: {row.get('action', '')}\n"
                     f"Source: {row.get('source', '')}\n"
@@ -6028,6 +6520,7 @@ class DecisionExplorerWindow(tk.Toplevel):
                     str(row.get("name", "")),
                     body,
                     "normal",
+                    int(row.get("release_id")),
                 )
                 self._arrow(related_header, rel_node)
                 related_y = rel_node[3] + 18
@@ -6045,7 +6538,7 @@ class DecisionExplorerWindow(tk.Toplevel):
             )
             self._arrow(outcome, alt_header)
             alt_y = y
-            for row in alternatives[:6]:
+            for row in alternatives[:8]:
                 body = (
                     f"Action: {row.get('action', '')}\n"
                     f"Source: {row.get('source', '')}\n"
@@ -6059,6 +6552,7 @@ class DecisionExplorerWindow(tk.Toplevel):
                     str(row.get("name", "")),
                     body,
                     "normal",
+                    int(row.get("release_id")),
                 )
                 self._arrow(alt_header, alt)
                 alt_y = alt[3] + 18
@@ -6103,7 +6597,35 @@ class DecisionExplorerWindow(tk.Toplevel):
         else:
             self.canvas.configure(scrollregion=(0, 0, 1600, max(800, y)))
 
+    def _orphan_rows(self) -> List[Tuple[str, str]]:
+        rows: List[Tuple[str, str]] = []
+        for item in self.snapshots:
+            if not item.get("manual_removed"):
+                continue
+            for row in item.get("tracklist", []) or []:
+                if row.get("orphaned"):
+                    rows.append((str(item.get("name", "")), str(row.get("title", ""))))
+        return rows
+
     def _apply(self) -> None:
+        orphan_rows = self._orphan_rows()
+        if orphan_rows:
+            preview = "\n".join(
+                f"- {release_name}: {track_title}"
+                for release_name, track_title in orphan_rows[:12]
+            )
+            if len(orphan_rows) > 12:
+                preview += f"\n- +{len(orphan_rows) - 12} more"
+            if not messagebox.askyesno(
+                APP_NAME,
+                (
+                    f"{len(orphan_rows)} included recording(s) are not available in any other "
+                    "allowed release after your manual removals:\n\n"
+                    f"{preview}\n\nApply the move plan anyway?"
+                ),
+                parent=self,
+            ):
+                return
         self.result = True
         self.destroy()
 
@@ -7115,17 +7637,29 @@ class App(tk.Tk):
         if comparison_log:
             self._append_activity(f"Comparison log: {comparison_log}")
 
-        decisions = build_release_decisions(releases, tracks, selected, reviews)
+        blocked_release_ids: Set[int] = set()
+        decisions = build_release_decisions(
+            releases,
+            tracks,
+            selected,
+            reviews,
+            blocked_release_ids,
+        )
         counts = action_summary(decisions)
         recycle_kept = sum(
             1 for d in decisions
             if next(r for r in releases if r.rid == d.release_id).root_kind == "recycle"
             and d.action in {"ADD", "REPLACE", "KEEP"}
         )
-        intra_duplicates = plan_intra_release_duplicates(releases, decisions)
-        to_move = counts["SKIP"] + counts["REMOVE"] + len(intra_duplicates)
+        initial_intra_duplicates = plan_intra_release_duplicates(releases, decisions)
 
-        self._decision_snapshot = build_decision_snapshot(releases, tracks, selected, decisions)
+        self._decision_snapshot = build_decision_snapshot(
+            releases,
+            tracks,
+            selected,
+            decisions,
+            blocked_release_ids,
+        )
         _save_decision_snapshot(self._decision_snapshot)
         self.decision_map_btn.configure(state="normal")
         self.status_var.set("Analysis complete - review Decision Map")
@@ -7140,26 +7674,42 @@ class App(tk.Tk):
         ]
         if existing is not None:
             summary_parts.append(f"Existing releases marked duplicate: {counts['REMOVE']}")
-        if intra_duplicates:
-            summary_parts.append(f"Duplicate files inside retained releases: {len(intra_duplicates)}")
+        if initial_intra_duplicates:
+            summary_parts.append(f"Duplicate files inside retained releases: {len(initial_intra_duplicates)}")
         if comparison_log:
             summary_parts.append("Detailed comparison logging is also enabled for this run.")
 
         explorer = DecisionExplorerWindow(
             self,
             self._decision_snapshot,
-            allow_apply=to_move > 0,
+            allow_apply=True,
             summary_text=" | ".join(summary_parts),
+            releases=releases,
+            tracks=tracks,
+            groups=groups,
+            selected=selected,
+            reviews=reviews,
+            decisions=decisions,
+            blocked_release_ids=blocked_release_ids,
         )
         self.wait_window(explorer)
 
-        if to_move == 0:
-            self.status_var.set("Analysis complete.")
-            return
+        self._decision_snapshot = list(explorer.snapshots)
+        _save_decision_snapshot(self._decision_snapshot)
 
         if explorer.result is not True:
             self.status_var.set("Move plan not applied.")
             self._append_activity("Move plan left unapplied; Decision Map remains available.")
+            return
+
+        decisions = list(explorer.decisions)
+        counts = action_summary(decisions)
+        intra_duplicates = plan_intra_release_duplicates(releases, decisions)
+        to_move = counts["SKIP"] + counts["REMOVE"] + len(intra_duplicates)
+
+        if to_move == 0:
+            self.status_var.set("Analysis complete - no moves in current plan.")
+            self._append_activity("Current plan contains no filesystem moves.")
             return
 
         self.run_btn.configure(state="disabled")

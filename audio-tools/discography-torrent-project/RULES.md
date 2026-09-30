@@ -778,3 +778,10 @@ Do not flatten release folders into the duplicate root. After successful moves, 
 - Show remix/live/pattern exclusions separately so skipped material is visibly distinguished from duplicate audio coverage.
 - Same-coverage/related-release metadata is explanatory context only; it must never be presented as the evidence that created duplicate identity. Duplicate identity remains audio-based.
 - Persist the latest compact Decision Map snapshot as program state under the analyzer's own `state` folder so it can be reopened without enabling detailed comparison logging.
+- During the live post-analysis Decision Map, every release must expose the other releases that share its included audio groups, and those release nodes must be directly navigable.
+- A retained release may be manually excluded from the current plan. This is a reversible planning constraint only until Apply; it must not move/delete files immediately.
+- Manual exclusion must re-run only collection optimization against the already-computed fingerprint groups. Do not rescan folders, re-probe files, regenerate Chromaprint fingerprints, or repeat pairwise audio comparison.
+- Re-optimization must apply the same album/source/existing/minimum-file rules to the remaining eligible releases and automatically select alternate carriers where available.
+- The selected release must expose its full track list. If a manually excluded release contains an included recording group with no non-blocked carrier anywhere else in the analyzed collection, highlight that track clearly in red as unique/unavailable elsewhere.
+- Applying a plan that would lose such manually orphaned included audio requires an explicit second confirmation that identifies the affected recordings. Never hide or silently accept this loss.
+- Manual exclusions may be undone before Apply. Saved Decision Map snapshots may be reopened read-only when the in-memory analysis objects are no longer available.
