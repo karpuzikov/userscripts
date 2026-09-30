@@ -32,7 +32,7 @@ import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 
 APP_NAME = "Duplicate / Edition Analyzer"
-APP_VERSION = "0.15.1"
+APP_VERSION = "0.15.2"
 PROGRAM_DATA_DIR_NAME = "Duplicate Edition Analyzer"
 AUDIO_EXTS = {".m4a", ".flac", ".wav", ".ape", ".wv", ".mp3", ".aac", ".ogg", ".opus"}
 def _logical_cpu_count() -> int:
@@ -6952,94 +6952,623 @@ class DoneWindow(tk.Toplevel):
         self.focus_force()
 
     def open_decision_map(self):
+        if self.decision_callback is None:
+            return
+        try:
+            self.grab_release()
+        except Exception:
+            pass
+        try:
+            self.decision_callback()
+        finally:
+            try:
+                if self.winfo_exists():
+                    self.grab_set()
+                    self.focus_force()
+            except Exception:
+                pass
+
+    def undo(self):
+        if not messagebox.askyesno(APP_NAME, "Undo last run?", parent=self):
+            return
+        try:
+            restored, conflicts = undo_last_run()
+        except Exception as exc:
+            messagebox.showerror(APP_NAME, str(exc), parent=self)
+            return
+        if conflicts:
+            messagebox.showwarning(
+                APP_NAME,
+                f"Restored: {restored}\nConflicts: {len(conflicts)}",
+                parent=self,
+            )
+        else:
+            messagebox.showinfo(APP_NAME, f"Restored: {restored}", parent=self)
+        self.destroy()
+
+
+
+class ToolTip:
+    def __init__(self, widget, text: str):
+        self.widget = widget
+        self.text = text
+        self.tip = None
+        widget.bind("<Enter>", self._show, add="+")
+        widget.bind("<Leave>", self._hide, add="+")
+        widget.bind("<ButtonPress>", self._hide, add="+")
+
+    def _show(self, _event=None):
+        if self.tip or not self.text:
+            return
+        try:
+            x = self.widget.winfo_rootx() + 14
+            y = self.widget.winfo_rooty() + self.widget.winfo_height() + 6
+            self.tip = tk.Toplevel(self.widget)
+            self.tip.wm_overrideredirect(True)
+            self.tip.wm_geometry(f"+{x}+{y}")
+            label = tk.Label(
+                self.tip,
+                text=self.text,
+                justify="left",
+                background=DARK_FIELD,
+                foreground=DARK_FG,
+                relief="solid",
+                borderwidth=1,
+                padx=8,
+                pady=5,
+                font=("Segoe UI", 9),
+            )
+            label.pack()
+        except Exception:
+            self.tip = None
+
+    def _hide(self, _event=None):
+        if self.tip is not None:
+            try:
+                self.tip.destroy()
+            except Exception:
+                pass
+            self.tip = None
+
+
+class PhraseReviewWindow(tk.Toplevel):
+    """Analyze-time review of detected remix/live phrase families."""
+
+    def __init__(
+        self,
+        master,
+        candidates: List[Tuple[str, int, List[str]]],
+        existing_rules: List[Dict[str, str]],
+    ):
+        super().__init__(master)
+        self.title(f"{APP_NAME} - Personal Picks Review")
+        self.geometry("900x650")
+        self.minsize(760, 520)
+        self.configure(background=DARK_BG)
+        _enable_dark_titlebar(self)
+        self.result: Optional[List[str]] = None
+        self.candidates = list(candidates)
+        self.added: Set[str] = set()
+
+        self.existing = {
+            _personal_pick_normalize(str(item.get("value", "")))
+            for item in existing_rules
+            if isinstance(item, dict) and str(item.get("value", "")).strip()
+        }
+
+        outer = ttk.Frame(self)
+        outer.pack(fill="both", expand=True, padx=16, pady=14)
+
+        ttk.Label(outer, text="Live / remix phrase review", font=("Segoe UI", 15, "bold")).pack(anchor="w")
+        ttk.Label(
+            outer,
+            text=(
+                "Detected from this analysis. Add only the live/remix families you personally want preserved. "
+                "Existing Personal Picks are marked automatically. Continue starts the normal duplicate analysis."
+            ),
+            style="Help.TLabel",
+            wraplength=850,
+            justify="left",
+        ).pack(anchor="w", pady=(5, 10))
+
+        body = ttk.Frame(outer)
+        body.pack(fill="both", expand=True)
+        canvas = tk.Canvas(body, background=DARK_BG, highlightthickness=0, borderwidth=0)
+        scroll = ttk.Scrollbar(body, orient="vertical", command=canvas.yview)
+        canvas.configure(yscrollcommand=scroll.set)
+        canvas.pack(side="left", fill="both", expand=True)
+        scroll.pack(side="right", fill="y")
+
+        rows = ttk.Frame(canvas)
+        window_id = canvas.create_window((0, 0), window=rows, anchor="nw")
+
+        def sync_scroll(_event=None):
+            canvas.configure(scrollregion=canvas.bbox("all"))
+            canvas.itemconfigure(window_id, width=canvas.winfo_width())
+
+        rows.bind("<Configure>", sync_scroll)
+        canvas.bind("<Configure>", sync_scroll)
+        canvas.bind("<MouseWheel>", lambda e: canvas.yview_scroll(int(-e.delta / 120), "units"))
+
+        self.buttons: Dict[str, ttk.Button] = {}
+
+        for row_index, (phrase, count, examples) in enumerate(self.candidates):
+            key = _personal_pick_normalize(phrase)
+            row = ttk.Frame(rows)
+            row.grid(row=row_index, column=0, sticky="ew", pady=(0, 10))
+            row.columnconfigure(0, weight=1)
+            rows.columnconfigure(0, weight=1)
+
+            kinds = []
+            if is_live_text(phrase):
+                kinds.append("Live")
+            if is_remix_text(phrase):
+                kinds.append("Remix")
+            kind = " / ".join(kinds) if kinds else "Version"
+
+            ttk.Label(
+                row,
+                text=f"{phrase}  [{kind}]  ({count})",
+                font=("Segoe UI", 10, "bold"),
+            ).grid(row=0, column=0, sticky="w")
+
+            if examples:
+                ttk.Label(
+                    row,
+                    text="Examples: " + "; ".join(examples[:3]),
+                    style="Help.TLabel",
+                    wraplength=650,
+                    justify="left",
+                ).grid(row=1, column=0, sticky="w", pady=(2, 0))
+
+            if key in self.existing:
+                ttk.Label(row, text="In keep list", style="Help.TLabel").grid(
+                    row=0, column=1, rowspan=2, sticky="e", padx=(12, 0)
+                )
+            else:
+                button = ttk.Button(
+                    row,
+                    text="Add to keep list",
+                    command=lambda p=phrase, k=key: self._add_phrase(p, k),
+                )
+                button.grid(row=0, column=1, rowspan=2, sticky="e", padx=(12, 0))
+                self.buttons[key] = button
+
+        footer = ttk.Frame(outer)
+        footer.pack(fill="x", pady=(12, 0))
+        ttk.Button(footer, text="Cancel", command=self._cancel).pack(side="right")
+        ttk.Button(footer, text="Continue", command=self._accept).pack(side="right", padx=(0, 8))
+
+        self.protocol("WM_DELETE_WINDOW", self._cancel)
+        self.transient(master)
+        self.grab_set()
+        self.focus_force()
+
+    def _add_phrase(self, phrase: str, key: str) -> None:
+        if not key or key in self.existing or key in self.added:
+            return
+        self.added.add(key)
+        button = self.buttons.get(key)
+        if button is not None:
+            button.configure(text="Added", state="disabled")
+
+    def _accept(self) -> None:
+        self.result = [
+            phrase
+            for phrase, _count, _examples in self.candidates
+            if _personal_pick_normalize(phrase) in self.added
+        ]
+        self.destroy()
+
+    def _cancel(self) -> None:
+        self.result = None
+        self.destroy()
+
+
+class PersonalPicksWindow(tk.Toplevel):
+    """Persistent exceptions to the global Remix/Live switches."""
+
+    def __init__(self, master, rules: List[Dict[str, str]]):
+        super().__init__(master)
+        self.title(f"{APP_NAME} - Personal Picks")
+        self.geometry("760x500")
+        self.minsize(660, 430)
+        self.configure(background=DARK_BG)
+        _enable_dark_titlebar(self)
+        self.result: Optional[List[Dict[str, str]]] = None
+        self.rules: List[Dict[str, str]] = [
+            {"mode": str(item.get("mode", "contains")), "value": str(item.get("value", ""))}
+            for item in rules
+            if isinstance(item, dict) and str(item.get("value", "")).strip()
+        ]
+
+        outer = ttk.Frame(self)
+        outer.pack(fill="both", expand=True, padx=16, pady=14)
+
+        ttk.Label(outer, text="Personal Picks", font=("Segoe UI", 15, "bold")).pack(anchor="w")
+        ttk.Label(
+            outer,
+            text=(
+                "These are exceptions to unchecked Save Remixes / Save Live recordings. "
+                "A matched track participates normally in optimization; it does not force a specific release to stay. "
+                "Phrase rules ignore case and punctuation, so 'Live From Capitol Studios' also matches year/punctuation variants."
+            ),
+            style="Help.TLabel",
+            wraplength=720,
+            justify="left",
+        ).pack(anchor="w", pady=(5, 10))
+
+        self.listbox = tk.Listbox(
+            outer,
+            background="#161616",
+            foreground=DARK_FG,
+            selectbackground=DARK_ACCENT,
+            selectforeground=DARK_FG,
+            relief="solid",
+            borderwidth=1,
+            font=("Segoe UI", 10),
+            activestyle="none",
+        )
+        self.listbox.pack(fill="both", expand=True)
+        self._refresh()
+
+        entry_row = ttk.Frame(outer)
+        entry_row.pack(fill="x", pady=(10, 0))
+        self.value_var = tk.StringVar()
+        entry = ttk.Entry(entry_row, textvariable=self.value_var)
+        entry.pack(side="left", fill="x", expand=True)
+        entry.bind("<Return>", lambda _e: self._add("contains"))
+        ttk.Button(entry_row, text="Add phrase", command=lambda: self._add("contains")).pack(side="left", padx=(8, 0))
+        ttk.Button(entry_row, text="Add exact title", command=lambda: self._add("exact")).pack(side="left", padx=(6, 0))
+
+        toolbar = ttk.Frame(outer)
+        toolbar.pack(fill="x", pady=(8, 0))
+        ttk.Button(toolbar, text="Remove selected", command=self._remove).pack(side="left")
+        ttk.Button(toolbar, text="Clear all", command=self._clear).pack(side="left", padx=(8, 0))
+
+        footer = ttk.Frame(outer)
+        footer.pack(fill="x", pady=(12, 0))
+        ttk.Button(footer, text="Cancel", command=self._cancel).pack(side="right")
+        ttk.Button(footer, text="Save", command=self._accept).pack(side="right", padx=(0, 8))
+
+        self.protocol("WM_DELETE_WINDOW", self._cancel)
+        self.transient(master)
+        self.grab_set()
+        entry.focus_set()
+
+    def _refresh(self) -> None:
+        self.listbox.delete(0, "end")
+        for item in self.rules:
+            mode = "Phrase" if item.get("mode") != "exact" else "Exact title"
+            self.listbox.insert("end", f"{mode}: {item.get('value', '')}")
+
+    def _add(self, mode: str) -> None:
+        value = self.value_var.get().strip()
+        if not value:
+            return
+        normalized = _personal_pick_normalize(value)
+        if not normalized:
+            return
+        for item in self.rules:
+            if (
+                str(item.get("mode", "contains")).lower() == mode
+                and _personal_pick_normalize(str(item.get("value", ""))) == normalized
+            ):
+                self.value_var.set("")
+                return
+        self.rules.append({"mode": mode, "value": value})
+        self.value_var.set("")
+        self._refresh()
+        self.listbox.see("end")
+
+    def _remove(self) -> None:
+        indexes = list(self.listbox.curselection())
+        for index in reversed(indexes):
+            if 0 <= index < len(self.rules):
+                del self.rules[index]
+        self._refresh()
+
+    def _clear(self) -> None:
+        self.rules.clear()
+        self._refresh()
+
+    def _accept(self) -> None:
+        self.result = [dict(item) for item in self.rules]
+        self.destroy()
+
+    def _cancel(self) -> None:
+        self.result = None
+        self.destroy()
+
+
+class PatternReviewWindow(tk.Toplevel):
+    def __init__(self, master, patterns: List[Dict[str, object]], preferences: Dict[str, bool]):
+        super().__init__(master)
+        self.title(f"{APP_NAME} - Track Pattern Review")
+        self.geometry("860x640")
+        self.minsize(720, 480)
+        self.configure(background=DARK_BG)
+        _enable_dark_titlebar(self)
+        self.result: Optional[Dict[str, bool]] = None
+        self.vars: Dict[str, tk.BooleanVar] = {}
+
+        outer = ttk.Frame(self)
+        outer.pack(fill="both", expand=True, padx=16, pady=14)
+
+        ttk.Label(outer, text="Unusual track pattern review", font=("Segoe UI", 15, "bold")).pack(anchor="w")
+        ttk.Label(
+            outer,
+            text=(
+                "Only unusual / non-standard patterns are shown. Standard families are recognized structurally, so prefixes "
+                "such as artist/remixer names do not make Radio Edit, Instrumental, Acoustic, Demo, Session, "
+                "Extended/VIP/Vocal Mix, 7\"/12\" versions, etc. appear here. "
+                "Remix/live tracks stay controlled by Save Remixes / Save Live recordings."
+            ),
+            style="Help.TLabel",
+            wraplength=810,
+            justify="left",
+        ).pack(anchor="w", pady=(5, 10))
+
+        toolbar = ttk.Frame(outer)
+        toolbar.pack(fill="x", pady=(0, 8))
+        ttk.Button(toolbar, text="Check all", command=lambda: self._set_all(True)).pack(side="left")
+        ttk.Button(toolbar, text="Uncheck all", command=lambda: self._set_all(False)).pack(side="left", padx=(8, 0))
+
+        body = ttk.Frame(outer)
+        body.pack(fill="both", expand=True)
+        canvas = tk.Canvas(body, background=DARK_BG, highlightthickness=0, borderwidth=0)
+        scroll = ttk.Scrollbar(body, orient="vertical", command=canvas.yview)
+        canvas.configure(yscrollcommand=scroll.set)
+        canvas.pack(side="left", fill="both", expand=True)
+        scroll.pack(side="right", fill="y")
+
+        rows = ttk.Frame(canvas)
+        window_id = canvas.create_window((0, 0), window=rows, anchor="nw")
+
+        def sync_scroll(_event=None):
+            canvas.configure(scrollregion=canvas.bbox("all"))
+            canvas.itemconfigure(window_id, width=canvas.winfo_width())
+
+        rows.bind("<Configure>", sync_scroll)
+        canvas.bind("<Configure>", sync_scroll)
+        canvas.bind("<MouseWheel>", lambda e: canvas.yview_scroll(int(-e.delta / 120), "units"))
+
+        for row_index, item in enumerate(patterns):
+            key = str(item["key"])
+            default = bool(preferences.get(key, True))
+            var = tk.BooleanVar(value=default)
+            self.vars[key] = var
+
+            row = ttk.Frame(rows)
+            row.grid(row=row_index, column=0, sticky="ew", pady=(0, 9))
+            rows.columnconfigure(0, weight=1)
+
+            count = int(item.get("count", 0))
+            label = str(item.get("label", key))
+            ttk.Checkbutton(row, text=f"{label} ({count})", variable=var).pack(anchor="w")
+
+            variants = [str(x) for x in item.get("variants", [])]
+            examples = [str(x) for x in item.get("examples", [])]
+            details = []
+            if len(variants) > 1:
+                details.append("Variants: " + "; ".join(variants[:6]))
+            if examples:
+                details.append("Examples: " + "; ".join(examples[:3]))
+            if details:
+                ttk.Label(
+                    row,
+                    text=" | ".join(details),
+                    style="Help.TLabel",
+                    wraplength=790,
+                    justify="left",
+                ).pack(anchor="w", padx=(24, 0), pady=(2, 0))
+
+        footer = ttk.Frame(outer)
+        footer.pack(fill="x", pady=(12, 0))
+        ttk.Button(footer, text="Cancel", command=self._cancel).pack(side="right")
+        ttk.Button(footer, text="Continue", command=self._accept).pack(side="right", padx=(0, 8))
+
+        self.protocol("WM_DELETE_WINDOW", self._cancel)
+        self.transient(master)
+        self.grab_set()
+        self.focus_force()
+
+    def _set_all(self, value: bool) -> None:
+        for var in self.vars.values():
+            var.set(value)
+
+    def _accept(self) -> None:
+        self.result = {key: bool(var.get()) for key, var in self.vars.items()}
+        self.destroy()
+
+    def _cancel(self) -> None:
+        self.result = None
+        self.destroy()
+
+
+class App(tk.Tk):
+    def __init__(self):
+        super().__init__()
+        self.title(f"{APP_NAME} {APP_VERSION}")
+        self.geometry("920x620")
+        self.minsize(820, 560)
+        _apply_dark_theme(self)
+        saved = _load_app_settings()
+        self.existing_var = tk.StringVar(value=saved.get("existing_discography", ""))
+        self.recycle_var = tk.StringVar(value=saved.get("recycle_update_folder", ""))
+
+        if "save_remixes" in saved:
+            save_remixes = bool(saved.get("save_remixes"))
+        else:
+            save_remixes = not bool(saved.get("exclude_remixes", True))
+        if "save_live" in saved:
+            save_live = bool(saved.get("save_live"))
+        else:
+            save_live = not bool(saved.get("exclude_live", True))
+
+        self.save_remixes_var = tk.BooleanVar(value=save_remixes)
+        self.save_live_var = tk.BooleanVar(value=save_live)
+        self.logging_var = tk.BooleanVar(value=bool(saved.get("logging_enabled", False)))
+        saved_patterns = saved.get("unusual_pattern_preferences_v5", {})
+        self.pattern_preferences: Dict[str, bool] = (
+            {str(k): bool(v) for k, v in saved_patterns.items()} if isinstance(saved_patterns, dict) else {}
+        )
+        saved_personal = saved.get("personal_keep_rules_v1", [])
+        self.personal_keep_rules: List[Dict[str, str]] = []
+        if isinstance(saved_personal, list):
+            for item in saved_personal:
+                if not isinstance(item, dict):
+                    continue
+                mode = str(item.get("mode", "contains")).strip().lower()
+                value = str(item.get("value", "")).strip()
+                if mode in {"contains", "exact"} and value:
+                    self.personal_keep_rules.append({"mode": mode, "value": value})
+        self.status_var = tk.StringVar(value="Ready")
+        self.progress_detail_var = tk.StringVar(value="")
+        self.progress_var = tk.DoubleVar(value=0)
+        self._running = False
+        self._run_started_at = 0.0
+        self._last_progress_stage = ""
+        self._decision_snapshot: List[Dict[str, object]] = _load_decision_snapshot()
+        self._build()
+        self.protocol("WM_DELETE_WINDOW", self.on_close)
+
+    def _build(self):
+        frm = ttk.Frame(self)
+        frm.pack(fill="both", expand=True, padx=16, pady=14)
+        frm.columnconfigure(0, weight=1)
+        frm.rowconfigure(11, weight=1)
+
+        ttk.Label(frm, text="Existing discography (optional)").grid(row=0, column=0, sticky="w", pady=(0, 3))
+        existing_entry = ttk.Entry(frm, textvariable=self.existing_var)
+        existing_entry.grid(row=1, column=0, sticky="ew")
+        existing_buttons = ttk.Frame(frm)
+        existing_buttons.grid(row=1, column=1, padx=(10, 0), sticky="e")
+        ttk.Button(existing_buttons, text="Browse...", command=lambda: self.browse(self.existing_var)).pack(side="left")
+        ttk.Button(existing_buttons, text="Clear", command=self.clear_existing).pack(side="left", padx=(6, 0))
+        ToolTip(existing_entry, "Already processed collection. Leave blank to analyze only the new/update folder.")
+
+        ttk.Label(frm, text="New / update releases").grid(row=2, column=0, sticky="w", pady=(12, 3))
+        recycle_entry = ttk.Entry(frm, textvariable=self.recycle_var)
+        recycle_entry.grid(row=3, column=0, sticky="ew")
+        ttk.Button(frm, text="Browse...", command=lambda: self.browse(self.recycle_var)).grid(
+            row=3, column=1, padx=(10, 0), sticky="e"
+        )
+        ToolTip(recycle_entry, "Folder containing releases to analyze and filter.")
+
+        options = ttk.Frame(frm)
+        options.grid(row=4, column=0, columnspan=2, sticky="w", pady=(14, 8))
+        remix_cb = ttk.Checkbutton(
+            options,
+            text="Save Remixes",
+            variable=self.save_remixes_var,
+            command=self.save_settings,
+        )
+        remix_cb.pack(side="left")
+        live_cb = ttk.Checkbutton(
+            options,
+            text="Save Live recordings",
+            variable=self.save_live_var,
+            command=self.save_settings,
+        )
+        live_cb.pack(side="left", padx=(18, 0))
+        self.personal_picks_btn = ttk.Button(
+            options,
+            text=self._personal_picks_button_text(),
+            command=self.edit_personal_picks,
+        )
+        self.personal_picks_btn.pack(side="left", padx=(18, 0))
+        logging_cb = ttk.Checkbutton(
+            options,
+            text="Logging",
+            variable=self.logging_var,
+            command=self.save_settings,
+        )
+        logging_cb.pack(side="left", padx=(18, 0))
+        ToolTip(remix_cb, "Checked: remixes are included in comparison and selection. Unchecked: remixes are skipped.")
+        ToolTip(live_cb, "Checked: live recordings are included in comparison and selection. Unchecked: live recordings are skipped.")
+        ToolTip(self.personal_picks_btn, "Persistent exceptions: matching remix/live tracks are included even when their global checkbox is unchecked.")
+        ToolTip(logging_cb, "Checked: write a detailed JSONL log for the audio comparison process.")
+
+        match_label = ttk.Label(frm, text="Match: Chromaprint + duration (audio only)", style="Help.TLabel")
+        match_label.grid(row=5, column=0, columnspan=2, sticky="w", pady=(0, 10))
+        ToolTip(match_label, "Titles, filenames, tags, barcodes, and folder names do not decide duplicate identity.")
+
+        ttk.Label(frm, text="Progress", style="Section.TLabel").grid(
+            row=6, column=0, columnspan=2, sticky="w", pady=(2, 5)
+        )
+        ttk.Label(frm, textvariable=self.status_var).grid(
+            row=7, column=0, columnspan=2, sticky="w"
+        )
+        self.progress = ttk.Progressbar(frm, variable=self.progress_var, maximum=100)
+        self.progress.grid(row=8, column=0, columnspan=2, sticky="ew", pady=(5, 3))
+        ttk.Label(frm, textvariable=self.progress_detail_var, style="Help.TLabel").grid(
+            row=9, column=0, columnspan=2, sticky="w"
+        )
+
+        ttk.Label(frm, text="Activity", style="Section.TLabel").grid(
+            row=10, column=0, columnspan=2, sticky="w", pady=(12, 5)
+        )
+        self.activity = tk.Text(
+            frm,
+            height=9,
+            wrap="word",
+            background="#161616",
+            foreground=DARK_FG,
+            insertbackground=DARK_FG,
+            selectbackground=DARK_ACCENT,
+            relief="solid",
+            borderwidth=1,
+            font=("Cascadia Mono", 9),
+            state="disabled",
+        )
+        self.activity.grid(row=11, column=0, columnspan=2, sticky="nsew")
+
+        actions = ttk.Frame(frm)
+        actions.grid(row=12, column=0, columnspan=2, sticky="ew", pady=(12, 0))
+        self.run_btn = ttk.Button(actions, text="Analyze", command=self.start)
+        self.run_btn.pack(side="left")
+        ttk.Button(actions, text="Undo last run", command=self.undo_main).pack(side="left", padx=(8, 0))
+        self.decision_map_btn = ttk.Button(
+            actions,
+            text="Release Map...",
+            command=self.open_decision_map,
+            state="normal" if self._decision_snapshot else "disabled",
+        )
+        self.decision_map_btn.pack(side="left", padx=(8, 0))
+        ttk.Button(actions, text="Close", command=self.on_close).pack(side="right")
+
+
+    def _personal_picks_button_text(self) -> str:
+        count = len(self.personal_keep_rules)
+        return f"Personal Picks... ({count})" if count else "Personal Picks..."
+
+    def edit_personal_picks(self):
         if self._running:
             return
+        dialog = PersonalPicksWindow(self, self.personal_keep_rules)
+        self.wait_window(dialog)
+        if dialog.result is None:
+            return
+        self.personal_keep_rules = dialog.result
+        self.personal_picks_btn.configure(text=self._personal_picks_button_text())
+        self.save_settings()
 
-        context = self._live_decision_context
-        if context is not None:
-            snapshots = list(context.get("snapshots", []) or [])
-        else:
-            snapshots = self._decision_snapshot or _load_decision_snapshot()
-
+    def open_decision_map(self):
+        if self._running:
+            return
+        snapshots = self._decision_snapshot or _load_decision_snapshot()
         if not snapshots:
             messagebox.showinfo(APP_NAME, "No analyzed release decisions are available yet.", parent=self)
             return
-
-        if context is not None:
-            dialog = DecisionExplorerWindow(
-                self,
-                snapshots,
-                allow_apply=True,
-                summary_text=str(context.get("summary_text", "")),
-                releases=context.get("releases"),
-                tracks=context.get("tracks"),
-                groups=context.get("groups"),
-                selected=set(context.get("selected", set())),
-                reviews=context.get("reviews"),
-                decisions=context.get("decisions"),
-                blocked_release_ids=set(context.get("blocked_release_ids", set())),
-                allow_reanalyze=True,
-            )
-        else:
-            dialog = DecisionExplorerWindow(
-                self,
-                snapshots,
-                allow_apply=False,
-                summary_text="Last saved analysis result.",
-                allow_reanalyze=True,
-            )
-
+        dialog = DecisionExplorerWindow(
+            self,
+            snapshots,
+            allow_apply=False,
+            summary_text="Last saved analysis result.",
+            allow_reanalyze=False,
+        )
         self.wait_window(dialog)
-
-        self._decision_snapshot = list(dialog.snapshots)
-        _save_decision_snapshot(self._decision_snapshot)
-
-        if context is not None:
-            context["snapshots"] = list(dialog.snapshots)
-            context["selected"] = set(dialog.selected)
-            context["decisions"] = list(dialog.decisions)
-            context["blocked_release_ids"] = set(dialog.blocked_release_ids)
-
-        if dialog.result == "reanalyze":
-            self._live_decision_context = None
-            self.after(50, self.start)
-            return
-
-        if dialog.result == "apply" and context is not None:
-            self._apply_live_decision_context(context)
-            return
-
-        self.status_var.set("Analysis complete - plan not applied.")
-
-    def _apply_live_decision_context(self, context: Dict[str, object]) -> None:
-        existing = context.get("existing")
-        recycle = context.get("recycle")
-        releases = context.get("releases")
-        decisions = list(context.get("decisions", []) or [])
-        if not isinstance(recycle, Path) or not isinstance(releases, list):
-            messagebox.showerror(APP_NAME, "The current analysis context is no longer available.", parent=self)
-            return
-
-        counts = action_summary(decisions)
-        intra_duplicates = plan_intra_release_duplicates(releases, decisions)
-        to_move = counts["SKIP"] + counts["REMOVE"] + len(intra_duplicates)
-        if to_move == 0:
-            self.status_var.set("Analysis complete - no moves in current plan.")
-            self._append_activity("Current plan contains no filesystem moves.")
-            return
-
-        self.run_btn.configure(state="disabled")
-        self.progress_var.set(0)
-        self.progress_detail_var.set("")
-        self.status_var.set("Applying moves")
-        self._last_progress_stage = ""
-        self._append_activity("Applying moves")
-        self._set_running(True)
-        threading.Thread(
-            target=self.apply_worker,
-            args=(existing, recycle, releases, decisions, intra_duplicates),
-            daemon=True,
-        ).start()
 
     def undo_main(self):
         if self._running:
@@ -7159,7 +7688,6 @@ class DoneWindow(tk.Toplevel):
                 pass
 
         self.save_settings()
-        self._live_decision_context = None
         self.run_btn.configure(state="disabled")
         self.progress_var.set(0)
         self.progress_detail_var.set("")
@@ -7415,22 +7943,58 @@ class DoneWindow(tk.Toplevel):
         if initial_intra_duplicates:
             summary_parts.append(f"Duplicate files inside retained releases: {len(initial_intra_duplicates)}")
         if comparison_log:
-            summary_parts.append("Detailed comparison logging is enabled for this run.")
+            summary_parts.append("Detailed comparison logging is also enabled for this run.")
 
-        self._live_decision_context = {
-            "existing": existing,
-            "recycle": recycle,
-            "releases": releases,
-            "tracks": tracks,
-            "groups": groups,
-            "selected": set(selected),
-            "reviews": list(reviews),
-            "decisions": list(decisions),
-            "blocked_release_ids": set(blocked_release_ids),
-            "snapshots": list(self._decision_snapshot),
-            "summary_text": " | ".join(summary_parts),
-        }
-        self.open_decision_map()
+        explorer = DecisionExplorerWindow(
+            self,
+            self._decision_snapshot,
+            allow_apply=True,
+            summary_text=" | ".join(summary_parts),
+            releases=releases,
+            tracks=tracks,
+            groups=groups,
+            selected=selected,
+            reviews=reviews,
+            decisions=decisions,
+            blocked_release_ids=blocked_release_ids,
+        )
+        self.wait_window(explorer)
+
+        self._decision_snapshot = list(explorer.snapshots)
+        _save_decision_snapshot(self._decision_snapshot)
+
+        if explorer.result == "reanalyze":
+            self.status_var.set("Starting a new analysis...")
+            self.after(50, self.start)
+            return
+
+        if explorer.result not in (True, "apply"):
+            self.status_var.set("Move plan not applied.")
+            self._append_activity("Move plan left unapplied; Release Map remains available.")
+            return
+
+        decisions = list(explorer.decisions)
+        counts = action_summary(decisions)
+        intra_duplicates = plan_intra_release_duplicates(releases, decisions)
+        to_move = counts["SKIP"] + counts["REMOVE"] + len(intra_duplicates)
+
+        if to_move == 0:
+            self.status_var.set("Analysis complete - no moves in current plan.")
+            self._append_activity("Current plan contains no filesystem moves.")
+            return
+
+        self.run_btn.configure(state="disabled")
+        self.progress_var.set(0)
+        self.progress_detail_var.set("")
+        self.status_var.set("Applying moves")
+        self._last_progress_stage = ""
+        self._append_activity("Applying moves")
+        self._set_running(True)
+        threading.Thread(
+            target=self.apply_worker,
+            args=(existing, recycle, releases, decisions, intra_duplicates),
+            daemon=True,
+        ).start()
 
     def apply_worker(
         self,
@@ -7456,7 +8020,6 @@ class DoneWindow(tk.Toplevel):
 
     def applied(self, recycle: Path, result: Dict[str, object]):
         self._set_running(False)
-        self._live_decision_context = None
         self.run_btn.configure(state="normal")
         self.progress_var.set(100)
         self.progress_detail_var.set("100%")
