@@ -33,7 +33,7 @@ import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 
 APP_NAME = "Duplicate / Edition Analyzer"
-APP_VERSION = "0.16.0"
+APP_VERSION = "0.16.1"
 PROGRAM_DATA_DIR_NAME = "Duplicate Edition Analyzer"
 PYSIDE6_VERSION = "6.11.2"
 SIGMA_VERSION = "3.0.3"
@@ -6947,7 +6947,7 @@ def launch_qt_release_map(session: Dict[str, object]) -> Dict[str, object]:
 
 
 
-class DoneWindow(tk.Toplevel):class DoneWindow(tk.Toplevel):
+class DoneWindow(tk.Toplevel):
     def __init__(
         self,
         master,
