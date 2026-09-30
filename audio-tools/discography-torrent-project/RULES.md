@@ -644,3 +644,9 @@ Do not flatten release folders into the duplicate root. After successful moves, 
 - A clean release may be replaced by an explicit release only when they are otherwise exact equivalents: same release identity after advisory wording is stripped, same release type, same source class, same total/wanted track count, same wanted track order, and the same audio-group multiset.
 - When that exact-equivalence test passes, retain explicit and move clean.
 - If clean and explicit audio differs, preserve both as distinct material.
+
+### Intra-release dedupe tag-fallback rule
+
+- Fingerprint all audio files even when they are excluded from wanted coverage; exclusions affect optimization, not the ability to prove duplicate files inside a retained release.
+- For intra-release cleanup, duplicate identity still requires the same high-confidence audio group.
+- Same-track safety requires the same physical folder and compatible track position, but title agreement may come from either the embedded title or normalized filename. A bad TITLE tag must not block cleanup when the filename and audio identity agree.
