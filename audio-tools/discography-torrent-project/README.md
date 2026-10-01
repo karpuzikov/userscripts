@@ -4,7 +4,7 @@ Complete project source and workflow assets for the discography torrent automati
 
 ## Current tools
 
-- `tools/Duplicate Edition Analyzer v0.17.5.pyw` - Release Map release-click relationships now include same-base-song alternative recordings even when fingerprint grouping correctly keeps them separate due to a real length/content difference; non-remix Versions are drawn separately from Remixes. Track details now expose separate `Versions N` and `Remixes N` controls. Retained releases containing a genuinely unique counted song with no other non-remix version receive a 💎 Gem badge instead of the numeric unique-count bubble. The obsolete bottom-left map legend was removed. v0.17.4 search, zero-count hiding, and physical-file minimization remain intact. Under construction ⚠️
+- `tools/Duplicate Edition Analyzer v0.17.6.pyw` - Track rows now receive the same 💎 marker when the exact recording occurs in only one release in the full analysis and the base song has no other non-remix recording-group version anywhere; remixes do not disqualify the Gem. Existing release-level Gem behavior from v0.17.5 is preserved, including album Gems. The Release Map details panel now closes with its top-right `×`, `Esc`, or by clicking the already-selected release again. v0.17.5 Versions/Remixes separation and alternative-release connections remain intact. Under construction ⚠️
 - `tools/AudioChecker Automation v0.1.pyw` - AudioChecker batch automation.
 - `tools/ALAC Conversion Automation v0.2.pyw` - lossless -> ALAC conversion. Under construction ⚠️
 - `tools/CUE Corrector - MusicBrainz DiscID 1.3.pyw` - MusicBrainz DiscID/CUE workflow.

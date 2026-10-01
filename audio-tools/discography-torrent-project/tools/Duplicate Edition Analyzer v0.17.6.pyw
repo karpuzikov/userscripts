@@ -33,7 +33,7 @@ import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 
 APP_NAME = "Duplicate / Edition Analyzer"
-APP_VERSION = "0.17.5"
+APP_VERSION = "0.17.6"
 PROGRAM_DATA_DIR_NAME = "Duplicate Edition Analyzer"
 PYSIDE6_VERSION = "6.11.2"
 AUDIO_EXTS = {".m4a", ".flac", ".wav", ".ape", ".wv", ".mp3", ".aac", ".ogg", ".opus"}
@@ -6310,7 +6310,13 @@ button,input { font:inherit; }
 #details.open { width:min(720px,52vw); border-left-width:1px; }
 #detailsInner { width:min(720px,52vw); min-width:520px; height:100%; display:flex; flex-direction:column; }
 #emptyDetails { margin:auto; color:var(--muted); text-align:center; padding:30px; }
-#detailsHead { padding:15px 16px 12px; border-bottom:1px solid var(--line); }
+#detailsHead { position:relative; padding:15px 46px 12px 16px; border-bottom:1px solid var(--line); }
+#closeDetailsBtn {
+  position:absolute; right:12px; top:11px; width:30px; height:30px; padding:0;
+  border:1px solid #38414f; border-radius:7px; background:#171c23; color:#cbd5e1;
+  font-size:18px; line-height:26px; cursor:pointer;
+}
+#closeDetailsBtn:hover { border-color:#697586; background:#222a34; color:#fff; }
 #releaseName { font-size:17px; line-height:1.28; font-weight:750; margin-bottom:5px; }
 #releaseMeta { color:var(--muted); font-size:12px; margin-bottom:10px; }
 #releaseActions { display:flex; gap:8px; margin-bottom:10px; }
@@ -6341,6 +6347,10 @@ button,input { font:inherit; }
 .track.manual { color:#c4b5fd; }
 .track .num,.track .dur { color:#8793a4; text-align:center; }
 .track .titleText { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.trackGem {
+  display:inline-block; margin-right:5px; font-family:"Segoe UI Emoji","Segoe UI Symbol","Segoe UI",sans-serif;
+  font-size:14px; vertical-align:-1px;
+}
 .track .status { color:#929eae; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .versionsCell { display:flex; justify-content:center; gap:4px; }
 .versionsTrack,.remixesTrack {
@@ -6574,7 +6584,14 @@ function renderBoard() {
           :'<span class="uniqueBadge '+badgeClass(n.uniqueCount)+'">'+n.uniqueCount+'</span>');
       row.innerHTML='<span class="folderIcon"></span><span class="releaseName">'+esc(n.name)+'</span>'
         +'<span class="releaseMeta">'+esc(n.action)+'</span>'+badge;
-      row.onclick=function(){ selectedId=Number(n.id); activeTrack=null; openDetails(n); updateRowHighlights(); drawConnections(); updateTrackMode(); };
+      row.onclick=function(){
+        const details=document.getElementById("details");
+        if(selectedId!=null && Number(selectedId)===Number(n.id) && details.classList.contains("open")){
+          closeDetails();
+          return;
+        }
+        selectedId=Number(n.id); activeTrack=null; openDetails(n); updateRowHighlights(); drawConnections(); updateTrackMode();
+      };
       col.appendChild(row); rowEls.set(String(n.id),row);
     });
     columns.appendChild(col);
@@ -6629,11 +6646,21 @@ function trackStatus(t) {
   if(t.pendingIgnore) return "Pending ignore - Re-Analyze required";
   if(t.manualSkip) return "Ignored by you";
   if(t.orphaned) return "Unique - release removal would lose it";
+  if(t.isGem) return "Gem - no duplicates or other versions";
   if(t.unique) return "Unique to this retained release";
   if(t.coveredBy && t.coveredBy.length) return "Also on: "+t.coveredBy.slice(0,2).join("; ");
   if(t.excluded) return "Skipped by active options";
   if(t.distinction) return t.distinction;
   return "Included";
+}
+function closeDetails() {
+  selectedId=null;
+  activeTrack=null;
+  const aside=document.getElementById("details");
+  aside.classList.remove("open");
+  updateRowHighlights();
+  drawConnections();
+  updateTrackMode();
 }
 function openDetails(n) {
   const aside=document.getElementById("details"), inner=document.getElementById("detailsInner");
@@ -6652,8 +6679,9 @@ function openDetails(n) {
     if(versions.length) altButtons+='<button class="versionsTrack" data-track="'+t.index+'">Versions '+versions.length+'</button>';
     if(remixes.length) altButtons+='<button class="remixesTrack" data-track="'+t.index+'">Remixes '+remixes.length+'</button>';
     const versionsCell='<div class="versionsCell">'+altButtons+'</div>';
+    const gem=t.isGem?'<span class="trackGem" title="Gem: no duplicates or other versions">💎</span>':"";
     tracks+='<div class="'+cls.join(" ")+'" data-group="'+t.groupId+'" data-index="'+t.index+'" title="'+esc(t.distinction||trackStatus(t))+'">'
-      +'<div class="num">'+esc(t.number)+'</div><div class="titleText">'+esc(t.title)+'</div>'
+      +'<div class="num">'+esc(t.number)+'</div><div class="titleText">'+gem+esc(t.title)+'</div>'
       +'<div class="dur">'+esc(t.duration)+'</div>'+versionsCell+'<div class="status">'+esc(trackStatus(t))+'</div>'+action+'</div>';
     function addAlternativePanel(items,kind){
       if(!items.length) return "";
@@ -6678,7 +6706,7 @@ function openDetails(n) {
     const label=n.pendingReleaseIgnore?"Restore release":"Ignore release";
     ignoreRelease='<button class="btn" id="ignoreReleaseBtn">'+label+'</button>';
   }
-  inner.innerHTML='<div id="detailsHead"><div id="releaseName">'+esc(n.name)+'</div>'
+  inner.innerHTML='<div id="detailsHead"><button id="closeDetailsBtn" title="Close details" aria-label="Close details">×</button><div id="releaseName">'+esc(n.name)+'</div>'
     +'<div id="releaseMeta">'+esc(n.kind==="duplicate"?"DUPLICATE / "+n.action:n.action)
     +' | '+n.uniqueCount+' unique | '+n.includedTracks+' included</div>'
     +'<div id="releaseActions">'+ignoreRelease+'</div><div id="pathRow"><div id="releasePath">'+esc(n.path)+'</div>'
@@ -6687,6 +6715,7 @@ function openDetails(n) {
     +'<div id="tracksTitle"><span>Tracks</span><small>Track = exact audio group; Versions and Remixes are separate same-song alternatives</small></div>'
     +'<div id="tracks">'+tracks+'</div>';
   aside.classList.add("open");
+  document.getElementById("closeDetailsBtn").onclick=closeDetails;
   document.getElementById("copyPathBtn").onclick=function(){bridge.copyPath(n.path);};
   document.getElementById("openFolderBtn").onclick=function(){bridge.openFolder(n.path);};
   const rb=document.getElementById("ignoreReleaseBtn"); if(rb) rb.onclick=function(){bridge.toggleRelease(Number(n.id),receiveState);};
@@ -6758,6 +6787,12 @@ document.getElementById("clearTrackBtn").onclick=function(){
 document.getElementById("reanalyzeBtn").onclick=function(){bridge.reanalyze(receiveState);};
 document.getElementById("applyBtn").onclick=function(){bridge.apply();};
 document.getElementById("closeBtn").onclick=function(){bridge.closeMap();};
+document.addEventListener("keydown",function(e){
+  if(e.key==="Escape" && document.getElementById("details").classList.contains("open")){
+    e.preventDefault();
+    closeDetails();
+  }
+});
 document.getElementById("search").addEventListener("input",function(){
   activeTrack=null;
   applySearchHighlights(true);
@@ -6924,12 +6959,19 @@ def _release_map_state_for_ui(
         )
         version_families[base_key] = family_rows
 
-    # Gem means a retained release has a genuinely unique counted track whose
-    # base song has no other non-remix recording-group version in the analysis.
-    # Exact duplicate copies of the same group do not disqualify it; remixes are
-    # deliberately excluded from this test.
+    # Release-level Gem behavior from v0.17.5 is intentionally preserved.
+    # It is based on counted/active non-remix groups in the current plan.
     non_remix_groups_by_base: Dict[str, Set[int]] = defaultdict(set)
+
+    # Track-level Gem is stricter: the exact recording group must physically
+    # occur in only one release across the whole scan, and the base song must
+    # have no other non-remix recording-group version anywhere in the scan.
+    # Pure remixes do not disqualify a track Gem.
+    all_non_remix_groups_by_base: Dict[str, Set[int]] = defaultdict(set)
+    all_release_carriers_by_group: Dict[int, Set[int]] = defaultdict(set)
+
     for item in snapshots:
+        source_rid = int(item.get("release_id", -1))
         for row in item.get("tracklist", []) or []:
             base_key = (
                 str(row.get("base_title_key", "") or "").strip()
@@ -6940,6 +6982,10 @@ def _release_map_state_for_ui(
                 row.get("is_remix")
                 or is_remix_text(str(row.get("title", "")))
             )
+            if group_id >= 0:
+                all_release_carriers_by_group[group_id].add(source_rid)
+            if base_key and group_id >= 0 and not row_is_remix:
+                all_non_remix_groups_by_base[base_key].add(group_id)
             if (
                 base_key
                 and group_id >= 0
@@ -6987,6 +7033,16 @@ def _release_map_state_for_ui(
                 title = str(row.get("title", "") or "").strip()
                 if title and title not in gem_titles:
                     gem_titles.append(title)
+
+            track_is_gem = bool(
+                included
+                and group_id >= 0
+                and base_key
+                and not is_remix
+                and len(all_release_carriers_by_group.get(group_id, set())) == 1
+                and len(all_non_remix_groups_by_base.get(base_key, set())) == 1
+            )
+
             ui_tracks.append(
                 {
                     "index": track_index,
@@ -6997,6 +7053,7 @@ def _release_map_state_for_ui(
                     "included": included,
                     "excluded": bool(row.get("excluded")),
                     "isRemix": is_remix,
+                    "isGem": track_is_gem,
                     "manualSkip": manual_skip,
                     "pendingIgnore": track_index in pending_track_indices,
                     "unique": unique,
