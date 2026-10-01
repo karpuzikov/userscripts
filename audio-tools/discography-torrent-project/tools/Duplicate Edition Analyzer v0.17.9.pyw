@@ -33,7 +33,7 @@ import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 
 APP_NAME = "Duplicate / Edition Analyzer"
-APP_VERSION = "0.17.8"
+APP_VERSION = "0.17.9"
 PROGRAM_DATA_DIR_NAME = "Duplicate Edition Analyzer"
 PYSIDE6_VERSION = "6.11.2"
 AUDIO_EXTS = {".m4a", ".flac", ".wav", ".ape", ".wv", ".mp3", ".aac", ".ogg", ".opus"}
@@ -6481,7 +6481,7 @@ function renderBoard() {
       const badge=n.kind==="duplicate"
         ?'<span class="duplicateBadge">DUP</span>'
         :(n.isGem
-          ?'<span class="uniqueBadge gem" title="Gem: '+esc((n.gemTitles||[]).join("; "))+'">💎</span>'
+          ?'<span class="uniqueBadge gem" title="Gem track: '+esc((n.gemTitles||[]).join("; "))+'">💎</span>'
           :'<span class="uniqueBadge '+badgeClass(n.uniqueCount)+'">'+n.uniqueCount+'</span>');
       row.innerHTML='<span class="folderIcon"></span><span class="releaseName">'+esc(n.name)+'</span>'
         +'<span class="releaseMeta">'+esc(n.action)+'</span>'+badge;
@@ -6861,11 +6861,8 @@ def _release_map_state_for_ui(
         )
         version_families[base_key] = family_rows
 
-    # Release-level Gem behavior from v0.17.5 is intentionally preserved.
-    # It is based on counted/active non-remix groups in the current plan.
-    non_remix_groups_by_base: Dict[str, Set[int]] = defaultdict(set)
-
-    # Track-level Gem is stricter: the exact recording group must physically
+    # Track-level Gem is the single source of truth for both track and release
+    # Gem badges: the exact recording group must physically
     # occur in only one release across the whole scan, and the base song must
     # have no other non-remix recording-group version anywhere in the scan.
     # Pure remixes do not disqualify a track Gem.
@@ -6888,15 +6885,6 @@ def _release_map_state_for_ui(
                 all_release_carriers_by_group[group_id].add(source_rid)
             if base_key and group_id >= 0 and not row_is_remix:
                 all_non_remix_groups_by_base[base_key].add(group_id)
-            if (
-                base_key
-                and group_id >= 0
-                and bool(row.get("included"))
-                and not bool(row.get("excluded"))
-                and not row_is_remix
-            ):
-                non_remix_groups_by_base[base_key].add(group_id)
-
     nodes: List[Dict[str, object]] = []
     for item in visible:
         rid = int(item.get("release_id", -1))
@@ -6924,26 +6912,19 @@ def _release_map_state_for_ui(
             )
             group_id = int(row.get("group_id", -1) or -1)
             included = bool(row.get("included")) and not bool(row.get("excluded"))
-            if (
-                unique
-                and included
-                and group_id >= 0
-                and base_key
-                and not is_remix
-                and len(non_remix_groups_by_base.get(base_key, set())) == 1
-            ):
-                title = str(row.get("title", "") or "").strip()
-                if title and title not in gem_titles:
-                    gem_titles.append(title)
-
             track_is_gem = bool(
-                included
+                retained
+                and included
                 and group_id >= 0
                 and base_key
                 and not is_remix
                 and len(all_release_carriers_by_group.get(group_id, set())) == 1
                 and len(all_non_remix_groups_by_base.get(base_key, set())) == 1
             )
+            if track_is_gem:
+                title = str(row.get("title", "") or "").strip()
+                if title and title not in gem_titles:
+                    gem_titles.append(title)
 
             ui_tracks.append(
                 {

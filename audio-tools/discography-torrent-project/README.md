@@ -4,7 +4,7 @@ Complete project source and workflow assets for the discography torrent automati
 
 ## Current tools
 
-- `tools/Duplicate Edition Analyzer v0.17.8.pyw` - Duplicate identity is now acoustic-first. ISRC is never used to create, accept, reject, or override a duplicate match, and reported/tagged/file duration is no longer part of identity acceptance or candidate gating. Weak fingerprint candidates and same-base-title tracks are compared acoustically regardless of duration. Radio/extended/edit distinctions are protected by aligned fingerprint coverage and unmatched acoustic-content checks rather than duration. Effectively carbon-copy Chromaprint evidence overrides conflicting MusicBrainz Recording IDs. v0.17.7 Release Map UI fixes remain intact. Under construction ⚠️
+- `tools/Duplicate Edition Analyzer v0.17.9.pyw` - Release 💎 and track 💎 now use one identical rule. A release can show 💎 only when at least one visible retained track in that release also shows 💎. There is no separate looser release-only Gem calculation anymore, eliminating cases where a release was marked Gem while none of its songs qualified. v0.17.8 acoustic-first duplicate identity remains intact. Under construction ⚠️
 - `tools/AudioChecker Automation v0.1.pyw` - AudioChecker batch automation.
 - `tools/ALAC Conversion Automation v0.2.pyw` - lossless -> ALAC conversion. Under construction ⚠️
 - `tools/CUE Corrector - MusicBrainz DiscID 1.3.pyw` - MusicBrainz DiscID/CUE workflow.
