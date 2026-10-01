@@ -33,7 +33,7 @@ import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 
 APP_NAME = "Duplicate / Edition Analyzer"
-APP_VERSION = "0.17.11"
+APP_VERSION = "0.17.12"
 PROGRAM_DATA_DIR_NAME = "Duplicate Edition Analyzer"
 PYSIDE6_VERSION = "6.11.2"
 AUDIO_EXTS = {".m4a", ".flac", ".wav", ".ape", ".wv", ".mp3", ".aac", ".ogg", ".opus"}
@@ -6213,7 +6213,15 @@ button,input { font:inherit; }
   height:56px; min-height:56px; display:flex; align-items:center; gap:8px; padding:0 14px;
   background:#101319; border-bottom:1px solid var(--line); z-index:20;
 }
-#title { font-weight:750; font-size:17px; margin-right:10px; white-space:nowrap; }
+#title { font-weight:750; font-size:17px; margin-right:4px; white-space:nowrap; }
+#planCounts { display:flex; align-items:center; gap:5px; white-space:nowrap; }
+.planCount {
+  height:30px; display:flex; align-items:center; padding:0 8px;
+  border:1px solid #333b47; border-radius:7px; background:#161a20;
+  color:#c6cfdb; font-size:11px; font-weight:650;
+}
+#resultCounts.changed { border-color:#527b92; background:#14212a; color:#d9f3ff; }
+#resultCounts.pending { border-color:#8a6a25; background:#251f12; color:#f5d98b; }
 #search {
   width:min(520px,38vw); height:34px; border:1px solid #37404d; border-radius:8px;
   background:#181c23; color:var(--text); padding:0 11px; outline:none;
@@ -6387,6 +6395,10 @@ button,input { font:inherit; }
 <body>
 <div id="toolbar">
   <div id="title">Release Map</div>
+  <div id="planCounts" title="Tracks = counted tracks in retained releases. Skipped/ignored tracks are not counted.">
+    <div class="planCount" id="initialCounts">Initial: --</div>
+    <div class="planCount" id="resultCounts">Result: --</div>
+  </div>
   <input id="search" placeholder="Find release or track...">
   <button class="btn" id="clearTrackBtn" style="display:none">Clear track highlight</button>
   <div id="modeText">Chronological release board</div>
@@ -6427,6 +6439,28 @@ function badgeClass(n) {
   if (n >= 6) return "green";
   if (n >= 3) return "yellow";
   return "red";
+}
+function signedCount(n) {
+  n=Number(n||0);
+  return n>0 ? "+"+n : String(n);
+}
+function renderPlanCounts() {
+  const pc=state&&state.planCounts?state.planCounts:null;
+  const initial=pc&&pc.initial?pc.initial:{releases:0,tracks:0};
+  const result=pc&&pc.result?pc.result:initial;
+  const delta=pc&&pc.delta?pc.delta:{
+    releases:Number(result.releases||0)-Number(initial.releases||0),
+    tracks:Number(result.tracks||0)-Number(initial.tracks||0)
+  };
+  const initialEl=document.getElementById("initialCounts");
+  const resultEl=document.getElementById("resultCounts");
+  initialEl.textContent="Initial: "+initial.releases+" releases / "+initial.tracks+" tracks";
+  resultEl.textContent="Result: "+result.releases+" releases ("+signedCount(delta.releases)+") / "
+    +result.tracks+" tracks ("+signedCount(delta.tracks)+")"
+    +(state&&state.dirty?" - pending Re-Analyze":"");
+  const changed=Number(delta.releases)!==0||Number(delta.tracks)!==0;
+  resultEl.classList.toggle("changed",changed&&!state.dirty);
+  resultEl.classList.toggle("pending",!!(state&&state.dirty));
 }
 function getNode(id) {
   return (state.nodes || []).find(function(n){ return Number(n.id) === Number(id); });
@@ -6762,7 +6796,7 @@ function openDetails(n) {
   });
 }
 function receiveState(raw) {
-  state=JSON.parse(raw); updateButtons(); renderBoard();
+  state=JSON.parse(raw); renderPlanCounts(); updateButtons(); renderBoard();
   if(selectedId!=null && getNode(selectedId)) openDetails(getNode(selectedId));
   else document.getElementById("details").classList.remove("open");
   updateTrackMode(); renderResult();
@@ -6781,6 +6815,13 @@ function renderResult() {
   if(state.result.removed&&state.result.removed.length) html+='<div class="resultLine resultRemove">THEN removed: '+state.result.removed.map(esc).join("; ")+'</div>';
   if((!state.result.added||!state.result.added.length)&&(!state.result.removed||!state.result.removed.length))
     html+='<div class="resultLine">THEN no release-selection change.</div>';
+  if(state.planCounts){
+    const pc=state.planCounts, i=pc.initial||{}, r=pc.result||{}, d=pc.delta||{};
+    html+='<div class="resultLine">FROM INITIAL: '
+      +esc(i.releases)+' releases / '+esc(i.tracks)+' tracks -> '
+      +esc(r.releases)+' releases ('+esc(signedCount(d.releases))+') / '
+      +esc(r.tracks)+' tracks ('+esc(signedCount(d.tracks))+')</div>';
+  }
   body.innerHTML=html; drawer.classList.add("open");
 }
 document.getElementById("clearTrackBtn").onclick=function(){
@@ -6839,6 +6880,25 @@ def _release_date_sort_key_for_map(name: str) -> Tuple[int, int, int, str]:
     )
 
 
+def _release_map_plan_counts(
+    snapshots: List[Dict[str, object]],
+) -> Dict[str, int]:
+    """Count the current proposed plan, not every row visible on the map."""
+    retained = [
+        item
+        for item in snapshots
+        if str(item.get("action", "")) in {"KEEP", "ADD", "REPLACE"}
+        and not bool(item.get("manual_removed"))
+    ]
+    return {
+        "releases": len(retained),
+        "tracks": sum(
+            max(0, int(item.get("included_tracks", 0) or 0))
+            for item in retained
+        ),
+    }
+
+
 def _release_map_state_for_ui(
     snapshots: List[Dict[str, object]],
     tracks: Optional[List[Track]],
@@ -6848,6 +6908,7 @@ def _release_map_state_for_ui(
     dirty: bool,
     apply_enabled: bool,
     apply_highlighted: bool,
+    initial_plan_counts: Optional[Dict[str, int]] = None,
     result: Optional[Dict[str, object]] = None,
 ) -> Dict[str, object]:
     visible = [
@@ -7126,11 +7187,32 @@ def _release_map_state_for_ui(
             seen_links.add(key)
             duplicate_links.append({"duplicate": duplicate_id, "retained": target})
 
+    current_plan_counts = _release_map_plan_counts(snapshots)
+    baseline = dict(initial_plan_counts or current_plan_counts)
+    initial_releases = max(0, int(baseline.get("releases", 0) or 0))
+    initial_tracks = max(0, int(baseline.get("tracks", 0) or 0))
+    current_releases = max(0, int(current_plan_counts.get("releases", 0) or 0))
+    current_tracks = max(0, int(current_plan_counts.get("tracks", 0) or 0))
+
     return {
         "editable": bool(editable),
         "dirty": bool(dirty),
         "applyEnabled": bool(apply_enabled),
         "applyHighlighted": bool(apply_highlighted),
+        "planCounts": {
+            "initial": {
+                "releases": initial_releases,
+                "tracks": initial_tracks,
+            },
+            "result": {
+                "releases": current_releases,
+                "tracks": current_tracks,
+            },
+            "delta": {
+                "releases": current_releases - initial_releases,
+                "tracks": current_tracks - initial_tracks,
+            },
+        },
         "nodes": nodes,
         "versionFamilies": version_families,
         "duplicateLinks": duplicate_links,
@@ -7175,6 +7257,14 @@ def _qt_release_map_process(session_path: Path, result_path: Path) -> int:
             self.pending_release_ids: Set[int] = set()
             self.pending_causes: List[str] = []
             self.result = {"show": False, "causes": [], "added": [], "removed": []}
+            supplied_initial = session.get("initial_plan_counts")
+            if isinstance(supplied_initial, dict):
+                self.initial_plan_counts = {
+                    "releases": max(0, int(supplied_initial.get("releases", 0) or 0)),
+                    "tracks": max(0, int(supplied_initial.get("tracks", 0) or 0)),
+                }
+            else:
+                self.initial_plan_counts = _release_map_plan_counts(self.snapshots)
 
         def _state(self) -> str:
             payload = _release_map_state_for_ui(
@@ -7186,6 +7276,7 @@ def _qt_release_map_process(session_path: Path, result_path: Path) -> int:
                 self.dirty,
                 self.apply_enabled,
                 self.apply_highlighted,
+                self.initial_plan_counts,
                 self.result,
             )
             return json.dumps(payload, ensure_ascii=False)
@@ -7303,6 +7394,7 @@ def _qt_release_map_process(session_path: Path, result_path: Path) -> int:
                 "selected": self.selected,
                 "decisions": self.decisions,
                 "blocked_release_ids": self.blocked_release_ids,
+                "initial_plan_counts": self.initial_plan_counts,
             }
             with result_path.open("wb") as handle:
                 pickle.dump(payload, handle, protocol=pickle.HIGHEST_PROTOCOL)
@@ -7318,6 +7410,7 @@ def _qt_release_map_process(session_path: Path, result_path: Path) -> int:
                         "selected": self.selected,
                         "decisions": self.decisions,
                         "blocked_release_ids": self.blocked_release_ids,
+                        "initial_plan_counts": self.initial_plan_counts,
                     },
                     handle,
                     protocol=pickle.HIGHEST_PROTOCOL,
@@ -7351,6 +7444,7 @@ def _qt_release_map_process(session_path: Path, result_path: Path) -> int:
                             "selected": bridge.selected,
                             "decisions": bridge.decisions,
                             "blocked_release_ids": bridge.blocked_release_ids,
+                            "initial_plan_counts": bridge.initial_plan_counts,
                         },
                         handle,
                         protocol=pickle.HIGHEST_PROTOCOL,
@@ -8047,12 +8141,20 @@ class App(tk.Tk):
             command=self.save_settings,
         )
         logging_cb.pack(side="left", padx=(18, 0))
+        self.open_logs_btn = ttk.Button(
+            options,
+            text="📁",
+            width=3,
+            command=self.open_logs_folder,
+        )
+        self.open_logs_btn.pack(side="left", padx=(4, 0))
         ToolTip(remix_cb, "Checked: remixes are included in comparison and selection. Unchecked: remixes are skipped.")
         ToolTip(live_cb, "Checked: live recordings are included in comparison and selection. Unchecked: live recordings are skipped.")
         ToolTip(self.personal_picks_btn, "Persistent exceptions: matching remix/live tracks are included even when their global checkbox is unchecked.")
         ToolTip(logging_cb, "Checked: write a detailed JSONL log for the audio comparison process.")
+        ToolTip(self.open_logs_btn, "Open Duplicate Edition Analyzer logs folder.")
 
-        match_label = ttk.Label(frm, text="Match: Chromaprint + duration (audio only)", style="Help.TLabel")
+        match_label = ttk.Label(frm, text="Match: Chromaprint (audio only)", style="Help.TLabel")
         match_label.grid(row=5, column=0, columnspan=2, sticky="w", pady=(0, 10))
         ToolTip(match_label, "Titles, filenames, tags, barcodes, and folder names do not decide duplicate identity.")
 
@@ -8130,6 +8232,12 @@ class App(tk.Tk):
                 session.get("blocked_release_ids", set()),
             ) or set()
         )
+        incoming_initial = map_result.get("initial_plan_counts")
+        if isinstance(incoming_initial, dict):
+            session["initial_plan_counts"] = {
+                "releases": max(0, int(incoming_initial.get("releases", 0) or 0)),
+                "tracks": max(0, int(incoming_initial.get("tracks", 0) or 0)),
+            }
         self._decision_snapshot = list(session["snapshots"])
         _save_decision_snapshot(self._decision_snapshot)
 
@@ -8221,6 +8329,24 @@ class App(tk.Tk):
             messagebox.showwarning(APP_NAME, f"Restored: {restored}\nConflicts: {len(conflicts)}", parent=self)
         else:
             messagebox.showinfo(APP_NAME, f"Restored: {restored}", parent=self)
+
+    def open_logs_folder(self):
+        _migrate_legacy_app_data()
+        path = _logs_dir()
+        path.mkdir(parents=True, exist_ok=True)
+        try:
+            if os.name == "nt":
+                os.startfile(str(path))
+            elif sys.platform == "darwin":
+                subprocess.Popen(["open", str(path)])
+            else:
+                subprocess.Popen(["xdg-open", str(path)])
+        except Exception as exc:
+            messagebox.showerror(
+                APP_NAME,
+                f"Could not open logs folder:\n\n{exc}",
+                parent=self,
+            )
 
     def save_settings(self):
         _save_app_settings(
@@ -8586,6 +8712,7 @@ class App(tk.Tk):
 
         session: Dict[str, object] = {
             "snapshots": list(self._decision_snapshot),
+            "initial_plan_counts": _release_map_plan_counts(self._decision_snapshot),
             "allow_apply": True,
             "summary_text": " | ".join(summary_parts),
             "existing": existing,

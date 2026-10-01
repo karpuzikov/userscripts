@@ -889,3 +889,15 @@ This taxonomy is a standing rule for all future Duplicate Edition Analyzer work.
 - **Parent-family precedence:** when an edit/version suffix describes a remix-family recording, the track remains a **Remix**. For example, `Gimme Gimme (Sebastien Radio Edit)` is a Remix: `Radio Edit` describes the radio-length edit of the Sebastien remix; it does not turn that remix into a Version. The same rule applies to `<Remixer> Radio Edit`, `<Remixer> Extended Mix`, `<Remixer> Radio Version`, `<Remixer> Extended Version`, and equivalent remix-edit wording.
 - Release Map alternative-family UI, connection logic, counts, and Gem calculations must respect these categories independently. Remixes and Live recordings must never increase the `Versions N` count.
 - For 💎 Gem logic, "has another Version" means another **Version-category** recording only. A Remix or Live recording of the same base song does not disqualify an otherwise unique track from 💎.
+
+
+### Initial vs Result plan counters
+
+- Release Map must always show **Initial** and **Result** counters side-by-side for both retained releases and counted tracks.
+- **Initial** is captured from the first completed Analyze plan and stays unchanged for the entire live analysis session, including repeated Ignore/Re-Analyze cycles and closing/reopening that live map.
+- **Result** represents the latest completed Analyze/Re-Analyze plan and shows signed cumulative differences from Initial for both releases and tracks.
+- When Ignore changes are pending but Re-Analyze has not run, do not predict counts. Keep the last computed Result and visibly mark it as pending Re-Analyze.
+- A brand-new Analyze resets Initial and starts a new comparison baseline.
+- Track count means tracks currently participating in coverage inside retained releases; tracks skipped by active options or the manual ignore list are not included in this counter.
+- The Re-Analyze result drawer must repeat the cumulative Initial -> Result release/track totals so the impact remains visible alongside the concrete release additions/removals.
+- The main window must provide a compact folder control immediately beside Logging that opens this program's isolated `Documents\\Karpuzikov Tools\\Duplicate Edition Analyzer\\logs` directory.
