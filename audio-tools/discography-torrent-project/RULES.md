@@ -876,3 +876,15 @@ Do not flatten release folders into the duplicate root. After successful moves, 
 - The same applies to `Gimme Gimme (Ness Remix)` and `Gimme, Gimme (Dirty Nano Remix)`: use the bracketed remix descriptor only.
 - A full-title fallback is permitted only when the input is genuinely a descriptor string rather than a complete track title.
 - Personal Picks Review must provide direct clipboard access: each detected candidate has a Copy action and the review has Copy all review text. The persistent Personal Picks list must support Ctrl+C for selected rows and a Copy all action.
+
+
+### Permanent track-family taxonomy
+
+This taxonomy is a standing rule for all future Duplicate Edition Analyzer work. These categories are mutually distinct and must never be collapsed into one generic "version" family.
+
+- **Version** means an alternate studio/release edit of the same underlying recording family, such as: Radio Edit, Radio Version, Extended Mix, Extended Version, Single Edit, Single Version, Main Version, Original/Main Mix, Album Version, Album Edit, or comparable non-remix/non-live edit/version wording.
+- **Remix** is a separate category. Remixes are **not Versions**, even when they are edits/extended forms of a remix. Examples include Producer/DJ Remix, Club Remix, Dub Remix, Remix Edit, Remix Radio Edit, Remix Extended, VIP Remix, and similar remix-family titles.
+- **Live recording** is a separate category. Live recordings are **not Versions**, even when the title literally contains the word `Version`, for example `Live Version`. Concert/live/stage recordings belong to the Live category, not Versions.
+- Classification must follow semantic meaning, not the literal presence of words such as `Version`, `Edit`, or `Mix`.
+- Release Map alternative-family UI, connection logic, counts, and Gem calculations must respect these categories independently. Remixes and Live recordings must never increase the `Versions N` count.
+- For 💎 Gem logic, "has another Version" means another **Version-category** recording only. A Remix or Live recording of the same base song does not disqualify an otherwise unique track from 💎.
