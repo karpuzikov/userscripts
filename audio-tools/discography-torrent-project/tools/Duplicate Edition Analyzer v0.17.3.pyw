@@ -33,7 +33,7 @@ import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 
 APP_NAME = "Duplicate / Edition Analyzer"
-APP_VERSION = "0.17.2"
+APP_VERSION = "0.17.3"
 PROGRAM_DATA_DIR_NAME = "Duplicate Edition Analyzer"
 PYSIDE6_VERSION = "6.11.2"
 AUDIO_EXTS = {".m4a", ".flac", ".wav", ".ape", ".wv", ".mp3", ".aac", ".ogg", ".opus"}
@@ -5495,6 +5495,7 @@ def build_decision_snapshot(
                     "unique_to_release": unique_to_release,
                     "orphaned": orphaned,
                     "distinction": distinction,
+                    "base_title_key": base_key,
                 }
             )
 
@@ -6257,8 +6258,8 @@ button,input { font:inherit; }
   width:0; overflow:hidden; transition:width .16s ease; border-left:0 solid var(--line);
   background:var(--panel); display:flex; flex-direction:column; z-index:10;
 }
-#details.open { width:min(590px,43vw); border-left-width:1px; }
-#detailsInner { width:min(590px,43vw); min-width:440px; height:100%; display:flex; flex-direction:column; }
+#details.open { width:min(720px,52vw); border-left-width:1px; }
+#detailsInner { width:min(720px,52vw); min-width:520px; height:100%; display:flex; flex-direction:column; }
 #emptyDetails { margin:auto; color:var(--muted); text-align:center; padding:30px; }
 #detailsHead { padding:15px 16px 12px; border-bottom:1px solid var(--line); }
 #releaseName { font-size:17px; line-height:1.28; font-weight:750; margin-bottom:5px; }
@@ -6280,7 +6281,7 @@ button,input { font:inherit; }
 #tracksTitle small { color:#8793a4; font-weight:400; }
 #tracks { min-height:0; flex:1; overflow:auto; padding:0 8px 14px; }
 .track {
-  position:relative; display:grid; grid-template-columns:36px minmax(190px,1fr) 66px 138px;
+  position:relative; display:grid; grid-template-columns:36px minmax(180px,1fr) 58px 88px 138px;
   gap:8px; align-items:center; min-height:40px; padding:5px 10px;
   border-bottom:1px solid #232933; border-radius:6px; color:#edf1f7; font-size:12px; cursor:pointer;
 }
@@ -6292,6 +6293,34 @@ button,input { font:inherit; }
 .track .num,.track .dur { color:#8793a4; text-align:center; }
 .track .titleText { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .track .status { color:#929eae; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.versionsCell { display:flex; justify-content:center; }
+.versionsTrack {
+  height:26px; border:1px solid #3d637a; border-radius:7px; background:#12232d; color:#9de6ff;
+  padding:0 8px; cursor:pointer; font-size:10px; font-weight:750; white-space:nowrap;
+}
+.versionsTrack:hover { background:#17313f; border-color:#55d7ff; color:#d7f7ff; }
+.altVersions {
+  display:none; margin:2px 8px 7px 52px; border:1px solid #2d4554; border-radius:8px;
+  background:#0e171d; overflow:hidden;
+}
+.altVersions.open { display:block; }
+.altVersionsHead {
+  padding:7px 10px; color:#8fcfe6; background:#101d25; border-bottom:1px solid #263a46;
+  font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:.04em;
+}
+.altVersion {
+  width:100%; display:grid; grid-template-columns:minmax(180px,1fr) 54px 80px minmax(130px,1fr);
+  gap:8px; align-items:center; padding:7px 10px; border:0; border-bottom:1px solid #1f303a;
+  background:transparent; color:#e6edf5; text-align:left; cursor:pointer; font-size:11px;
+}
+.altVersion:last-child { border-bottom:0; }
+.altVersion:hover { background:#172630; }
+.altVersion .altTitle { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:650; }
+.altVersion .altDuration { color:#8793a4; text-align:center; }
+.altVersion .altState { color:#9ca7b8; white-space:nowrap; }
+.altVersion .altState.retained { color:#8ee7a7; }
+.altVersion .altState.available { color:#f3d17a; }
+.altVersion .altReleases { color:#7f8c9d; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .ignoreTrack {
   position:absolute; right:8px; top:5px; height:30px; opacity:0; pointer-events:none;
   border:1px solid #a33b44; border-radius:7px; background:#5b2026; color:#ffe8ea; padding:0 11px;
@@ -6453,6 +6482,25 @@ function selectTrack(releaseId,track) {
     el.classList.toggle("activeTrack",Number(el.dataset.group)===Number(activeTrack.groupId));
   });
 }
+function versionsForTrack(t) {
+  if(!state || !state.versionFamilies || !t || !t.baseKey) return [];
+  const family=state.versionFamilies[t.baseKey]||[];
+  return family.filter(function(v){return Number(v.groupId)!==Number(t.groupId);});
+}
+function highlightAlternativeVersion(v) {
+  if(!v || Number(v.groupId)<0 || Number(v.releaseId)<0) return;
+  activeTrack={
+    releaseId:Number(v.releaseId),
+    groupId:Number(v.groupId),
+    title:String(v.title||"Alternative version")
+  };
+  updateRowHighlights(); drawConnections(); updateTrackMode();
+  document.querySelectorAll(".track").forEach(function(el){
+    el.classList.toggle("activeTrack",Number(el.dataset.group)===Number(activeTrack.groupId));
+  });
+  const row=rowEls.get(String(v.releaseId));
+  if(row) row.scrollIntoView({behavior:"smooth",block:"center",inline:"center"});
+}
 function trackStatus(t) {
   if(t.pendingIgnore) return "Pending ignore - Re-Analyze required";
   if(t.manualSkip) return "Ignored by you";
@@ -6475,9 +6523,25 @@ function openDetails(n) {
       const label=(t.manualSkip||t.pendingIgnore)?"Restore":"Ignore";
       action='<button class="ignoreTrack" data-track="'+t.index+'">'+label+'</button>';
     }
+    const versions=versionsForTrack(t);
+    const versionsCell=versions.length
+      ?'<div class="versionsCell"><button class="versionsTrack" data-track="'+t.index+'">Versions '+versions.length+'</button></div>'
+      :'<div class="versionsCell"></div>';
     tracks+='<div class="'+cls.join(" ")+'" data-group="'+t.groupId+'" data-index="'+t.index+'" title="'+esc(t.distinction||trackStatus(t))+'">'
       +'<div class="num">'+esc(t.number)+'</div><div class="titleText">'+esc(t.title)+'</div>'
-      +'<div class="dur">'+esc(t.duration)+'</div><div class="status">'+esc(trackStatus(t))+'</div>'+action+'</div>';
+      +'<div class="dur">'+esc(t.duration)+'</div>'+versionsCell+'<div class="status">'+esc(trackStatus(t))+'</div>'+action+'</div>';
+    if(versions.length){
+      let versionRows="";
+      versions.forEach(function(v){
+        const stateText=v.retained?"Retained":(v.available?"Available":"Ignored");
+        const stateClass=v.retained?"retained":(v.available?"available":"");
+        const releaseText=(v.retainedReleaseNames&&v.retainedReleaseNames.length?v.retainedReleaseNames:v.releaseNames||[]).slice(0,2).join("; ");
+        versionRows+='<button class="altVersion" data-parent="'+t.index+'" data-group="'+v.groupId+'" data-release="'+v.releaseId+'">'
+          +'<span class="altTitle">'+esc(v.title)+'</span><span class="altDuration">'+esc(v.duration||"")+'</span>'
+          +'<span class="altState '+stateClass+'">'+esc(stateText)+'</span><span class="altReleases">'+esc(releaseText)+'</span></button>';
+      });
+      tracks+='<div class="altVersions" data-for="'+t.index+'"><div class="altVersionsHead">Alternative versions - different audio groups, not duplicates</div>'+versionRows+'</div>';
+    }
   });
   let ignoreRelease="";
   if(state.editable && n.kind==="retained"){
@@ -6490,7 +6554,7 @@ function openDetails(n) {
     +'<div id="releaseActions">'+ignoreRelease+'</div><div id="pathRow"><div id="releasePath">'+esc(n.path)+'</div>'
     +'<button class="btn" id="copyPathBtn">Copy</button><button class="btn" id="openFolderBtn">Open folder</button></div>'
     +'<div id="reason">'+esc(n.reason)+'</div></div>'
-    +'<div id="tracksTitle"><span>Tracks</span><small>Click a track to highlight every release containing it</small></div>'
+    +'<div id="tracksTitle"><span>Tracks</span><small>Track = exact audio group; Versions = other edits/mixes of the same base song</small></div>'
     +'<div id="tracks">'+tracks+'</div>';
   aside.classList.add("open");
   document.getElementById("copyPathBtn").onclick=function(){bridge.copyPath(n.path);};
@@ -6498,10 +6562,29 @@ function openDetails(n) {
   const rb=document.getElementById("ignoreReleaseBtn"); if(rb) rb.onclick=function(){bridge.toggleRelease(Number(n.id),receiveState);};
   inner.querySelectorAll(".track").forEach(function(el){
     const index=Number(el.dataset.index), track=(n.tracks||[]).find(function(t){return Number(t.index)===index;});
-    if(track) el.onclick=function(ev){ if(ev.target && ev.target.classList.contains("ignoreTrack")) return; selectTrack(n.id,track); };
+    if(track) el.onclick=function(ev){
+      if(ev.target && (ev.target.classList.contains("ignoreTrack")||ev.target.classList.contains("versionsTrack"))) return;
+      selectTrack(n.id,track);
+    };
   });
   inner.querySelectorAll(".ignoreTrack").forEach(function(btn){
     btn.onclick=function(ev){ev.stopPropagation();bridge.toggleTrack(Number(btn.dataset.track),receiveState);};
+  });
+  inner.querySelectorAll(".versionsTrack").forEach(function(btn){
+    btn.onclick=function(ev){
+      ev.stopPropagation();
+      const panel=inner.querySelector('.altVersions[data-for="'+btn.dataset.track+'"]');
+      if(panel) panel.classList.toggle("open");
+    };
+  });
+  inner.querySelectorAll(".altVersion").forEach(function(btn){
+    btn.onclick=function(ev){
+      ev.stopPropagation();
+      const parentIndex=Number(btn.dataset.parent);
+      const parentTrack=(n.tracks||[]).find(function(t){return Number(t.index)===parentIndex;});
+      const version=(parentTrack?versionsForTrack(parentTrack):[]).find(function(v){return Number(v.groupId)===Number(btn.dataset.group);});
+      if(version) highlightAlternativeVersion(version);
+    };
   });
 }
 function receiveState(raw) {
@@ -6581,6 +6664,95 @@ def _release_map_state_for_ui(
     visible.sort(key=lambda item: _release_date_sort_key_for_map(str(item.get("name", ""))))
     visible_ids = {int(item.get("release_id", -1)) for item in visible}
 
+    # Build a display-only catalog of distinct recording groups that share the
+    # same base song title. This intentionally does NOT merge those groups.
+    # It only lets the Release Map show "other versions" (radio edit, album
+    # version, remix, etc.) next to the currently selected track.
+    version_group_catalog: Dict[str, Dict[int, Dict[str, object]]] = defaultdict(dict)
+    for item in visible:
+        rid = int(item.get("release_id", -1))
+        release_name = str(item.get("name", ""))
+        action = str(item.get("action", ""))
+        release_retained = action in {"KEEP", "ADD", "REPLACE"}
+        for row in item.get("tracklist", []) or []:
+            base_key = str(row.get("base_title_key", "") or "").strip()
+            group_id = int(row.get("group_id", -1) or -1)
+            if not base_key or group_id < 0:
+                continue
+            group = version_group_catalog[base_key].setdefault(
+                group_id,
+                {
+                    "aliases": set(),
+                    "durations": [],
+                    "carriers": {},
+                },
+            )
+            title = str(row.get("title", "") or "").strip()
+            if title:
+                group["aliases"].add(title)
+            duration = str(row.get("duration", "") or "").strip()
+            if duration and duration not in group["durations"]:
+                group["durations"].append(duration)
+            included = bool(row.get("included")) and not bool(row.get("excluded"))
+            carrier = group["carriers"].setdefault(
+                rid,
+                {
+                    "id": rid,
+                    "name": release_name,
+                    "retained": False,
+                    "included": False,
+                },
+            )
+            carrier["retained"] = bool(carrier["retained"] or (release_retained and included))
+            carrier["included"] = bool(carrier["included"] or included)
+
+    version_families: Dict[str, List[Dict[str, object]]] = {}
+    for base_key, groups in version_group_catalog.items():
+        if len(groups) <= 1:
+            continue
+        family_rows: List[Dict[str, object]] = []
+        for group_id, raw in groups.items():
+            aliases = sorted(
+                list(raw.get("aliases", set()) or set()),
+                key=lambda value: (len(str(value)), str(value).casefold()),
+            )
+            carriers = sorted(
+                list((raw.get("carriers", {}) or {}).values()),
+                key=lambda row: (
+                    0 if bool(row.get("retained")) else 1,
+                    0 if bool(row.get("included")) else 1,
+                    str(row.get("name", "")).casefold(),
+                ),
+            )
+            retained_carriers = [row for row in carriers if bool(row.get("retained"))]
+            available_carriers = [row for row in carriers if bool(row.get("included"))]
+            preferred = retained_carriers or available_carriers or carriers
+            family_rows.append(
+                {
+                    "groupId": int(group_id),
+                    "title": aliases[0] if aliases else "Unknown version",
+                    "aliases": aliases[:6],
+                    "duration": (raw.get("durations", []) or [""])[0],
+                    "releaseId": int(preferred[0].get("id", -1)) if preferred else -1,
+                    "releaseIds": [int(row.get("id", -1)) for row in carriers],
+                    "releaseNames": [str(row.get("name", "")) for row in carriers[:6]],
+                    "retainedReleaseNames": [
+                        str(row.get("name", "")) for row in retained_carriers[:6]
+                    ],
+                    "retained": bool(retained_carriers),
+                    "available": bool(available_carriers),
+                }
+            )
+        family_rows.sort(
+            key=lambda row: (
+                0 if bool(row.get("retained")) else 1,
+                0 if bool(row.get("available")) else 1,
+                str(row.get("title", "")).casefold(),
+                int(row.get("groupId", -1)),
+            )
+        )
+        version_families[base_key] = family_rows
+
     nodes: List[Dict[str, object]] = []
     for item in visible:
         rid = int(item.get("release_id", -1))
@@ -6610,6 +6782,7 @@ def _release_map_state_for_ui(
                     "orphaned": bool(row.get("orphaned")),
                     "coveredBy": list(row.get("covered_by_names", []) or []),
                     "distinction": str(row.get("distinction", "")),
+                    "baseKey": str(row.get("base_title_key", "") or ""),
                 }
             )
         nodes.append(
@@ -6664,6 +6837,7 @@ def _release_map_state_for_ui(
         "applyEnabled": bool(apply_enabled),
         "applyHighlighted": bool(apply_highlighted),
         "nodes": nodes,
+        "versionFamilies": version_families,
         "duplicateLinks": duplicate_links,
         "result": result or {"show": False, "causes": [], "added": [], "removed": []},
     }
