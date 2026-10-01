@@ -4,7 +4,7 @@ Complete project source and workflow assets for the discography torrent automati
 
 ## Current tools
 
-- `tools/Duplicate Edition Analyzer v0.17.7.pyw` - Fixed an identity-precedence bug where an otherwise exact audio match could be split solely because two files carried different MusicBrainz Recording MBIDs. Exact matching Chromaprint fingerprints now override MBID disagreement, and an accepted audio pair with the same ISRC plus the same credited performers also overrides it. This prevents literal carbon copies such as `Cheeky` from being retained twice or mislabeled as alternative Versions. Track 💎 is now rendered in the same alternatives/actions column as `Versions N` / `Remixes N`, and tracks skipped by active options are grayed out. Under construction ⚠️
+- `tools/Duplicate Edition Analyzer v0.17.8.pyw` - Duplicate identity is now acoustic-first. ISRC is never used to create, accept, reject, or override a duplicate match, and reported/tagged/file duration is no longer part of identity acceptance or candidate gating. Weak fingerprint candidates and same-base-title tracks are compared acoustically regardless of duration. Radio/extended/edit distinctions are protected by aligned fingerprint coverage and unmatched acoustic-content checks rather than duration. Effectively carbon-copy Chromaprint evidence overrides conflicting MusicBrainz Recording IDs. v0.17.7 Release Map UI fixes remain intact. Under construction ⚠️
 - `tools/AudioChecker Automation v0.1.pyw` - AudioChecker batch automation.
 - `tools/ALAC Conversion Automation v0.2.pyw` - lossless -> ALAC conversion. Under construction ⚠️
 - `tools/CUE Corrector - MusicBrainz DiscID 1.3.pyw` - MusicBrainz DiscID/CUE workflow.

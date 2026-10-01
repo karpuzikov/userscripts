@@ -33,7 +33,7 @@ import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 
 APP_NAME = "Duplicate / Edition Analyzer"
-APP_VERSION = "0.17.7"
+APP_VERSION = "0.17.8"
 PROGRAM_DATA_DIR_NAME = "Duplicate Edition Analyzer"
 PYSIDE6_VERSION = "6.11.2"
 AUDIO_EXTS = {".m4a", ".flac", ".wav", ".ape", ".wv", ".mp3", ".aac", ".ogg", ".opus"}
@@ -409,26 +409,21 @@ FP_AUTO_P90_MAX = 10
 FP_MIN_OVERLAP = 0.85
 
 # Secondary audio-only acceptance for the same recording from a different
-# mastering/pressing. It is deliberately much tighter than random Chromaprint
-# similarity and requires near-identical duration plus strong full-track overlap.
+# mastering/pressing. Identity is based on Chromaprint evidence only; tagged/file
+# duration and identifiers such as ISRC are not identity authority.
 FP_MASTERING_SCORE = 7.5
 FP_MASTERING_GOOD_FRACTION = 0.80
 FP_MASTERING_MEDIAN_MAX = 7.0
 FP_MASTERING_P90_MAX = 14
 FP_MASTERING_MIN_OVERLAP = 0.92
-FP_MASTERING_MAX_DURATION_SECONDS = 4.0
-FP_MASTERING_MAX_DURATION_RATIO = 0.02
 
 FP_SILENCE_MIN_FRAMES = 120
 
-# Candidate prefilter. The previous pure-duration fallback compared almost every
-# track with every other similarly-sized track. Real matches from the diagnostic
-# corpus had far stronger token overlap, so keep a generous weak fallback without
-# turning the expensive matcher back into O(n^2).
+# Candidate prefilter is fingerprint-first. Weak fingerprint-token overlap is
+# still tested without requiring similar duration. Same-base-title tracks are
+# also fully compared acoustically regardless of reported duration.
 FP_CANDIDATE_STRONG_SHARED_TOKENS = 64
 FP_CANDIDATE_WEAK_SHARED_TOKENS = 24
-FP_CANDIDATE_DURATION_SECONDS = 6.0
-FP_CANDIDATE_DURATION_RATIO = 0.035
 
 
 def _new_comparison_log_path(recycle: Path) -> Path:
@@ -1146,16 +1141,6 @@ def _base_title_identity(text: str) -> str:
     return re.sub(r"[^a-z0-9]+", "", normalize_title(source))
 
 
-def _candidate_duration_close(a: Track, b: Track) -> bool:
-    if a.duration <= 0 or b.duration <= 0:
-        return False
-    delta = abs(a.duration - b.duration)
-    return delta <= max(
-        FP_CANDIDATE_DURATION_SECONDS,
-        FP_CANDIDATE_DURATION_RATIO * max(a.duration, b.duration),
-    )
-
-
 def _descriptor_family_set(values: Set[str]) -> Set[str]:
     """Collapse wording aliases into semantic families for metadata safety.
 
@@ -1188,40 +1173,46 @@ def _descriptor_family_set(values: Set[str]) -> Set[str]:
     return families
 
 
-def _metadata_match_conflict(a: Track, b: Track) -> str:
-    """Return a conservative reason to veto an otherwise-valid audio match.
+def _definitive_acoustic_identity(
+    sim: Optional[Tuple[float, float, float, int, float, float, int]]
+) -> bool:
+    """True only for effectively carbon-copy Chromaprint evidence.
 
-    Audio remains required. Metadata only blocks a merge when it contains strong,
-    contradictory evidence that the files are distinct recordings/versions.
+    This deliberately ignores ISRC, MusicBrainz IDs and duration.
     """
-    mbid_a = _normalized_identifier(a.mbid)
-    mbid_b = _normalized_identifier(b.mbid)
-    isrc_a = _normalized_identifier(a.isrc)
-    isrc_b = _normalized_identifier(b.isrc)
-    artists_a = _artist_signature(a.artist)
-    artists_b = _artist_signature(b.artist)
-    same_mbid = bool(mbid_a and mbid_b and mbid_a == mbid_b)
-    same_isrc = bool(isrc_a and isrc_b and isrc_a == isrc_b)
-    exact_fingerprint = bool(
-        a.fingerprint
-        and b.fingerprint
-        and a.fingerprint == b.fingerprint
-        and abs((a.fingerprint_duration or a.duration or 0.0) - (b.fingerprint_duration or b.duration or 0.0)) <= 0.25
+    if not sim:
+        return False
+    score, good, overlap, _shift, excellent, median, p90 = sim
+    return bool(
+        overlap >= 0.995
+        and score <= 0.25
+        and good >= 0.995
+        and excellent >= 0.995
+        and median <= 0.5
+        and p90 <= 1
     )
 
-    # Audio identity wins over database bookkeeping. Two MusicBrainz Recording
-    # entities can still point at the exact same audio. Never split a literal
-    # acoustic carbon copy merely because its recording MBID differs.
-    if same_mbid or exact_fingerprint:
+
+def _metadata_match_conflict(
+    a: Track,
+    b: Track,
+    definitive_audio: bool = False,
+) -> str:
+    """Return a conservative metadata veto for a non-definitive audio match.
+
+    ISRC and duration are diagnostic metadata only and never decide identity.
+    Definitive acoustic evidence wins over conflicting database metadata.
+    """
+    if definitive_audio:
         return ""
 
-    # A shared ISRC plus the same credited performers is also strong identity
-    # evidence once the audio matcher has already accepted the pair.
-    if same_isrc and (not artists_a or not artists_b or artists_a == artists_b):
+    mbid_a = _normalized_identifier(a.mbid)
+    mbid_b = _normalized_identifier(b.mbid)
+    same_mbid = bool(mbid_a and mbid_b and mbid_a == mbid_b)
+
+    if same_mbid:
         return ""
 
-    # Different recording MBIDs remain a conservative veto only when the
-    # stronger exact-audio / same-ISRC identity evidence above is absent.
     if mbid_a and mbid_b and mbid_a != mbid_b:
         return f"different MusicBrainz recording MBIDs ({a.mbid} vs {b.mbid})"
 
@@ -1235,51 +1226,6 @@ def _metadata_match_conflict(a: Track, b: Track) -> str:
                 "conflicting semantic version descriptors "
                 f"({sorted(semantic_a)} vs {sorted(semantic_b)})"
             )
-
-    featured_a = _featured_credit_signature(a.display_title)
-    featured_b = _featured_credit_signature(b.display_title)
-    if (
-        featured_a != featured_b
-        and (featured_a or featured_b)
-        and isrc_a and isrc_b and isrc_a != isrc_b
-    ):
-        return (
-            "different featured performers with different ISRCs "
-            f"({sorted(featured_a)} vs {sorted(featured_b)})"
-        )
-
-    if (
-        artists_a and artists_b and artists_a != artists_b
-        and isrc_a and isrc_b and isrc_a != isrc_b
-    ):
-        return (
-            "different credited artists with different ISRCs "
-            f"({sorted(artists_a)} vs {sorted(artists_b)})"
-        )
-
-    descriptors_a = _version_descriptors(a.display_title)
-    descriptors_b = _version_descriptors(b.display_title)
-    if (
-        descriptors_a
-        and descriptors_b
-        and _descriptor_family_set(descriptors_a) != _descriptor_family_set(descriptors_b)
-        and isrc_a and isrc_b and isrc_a != isrc_b
-    ):
-        return (
-            "different title/version descriptors with different ISRCs "
-            f"({sorted(descriptors_a)} vs {sorted(descriptors_b)})"
-        )
-
-    base_a = _base_title_identity(a.display_title)
-    base_b = _base_title_identity(b.display_title)
-    if (
-        isrc_a and isrc_b and isrc_a != isrc_b
-        and base_a and base_b and base_a != base_b
-    ):
-        return (
-            "different ISRCs and different base titles "
-            f"({a.display_title!r} vs {b.display_title!r})"
-        )
 
     return ""
 
@@ -2537,6 +2483,9 @@ def fingerprint_auto_match_values(
     fp2: Tuple[int, ...],
     duration2: float,
 ) -> Tuple[bool, Optional[Tuple[float, float, float, int, float, float, int]]]:
+    # duration1/duration2 are intentionally not used for identity. They remain
+    # in the signature only for compatibility with existing callers/logging.
+    _ = (duration1, duration2)
     sim = fingerprint_similarity(fp1, fp2)
     if not sim:
         return False, None
@@ -2552,16 +2501,8 @@ def fingerprint_auto_match_values(
         and p90 <= FP_AUTO_P90_MAX
     )
 
-    longer = max(duration1, duration2, 1.0)
-    shorter = min(duration1, duration2, longer)
-    duration_delta = abs(duration1 - duration2)
-
     mastering_match = (
         overlap >= FP_MASTERING_MIN_OVERLAP
-        and duration_delta <= max(
-            FP_MASTERING_MAX_DURATION_SECONDS,
-            FP_MASTERING_MAX_DURATION_RATIO * longer,
-        )
         and score <= FP_MASTERING_SCORE
         and good >= FP_MASTERING_GOOD_FRACTION
         and median <= FP_MASTERING_MEDIAN_MAX
@@ -2571,10 +2512,16 @@ def fingerprint_auto_match_values(
     if not strict_match and not mastering_match:
         return False, sim
 
-    length_ratio = shorter / longer
-    if length_ratio < 0.94 or duration_delta > max(12.0, 0.06 * longer):
-        if not _unmatched_fingerprint_is_silence(fp1, fp2, shift):
-            return False, sim
+    # Distinguish a carbon copy from a radio/extended/edit relationship using
+    # fingerprint content itself, not reported duration. If less than 94% of
+    # the longer fingerprint is aligned, any unmatched acoustic content must
+    # be silence for the files to remain the same recording.
+    a0 = max(shift, 0)
+    b0 = max(-shift, 0)
+    aligned_frames = max(0, min(len(fp1) - a0, len(fp2) - b0))
+    acoustic_coverage = aligned_frames / max(1, len(fp1), len(fp2))
+    if acoustic_coverage < 0.94 and not _unmatched_fingerprint_is_silence(fp1, fp2, shift):
+        return False, sim
 
     return True, sim
 
@@ -2986,16 +2933,12 @@ def _comparison_decision_details(
     matched: bool,
     sim: Optional[Tuple[float, float, float, int, float, float, int]],
 ) -> Dict[str, object]:
-    """Explain every threshold involved in one fingerprint decision."""
-    longer = max(duration1, duration2, 1.0)
-    shorter = min(duration1, duration2, longer)
+    """Explain every acoustic threshold involved in one fingerprint decision."""
+    # Durations are logged for diagnostics only and are not part of the decision.
     duration_delta = abs(duration1 - duration2)
-    length_ratio = shorter / longer
-
     details: Dict[str, object] = {
         "worker_matched": bool(matched),
-        "duration_delta_seconds": round(duration_delta, 6),
-        "length_ratio": round(length_ratio, 6),
+        "duration_delta_seconds_diagnostic_only": round(duration_delta, 6),
     }
     if not sim:
         details.update({
@@ -3003,8 +2946,8 @@ def _comparison_decision_details(
             "accepted_by": [],
             "strict_pass": False,
             "mastering_pass": False,
-            "length_gate_triggered": False,
-            "length_gate_pass": False,
+            "content_gate_triggered": False,
+            "content_gate_pass": False,
             "rejection_reasons": ["fingerprint_similarity returned no comparable result"],
         })
         return details
@@ -3018,13 +2961,8 @@ def _comparison_decision_details(
         "median": median <= FP_AUTO_MEDIAN_MAX,
         "p90": p90 <= FP_AUTO_P90_MAX,
     }
-    mastering_duration_limit = max(
-        FP_MASTERING_MAX_DURATION_SECONDS,
-        FP_MASTERING_MAX_DURATION_RATIO * longer,
-    )
     mastering_checks = {
         "overlap": overlap >= FP_MASTERING_MIN_OVERLAP,
-        "duration_delta": duration_delta <= mastering_duration_limit,
         "score": score <= FP_MASTERING_SCORE,
         "good_fraction": good >= FP_MASTERING_GOOD_FRACTION,
         "median": median <= FP_MASTERING_MEDIAN_MAX,
@@ -3034,15 +2972,16 @@ def _comparison_decision_details(
     mastering_pass = all(mastering_checks.values())
     preliminary_pass = strict_pass or mastering_pass
 
-    length_gate_triggered = bool(
-        preliminary_pass
-        and (length_ratio < 0.94 or duration_delta > max(12.0, 0.06 * longer))
-    )
+    a0 = max(shift, 0)
+    b0 = max(-shift, 0)
+    aligned_frames = max(0, min(len(fp1) - a0, len(fp2) - b0))
+    acoustic_coverage = aligned_frames / max(1, len(fp1), len(fp2))
+    content_gate_triggered = bool(preliminary_pass and acoustic_coverage < 0.94)
     unmatched_is_silence: Optional[bool] = None
-    length_gate_pass = True
-    if length_gate_triggered:
+    content_gate_pass = True
+    if content_gate_triggered:
         unmatched_is_silence = _unmatched_fingerprint_is_silence(fp1, fp2, shift)
-        length_gate_pass = bool(unmatched_is_silence)
+        content_gate_pass = bool(unmatched_is_silence)
 
     rejection_reasons: List[str] = []
     if not preliminary_pass:
@@ -3050,8 +2989,8 @@ def _comparison_decision_details(
         mastering_failed = [name for name, passed in mastering_checks.items() if not passed]
         rejection_reasons.append("strict failed: " + ", ".join(strict_failed))
         rejection_reasons.append("mastering failed: " + ", ".join(mastering_failed))
-    elif not length_gate_pass:
-        rejection_reasons.append("length gate failed: unmatched fingerprint content is not silence")
+    elif not content_gate_pass:
+        rejection_reasons.append("acoustic content gate failed: unmatched fingerprint content is not silence")
 
     accepted_by: List[str] = []
     if strict_pass:
@@ -3059,26 +2998,28 @@ def _comparison_decision_details(
     if mastering_pass:
         accepted_by.append("mastering")
 
+    derived_final_match = bool(preliminary_pass and content_gate_pass)
     details.update({
         "similarity_available": True,
         "score": round(score, 6),
         "good_fraction": round(good, 6),
         "excellent_fraction": round(excellent, 6),
         "overlap": round(overlap, 6),
+        "acoustic_coverage": round(acoustic_coverage, 6),
         "median": round(median, 6),
         "p90": int(p90),
         "shift": int(shift),
         "strict_checks": strict_checks,
         "strict_pass": strict_pass,
         "mastering_checks": mastering_checks,
-        "mastering_duration_limit_seconds": round(mastering_duration_limit, 6),
         "mastering_pass": mastering_pass,
         "accepted_by": accepted_by,
-        "length_gate_triggered": length_gate_triggered,
+        "content_gate_triggered": content_gate_triggered,
         "unmatched_is_silence": unmatched_is_silence,
-        "length_gate_pass": length_gate_pass,
-        "derived_final_match": bool(preliminary_pass and length_gate_pass),
-        "decision_consistent": bool(matched) == bool(preliminary_pass and length_gate_pass),
+        "content_gate_pass": content_gate_pass,
+        "definitive_acoustic_identity": _definitive_acoustic_identity(sim),
+        "derived_final_match": derived_final_match,
+        "decision_consistent": bool(matched) == derived_final_match,
         "rejection_reasons": rejection_reasons,
     })
     return details
@@ -3122,9 +3063,9 @@ def merge_equivalent_tracks(
 ) -> Tuple[Dict[int, List[int]], List[str]]:
     """Group recordings from audio fingerprints with a conservative metadata veto.
 
-    Candidate discovery now uses strong fingerprint-token overlap, a weaker
-    token+duration fallback, exact ID indexes, and same-base-title+duration
-    fallback. Pure duration-only all-pairs comparison is intentionally avoided.
+    Candidate discovery is fingerprint-first: strong/weak token overlap plus
+    same-base-title acoustic comparison. ISRC and duration do not create, accept,
+    reject, or merge a duplicate candidate.
     """
     uf = UnionFind(len(tracks))
     notes: List[str] = []
@@ -3160,63 +3101,40 @@ def merge_equivalent_tracks(
 
     candidate_reasons: Dict[Tuple[int, int], Set[str]] = defaultdict(set)
 
-    # Primary fingerprint-token routes.
+    # Primary fingerprint-token routes. Duration is deliberately not consulted.
     for pair, shared in pair_counts.items():
-        a, b = pair
         if shared >= FP_CANDIDATE_STRONG_SHARED_TOKENS:
             candidate_reasons[pair].add("fingerprint_tokens_strong")
-        elif (
-            shared >= FP_CANDIDATE_WEAK_SHARED_TOKENS
-            and _candidate_duration_close(tracks[a], tracks[b])
-        ):
-            candidate_reasons[pair].add("fingerprint_tokens_weak+duration")
+        elif shared >= FP_CANDIDATE_WEAK_SHARED_TOKENS:
+            candidate_reasons[pair].add("fingerprint_tokens_weak")
 
-    # Exact identifiers are candidate hints only; audio still has to pass.
+    # A shared MusicBrainz Recording ID is only a discovery hint; audio still
+    # has to pass. ISRC is intentionally not used even for candidate discovery.
     mbid_index: Dict[str, List[int]] = defaultdict(list)
-    isrc_index: Dict[str, List[int]] = defaultdict(list)
     for i, track in enumerate(tracks):
         if not track.fingerprint:
             continue
         mbid = _normalized_identifier(track.mbid)
-        isrc = _normalized_identifier(track.isrc)
         if mbid:
             mbid_index[mbid].append(i)
-        if isrc:
-            isrc_index[isrc].append(i)
 
     for ids in mbid_index.values():
         for a, b in itertools.combinations(sorted(set(ids)), 2):
             candidate_reasons[(a, b)].add("same_mbid")
-    for ids in isrc_index.values():
-        for a, b in itertools.combinations(sorted(set(ids)), 2):
-            candidate_reasons[(a, b)].add("same_isrc")
 
-    # Conservative fallback for alternate masterings whose cheap fingerprint
-    # tokens diverge: same base title + close duration still gets a full audio test.
+    # Same-base-title tracks always receive the full acoustic test regardless
+    # of their reported/tagged/file duration.
     title_index: Dict[str, List[int]] = defaultdict(list)
     for i, track in enumerate(tracks):
-        if not track.fingerprint or track.duration <= 0:
+        if not track.fingerprint:
             continue
         key = _base_title_identity(track.display_title)
         if key:
             title_index[key].append(i)
 
     for ids in title_index.values():
-        ordered = sorted(ids, key=lambda i: tracks[i].duration)
-        for pos, a in enumerate(ordered):
-            for b in ordered[pos + 1:]:
-                if not _candidate_duration_close(tracks[a], tracks[b]):
-                    if (
-                        tracks[b].duration - tracks[a].duration
-                        > max(
-                            FP_CANDIDATE_DURATION_SECONDS,
-                            FP_CANDIDATE_DURATION_RATIO * tracks[b].duration,
-                        )
-                    ):
-                        break
-                    continue
-                pair = (min(a, b), max(a, b))
-                candidate_reasons[pair].add("same_base_title+duration")
+        for a, b in itertools.combinations(sorted(set(ids)), 2):
+            candidate_reasons[(a, b)].add("same_base_title")
 
     candidate_pairs = sorted(candidate_reasons)
     total_candidates = len(candidate_pairs)
@@ -3252,13 +3170,12 @@ def merge_equivalent_tracks(
                     "candidate_prefilter": {
                         "strong_shared_token_min": FP_CANDIDATE_STRONG_SHARED_TOKENS,
                         "weak_shared_token_min": FP_CANDIDATE_WEAK_SHARED_TOKENS,
-                        "weak_duration_seconds": FP_CANDIDATE_DURATION_SECONDS,
-                        "weak_duration_ratio": FP_CANDIDATE_DURATION_RATIO,
                         "fallbacks": [
-                            "same_mbid",
-                            "same_isrc",
-                            "same_base_title+duration",
+                            "same_mbid (candidate hint only)",
+                            "same_base_title",
                         ],
+                        "isrc_used_for_identity": False,
+                        "duration_used_for_identity": False,
                     },
                     "strict": {
                         "score_max": FP_AUTO_SCORE,
@@ -3274,20 +3191,15 @@ def merge_equivalent_tracks(
                         "median_max": FP_MASTERING_MEDIAN_MAX,
                         "p90_max": FP_MASTERING_P90_MAX,
                         "overlap_min": FP_MASTERING_MIN_OVERLAP,
-                        "duration_delta_seconds_max": FP_MASTERING_MAX_DURATION_SECONDS,
-                        "duration_delta_ratio_max": FP_MASTERING_MAX_DURATION_RATIO,
                     },
-                    "length_gate": {
-                        "length_ratio_min": 0.94,
-                        "duration_delta_seconds_or_ratio": "12.0 seconds or 6% of longer track; unmatched part must be silence",
+                    "acoustic_content_gate": {
+                        "aligned_fingerprint_coverage_min": 0.94,
+                        "rule": "below 94% acoustic coverage, unmatched fingerprint content must be silence",
                     },
                     "metadata_safety_gate": [
-                        "different recording MBIDs unless exact fingerprint or shared ISRC+artist proves identity",
-                        "semantic version descriptor conflict",
-                        "different featured performers + different ISRCs",
-                        "different credited artists + different ISRCs",
-                        "different descriptors + different ISRCs",
-                        "different ISRCs + different base titles",
+                        "definitive acoustic identity overrides metadata disagreement",
+                        "different recording MBIDs for non-definitive audio matches",
+                        "semantic version descriptor conflict for non-definitive audio matches",
                     ],
                 },
             }
@@ -3314,10 +3226,6 @@ def merge_equivalent_tracks(
         second = tracks[b]
         shared_tokens = int(pair_counts.get(pair, 0))
         duration_delta = abs(first.duration - second.duration)
-        duration_limit = max(
-            FP_CANDIDATE_DURATION_SECONDS,
-            FP_CANDIDATE_DURATION_RATIO * max(first.duration, second.duration),
-        )
         reasons = sorted(candidate_reasons.get(pair, set()))
 
         details = _comparison_decision_details(
@@ -3343,7 +3251,7 @@ def merge_equivalent_tracks(
             if not details.get("similarity_available"):
                 log_counts["rejected_no_similarity"] += 1
             elif details.get("strict_pass") or details.get("mastering_pass"):
-                log_counts["rejected_length_gate"] += 1
+                log_counts["rejected_acoustic_content_gate"] += 1
             else:
                 log_counts["rejected_thresholds"] += 1
 
@@ -3354,8 +3262,7 @@ def merge_equivalent_tracks(
             "candidate": {
                 "reasons": reasons,
                 "shared_token_buckets": shared_tokens,
-                "duration_delta_seconds": round(duration_delta, 6),
-                "duration_candidate_limit_seconds": round(duration_limit, 6),
+                "duration_delta_seconds_diagnostic_only": round(duration_delta, 6),
             },
             "track_a": _comparison_track_log_data(first),
             "track_b": _comparison_track_log_data(second),
@@ -3373,7 +3280,12 @@ def merge_equivalent_tracks(
             notes.append(f"Comparison log write error: {exc}")
 
     def handle_result(done: int, a: int, b: int, audio_matched: bool, sim) -> None:
-        metadata_conflict = _metadata_match_conflict(tracks[a], tracks[b]) if audio_matched else ""
+        definitive_audio = bool(audio_matched and _definitive_acoustic_identity(sim))
+        metadata_conflict = (
+            _metadata_match_conflict(tracks[a], tracks[b], definitive_audio)
+            if audio_matched
+            else ""
+        )
         final_matched = bool(audio_matched and not metadata_conflict)
         log_comparison(done, a, b, audio_matched, final_matched, sim, metadata_conflict)
 
@@ -5322,44 +5234,22 @@ def _track_distinction_summary(
     other_release = by_release_id.get(other.release_id)
     other_name = other_release.path.name if other_release is not None else other.album or "another release"
     audio_match, _sim = fingerprint_auto_match(track, other)
-    metadata_conflict = _metadata_match_conflict(track, other) if audio_match else ""
-
-    artists_a = _artist_signature(track.artist)
-    artists_b = _artist_signature(other.artist)
-    delta = abs((track.duration or 0.0) - (other.duration or 0.0))
+    metadata_conflict = (
+        _metadata_match_conflict(track, other, _definitive_acoustic_identity(_sim))
+        if audio_match
+        else ""
+    )
 
     if audio_match and metadata_conflict:
-        if artists_a and artists_b and artists_a != artists_b:
-            return (
-                f"Same audio as '{other.display_title}' on {other_name}, but kept separate because "
-                f"artist credit differs ({track.artist or '?'} vs {other.artist or '?'})"
-                + (" and ISRC differs." if track.isrc and other.isrc and track.isrc != other.isrc else ".")
-            )
         return (
-            f"Same audio as '{other.display_title}' on {other_name}, but kept separate by metadata safety: "
-            f"{metadata_conflict}."
+            f"Acoustically similar to '{other.display_title}' on {other_name}, but kept separate by "
+            f"non-audio metadata safety because the fingerprint match is not definitive: {metadata_conflict}."
         )
 
     if not audio_match:
-        details: List[str] = []
-        if artists_a and artists_b and artists_a != artists_b:
-            details.append(f"artist credit differs ({track.artist or '?'} vs {other.artist or '?'})")
-        if delta >= 1.0:
-            details.append(
-                f"length {_duration_display(track.duration)} vs {_duration_display(other.duration)} "
-                f"({delta:.1f}s difference)"
-            )
-        if track.isrc and other.isrc and track.isrc != other.isrc:
-            details.append("ISRC differs")
-        if details:
-            return (
-                f"Different audio from '{other.display_title}' on {other_name}: "
-                + "; ".join(details)
-                + "; Chromaprint did not match."
-            )
         return (
-            f"Same visible metadata/length as '{other.display_title}' on {other_name}, "
-            "but Chromaprint did not match."
+            f"Different acoustic recording from '{other.display_title}' on {other_name}; "
+            "Chromaprint did not meet the duplicate threshold. ISRC and duration are diagnostic only."
         )
 
     return ""
