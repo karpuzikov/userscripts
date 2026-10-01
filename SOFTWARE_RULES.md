@@ -68,7 +68,7 @@ This is a blocking rule. A userscript update is not considered published until e
 4. Commit the script.
 5. Fetch the immutable commit-pinned raw URL and verify its `@version` and body.
 6. Update the README **Install** link to that immutable URL in a separate commit.
-7. Run the repository userscript-distribution check and require success.
+7. Verify the userscript metadata, version, raw source, and README link directly during the publish operation. Do not create or run a GitHub Actions workflow for this validation.
 8. Before giving a direct link to the user, compare the known installed version with the target. Only call it **Update** when installed < target.
 
 ### Failure handling
@@ -76,8 +76,21 @@ This is a blocking rule. A userscript update is not considered published until e
 - If Tampermonkey shows **Reinstall** and the installed version is lower than the intended target, distribution has failed: stop other work and repair the served source/version.
 - If Tampermonkey shows **Reinstall** and installed version equals incoming version, do not reinstall. The user is already current.
 - Never tell the user to click **Reinstall** as a workaround for an update problem.
-- The repository userscript-distribution check must pass before a userscript update is considered complete.
+- Userscript publishing must not depend on GitHub Actions. Perform required validation directly as part of the publish operation.
 
+
+
+## GitHub Actions policy
+
+This is a blocking repository rule.
+
+- Do **not** create, restore, replace, or enable a GitHub Actions workflow for userscript publishing, userscript distribution, userscript version checks, README install-link checks, cache-busting checks, metadata checks, or routine repository validation.
+- Do **not** create or modify any file under `.github/workflows/` unless the user explicitly requests that exact GitHub Actions workflow or explicitly asks to modify an existing workflow.
+- Routine software/userscript publishing and updates must be performed by direct repository commits and direct verification, without GitHub Actions.
+- Never restore the deleted `.github/workflows/userscript-distribution-check.yml` workflow or an equivalent workflow under another name.
+- Existing workflows must remain narrowly path-scoped to the specific tool they were created for. They must not run on `README.md`, `SOFTWARE_RULES.md`, unrelated scripts, or ordinary repository-wide pushes unless the user explicitly requests that behavior.
+- A normal userscript update, README update, rule update, or unrelated software update must not trigger GitHub Actions.
+- If a validation can be done during the current publish operation, do it directly instead of creating CI.
 
 ## GitHub development status
 
