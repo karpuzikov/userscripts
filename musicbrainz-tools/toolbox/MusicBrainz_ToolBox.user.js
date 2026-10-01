@@ -1,15 +1,16 @@
 // ==UserScript==
 // @name         MusicBrainz ToolBox
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.0.16
-// @description  Combined MusicBrainz release-editor, recording, barcode, Spotify linking, search, cover-art, Disc ID, and duplicate-edit tools.
+// @version      1.0.17
+// @description  Combined MusicBrainz release-editor, recording, barcode, Spotify/Apple Music linking, search, cover-art, Disc ID, and duplicate-edit tools.
 // @author       karpuzikov
 // @license      MIT
 // @match        https://musicbrainz.org/*
 // @match        https://beta.musicbrainz.org/*
 // @match        https://open.spotify.com/*
-// @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/toolbox/MusicBrainz_ToolBox.user.js?v=1.0.16
-// @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/toolbox/MusicBrainz_ToolBox.user.js?v=1.0.16
+// @match        https://music.apple.com/*
+// @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/toolbox/MusicBrainz_ToolBox.user.js?v=1.0.17
+// @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/toolbox/MusicBrainz_ToolBox.user.js?v=1.0.17
 // @supportURL   https://github.com/karpuzikov/userscripts
 // @grant        GM_getValue
 // @grant        GM_setValue
@@ -7488,6 +7489,411 @@
         handleRouteChange();
     })();
     }
+
+    // ============================================================================
+    // Apple Music -> linked MusicBrainz release
+    // MusicBrainz cleans Apple Music album URLs to:
+    // https://music.apple.com/<storefront>/album/<catalog-id>
+    // Shows MusicBrainz when linked, otherwise Harmony as the lookup fallback.
+    // ============================================================================
+    if (location.hostname === 'music.apple.com') {
+    (() => {
+        'use strict';
+
+        const LINK_CLASS = 'mb-toolbox-apple-release-link';
+        const TITLE_ROW_CLASS = 'mb-toolbox-apple-title-row';
+        const STYLE_ID = 'mb-toolbox-apple-release-link-style';
+        const CACHE_KEY = 'mb-toolbox-apple-release-links-v1';
+        const FOUND_TTL = 30 * 24 * 60 * 60 * 1000;
+        const MISSING_TTL = 15 * 1000;
+        const MAX_CACHE_ENTRIES = 500;
+        const REQUEST_INTERVAL = 1100;
+        const HARMONY_URL = 'https://harmony.pulsewidth.org.uk/';
+        const HARMONY_LOGO_URL = HARMONY_URL + 'harmony-logo.svg';
+
+        let currentAlbumKey = '';
+        let currentReleases = null;
+        let currentLookupAt = 0;
+        let lookupInFlight = false;
+        let requestGeneration = 0;
+        let lastRequestAt = 0;
+        let scanQueued = false;
+
+        function appleAlbumInfoFromLocation() {
+            const parts = location.pathname.split('/').filter(Boolean);
+            const albumIndex = parts.findIndex(part => part.toLowerCase() === 'album');
+            if (albumIndex < 0) return null;
+
+            const id = parts
+                .slice(albumIndex + 1)
+                .reverse()
+                .find(part => /^\d+$/.test(part));
+            if (!id) return null;
+
+            const storefront =
+                albumIndex > 0 && /^[a-z]{2}$/i.test(parts[albumIndex - 1])
+                    ? parts[albumIndex - 1].toLowerCase()
+                    : 'us';
+
+            const cleanPageUrl = new URL(location.href);
+            cleanPageUrl.hash = '';
+            cleanPageUrl.search = '';
+
+            return {
+                id,
+                storefront,
+                key: storefront + ':' + id,
+                // Match MusicBrainz URLCleanup.js exactly for Apple Music albums.
+                musicBrainzResource:
+                    `https://music.apple.com/${storefront}/album/${id}`,
+                // Preserve the human-facing Apple page for Harmony.
+                harmonyResource: cleanPageUrl.href,
+            };
+        }
+
+        function readCache() {
+            try {
+                const value = GM_getValue(CACHE_KEY, {});
+                return value && typeof value === 'object' ? value : {};
+            } catch {
+                return {};
+            }
+        }
+
+        function writeCache(cache) {
+            try {
+                const entries = Object.entries(cache)
+                    .sort((a, b) => Number(b[1]?.checkedAt || 0) - Number(a[1]?.checkedAt || 0))
+                    .slice(0, MAX_CACHE_ENTRIES);
+                GM_setValue(CACHE_KEY, Object.fromEntries(entries));
+            } catch {
+                // Cache failure must never break Apple Music.
+            }
+        }
+
+        function cachedReleases(albumKey) {
+            const cache = readCache();
+            const item = cache[albumKey];
+            if (!item?.checkedAt || !Array.isArray(item.releases)) return null;
+
+            const ttl = item.releases.length ? FOUND_TTL : MISSING_TTL;
+            if (Date.now() - item.checkedAt > ttl) return null;
+
+            return item.releases;
+        }
+
+        function storeCachedReleases(albumKey, releases) {
+            const cache = readCache();
+            cache[albumKey] = {
+                checkedAt: Date.now(),
+                releases,
+            };
+            writeCache(cache);
+        }
+
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        async function throttleMusicBrainz() {
+            const wait = Math.max(0, REQUEST_INTERVAL - (Date.now() - lastRequestAt));
+            if (wait) await sleep(wait);
+            lastRequestAt = Date.now();
+        }
+
+        function requestJson(url) {
+            return new Promise((resolve, reject) => {
+                GM_xmlhttpRequest({
+                    method: 'GET',
+                    url,
+                    headers: { Accept: 'application/json' },
+                    timeout: 15000,
+                    onload(response) {
+                        if (response.status === 404) {
+                            resolve(null);
+                            return;
+                        }
+                        if (response.status < 200 || response.status >= 300) {
+                            reject(new Error(`MusicBrainz HTTP ${response.status}`));
+                            return;
+                        }
+
+                        try {
+                            resolve(JSON.parse(response.responseText));
+                        } catch (error) {
+                            reject(error);
+                        }
+                    },
+                    onerror() {
+                        reject(new Error('MusicBrainz request failed'));
+                    },
+                    ontimeout() {
+                        reject(new Error('MusicBrainz request timed out'));
+                    },
+                });
+            });
+        }
+
+        function parseReleaseRelations(data) {
+            const relations = Array.isArray(data?.relations) ? data.relations : [];
+            const unique = new Map();
+
+            for (const relation of relations) {
+                const release = relation?.release;
+                const id = String(release?.id || '').trim().toLowerCase();
+                if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)) {
+                    continue;
+                }
+
+                if (!unique.has(id)) {
+                    unique.set(id, {
+                        id,
+                        title: String(release?.title || '').trim(),
+                        disambiguation: String(release?.disambiguation || '').trim(),
+                    });
+                }
+            }
+
+            return [...unique.values()];
+        }
+
+        async function lookupMusicBrainzReleases(info, force = false) {
+            const cached = force ? null : cachedReleases(info.key);
+            if (cached) return cached;
+
+            await throttleMusicBrainz();
+
+            const endpoint =
+                'https://musicbrainz.org/ws/2/url' +
+                '?resource=' + encodeURIComponent(info.musicBrainzResource) +
+                '&inc=release-rels&fmt=json';
+
+            try {
+                const data = await requestJson(endpoint);
+                const releases = parseReleaseRelations(data);
+                storeCachedReleases(info.key, releases);
+                return releases;
+            } catch (error) {
+                console.warn('[MusicBrainz ToolBox] Apple Music -> MusicBrainz lookup failed:', error);
+                return null;
+            }
+        }
+
+        function installStyles() {
+            if (document.getElementById(STYLE_ID)) return;
+
+            const style = document.createElement('style');
+            style.id = STYLE_ID;
+            style.textContent = `
+                .${TITLE_ROW_CLASS} {
+                    display: flex !important;
+                    align-items: center !important;
+                    gap: 8px !important;
+                    flex-wrap: wrap;
+                    min-width: 0;
+                }
+                .${LINK_CLASS} {
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    flex: 0 0 auto;
+                    width: 28px;
+                    height: 28px;
+                    border-radius: 4px;
+                    text-decoration: none !important;
+                    opacity: .92;
+                    transition: transform .12s ease, opacity .12s ease;
+                }
+                .${LINK_CLASS}:hover {
+                    opacity: 1;
+                    transform: scale(1.08);
+                }
+                .${LINK_CLASS} img {
+                    display: block;
+                    width: 26px;
+                    height: 26px;
+                    border: 0;
+                }
+            `;
+            document.head.appendChild(style);
+        }
+
+        function removeLinks() {
+            document.querySelectorAll('.' + LINK_CLASS).forEach(node => node.remove());
+            document.querySelectorAll('.' + TITLE_ROW_CLASS).forEach(node => {
+                node.classList.remove(TITLE_ROW_CLASS);
+            });
+        }
+
+        function renderLinks() {
+            const info = appleAlbumInfoFromLocation();
+            if (!info || info.key !== currentAlbumKey || !Array.isArray(currentReleases)) {
+                return false;
+            }
+
+            const title = document.querySelector(
+                'h1[data-testid="non-editable-product-title"]'
+            );
+            if (!title) return false;
+
+            installStyles();
+            title.classList.add(TITLE_ROW_CLASS);
+
+            const desired = currentReleases.length
+                ? currentReleases.map(release => ({
+                    key: 'mb:' + release.id,
+                    mbid: release.id,
+                    href: 'https://musicbrainz.org/release/' + release.id,
+                    image: 'https://musicbrainz.org/favicon.ico',
+                    alt: 'MusicBrainz',
+                    title: release.disambiguation
+                        ? `Open MusicBrainz release: ${release.title || release.id} (${release.disambiguation})`
+                        : `Open MusicBrainz release: ${release.title || release.id}`,
+                }))
+                : [{
+                    key: 'harmony',
+                    mbid: '',
+                    href:
+                        HARMONY_URL +
+                        'release?url=' +
+                        encodeURIComponent(info.harmonyResource),
+                    image: HARMONY_LOGO_URL,
+                    alt: 'Harmony',
+                    title: 'Search this Apple Music release in Harmony',
+                }];
+
+            const wantedKeys = new Set(desired.map(item => item.key));
+            title.querySelectorAll('.' + LINK_CLASS).forEach(link => {
+                if (!wantedKeys.has(link.dataset.linkKey || '')) link.remove();
+            });
+
+            for (const item of desired) {
+                if (title.querySelector(
+                    `.${LINK_CLASS}[data-link-key="${CSS.escape(item.key)}"]`
+                )) {
+                    continue;
+                }
+
+                const link = document.createElement('a');
+                link.className = LINK_CLASS;
+                link.dataset.linkKey = item.key;
+                if (item.mbid) link.dataset.mbid = item.mbid;
+                link.href = item.href;
+                link.target = '_blank';
+                link.rel = 'noopener noreferrer';
+                link.title = item.title;
+                link.setAttribute('aria-label', item.title);
+
+                const image = document.createElement('img');
+                image.src = item.image;
+                image.alt = item.alt;
+                image.width = 26;
+                image.height = 26;
+
+                link.appendChild(image);
+                title.appendChild(link);
+            }
+
+            return true;
+        }
+
+        async function refreshCurrentAlbum(force = false) {
+            const info = appleAlbumInfoFromLocation();
+            if (!info || info.key !== currentAlbumKey || lookupInFlight) return;
+
+            lookupInFlight = true;
+            const generation = requestGeneration;
+
+            try {
+                const releases = await lookupMusicBrainzReleases(info, force);
+
+                const latest = appleAlbumInfoFromLocation();
+                if (
+                    generation !== requestGeneration ||
+                    !latest ||
+                    latest.key !== currentAlbumKey ||
+                    latest.key !== info.key
+                ) {
+                    return;
+                }
+
+                currentLookupAt = Date.now();
+                currentReleases = releases;
+                renderLinks();
+            } finally {
+                lookupInFlight = false;
+            }
+        }
+
+        function handleRouteChange() {
+            const info = appleAlbumInfoFromLocation();
+            const albumKey = info?.key || '';
+
+            if (albumKey === currentAlbumKey) {
+                if (Array.isArray(currentReleases)) {
+                    renderLinks();
+
+                    if (
+                        currentReleases.length === 0 &&
+                        Date.now() - currentLookupAt >= MISSING_TTL
+                    ) {
+                        refreshCurrentAlbum(true);
+                    }
+                }
+                return;
+            }
+
+            currentAlbumKey = albumKey;
+            currentReleases = null;
+            currentLookupAt = 0;
+            ++requestGeneration;
+            removeLinks();
+
+            if (!info) return;
+            refreshCurrentAlbum(false);
+        }
+
+        function queueScan() {
+            if (scanQueued) return;
+            scanQueued = true;
+            setTimeout(() => {
+                scanQueued = false;
+                handleRouteChange();
+            }, 50);
+        }
+
+        const observer = new MutationObserver(queueScan);
+        observer.observe(document.documentElement, {
+            childList: true,
+            subtree: true,
+        });
+
+        window.addEventListener('focus', () => {
+            if (
+                currentAlbumKey &&
+                Array.isArray(currentReleases) &&
+                currentReleases.length === 0
+            ) {
+                refreshCurrentAlbum(true);
+            }
+        });
+
+        document.addEventListener('visibilitychange', () => {
+            if (
+                document.visibilityState === 'visible' &&
+                currentAlbumKey &&
+                Array.isArray(currentReleases) &&
+                currentReleases.length === 0
+            ) {
+                refreshCurrentAlbum(true);
+            }
+        });
+
+        setInterval(handleRouteChange, 500);
+        handleRouteChange();
+    })();
+    }
+
 
 
 })();
