@@ -33,7 +33,7 @@ import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 
 APP_NAME = "Duplicate / Edition Analyzer"
-APP_VERSION = "0.18.0"
+APP_VERSION = "0.18.1"
 PROGRAM_DATA_DIR_NAME = "Duplicate Edition Analyzer"
 PYSIDE6_VERSION = "6.11.2"
 AUDIO_EXTS = {".m4a", ".flac", ".wav", ".ape", ".wv", ".mp3", ".aac", ".ogg", ".opus"}
@@ -5480,6 +5480,15 @@ def build_decision_snapshot(
                 for other in selected_rels
                 if other.rid != rel.rid and track.group_id >= 0 and track.group_id in other.groups
             ]
+            covering_releases.sort(
+                key=lambda other: (
+                    other.included_track_count,
+                    -_explicit_rank(other),
+                    -source_rank(other),
+                    0 if other.root_kind == "existing" else 1,
+                    other.path.name.casefold(),
+                )
+            )
             covered_by_other_retained = bool(covering_releases)
             orphaned = bool(
                 manual_removed
@@ -5514,7 +5523,17 @@ def build_decision_snapshot(
                     "manual_skip_rule": track.manual_skip_rule,
                     "available_elsewhere": available_elsewhere,
                     "covered_by_other_retained": covered_by_other_retained,
-                    "covered_by_names": [other.path.name for other in covering_releases[:4]],
+                    "covered_by_names": [other.path.name for other in covering_releases[:8]],
+                    "replacement_source": (
+                        covering_releases[0].path.name
+                        if manual_removed and included and covering_releases
+                        else ""
+                    ),
+                    "replacement_alternates": (
+                        [other.path.name for other in covering_releases[1:8]]
+                        if manual_removed and included
+                        else []
+                    ),
                     "unique_to_release": unique_to_release,
                     "orphaned": orphaned,
                     "distinction": distinction,
@@ -6259,6 +6278,19 @@ button,input { font:inherit; }
 .releaseRow.selected { background:#18283a; border-color:#68a9f5; box-shadow:0 0 0 1px rgba(104,169,245,.18); }
 .releaseRow.duplicate { color:#a9b1be; background:rgba(17,20,25,.56); }
 .releaseRow.duplicate .releaseName { color:#a9b1be; }
+.releaseRow.ignored {
+  color:#ffc1c6; background:rgba(86,29,35,.36); border-color:#843640;
+  box-shadow:inset 3px 0 #dc5965;
+}
+.releaseRow.ignored .releaseName { color:#ffd6da; }
+.releaseRow.pendingIgnore {
+  color:#f5d98b; background:rgba(90,68,20,.30); border-color:#806423;
+  box-shadow:inset 3px 0 #d4a62f;
+}
+.releaseRow.pendingRestore {
+  color:#aee9c0; background:rgba(24,76,43,.26); border-color:#34784d;
+  box-shadow:inset 3px 0 #4fb574;
+}
 .releaseRow.carrier { border-color:#54d6ff; background:#102934; color:#e8fbff; box-shadow:0 0 0 1px rgba(84,214,255,.24); }
 .releaseRow.searchMatch { border-color:#f3c969; background:#2a2413; box-shadow:0 0 0 1px rgba(243,201,105,.22); }
 .releaseRow.searchDimmed { opacity:.16; }
@@ -6273,7 +6305,7 @@ button,input { font:inherit; }
 }
 .releaseName { min-width:0; flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-size:12px; }
 .releaseMeta { flex:0 0 auto; color:#707b8b; font-size:10px; }
-.uniqueBadge,.duplicateBadge {
+.uniqueBadge,.duplicateBadge,.ignoredBadge,.pendingBadge {
   flex:0 0 auto; min-width:22px; height:20px; padding:0 6px; border-radius:10px;
   display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:800;
 }
@@ -6286,6 +6318,8 @@ button,input { font:inherit; }
   font-family:"Segoe UI Emoji","Segoe UI Symbol","Segoe UI",sans-serif;
 }
 .duplicateBadge { border:1px solid #4f5968; color:#9aa5b5; background:#20252d; font-weight:700; }
+.ignoredBadge { border:1px solid #ad4a55; color:#ffd5d9; background:#542128; }
+.pendingBadge { border:1px solid #8a6a25; color:#f5d98b; background:#302611; }
 #details {
   width:0; overflow:hidden; transition:width .16s ease; border-left:0 solid var(--line);
   background:var(--panel); display:flex; flex-direction:column; z-index:10;
@@ -6305,6 +6339,16 @@ button,input { font:inherit; }
 #releaseActions { display:flex; gap:8px; margin-bottom:10px; }
 #ignoreReleaseBtn { background:#5b2026; border-color:#a33b44; color:#ffe8ea; font-weight:750; }
 #ignoreReleaseBtn:hover { background:#742932; border-color:#ff7c86; color:#fff; }
+#ignoreReleaseBtn.restore { background:#12351f; border-color:#2f9e55; color:#b8f7c9; }
+#ignoreReleaseBtn.restore:hover { background:#19482a; border-color:#53c979; color:#e0ffe8; }
+.ignoredNotice {
+  margin:0 0 10px; padding:8px 10px; border:1px solid #71313a; border-radius:7px;
+  background:#291317; color:#ffc5ca; font-size:11px; line-height:1.4;
+}
+.pendingNotice {
+  margin:0 0 10px; padding:8px 10px; border:1px solid #735a22; border-radius:7px;
+  background:#251e0f; color:#f5d98b; font-size:11px; line-height:1.4;
+}
 #pathRow { display:flex; gap:8px; align-items:center; }
 #releasePath {
   flex:1; min-width:0; color:#c7d2e3; background:#0d1015; border:1px solid #303744;
@@ -6319,7 +6363,7 @@ button,input { font:inherit; }
 #tracksTitle small { color:#8793a4; font-weight:400; }
 #tracks { min-height:0; flex:1; overflow:auto; padding:0 8px 14px; }
 .track {
-  position:relative; display:grid; grid-template-columns:36px minmax(170px,1fr) 58px 132px 122px;
+  position:relative; display:grid; grid-template-columns:36px minmax(150px,1fr) 52px 132px minmax(180px,1fr);
   gap:8px; align-items:center; min-height:40px; padding:5px 10px;
   border-bottom:1px solid #232933; border-radius:6px; color:#edf1f7; font-size:12px; cursor:pointer;
 }
@@ -6337,6 +6381,8 @@ button,input { font:inherit; }
   font-family:"Segoe UI Emoji","Segoe UI Symbol","Segoe UI",sans-serif; font-size:15px;
 }
 .track .status { color:#929eae; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.track .status.replacement { color:#8ee7a7; font-weight:650; }
+.track .status.missing { color:#ff9da5; font-weight:750; }
 .versionsCell { display:flex; justify-content:center; gap:4px; }
 .versionsTrack,.remixesTrack,.liveTrack {
   height:26px; border-radius:7px; padding:0 7px; cursor:pointer;
@@ -6595,17 +6641,28 @@ function renderBoard() {
     const col=document.createElement("div"); col.className="releaseColumn";
     nodes.slice(start,start+perColumn).forEach(function(n){
       const row=document.createElement("div");
-      row.className="releaseRow "+(n.kind==="duplicate"?"duplicate":"retained");
+      let rowState=n.kind==="duplicate"?"duplicate":"retained";
+      if(n.manualRemoved) rowState+=" ignored";
+      else if(n.pendingReleaseIgnore) rowState+=" pendingIgnore";
+      else if(n.pendingReleaseRestore) rowState+=" pendingRestore";
+      row.className="releaseRow "+rowState;
       row.dataset.id=String(n.id); row.title=n.name;
-      const badge=n.kind==="duplicate"
-        ?'<span class="duplicateBadge">DUP</span>'
-        :(n.isGem
-          ?'<span class="uniqueBadge gem" title="Gem track: '+esc((n.gemTitles||[]).join("; "))+'">💎</span>'
-          :(Number(n.uniqueCount)>0
-            ?'<span class="uniqueBadge '+badgeClass(n.uniqueCount)+'">'+n.uniqueCount+'</span>'
-            :""));
+      const badge=n.manualRemoved
+        ?'<span class="ignoredBadge">IGN</span>'
+        :(n.pendingReleaseIgnore
+          ?'<span class="pendingBadge">PENDING</span>'
+          :(n.pendingReleaseRestore
+            ?'<span class="pendingBadge">RESTORE</span>'
+            :(n.kind==="duplicate"
+              ?'<span class="duplicateBadge">DUP</span>'
+              :(n.isGem
+                ?'<span class="uniqueBadge gem" title="Gem track: '+esc((n.gemTitles||[]).join("; "))+'">💎</span>'
+                :(Number(n.uniqueCount)>0
+                  ?'<span class="uniqueBadge '+badgeClass(n.uniqueCount)+'">'+n.uniqueCount+'</span>'
+                  :"")))));
+      const meta=n.manualRemoved?"IGNORED":(n.pendingReleaseIgnore?"PENDING IGNORE":(n.pendingReleaseRestore?"PENDING RESTORE":n.action));
       row.innerHTML='<span class="folderIcon"></span><span class="releaseName">'+esc(n.name)+'</span>'
-        +'<span class="releaseMeta">'+esc(n.action)+'</span>'+badge;
+        +'<span class="releaseMeta">'+esc(meta)+'</span>'+badge;
       row.onclick=function(){
         const details=document.getElementById("details");
         if(selectedId!=null && Number(selectedId)===Number(n.id) && details.classList.contains("open")){
@@ -6665,9 +6722,15 @@ function highlightAlternativeVersion(v) {
   const row=rowEls.get(String(v.releaseId));
   if(row) row.scrollIntoView({behavior:"smooth",block:"center",inline:"center"});
 }
-function trackStatus(t) {
+function trackStatus(t,n) {
   if(t.pendingIgnore) return "Pending ignore - Re-Analyze required";
   if(t.manualSkip) return "Ignored by you";
+  if(n && n.manualRemoved){
+    if(t.excluded) return "Skipped by active options";
+    if(t.orphaned || !t.replacementSource) return "NO REPLACEMENT - exact recording is not retained elsewhere";
+    const more=(t.replacementAlternates||[]).length;
+    return "Sourced from: "+t.replacementSource+(more?" (+"+more+" other retained cop"+(more===1?"y":"ies")+")":"");
+  }
   if(t.orphaned) return "Unique - release removal would lose it";
   if(t.isGem) return "Gem - no duplicates or other versions";
   if(t.unique) return "Unique to this retained release";
@@ -6705,9 +6768,13 @@ function openDetails(n) {
     if(remixes.length) altButtons+='<button class="remixesTrack" data-track="'+t.index+'">Remixes '+remixes.length+'</button>';
     if(live.length) altButtons+='<button class="liveTrack" data-track="'+t.index+'">Live '+live.length+'</button>';
     const versionsCell='<div class="versionsCell">'+altButtons+'</div>';
-    tracks+='<div class="'+cls.join(" ")+'" data-group="'+t.groupId+'" data-index="'+t.index+'" title="'+esc(t.distinction||trackStatus(t))+'">'
+    const statusText=trackStatus(t,n);
+    const statusClass=(n.manualRemoved&&!t.excluded)
+      ?((t.orphaned||!t.replacementSource)?"status missing":"status replacement")
+      :"status";
+    tracks+='<div class="'+cls.join(" ")+'" data-group="'+t.groupId+'" data-index="'+t.index+'" title="'+esc(statusText)+'">'
       +'<div class="num">'+esc(t.number)+'</div><div class="titleText">'+esc(t.title)+'</div>'
-      +'<div class="dur">'+esc(t.duration)+'</div>'+versionsCell+'<div class="status">'+esc(trackStatus(t))+'</div>'+action+'</div>';
+      +'<div class="dur">'+esc(t.duration)+'</div>'+versionsCell+'<div class="'+statusClass+'">'+esc(statusText)+'</div>'+action+'</div>';
     function addAlternativePanel(items,kind){
       if(!items.length) return "";
       let rows="";
@@ -6729,16 +6796,38 @@ function openDetails(n) {
     tracks+=addAlternativePanel(live,"live");
   });
   let ignoreRelease="";
-  if(state.editable && n.kind==="retained"){
-    const label=n.pendingReleaseIgnore?"Restore release":"Ignore release";
-    ignoreRelease='<button class="btn" id="ignoreReleaseBtn">'+label+'</button>';
+  if(state.editable && (n.kind==="retained" || n.manualRemoved || n.pendingReleaseChange)){
+    const label=n.releaseBlocked?"Restore release":"Ignore release";
+    const cls=n.releaseBlocked?"btn restore":"btn";
+    ignoreRelease='<button class="'+cls+'" id="ignoreReleaseBtn">'+label+'</button>';
   }
+  let ignoreNotice="";
+  if(n.pendingReleaseIgnore){
+    ignoreNotice='<div class="pendingNotice"><b>Pending Ignore.</b> Click Re-Analyze to calculate where every included track will be sourced from. No files have been moved.</div>';
+  } else if(n.pendingReleaseRestore){
+    ignoreNotice='<div class="pendingNotice"><b>Pending Restore.</b> Click Re-Analyze to put this release back into optimization. No files have been moved.</div>';
+  } else if(n.manualRemoved){
+    ignoreNotice='<div class="ignoredNotice"><b>Ignored by you.</b> This release stays on the map so you can inspect its replacement sources. To undo: click <b>Restore release</b>, then <b>Re-Analyze</b>.</div>';
+  }
+  const releaseMeta=n.manualRemoved
+    ?"IGNORED BY YOU / "+n.action
+    :(n.pendingReleaseIgnore
+      ?"PENDING IGNORE / "+n.action
+      :(n.pendingReleaseRestore
+        ?"PENDING RESTORE / "+n.action
+        :(n.kind==="duplicate"?"DUPLICATE / "+n.action:n.action)));
   inner.innerHTML='<div id="detailsHead"><button id="closeDetailsBtn" title="Close details" aria-label="Close details">×</button><div id="releaseName">'+esc(n.name)+'</div>'
-    +'<div id="releaseMeta">'+esc(n.kind==="duplicate"?"DUPLICATE / "+n.action:n.action)
+    +'<div id="releaseMeta">'+esc(releaseMeta)
     +' | '+n.uniqueCount+' unique | '+n.includedTracks+' included</div>'
-    +'<div id="releaseActions">'+ignoreRelease+'</div><div id="pathRow"><div id="releasePath">'+esc(n.path)+'</div>'
+    +ignoreNotice+'<div id="releaseActions">'+ignoreRelease+'</div><div id="pathRow"><div id="releasePath">'+esc(n.path)+'</div>'
     +'<button class="btn" id="copyPathBtn">Copy</button><button class="btn" id="openFolderBtn">Open folder</button></div>'
-    +'<div id="reason">'+esc(n.reason)+'</div></div>'
+    +'<div id="reason">'+esc(
+      n.pendingReleaseIgnore
+        ?"Pending user Ignore. Re-Analyze has not run yet, so replacement sources below still reflect the previous plan."
+        :(n.pendingReleaseRestore
+          ?"Pending user Restore. Re-Analyze has not run yet."
+          :n.reason)
+    )+'</div></div>'
     +'<div id="tracksTitle"><span>Tracks</span><small>Track = exact audio group; Versions, Remixes, and Live recordings are separate families</small></div>'
     +'<div id="tracks">'+tracks+'</div>';
   aside.classList.add("open");
@@ -6815,6 +6904,18 @@ function renderResult() {
   if(state.result.removed&&state.result.removed.length) html+='<div class="resultLine resultRemove">THEN removed: '+state.result.removed.map(esc).join("; ")+'</div>';
   if((!state.result.added||!state.result.added.length)&&(!state.result.removed||!state.result.removed.length))
     html+='<div class="resultLine">THEN no release-selection change.</div>';
+  (state.result.replacementSources||[]).forEach(function(group){
+    html+='<div class="resultLine"><b>Ignored release remains on map:</b> '+esc(group.release)+'</div>';
+    (group.tracks||[]).forEach(function(t){
+      if(t.missing){
+        html+='<div class="resultLine resultRemove">TRACK: '+esc(t.title)+' -> NO RETAINED REPLACEMENT</div>';
+      } else {
+        const more=(t.alternates||[]).length;
+        html+='<div class="resultLine resultAdd">TRACK: '+esc(t.title)+' -> '+esc(t.source)
+          +(more?' (+'+more+' other retained cop'+(more===1?'y':'ies')+')':'')+'</div>';
+      }
+    });
+  });
   if(state.planCounts){
     const pc=state.planCounts, i=pc.initial||{}, r=pc.result||{}, d=pc.delta||{};
     html+='<div class="resultLine">FROM INITIAL: '
@@ -6904,6 +7005,7 @@ def _release_map_state_for_ui(
     tracks: Optional[List[Track]],
     pending_track_indices: Set[int],
     pending_release_ids: Set[int],
+    blocked_release_ids: Set[int],
     editable: bool,
     dirty: bool,
     apply_enabled: bool,
@@ -6914,12 +7016,12 @@ def _release_map_state_for_ui(
     visible = [
         item
         for item in snapshots
-        if any(
+        if bool(item.get("manual_removed"))
+        or any(
             bool(row.get("included"))
             and int(row.get("group_id", -1) or -1) >= 0
             for row in (item.get("tracklist", []) or [])
         )
-        and not bool(item.get("manual_removed"))
     ]
     visible.sort(key=lambda item: _release_date_sort_key_for_map(str(item.get("name", ""))))
     visible_ids = {int(item.get("release_id", -1)) for item in visible}
@@ -7075,6 +7177,9 @@ def _release_map_state_for_ui(
         rid = int(item.get("release_id", -1))
         action = str(item.get("action", ""))
         retained = action in {"KEEP", "ADD", "REPLACE"}
+        manual_removed = bool(item.get("manual_removed"))
+        release_blocked = rid in blocked_release_ids
+        pending_release_change = rid in pending_release_ids
         ui_tracks: List[Dict[str, object]] = []
         unique_count = 0
         gem_titles: List[str] = []
@@ -7135,6 +7240,8 @@ def _release_map_state_for_ui(
                     "unique": unique,
                     "orphaned": bool(row.get("orphaned")),
                     "coveredBy": list(row.get("covered_by_names", []) or []),
+                    "replacementSource": str(row.get("replacement_source", "") or ""),
+                    "replacementAlternates": list(row.get("replacement_alternates", []) or []),
                     "distinction": str(row.get("distinction", "")),
                     "baseKey": base_key,
                 }
@@ -7146,12 +7253,17 @@ def _release_map_state_for_ui(
                 "path": str(item.get("path", "")),
                 "action": action,
                 "kind": "retained" if retained else "duplicate",
+                "outcome": str(item.get("outcome", "")),
+                "manualRemoved": manual_removed,
+                "releaseBlocked": release_blocked,
+                "pendingReleaseChange": pending_release_change,
+                "pendingReleaseIgnore": bool(pending_release_change and release_blocked),
+                "pendingReleaseRestore": bool(pending_release_change and not release_blocked),
                 "reason": str(item.get("reason", "")),
                 "includedTracks": int(item.get("included_tracks", 0) or 0),
                 "uniqueCount": unique_count,
                 "isGem": bool(gem_titles),
                 "gemTitles": gem_titles[:6],
-                "pendingReleaseIgnore": rid in pending_release_ids,
                 "tracks": ui_tracks,
             }
         )
@@ -7216,7 +7328,7 @@ def _release_map_state_for_ui(
         "nodes": nodes,
         "versionFamilies": version_families,
         "duplicateLinks": duplicate_links,
-        "result": result or {"show": False, "causes": [], "added": [], "removed": []},
+        "result": result or {"show": False, "causes": [], "added": [], "removed": [], "replacementSources": []},
     }
 
 
@@ -7256,7 +7368,7 @@ def _qt_release_map_process(session_path: Path, result_path: Path) -> int:
             self.pending_track_indices: Set[int] = set()
             self.pending_release_ids: Set[int] = set()
             self.pending_causes: List[str] = []
-            self.result = {"show": False, "causes": [], "added": [], "removed": []}
+            self.result = {"show": False, "causes": [], "added": [], "removed": [], "replacementSources": []}
             supplied_initial = session.get("initial_plan_counts")
             if isinstance(supplied_initial, dict):
                 self.initial_plan_counts = {
@@ -7272,6 +7384,7 @@ def _qt_release_map_process(session_path: Path, result_path: Path) -> int:
                 self.tracks if isinstance(self.tracks, list) else None,
                 self.pending_track_indices,
                 self.pending_release_ids,
+                self.blocked_release_ids,
                 self.editable,
                 self.dirty,
                 self.apply_enabled,
@@ -7285,7 +7398,7 @@ def _qt_release_map_process(session_path: Path, result_path: Path) -> int:
             self.dirty = True
             self.apply_enabled = False
             self.apply_highlighted = False
-            self.result = {"show": False, "causes": [], "added": [], "removed": []}
+            self.result = {"show": False, "causes": [], "added": [], "removed": [], "replacementSources": []}
             if cause:
                 self.pending_causes.append(cause)
 
@@ -7321,7 +7434,7 @@ def _qt_release_map_process(session_path: Path, result_path: Path) -> int:
                 return self._state()
             if release_id in self.blocked_release_ids:
                 self.blocked_release_ids.remove(release_id)
-                self.pending_release_ids.discard(release_id)
+                self.pending_release_ids.add(release_id)
                 self._mark_dirty(f'IF release: "{release.path.name}" restored')
             else:
                 self.blocked_release_ids.add(release_id)
@@ -7361,15 +7474,42 @@ def _qt_release_map_process(session_path: Path, result_path: Path) -> int:
             removed_ids = sorted(old_selected - self.selected)
             added = [by_id[rid].path.name for rid in added_ids if rid in by_id]
             removed = [by_id[rid].path.name for rid in removed_ids if rid in by_id]
+            replacement_rows: List[Dict[str, object]] = []
+            snapshot_by_id = {
+                int(item.get("release_id", -1)): item
+                for item in self.snapshots
+            }
+            for release_id in sorted(self.blocked_release_ids):
+                snap = snapshot_by_id.get(release_id)
+                if not snap or not bool(snap.get("manual_removed")):
+                    continue
+                rows: List[Dict[str, object]] = []
+                for row in snap.get("tracklist", []) or []:
+                    if not bool(row.get("included")) or bool(row.get("excluded")):
+                        continue
+                    source = str(row.get("replacement_source", "") or "")
+                    alternates = list(row.get("replacement_alternates", []) or [])
+                    rows.append({
+                        "title": str(row.get("title", "")),
+                        "source": source,
+                        "alternates": alternates,
+                        "missing": not bool(source),
+                    })
+                replacement_rows.append({
+                    "release": str(snap.get("name", "")),
+                    "tracks": rows,
+                })
+
             self.result = {
                 "show": True,
                 "causes": list(self.pending_causes) or ["IF pending ignore changes applied"],
                 "added": added,
                 "removed": removed,
+                "replacementSources": replacement_rows,
             }
             self.pending_causes.clear()
             self.pending_track_indices.clear()
-            self.pending_release_ids = set(self.blocked_release_ids)
+            self.pending_release_ids.clear()
             self.dirty = False
             self.apply_enabled = True
             self.apply_highlighted = bool(added or removed)

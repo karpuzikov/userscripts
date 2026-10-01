@@ -909,3 +909,14 @@ This taxonomy is a standing rule for all future Duplicate Edition Analyzer work.
 - Keep the main window and Release Map visually unified: same dark palette, Segoe UI hierarchy, compact controls, border/radius language, status/progress treatment, and interaction density.
 - Do not revert the active main window to Tkinter in future updates unless the user explicitly requests it.
 - Keep long-running work off the WebEngine/UI thread; progress and activity must remain live through the Qt bridge.
+
+### Ignored-release inspect and restore workflow
+
+- A release ignored from Release Map must **never disappear from the map** merely because it is ignored. Keep it in its chronological position and visibly mark it `IGNORED BY YOU`.
+- Before Re-Analyze, show explicit `PENDING IGNORE` / `PENDING RESTORE` states. Do not pretend replacement sourcing has already changed.
+- After Re-Analyze, keep the ignored release selected/open when possible so the user can immediately inspect the consequence of the decision.
+- Every included track in an ignored release must state where that exact recording is retained instead. Show a deterministic primary retained source and, when applicable, the number of additional retained copies.
+- If an ignored release contains an included exact recording that no retained release supplies, show a prominent red `NO REPLACEMENT` warning for that track. Do not silently substitute an alternate Version, Remix, or Live recording.
+- Re-Analyze result details must repeat the track-by-track replacement sourcing for ignored releases, not only the release-level added/removed list.
+- An ignored release must always expose an obvious `Restore release` control. Restoring changes the planning constraint and requires Re-Analyze; it does not require a new full audio scan.
+- Ignore/Restore/Re-Analyze remain planning operations. No files are moved until Apply.

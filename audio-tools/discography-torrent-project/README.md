@@ -4,7 +4,7 @@ Complete project source and workflow assets for the discography torrent automati
 
 ## Current tools
 
-- `tools/Duplicate Edition Analyzer v0.18.0.pyw` - Main application UI rewritten from Tkinter to the same PySide6 + Qt WebEngine + HTML/CSS/JavaScript stack used by Release Map. The new dark interface keeps the existing analyzer backend and one-file `.pyw` packaging while unifying source-folder controls, Save Remixes/Live, Personal Picks, Logging + logs-folder shortcut, progress, activity, Analyze, Undo, Release Map, phrase review, unusual-pattern review, completion summary, and file/folder actions in one consistent WebEngine UI. Release Map remains a separate WebEngine window/process. Under construction ⚠️
+- `tools/Duplicate Edition Analyzer v0.18.1.pyw` - Release Ignore is now inspectable and reversible. An ignored release never disappears from Release Map: it remains chronologically in place with a strong `IGN` / `IGNORED BY YOU` state. Pending Ignore/Restore states are visible before Re-Analyze. The selected release stays open across Re-Analyze, and each included track shows its exact retained replacement source (`Sourced from: ...`) or a red `NO REPLACEMENT` warning. The Re-Analyze result drawer repeats track-by-track replacement sourcing for ignored releases. Ignored releases have an obvious `Restore release` action; restoring is completed by Re-Analyze. No filesystem change occurs until Apply. Under construction ⚠️
 - `tools/AudioChecker Automation v0.1.pyw` - AudioChecker batch automation.
 - `tools/ALAC Conversion Automation v0.2.pyw` - lossless -> ALAC conversion. Under construction ⚠️
 - `tools/CUE Corrector - MusicBrainz DiscID 1.3.pyw` - MusicBrainz DiscID/CUE workflow.
