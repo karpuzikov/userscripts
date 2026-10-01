@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Beatport - MusicBrainz Importer
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.2.7
+// @version      1.2.8
 // @description  Import Beatport and BPTopTracker releases into MusicBrainz with Beatport enrichment, ISRC matching, and release-source handling.
 // @author       karpuzikov
 // @match        https://www.beatport.com/*
@@ -40,7 +40,6 @@
     const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     const ISRC_CHOICE_CACHE_KEY = 'mb-recording-matcher:isrc-choice:v1';
     const LEGACY_ISRC_CHOICE_CACHE_KEY = 'mb-recording-data-to-tracks:isrc-choice-cache:v1';
-    const GITHUB_TOKEN_KEY = 'mb-recording-matcher:github-token';
     const GITHUB_CACHE_REPO = 'karpuzikov/userscripts';
     const GITHUB_CACHE_PATH = 'musicbrainz-tools/safe-recording-matcher/isrc-choice-cache.json';
     const GITHUB_API_BASE = 'https://api.github.com';
@@ -820,46 +819,22 @@
         return true;
     }
 
-    function githubToken() {
-        try {
-            return String(GM_getValue(GITHUB_TOKEN_KEY, '') || '').trim();
-        } catch {
-            return '';
-        }
-    }
-
-    function encodeBase64Utf8(text) {
-        const bytes = new TextEncoder().encode(String(text));
-        let binary = '';
-        for (const byte of bytes) binary += String.fromCharCode(byte);
-        return btoa(binary);
-    }
-
     function decodeBase64Utf8(text) {
         const binary = atob(String(text || '').replace(/\s+/g, ''));
         const bytes = Uint8Array.from(binary, char => char.charCodeAt(0));
         return new TextDecoder().decode(bytes);
     }
 
-    function githubApi(method, url, body = null, token = githubToken()) {
+    function githubCacheGet(url) {
         return new Promise((resolve, reject) => {
-            if (method !== 'GET' && !token) {
-                reject(new Error('GitHub cache is not connected'));
-                return;
-            }
-
-            const headers = {
-                Accept: 'application/vnd.github+json',
-                'X-GitHub-Api-Version': '2022-11-28',
-                ...(body ? {'Content-Type': 'application/json'} : {}),
-            };
-            if (token) headers.Authorization = 'Bearer ' + token;
-
             GM_xmlhttpRequest({
-                method,
+                method: 'GET',
                 url,
-                headers,
-                data: body ? JSON.stringify(body) : undefined,
+                headers: {
+                    Accept: 'application/vnd.github+json',
+                    'X-GitHub-Api-Version': '2022-11-28',
+                    'Cache-Control': 'no-cache',
+                },
                 timeout: 15000,
                 onload: response => {
                     let data = null;
@@ -886,8 +861,9 @@
 
     async function fetchGithubChoiceFile() {
         const url = GITHUB_API_BASE + '/repos/' + GITHUB_CACHE_REPO +
-            '/contents/' + GITHUB_CACHE_PATH;
-        const response = await githubApi('GET', url);
+            '/contents/' + GITHUB_CACHE_PATH +
+            '?ref=main&cb=' + Date.now();
+        const response = await githubCacheGet(url);
         const data = response.data || {};
         let parsed = {version: 1, choices: {}};
 
@@ -906,7 +882,6 @@
         }
 
         return {
-            sha: String(data.sha || ''),
             choices: parsed.choices,
         };
     }
@@ -916,78 +891,7 @@
         const local = readIsrcChoiceCache();
         const merged = {...local, ...remote.choices};
         writeIsrcChoiceCache(merged);
-        return {connected: Boolean(githubToken()), count: Object.keys(remote.choices).length};
-    }
-
-    async function pushGithubChoices() {
-        const token = githubToken();
-        if (!token) return {connected: false, count: 0};
-
-        const url = GITHUB_API_BASE + '/repos/' + GITHUB_CACHE_REPO +
-            '/contents/' + GITHUB_CACHE_PATH;
-
-        for (let attempt = 0; attempt < 2; attempt++) {
-            const remote = await fetchGithubChoiceFile();
-            const local = readIsrcChoiceCache();
-            const merged = {...remote.choices, ...local};
-            const content = JSON.stringify({version: 1, choices: merged}, null, 2) + '\n';
-
-            try {
-                await githubApi('PUT', url, {
-                    message: 'Update Recording Matcher ISRC cache',
-                    content: encodeBase64Utf8(content),
-                    sha: remote.sha,
-                }, token);
-                writeIsrcChoiceCache(merged);
-                return {connected: true, count: Object.keys(merged).length};
-            } catch (error) {
-                if (attempt === 0 && /HTTP (409|422)/.test(error.message)) continue;
-                throw error;
-            }
-        }
-
-        throw new Error('GitHub cache update conflicted twice');
-    }
-
-    async function configureGithubCache(button) {
-        const current = githubToken();
-        const token = prompt(
-            'GitHub fine-grained token for Recording Matcher cache.\n\n' +
-            'Repository: ' + GITHUB_CACHE_REPO + '\n' +
-            'Required repository permission: Contents - Read and write.\n\n' +
-            'The token is stored only in Tampermonkey.',
-            current
-        );
-
-        if (token === null) return;
-        const trimmed = token.trim();
-
-        if (!trimmed) {
-            GM_setValue(GITHUB_TOKEN_KEY, '');
-            setNativeStatus('GitHub cache disconnected. Shared cache can still be read.');
-            updateGithubCacheButton(button);
-            return;
-        }
-
-        GM_setValue(GITHUB_TOKEN_KEY, trimmed);
-        setNativeStatus('Connecting GitHub cache...');
-
-        try {
-            await pullGithubChoices();
-            const pushed = await pushGithubChoices();
-            setNativeStatus(
-                'GitHub cache connected and synced: ' + pushed.count + ' saved ISRC choice(s).'
-            );
-        } catch (error) {
-            setNativeStatus('GitHub cache error: ' + error.message);
-        }
-
-        updateGithubCacheButton(button);
-    }
-
-    function updateGithubCacheButton(button) {
-        if (!button) return;
-        button.textContent = githubToken() ? 'GitHub cache: connected' : 'Connect GitHub cache';
+        return {count: Object.keys(remote.choices).length};
     }
 
     function candidateCredit(candidate) {
@@ -1871,18 +1775,12 @@
             }
         });
 
-        const githubButton = makeButton('');
-        githubButton.title = 'Use the same GitHub ISRC-choice cache as MusicBrainz ToolBox';
-        updateGithubCacheButton(githubButton);
-        githubButton.addEventListener('click', () => configureGithubCache(githubButton));
-
         importButton.addEventListener('click', async () => {
             if (serial !== processSerial) return;
 
             importButton.disabled = true;
             searchButton.disabled = true;
             isrcButton.disabled = true;
-            githubButton.disabled = true;
 
             const setStatus = text => setNativeStatus(text);
 
@@ -1911,15 +1809,6 @@
                 const entityLinks = await addMissingBeatportEntityLinks(release, tracks, setStatus);
                 if (serial !== processSerial) return;
 
-                if (githubToken()) {
-                    setStatus('Syncing learned ISRC choices to GitHub...');
-                    try {
-                        await pushGithubChoices();
-                    } catch (error) {
-                        console.warn('[Beatport MB Importer] Shared cache push failed:', error);
-                    }
-                }
-
                 const sources = await findReleaseSources(release, reverse, setStatus);
                 if (serial !== processSerial) return;
 
@@ -1941,11 +1830,10 @@
                 importButton.disabled = false;
                 searchButton.disabled = false;
                 isrcButton.disabled = allIsrcs.length === 0;
-                githubButton.disabled = false;
             }
         });
 
-        box.append(importButton, searchButton, isrcButton, githubButton);
+        box.append(importButton, searchButton, isrcButton);
     }
 
     async function processBeatportRelease() {
