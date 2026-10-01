@@ -483,3 +483,6 @@ Before any program/script change in this project, apply the newest stored softwa
 
 
 - v0.17.1 packaging fix: corrected the duplicated `_qt_release_map_process` function boundary introduced during the v0.17.0 Release Map replacement. No workflow behavior change; this is the compile/runtime correction for the chronological folder-board build.
+
+
+- v0.17.2 Personal Picks phrase correction: fixed analyze-time phrase extraction that could treat an entire title such as `Club Rocker (Play & Win Remix)` as a reusable remix phrase in addition to the correct `Play & Win Remix`. Supplemental trailing-descriptor detection now requires an actual title/descriptor separator, and full-title `... Mix` fallback is disabled when scanning complete track titles. Personal Picks Review now has per-candidate Copy plus Copy all review text; the persistent Personal Picks window supports Ctrl+C on selected rows and Copy all.
