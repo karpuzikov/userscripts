@@ -1,14 +1,14 @@
 // ==UserScript==
 // @name         MusicBrainz ToolBox
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.0.7
+// @version      1.0.8
 // @description  Combined MusicBrainz release-editor, recording, barcode, search, cover-art, Disc ID, and duplicate-edit tools.
 // @author       karpuzikov
 // @license      MIT
 // @match        https://musicbrainz.org/*
 // @match        https://beta.musicbrainz.org/*
-// @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/toolbox/MusicBrainz_ToolBox.user.js
-// @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/toolbox/MusicBrainz_ToolBox.user.js
+// @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/toolbox/MusicBrainz_ToolBox.user.js?v=1.0.8
+// @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/toolbox/MusicBrainz_ToolBox.user.js?v=1.0.8
 // @supportURL   https://github.com/karpuzikov/userscripts
 // @grant        GM_getValue
 // @grant        GM_setValue
@@ -6542,7 +6542,62 @@
             return current.length === rows.length && rows.every((row, index) => row === current[index]);
         }
     
-        function removeAllLinks(panel) {
+        function snapshotTrackLength(track) {
+            const lengthObservable = track?.length;
+            const formattedObservable = track?.formattedLength;
+
+            return {
+                value: typeof lengthObservable === 'function'
+                    ? lengthObservable()
+                    : undefined,
+                formatted: typeof formattedObservable === 'function'
+                    ? formattedObservable()
+                    : undefined,
+                hasOriginal: Boolean(
+                    lengthObservable &&
+                    Object.prototype.hasOwnProperty.call(lengthObservable, 'original')
+                ),
+                original: lengthObservable?.original,
+                hasSaved: Boolean(
+                    lengthObservable &&
+                    Object.prototype.hasOwnProperty.call(lengthObservable, 'saved')
+                ),
+                saved: lengthObservable?.saved,
+            };
+        }
+
+        function restoreTrackLength(track, snapshot) {
+            const lengthObservable = track?.length;
+            const formattedObservable = track?.formattedLength;
+
+            if (typeof formattedObservable === 'function' &&
+                formattedObservable() !== snapshot.formatted) {
+                formattedObservable(snapshot.formatted);
+            }
+
+            if (typeof lengthObservable === 'function' &&
+                lengthObservable() !== snapshot.value) {
+                lengthObservable(snapshot.value);
+            }
+
+            if (lengthObservable) {
+                if (snapshot.hasOriginal) lengthObservable.original = snapshot.original;
+                if (snapshot.hasSaved) lengthObservable.saved = snapshot.saved;
+            }
+        }
+
+        function trackLengthMatchesSnapshot(track, snapshot) {
+            const value = typeof track?.length === 'function'
+                ? track.length()
+                : undefined;
+            const formatted = typeof track?.formattedLength === 'function'
+                ? track.formattedLength()
+                : undefined;
+
+            return value === snapshot.value && formatted === snapshot.formatted;
+        }
+
+        async function removeAllLinks(panel) {
             if (running) return;
     
             const release = PAGE_WINDOW.MB?.releaseEditor?.rootField?.release?.();
@@ -6573,11 +6628,34 @@
             }
     
             if (!confirm(`Remove all ${linked.length} recording links from this release?`)) return;
+
+            /*
+             * Removing a recording association must never modify track duration.
+             * Snapshot every track's raw and formatted length before touching
+             * recording state, then restore it after MusicBrainz has processed
+             * the unlink and again on the next task to catch delayed subscribers.
+             */
+            const lengthSnapshots = new Map(
+                tracks.map(track => [track, snapshotTrackLength(track)])
+            );
     
             for (const track of linked) {
                 track.recording(null);
                 if (typeof track.hasNewRecording === 'function') {
                     track.hasNewRecording(false);
+                }
+
+                restoreTrackLength(track, lengthSnapshots.get(track));
+            }
+
+            await new Promise(resolve => setTimeout(resolve, 0));
+
+            let repairedLengths = 0;
+            for (const track of tracks) {
+                const snapshot = lengthSnapshots.get(track);
+                if (!trackLengthMatchesSnapshot(track, snapshot)) {
+                    restoreTrackLength(track, snapshot);
+                    repairedLengths++;
                 }
             }
     
@@ -6598,7 +6676,9 @@
     
             needsAttribution = true;
             appendNoteIfPossible();
-            status.textContent = `Removed all ${linked.length} recording links.`;
+            status.textContent = repairedLengths
+                ? `Removed all ${linked.length} recording links. Preserved/restored track lengths on ${repairedLengths} track(s).`
+                : `Removed all ${linked.length} recording links. Track lengths preserved.`;
             updateDuplicateHighlights();
         }
     
