@@ -33,7 +33,7 @@ import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 
 APP_NAME = "Duplicate / Edition Analyzer"
-APP_VERSION = "0.17.3"
+APP_VERSION = "0.17.4"
 PROGRAM_DATA_DIR_NAME = "Duplicate Edition Analyzer"
 PYSIDE6_VERSION = "6.11.2"
 AUDIO_EXTS = {".m4a", ".flac", ".wav", ".ape", ".wv", ".mp3", ".aac", ".ogg", ".opus"}
@@ -2106,6 +2106,20 @@ class Release:
         return sum(1 for t in self.tracks if not t.exclude_from_coverage)
 
     @property
+    def counted_track_count(self) -> int:
+        """Tracks that actually participate in recording-group coverage."""
+        return sum(
+            1
+            for t in self.tracks
+            if not t.exclude_from_coverage and t.group_id >= 0
+        )
+
+    @property
+    def retained_audio_file_count(self) -> int:
+        """Physical audio files retained when this whole release folder is kept."""
+        return len({os.path.normcase(str(t.path)) for t in self.tracks})
+
+    @property
     def ignored_track_count(self) -> int:
         """Tracks skipped by the active checkboxes/pattern choices."""
         return sum(1 for t in self.tracks if t.exclude_from_coverage)
@@ -3703,11 +3717,21 @@ def greedy_cover(target: Set[int], releases: List[Release], selected: Set[int]) 
             new = r.groups & missing
             if not new:
                 continue
-            # Tracks skipped by the active options do not participate in coverage/cost. Among otherwise
-            # equivalent coverage, explicit and better source medium win.
-            cost_per = max(1, r.included_track_count) / len(new)
+            # Skipped tracks never create coverage, but they remain physically
+            # inside a retained release folder. Price the whole retained audio
+            # payload so equal useful coverage prefers fewer files on disk.
+            cost_per = max(1, r.retained_audio_file_count) / len(new)
             q, ex, existing = quality_key(r)
-            key = (cost_per, -len(new), -ex, -q, 0 if r.root_kind == "existing" else 1, r.included_track_count, r.title.lower())
+            key = (
+                cost_per,
+                -len(new),
+                -ex,
+                -q,
+                0 if r.root_kind == "existing" else 1,
+                r.retained_audio_file_count,
+                r.counted_track_count,
+                r.title.lower(),
+            )
             if best_key is None or key < best_key:
                 best_key = key
                 best = r
@@ -3850,14 +3874,14 @@ def choose_album_families(releases: List[Release]) -> Set[int]:
             new_rels = [by_id[x] for x in new_ids]
 
             core_explicit, core_source, core_existing = _core_album_preference(combo, core_groups)
-            total_included_files = sum(r.included_track_count for r in new_rels)
+            total_retained_audio_files = sum(r.retained_audio_file_count for r in new_rels)
             total_releases = len(new_rels)
             recycle_count = sum(r.root_kind == "recycle" for r in new_rels)
             score = (
                 -core_explicit,
                 -core_source,
                 -core_existing,
-                total_included_files,
+                total_retained_audio_files,
                 total_releases,
                 recycle_count,
             )
@@ -3872,7 +3896,8 @@ def choose_album_families(releases: List[Release]) -> Set[int]:
                     -_explicit_rank(r),
                     -source_rank(r),
                     0 if r.root_kind == "existing" else 1,
-                    r.included_track_count,
+                    r.retained_audio_file_count,
+                    r.counted_track_count,
                 ),
             )
             selected.add(chosen.rid)
@@ -4006,7 +4031,14 @@ def stabilize_equivalent_sources(releases: List[Release], selected: Set[int]) ->
                 and (_explicit_rank(e), source_rank(e)) >= (_explicit_rank(rr), source_rank(rr))
             ]
             if candidates:
-                best = max(candidates, key=lambda e: (_explicit_rank(e), source_rank(e), e.included_track_count))
+                best = max(
+                    candidates,
+                    key=lambda e: (
+                        _explicit_rank(e),
+                        source_rank(e),
+                        -e.retained_audio_file_count,
+                    ),
+                )
                 selected.discard(rr.rid)
                 selected.add(best.rid)
                 changed = True
@@ -4025,7 +4057,14 @@ def stabilize_equivalent_sources(releases: List[Release], selected: Set[int]) ->
                 and (_explicit_rank(r), source_rank(r)) > (_explicit_rank(er), source_rank(er))
             ]
             if candidates:
-                best = max(candidates, key=lambda r: (_explicit_rank(r), source_rank(r), r.included_track_count))
+                best = max(
+                    candidates,
+                    key=lambda r: (
+                        _explicit_rank(r),
+                        source_rank(r),
+                        -r.retained_audio_file_count,
+                    ),
+                )
                 selected.discard(er.rid)
                 selected.add(best.rid)
                 changed = True
@@ -4062,8 +4101,20 @@ def find_dominated_releases(releases: List[Release]) -> Set[int]:
         if not (a_covers_b and b_covers_a):
             continue
 
-        a_pref = (_explicit_rank(a), source_rank(a), 1 if a.root_kind == "existing" else 0, -a.rid)
-        b_pref = (_explicit_rank(b), source_rank(b), 1 if b.root_kind == "existing" else 0, -b.rid)
+        a_pref = (
+            _explicit_rank(a),
+            source_rank(a),
+            -a.retained_audio_file_count,
+            1 if a.root_kind == "existing" else 0,
+            -a.rid,
+        )
+        b_pref = (
+            _explicit_rank(b),
+            source_rank(b),
+            -b.retained_audio_file_count,
+            1 if b.root_kind == "existing" else 0,
+            -b.rid,
+        )
         if a_pref > b_pref:
             dominated.add(b.rid)
         elif b_pref > a_pref:
@@ -4080,16 +4131,13 @@ def _selected_album_cluster_map(releases: List[Release]) -> Dict[int, int]:
     return result
 
 
-def minimize_collection_track_count(releases: List[Release], selected: Set[int]) -> Set[int]:
-    """Reduce total included track count using whole-collection coverage.
+def minimize_collection_file_count(releases: List[Release], selected: Set[int]) -> Set[int]:
+    """Reduce retained physical audio-file count using whole-collection coverage.
 
-    This pass fixes the classic "larger deluxe edition wins because it has one
-    extra track" problem when that extra recording is already supplied by some
-    other retained release. A swap is allowed only when:
-      - the replacement is a related edition of the same album cluster;
-      - its source class is not worse;
-      - every included recording group in the entire collection remains covered;
-      - total included track count strictly decreases.
+    Coverage still uses only counted recording groups. Cost uses every physical
+    audio file that remains because release folders are retained as whole units.
+    A swap is allowed only when source class is not worse, every counted group
+    remains covered, and retained physical audio-file count strictly decreases.
 
     Existing-vs-recycle, CD-log and clean/explicit rules still apply afterward.
     """
@@ -4129,19 +4177,19 @@ def minimize_collection_track_count(releases: List[Release], selected: Set[int])
                     continue
                 if source_rank(candidate) < source_rank(current):
                     continue
-                if candidate.included_track_count >= current.included_track_count:
+                if candidate.retained_audio_file_count >= current.retained_audio_file_count:
                     continue
 
                 trial = (selected - {current.rid}) | {candidate.rid}
                 if not required_groups <= covered(trial):
                     continue
 
-                saved_tracks = current.included_track_count - candidate.included_track_count
+                saved_files = current.retained_audio_file_count - candidate.retained_audio_file_count
                 key = (
-                    -saved_tracks,
+                    -saved_files,
                     -source_rank(candidate),
                     0 if candidate.root_kind == "existing" else 1,
-                    candidate.included_track_count,
+                    candidate.retained_audio_file_count,
                     candidate.rid,
                 )
                 if best_key is None or key < best_key:
@@ -4170,7 +4218,7 @@ def prune_redundant_selected(releases: List[Release], selected: Set[int]) -> Set
             (by_id[rid] for rid in selected),
             key=lambda r: (
                 0 if r.release_type != "album" else 1,
-                -r.included_track_count,
+                -r.retained_audio_file_count,
                 r.rid,
             ),
         )
@@ -4355,10 +4403,11 @@ def optimize_collection(
                 chosen = min(
                     containing,
                     key=lambda r: (
-                        r.included_track_count,
+                        r.retained_audio_file_count,
                         -_explicit_rank(r),
                         -source_rank(r),
                         0 if r.root_kind == "existing" else 1,
+                        r.counted_track_count,
                     ),
                 )
                 selected.add(chosen.rid)
@@ -4367,10 +4416,9 @@ def optimize_collection(
     selected = enforce_existing_precedence(active, selected)
     selected = prune_redundant_selected(active, selected)
 
-    # Now that the whole retained set exists, minimize total included tracks.
-    # Bonus tracks on one edition have zero value here if another retained
-    # release already supplies those same recording groups.
-    selected = minimize_collection_track_count(active, selected)
+    # Now that the whole retained set exists, minimize physical audio files
+    # retained on disk while preserving every counted recording group.
+    selected = minimize_collection_file_count(active, selected)
     selected = prune_redundant_selected(active, selected)
 
     # Quality of a CD rip must never create duplicate identity or override a
@@ -4576,8 +4624,9 @@ def report_text(existing: Optional[Path], recycle: Path, releases: List[Release]
     lines.append(f"Audio files scanned: {len(tracks)}")
     lines.append(f"High-confidence recording groups: {len(groups)}")
     lines.append(f"Proposed retained releases: {len(selected)}")
-    lines.append(f"Proposed retained included audio files: {sum(by_id[x].included_track_count for x in selected)}")
-    lines.append(f"Skipped remix/live/pattern files inside retained releases: {sum(by_id[x].ignored_track_count for x in selected)}")
+    lines.append(f"Proposed retained physical audio files: {sum(by_id[x].retained_audio_file_count for x in selected)}")
+    lines.append(f"Counted tracks in retained releases: {sum(by_id[x].counted_track_count for x in selected)}")
+    lines.append(f"Skipped remix/live/pattern tracks inside retained releases: {sum(by_id[x].ignored_track_count for x in selected)}")
     personal_kept = [t for t in tracks if t.personal_keep_rule and not t.exclude_from_coverage]
     lines.append(f"Personal-pick track matches included: {len(personal_kept)}")
     lines.append("Manual review required: no")
@@ -5440,7 +5489,7 @@ def build_decision_snapshot(
                     "name": other.path.name,
                     "action": by_decision.get(other.rid).action if other.rid in by_decision else "",
                     "source": _release_source_description(other),
-                    "included_tracks": other.included_track_count,
+                    "included_tracks": other.counted_track_count,
                 }
             )
 
@@ -5566,7 +5615,7 @@ def build_decision_snapshot(
                         "name": other.path.name,
                         "action": by_decision.get(other.rid).action if other.rid in by_decision else "",
                         "source": _release_source_description(other),
-                        "included_tracks": other.included_track_count,
+                        "included_tracks": other.counted_track_count,
                         "root_kind": other.root_kind,
                     }
                 )
@@ -5585,9 +5634,10 @@ def build_decision_snapshot(
                 "release_type": rel.release_type,
                 "family": rel.family,
                 "source": _release_source_description(rel),
-                "included_tracks": rel.included_track_count,
+                "included_tracks": rel.counted_track_count,
                 "ignored_tracks": rel.ignored_track_count,
                 "physical_tracks": rel.track_count,
+                "retained_audio_files": rel.retained_audio_file_count,
                 "recording_groups": len(rel.groups),
                 "decision_factors": list(decision.decision_factors),
                 "essential_tracks": list(decision.essential_tracks),
@@ -6226,6 +6276,8 @@ button,input { font:inherit; }
 .releaseRow.duplicate { color:#a9b1be; background:rgba(17,20,25,.56); }
 .releaseRow.duplicate .releaseName { color:#a9b1be; }
 .releaseRow.carrier { border-color:#54d6ff; background:#102934; color:#e8fbff; box-shadow:0 0 0 1px rgba(84,214,255,.24); }
+.releaseRow.searchMatch { border-color:#f3c969; background:#2a2413; box-shadow:0 0 0 1px rgba(243,201,105,.22); }
+.releaseRow.searchDimmed { opacity:.16; }
 .releaseRow.dimmed { opacity:.18; }
 .folderIcon {
   position:relative; width:16px; height:11px; flex:0 0 16px; border-radius:2px;
@@ -6341,7 +6393,7 @@ button,input { font:inherit; }
 <body>
 <div id="toolbar">
   <div id="title">Release Map</div>
-  <input id="search" placeholder="Find release...">
+  <input id="search" placeholder="Find release or track...">
   <button class="btn" id="clearTrackBtn" style="display:none">Clear track highlight</button>
   <div id="modeText">Chronological release board</div>
   <button class="btn" id="reanalyzeBtn" disabled>Re-Analyze</button>
@@ -6412,6 +6464,36 @@ function addCurve(svg,a,b,color,width,opacity) {
   p.setAttribute("fill","none"); p.setAttribute("stroke",color); p.setAttribute("stroke-width",String(width));
   p.setAttribute("stroke-opacity",String(opacity)); p.setAttribute("stroke-linecap","round"); svg.appendChild(p);
 }
+let searchCursor=-1;
+let lastSearchQuery="";
+function searchMatchesFor(query) {
+  const q=String(query||"").trim().toLowerCase();
+  if(!q || !state) return [];
+  return (state.nodes||[]).filter(function(n){
+    if(String(n.name||"").toLowerCase().includes(q)) return true;
+    return (n.tracks||[]).some(function(t){
+      return String(t.title||"").toLowerCase().includes(q);
+    });
+  });
+}
+function applySearchHighlights(resetCursor) {
+  const input=document.getElementById("search");
+  const q=String(input.value||"").trim().toLowerCase();
+  if(resetCursor || q!==lastSearchQuery){ searchCursor=-1; lastSearchQuery=q; }
+  const matches=searchMatchesFor(q);
+  const ids=new Set(matches.map(function(n){return String(n.id);}));
+  rowEls.forEach(function(el,id){
+    el.classList.toggle("searchMatch",!!q && ids.has(id));
+    el.classList.toggle("searchDimmed",!!q && !ids.has(id));
+  });
+  if(!activeTrack){
+    const mode=document.getElementById("modeText");
+    mode.textContent=q
+      ? 'Find "'+input.value.trim()+'" - '+matches.length+' release(s)'
+      : "Chronological release board";
+  }
+  return matches;
+}
 function updateRowHighlights() {
   const carrierIds=new Set();
   if(activeTrack) carriersForGroup(activeTrack.groupId).forEach(function(n){carrierIds.add(String(n.id));});
@@ -6421,6 +6503,7 @@ function updateRowHighlights() {
       const carrier=carrierIds.has(id); el.classList.toggle("carrier",carrier); el.classList.toggle("dimmed",!carrier);
     } else { el.classList.remove("carrier"); el.classList.remove("dimmed"); }
   });
+  applySearchHighlights(false);
 }
 function drawConnections() {
   if(!state) return;
@@ -6471,7 +6554,12 @@ function updateTrackMode() {
   if(activeTrack){
     const carriers=carriersForGroup(activeTrack.groupId); clear.style.display="";
     mode.textContent='"'+activeTrack.title+'" - '+carriers.length+' release(s)';
-  } else { clear.style.display="none"; mode.textContent="Chronological release board"; }
+  } else {
+    clear.style.display="none";
+    const q=document.getElementById("search").value.trim();
+    const matches=searchMatchesFor(q);
+    mode.textContent=q ? 'Find "'+q+'" - '+matches.length+' release(s)' : "Chronological release board";
+  }
 }
 function selectTrack(releaseId,track) {
   if(Number(track.groupId)<0) return;
@@ -6616,11 +6704,26 @@ document.getElementById("clearTrackBtn").onclick=function(){
 document.getElementById("reanalyzeBtn").onclick=function(){bridge.reanalyze(receiveState);};
 document.getElementById("applyBtn").onclick=function(){bridge.apply();};
 document.getElementById("closeBtn").onclick=function(){bridge.closeMap();};
+document.getElementById("search").addEventListener("input",function(){
+  activeTrack=null;
+  applySearchHighlights(true);
+  drawConnections();
+  updateTrackMode();
+});
 document.getElementById("search").addEventListener("keydown",function(e){
-  if(e.key!=="Enter") return; const q=e.target.value.trim().toLowerCase(); if(!q) return;
-  const n=(state.nodes||[]).find(function(x){return x.name.toLowerCase().includes(q);}); if(!n) return;
-  selectedId=Number(n.id);activeTrack=null;openDetails(n);updateRowHighlights();drawConnections();updateTrackMode();
-  const row=rowEls.get(String(n.id));if(row)row.scrollIntoView({behavior:"smooth",block:"center",inline:"center"});
+  if(e.key!=="Enter") return;
+  const matches=searchMatchesFor(e.target.value);
+  if(!matches.length) return;
+  searchCursor=(searchCursor+1)%matches.length;
+  const n=matches[searchCursor];
+  selectedId=Number(n.id);
+  activeTrack=null;
+  openDetails(n);
+  updateRowHighlights();
+  drawConnections();
+  updateTrackMode();
+  const row=rowEls.get(String(n.id));
+  if(row)row.scrollIntoView({behavior:"smooth",block:"center",inline:"center"});
 });
 window.addEventListener("resize",function(){clearTimeout(resizeTimer);resizeTimer=setTimeout(renderBoard,100);});
 new ResizeObserver(function(){drawConnections();}).observe(document.getElementById("boardContent"));
@@ -6658,7 +6761,11 @@ def _release_map_state_for_ui(
     visible = [
         item
         for item in snapshots
-        if int(item.get("included_tracks", 0) or 0) > 0
+        if any(
+            bool(row.get("included"))
+            and int(row.get("group_id", -1) or -1) >= 0
+            for row in (item.get("tracklist", []) or [])
+        )
         and not bool(item.get("manual_removed"))
     ]
     visible.sort(key=lambda item: _release_date_sort_key_for_map(str(item.get("name", ""))))
