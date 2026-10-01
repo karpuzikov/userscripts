@@ -4,7 +4,7 @@ Complete project source and workflow assets for the discography torrent automati
 
 ## Current tools
 
-- `tools/Duplicate Edition Analyzer v0.17.12.pyw` - Release Map now keeps permanent side-by-side `Initial` and `Result` counters for retained releases and counted tracks. Initial is captured by the first Analyze and never changes during that live analysis session; Result updates after each Re-Analyze and shows cumulative signed deltas from Initial. Pending Ignore changes are labeled `pending Re-Analyze` until recomputed, and the result drawer repeats the Initial -> Result totals. The main window also has a folder icon directly beside Logging to open `Documents\\Karpuzikov Tools\\Duplicate Edition Analyzer\\logs`. The stale UI wording `Chromaprint + duration` was corrected to `Chromaprint (audio only)`. Under construction ⚠️
+- `tools/Duplicate Edition Analyzer v0.18.0.pyw` - Main application UI rewritten from Tkinter to the same PySide6 + Qt WebEngine + HTML/CSS/JavaScript stack used by Release Map. The new dark interface keeps the existing analyzer backend and one-file `.pyw` packaging while unifying source-folder controls, Save Remixes/Live, Personal Picks, Logging + logs-folder shortcut, progress, activity, Analyze, Undo, Release Map, phrase review, unusual-pattern review, completion summary, and file/folder actions in one consistent WebEngine UI. Release Map remains a separate WebEngine window/process. Under construction ⚠️
 - `tools/AudioChecker Automation v0.1.pyw` - AudioChecker batch automation.
 - `tools/ALAC Conversion Automation v0.2.pyw` - lossless -> ALAC conversion. Under construction ⚠️
 - `tools/CUE Corrector - MusicBrainz DiscID 1.3.pyw` - MusicBrainz DiscID/CUE workflow.

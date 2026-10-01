@@ -33,7 +33,7 @@ import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 
 APP_NAME = "Duplicate / Edition Analyzer"
-APP_VERSION = "0.17.12"
+APP_VERSION = "0.18.0"
 PROGRAM_DATA_DIR_NAME = "Duplicate Edition Analyzer"
 PYSIDE6_VERSION = "6.11.2"
 AUDIO_EXTS = {".m4a", ".flac", ".wav", ".ape", ".wv", ".mp3", ".aac", ".ogg", ".opus"}
@@ -8811,14 +8811,1247 @@ def _report_startup_crash(exc: BaseException) -> None:
         pass
 
 
+
+def _qt_main_html() -> str:
+    html = r'''<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Duplicate Edition Analyzer</title>
+<script src="qrc:///qtwebchannel/qwebchannel.js"></script>
+<style>
+:root{
+  color-scheme:dark;
+  --bg:#0b0c0f;--panel:#11141a;--panel2:#171b22;--field:#181c23;--line:#2a303a;
+  --text:#f3f6fb;--muted:#9ca7b8;--blue:#66a9ff;--cyan:#55d7ff;--red:#ef4444;
+  --yellow:#f59e0b;--green:#22c55e;--shadow:0 14px 42px rgba(0,0,0,.28);
+}
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--text);
+  font-family:"Segoe UI Variable","Segoe UI",system-ui,sans-serif;font-size:13px}
+body{display:flex;flex-direction:column}
+button,input{font:inherit}
+button{user-select:none}
+#topbar{
+  min-height:58px;height:58px;display:flex;align-items:center;gap:10px;padding:0 18px;
+  background:#101319;border-bottom:1px solid var(--line)
+}
+#appTitle{font-size:18px;font-weight:780;letter-spacing:-.01em}
+#version{color:#8b98a9;font-size:12px}
+#statusBadge{
+  margin-left:auto;padding:5px 9px;border:1px solid #4b4221;border-radius:999px;
+  color:#f3d17a;background:#201c10;font-size:11px;font-weight:700
+}
+#content{flex:1;min-height:0;display:grid;grid-template-rows:auto auto minmax(180px,1fr);gap:12px;
+  padding:14px 18px 12px;overflow:auto}
+.card{border:1px solid var(--line);border-radius:10px;background:var(--panel);box-shadow:var(--shadow)}
+.cardHead{display:flex;align-items:center;justify-content:space-between;padding:11px 13px 8px}
+.cardTitle{font-size:14px;font-weight:760}
+.cardHint{color:var(--muted);font-size:11px}
+.sources{padding:0 13px 13px}
+.sourceBlock+.sourceBlock{margin-top:11px}
+.labelRow{display:flex;align-items:baseline;gap:7px;margin-bottom:5px}
+.fieldLabel{font-weight:650}
+.optional{font-size:11px;color:#788495}
+.pathRow{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:7px}
+.pathRow.recycle{grid-template-columns:minmax(0,1fr) auto}
+.pathInput{
+  width:100%;height:34px;border:1px solid #37404d;border-radius:8px;background:var(--field);
+  color:var(--text);padding:0 10px;outline:none
+}
+.pathInput:focus{border-color:var(--blue);box-shadow:0 0 0 2px rgba(102,169,255,.15)}
+.btn,.iconBtn{
+  height:34px;border:1px solid #3a4351;border-radius:8px;background:#1b2028;color:var(--text);
+  padding:0 11px;cursor:pointer;transition:.12s ease
+}
+.btn:hover:not(:disabled),.iconBtn:hover:not(:disabled){background:#252c36;border-color:#596579}
+.btn:disabled,.iconBtn:disabled{opacity:.38;cursor:default}
+.btn.primary{background:#17324c;border-color:#3e78aa;color:#dff1ff;font-weight:720}
+.btn.primary:hover:not(:disabled){background:#1e4265;border-color:#66a9ff}
+.btn.danger{border-color:#8f3d45;background:#3a191d;color:#ffdadd}
+.btn.success{border-color:#2d7d49;background:#12351f;color:#b8f7c9}
+.iconBtn{width:34px;padding:0;display:inline-flex;align-items:center;justify-content:center}
+.options{
+  margin-top:13px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding-top:12px;border-top:1px solid #222832
+}
+.toggle{display:inline-flex;align-items:center;gap:7px;color:#dce3ec;cursor:pointer;white-space:nowrap}
+.toggle input{appearance:none;width:34px;height:18px;border-radius:999px;background:#303743;border:1px solid #46505e;
+  position:relative;cursor:pointer;transition:.12s}
+.toggle input:after{content:"";position:absolute;width:12px;height:12px;left:2px;top:2px;border-radius:50%;
+  background:#aab4c1;transition:.12s}
+.toggle input:checked{background:#1c5278;border-color:#4b8dbb}
+.toggle input:checked:after{left:18px;background:#eaf7ff}
+.matcher{margin-left:auto;color:#8f9bab;font-size:11px}
+.progressCard{padding:12px 13px}
+.progressTop{display:flex;align-items:center;gap:10px}
+#progressStatus{font-weight:700;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#progressPercent{margin-left:auto;color:#b7c4d4;font-variant-numeric:tabular-nums}
+.progressTrack{height:8px;margin-top:10px;border:1px solid #303844;border-radius:999px;background:#161a20;overflow:hidden}
+#progressFill{height:100%;width:0;background:linear-gradient(90deg,#4c93ce,#55d7ff);transition:width .12s ease}
+#progressDetail{margin-top:7px;color:var(--muted);font-size:11px;min-height:15px}
+.activityCard{min-height:0;display:flex;flex-direction:column}
+.activityCard .cardHead{padding-bottom:7px}
+#activity{
+  flex:1;min-height:120px;margin:0 13px 13px;padding:10px 11px;overflow:auto;border:1px solid #29303a;
+  border-radius:8px;background:#0d1014;color:#d6dde6;white-space:pre-wrap;font-family:"Cascadia Mono","Consolas",monospace;
+  font-size:12px;line-height:1.45
+}
+#footer{
+  min-height:58px;height:58px;display:flex;align-items:center;gap:8px;padding:0 18px;
+  border-top:1px solid var(--line);background:#101319
+}
+#footerSpacer{flex:1}
+#modalBackdrop{
+  display:none;position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.62);align-items:center;justify-content:center;padding:26px
+}
+#modalBackdrop.open{display:flex}
+#modal{
+  width:min(920px,94vw);max-height:88vh;display:flex;flex-direction:column;border:1px solid #3a4351;border-radius:12px;
+  background:#11151b;box-shadow:0 26px 90px rgba(0,0,0,.58);overflow:hidden
+}
+#modalHead{padding:14px 16px 10px;border-bottom:1px solid #29303a}
+#modalTitle{font-size:17px;font-weight:780}
+#modalSubtitle{margin-top:4px;color:var(--muted);font-size:12px;line-height:1.45}
+#modalBody{padding:12px 16px;overflow:auto;min-height:80px}
+#modalFoot{display:flex;align-items:center;gap:8px;padding:11px 16px;border-top:1px solid #29303a}
+.modalSpacer{flex:1}
+.reviewRow{border:1px solid #29313c;border-radius:8px;padding:10px 11px;background:#151a21;margin-bottom:7px}
+.reviewTop{display:flex;align-items:center;gap:10px}
+.reviewTitle{font-weight:700;min-width:0;flex:1}
+.reviewMeta{color:#9eabbc;font-size:11px;white-space:nowrap}
+.reviewDetails{margin-top:4px;color:#8f9bab;font-size:11px;line-height:1.4}
+.reviewCheck{width:16px;height:16px;accent-color:#66a9ff}
+.picksEntry{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:7px;margin-bottom:10px}
+.picksList{border:1px solid #29313c;border-radius:8px;overflow:hidden}
+.pickRow{display:grid;grid-template-columns:90px minmax(0,1fr) auto;gap:9px;align-items:center;padding:8px 10px;
+  border-bottom:1px solid #242b34;background:#14191f}
+.pickRow:last-child{border-bottom:0}
+.pickMode{color:#8fbfe4;font-size:11px;font-weight:700}
+.pickValue{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.empty{color:#7f8a99;padding:15px;text-align:center}
+.msg{line-height:1.55;color:#dce3ec;white-space:pre-wrap}
+.doneGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.doneStat{padding:9px 10px;border:1px solid #29313c;border-radius:8px;background:#151a21}
+.doneStat b{display:block;font-size:16px;margin-top:2px}
+.pathNote{margin-top:10px;padding:9px 10px;border:1px solid #29313c;border-radius:8px;background:#0e1115;
+  color:#9eabbc;font-family:"Cascadia Mono","Consolas",monospace;font-size:11px;word-break:break-all}
+</style>
+</head>
+<body>
+<div id="topbar">
+  <div id="appTitle">Duplicate / Edition Analyzer</div>
+  <div id="version">v__APP_VERSION__</div>
+  <div id="statusBadge">Under construction ⚠️</div>
+</div>
+
+<div id="content">
+  <section class="card">
+    <div class="cardHead"><div class="cardTitle">Source folders</div><div class="cardHint">Nothing is moved until Apply in Release Map</div></div>
+    <div class="sources">
+      <div class="sourceBlock">
+        <div class="labelRow"><div class="fieldLabel">Existing discography</div><div class="optional">optional</div></div>
+        <div class="pathRow">
+          <input id="existingPath" class="pathInput" placeholder="Already processed collection">
+          <button class="btn" id="browseExisting">Browse...</button>
+          <button class="btn" id="clearExisting">Clear</button>
+        </div>
+      </div>
+      <div class="sourceBlock">
+        <div class="labelRow"><div class="fieldLabel">New / update releases</div></div>
+        <div class="pathRow recycle">
+          <input id="recyclePath" class="pathInput" placeholder="Folder containing releases to analyze and filter">
+          <button class="btn" id="browseRecycle">Browse...</button>
+        </div>
+      </div>
+      <div class="options">
+        <label class="toggle" title="Checked: remixes participate normally. Unchecked: remixes are skipped.">
+          <input type="checkbox" id="saveRemixes"><span>Save Remixes</span>
+        </label>
+        <label class="toggle" title="Checked: live recordings participate normally. Unchecked: live recordings are skipped.">
+          <input type="checkbox" id="saveLive"><span>Save Live recordings</span>
+        </label>
+        <button class="btn" id="personalPicks">Personal Picks...</button>
+        <label class="toggle" title="Write detailed JSONL audio-comparison logs.">
+          <input type="checkbox" id="logging"><span>Logging</span>
+        </label>
+        <button class="iconBtn" id="openLogs" title="Open logs folder">📁</button>
+        <div class="matcher">Match: Chromaprint (audio only)</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card progressCard">
+    <div class="progressTop"><div id="progressStatus">Ready</div><div id="progressPercent">0%</div></div>
+    <div class="progressTrack"><div id="progressFill"></div></div>
+    <div id="progressDetail"></div>
+  </section>
+
+  <section class="card activityCard">
+    <div class="cardHead"><div class="cardTitle">Activity</div><div class="cardHint" id="activityHint"></div></div>
+    <div id="activity"></div>
+  </section>
+</div>
+
+<div id="footer">
+  <button class="btn primary" id="analyzeBtn">Analyze</button>
+  <button class="btn" id="undoBtn">Undo last run</button>
+  <button class="btn" id="mapBtn">Release Map...</button>
+  <div id="footerSpacer"></div>
+  <button class="btn" id="closeBtn">Close</button>
+</div>
+
+<div id="modalBackdrop">
+  <div id="modal">
+    <div id="modalHead"><div id="modalTitle"></div><div id="modalSubtitle"></div></div>
+    <div id="modalBody"></div>
+    <div id="modalFoot"></div>
+  </div>
+</div>
+
+<script>
+let bridge=null;
+let state=null;
+let modalKind="";
+let localPicks=[];
+let currentDone=null;
+
+function esc(v){
+  return String(v==null?"":v).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;").replaceAll("'","&#39;");
+}
+function formatElapsed(ms){
+  let s=Math.max(0,Math.floor(ms/1000));
+  const h=Math.floor(s/3600);s%=3600;const m=Math.floor(s/60);const sec=s%60;
+  return h? h+":"+String(m).padStart(2,"0")+":"+String(sec).padStart(2,"0")
+          : String(m).padStart(2,"0")+":"+String(sec).padStart(2,"0");
+}
+function currentDetail(){
+  if(!state)return "";
+  let text=String(state.progressCount||"");
+  if(state.running&&state.runStartedEpochMs){
+    const elapsed=formatElapsed(Date.now()-Number(state.runStartedEpochMs));
+    text+=(text?" | ":"")+"Elapsed "+elapsed;
+  }
+  return text;
+}
+function renderState(raw){
+  state=typeof raw==="string"?JSON.parse(raw):raw;
+  document.getElementById("existingPath").value=state.existingPath||"";
+  document.getElementById("recyclePath").value=state.recyclePath||"";
+  document.getElementById("saveRemixes").checked=!!state.saveRemixes;
+  document.getElementById("saveLive").checked=!!state.saveLive;
+  document.getElementById("logging").checked=!!state.logging;
+  document.getElementById("personalPicks").textContent=state.personalCount
+    ?"Personal Picks... ("+state.personalCount+")":"Personal Picks...";
+  document.getElementById("progressStatus").textContent=state.status||"Ready";
+  const pct=Math.max(0,Math.min(100,Number(state.progressPct||0)));
+  document.getElementById("progressFill").style.width=pct+"%";
+  document.getElementById("progressPercent").textContent=Math.round(pct)+"%";
+  document.getElementById("progressDetail").textContent=currentDetail();
+  const act=(state.activity||[]).join("\n");
+  const box=document.getElementById("activity");
+  const atBottom=box.scrollHeight-box.scrollTop-box.clientHeight<30;
+  box.textContent=act;
+  if(atBottom)box.scrollTop=box.scrollHeight;
+  document.getElementById("activityHint").textContent=state.running?"Working":"";
+  const busy=!!state.running||!!state.reviewPending||!!state.mapOpen;
+  document.getElementById("analyzeBtn").disabled=busy;
+  document.getElementById("undoBtn").disabled=busy;
+  document.getElementById("mapBtn").disabled=busy||!state.mapAvailable;
+  ["browseExisting","clearExisting","browseRecycle","saveRemixes","saveLive","personalPicks","logging","openLogs"].forEach(function(id){
+    document.getElementById(id).disabled=!!state.running||!!state.reviewPending||!!state.mapOpen;
+  });
+  document.getElementById("existingPath").disabled=!!state.running||!!state.reviewPending||!!state.mapOpen;
+  document.getElementById("recyclePath").disabled=!!state.running||!!state.reviewPending||!!state.mapOpen;
+}
+setInterval(function(){
+  if(state&&state.running)document.getElementById("progressDetail").textContent=currentDetail();
+},1000);
+
+function openModal(kind,title,subtitle,bodyHtml,buttonsHtml){
+  modalKind=kind;
+  document.getElementById("modalTitle").textContent=title||"";
+  document.getElementById("modalSubtitle").textContent=subtitle||"";
+  document.getElementById("modalBody").innerHTML=bodyHtml||"";
+  document.getElementById("modalFoot").innerHTML=buttonsHtml||"";
+  document.getElementById("modalBackdrop").classList.add("open");
+}
+function closeModal(){
+  modalKind="";
+  document.getElementById("modalBackdrop").classList.remove("open");
+}
+function messageModal(title,message){
+  openModal("message",title,"",'<div class="msg">'+esc(message)+'</div>',
+    '<div class="modalSpacer"></div><button class="btn primary" id="msgOk">OK</button>');
+  document.getElementById("msgOk").onclick=closeModal;
+}
+function confirmModal(title,message,yesText,onYes){
+  openModal("confirm",title,"",'<div class="msg">'+esc(message)+'</div>',
+    '<div class="modalSpacer"></div><button class="btn" id="confirmNo">Cancel</button>'
+    +'<button class="btn danger" id="confirmYes">'+esc(yesText||"Continue")+'</button>');
+  document.getElementById("confirmNo").onclick=closeModal;
+  document.getElementById("confirmYes").onclick=function(){closeModal();onYes();};
+}
+function phraseReview(data){
+  let rows="";
+  (data.candidates||[]).forEach(function(c,i){
+    rows+='<div class="reviewRow"><div class="reviewTop">'
+      +'<input class="reviewCheck phraseKeep" type="checkbox" data-i="'+i+'" '+(c.existing?"checked disabled":"")+'>'
+      +'<div class="reviewTitle">'+esc(c.phrase)+'</div><div class="reviewMeta">'+esc(c.kind)+' · '+esc(c.count)+'</div>'
+      +'<button class="btn phraseCopy" data-i="'+i+'">Copy</button></div>'
+      +(c.examples&&c.examples.length?'<div class="reviewDetails">Examples: '+esc(c.examples.slice(0,3).join("; "))+'</div>':"")
+      +'</div>';
+  });
+  openModal("phrase","Live / remix phrase review",
+    "Add only the live/remix families you personally want preserved. Existing Personal Picks are already checked.",
+    rows||'<div class="empty">No candidates</div>',
+    '<button class="btn" id="copyReview">Copy all review text</button><div class="modalSpacer"></div>'
+    +'<button class="btn" id="phraseCancel">Cancel</button><button class="btn primary" id="phraseContinue">Continue</button>');
+  document.querySelectorAll(".phraseCopy").forEach(function(btn){
+    btn.onclick=function(){
+      const c=data.candidates[Number(btn.dataset.i)];
+      let t=c.phrase+" ["+c.kind+"] ("+c.count+")";
+      if(c.examples&&c.examples.length)t+="\nExamples: "+c.examples.slice(0,3).join("; ");
+      bridge.copyText(t);
+    };
+  });
+  document.getElementById("copyReview").onclick=function(){
+    const t=(data.candidates||[]).map(function(c){
+      let s=c.phrase+" ["+c.kind+"] ("+c.count+")";
+      if(c.examples&&c.examples.length)s+="\nExamples: "+c.examples.slice(0,3).join("; ");
+      return s;
+    }).join("\n\n");
+    bridge.copyText(t);
+  };
+  document.getElementById("phraseCancel").onclick=function(){closeModal();bridge.cancelReview();};
+  document.getElementById("phraseContinue").onclick=function(){
+    const selected=[];
+    document.querySelectorAll(".phraseKeep").forEach(function(cb){
+      const c=data.candidates[Number(cb.dataset.i)];
+      if(cb.checked&&!c.existing)selected.push(c.phrase);
+    });
+    closeModal();bridge.submitPhraseReview(JSON.stringify(selected));
+  };
+}
+function patternReview(data){
+  let rows="";
+  (data.patterns||[]).forEach(function(p,i){
+    rows+='<div class="reviewRow"><div class="reviewTop">'
+      +'<input class="reviewCheck patternKeep" type="checkbox" data-i="'+i+'" '+(p.keep?"checked":"")+'>'
+      +'<div class="reviewTitle">'+esc(p.label)+' ('+esc(p.count)+')</div></div>'
+      +((p.variants&&p.variants.length)||(p.examples&&p.examples.length)
+        ?'<div class="reviewDetails">'
+          +(p.variants&&p.variants.length?'Variants: '+esc(p.variants.slice(0,6).join("; ")):"")
+          +((p.variants&&p.variants.length)&&(p.examples&&p.examples.length)?" | ":"")
+          +(p.examples&&p.examples.length?'Examples: '+esc(p.examples.slice(0,3).join("; ")):"")
+          +'</div>':"")+'</div>';
+  });
+  openModal("pattern","Unusual track pattern review",
+    "Checked patterns are kept. Unchecked patterns are skipped. Remix and Live remain controlled by their own switches.",
+    rows||'<div class="empty">No unusual patterns</div>',
+    '<button class="btn" id="patternsAll">Check all</button><button class="btn" id="patternsNone">Uncheck all</button>'
+    +'<div class="modalSpacer"></div><button class="btn" id="patternCancel">Cancel</button>'
+    +'<button class="btn primary" id="patternContinue">Continue</button>');
+  document.getElementById("patternsAll").onclick=function(){document.querySelectorAll(".patternKeep").forEach(function(x){x.checked=true;});};
+  document.getElementById("patternsNone").onclick=function(){document.querySelectorAll(".patternKeep").forEach(function(x){x.checked=false;});};
+  document.getElementById("patternCancel").onclick=function(){closeModal();bridge.cancelReview();};
+  document.getElementById("patternContinue").onclick=function(){
+    const out={};
+    document.querySelectorAll(".patternKeep").forEach(function(cb){
+      const p=data.patterns[Number(cb.dataset.i)];out[p.key]=!!cb.checked;
+    });
+    closeModal();bridge.submitPatternReview(JSON.stringify(out));
+  };
+}
+function renderPickRows(){
+  const host=document.getElementById("pickRows");
+  if(!host)return;
+  if(!localPicks.length){host.innerHTML='<div class="empty">No Personal Picks</div>';return;}
+  host.innerHTML=localPicks.map(function(p,i){
+    return '<div class="pickRow"><div class="pickMode">'+(p.mode==="exact"?"Exact title":"Phrase")+'</div>'
+      +'<div class="pickValue">'+esc(p.value)+'</div><button class="btn pickRemove" data-i="'+i+'">Remove</button></div>';
+  }).join("");
+  document.querySelectorAll(".pickRemove").forEach(function(btn){
+    btn.onclick=function(){localPicks.splice(Number(btn.dataset.i),1);renderPickRows();};
+  });
+}
+function personalPicksModal(raw){
+  const data=typeof raw==="string"?JSON.parse(raw):raw;
+  localPicks=(data.rules||[]).map(function(x){return {mode:x.mode==="exact"?"exact":"contains",value:String(x.value||"")};});
+  openModal("picks","Personal Picks",
+    "Exceptions to unchecked Save Remixes / Save Live recordings. Matches participate normally; they do not force a release to stay.",
+    '<div class="picksEntry"><input class="pathInput" id="pickInput" placeholder="Phrase or exact track title">'
+      +'<button class="btn" id="addPhrase">Add phrase</button><button class="btn" id="addExact">Add exact title</button></div>'
+      +'<div class="picksList" id="pickRows"></div>',
+    '<button class="btn" id="copyPicks">Copy all</button><button class="btn danger" id="clearPicks">Clear all</button>'
+      +'<div class="modalSpacer"></div><button class="btn" id="picksCancel">Cancel</button>'
+      +'<button class="btn primary" id="picksSave">Save</button>');
+  renderPickRows();
+  function add(mode){
+    const input=document.getElementById("pickInput"),value=input.value.trim();if(!value)return;
+    const key=value.toLowerCase().replace(/[^a-z0-9]+/g,"");
+    if(!localPicks.some(function(p){return p.mode===mode&&p.value.toLowerCase().replace(/[^a-z0-9]+/g,"")===key;})){
+      localPicks.push({mode:mode,value:value});renderPickRows();
+    }
+    input.value="";input.focus();
+  }
+  document.getElementById("addPhrase").onclick=function(){add("contains");};
+  document.getElementById("addExact").onclick=function(){add("exact");};
+  document.getElementById("pickInput").onkeydown=function(e){if(e.key==="Enter")add("contains");};
+  document.getElementById("copyPicks").onclick=function(){
+    bridge.copyText(localPicks.map(function(p){return (p.mode==="exact"?"Exact title: ":"Phrase: ")+p.value;}).join("\n"));
+  };
+  document.getElementById("clearPicks").onclick=function(){localPicks=[];renderPickRows();};
+  document.getElementById("picksCancel").onclick=closeModal;
+  document.getElementById("picksSave").onclick=function(){
+    closeModal();bridge.savePersonalPicks(JSON.stringify(localPicks),renderState);
+  };
+  document.getElementById("pickInput").focus();
+}
+function doneModal(data){
+  currentDone=data;
+  const r=data.result||{};
+  const body='<div class="doneGrid">'
+    +'<div class="doneStat">Recycle releases kept<b>'+esc(r.remaining_recycle||0)+'</b></div>'
+    +'<div class="doneStat">Redundant releases moved<b>'+esc(r.moved||0)+'</b></div>'
+    +'<div class="doneStat">Duplicate files removed<b>'+esc(r.intra_duplicate_files||0)+'</b></div>'
+    +'<div class="doneStat">Moved under !Remixes<b>'+esc(r.remix_moved||0)+'</b></div>'
+    +'</div><div class="reviewDetails" style="margin-top:10px">Added: '+esc(r.add||0)
+    +' · Replaced: '+esc(r.replace||0)+' · Recycle skipped: '+esc(r.skipped_recycle||0)
+    +' · Existing removed: '+esc(r.removed_current||0)+'</div>'
+    +'<div class="pathNote">Duplicates: '+esc(data.duplicates||"")+'</div>';
+  openModal("done","Completed","Filesystem changes finished.",body,
+    '<button class="btn" id="openRecycleDone">Open recycle</button>'
+    +'<button class="btn" id="openDupDone">Open duplicates</button>'
+    +'<button class="btn" id="undoDone">Undo last run</button>'
+    +'<button class="btn" id="mapDone">Release Map...</button>'
+    +'<div class="modalSpacer"></div><button class="btn primary" id="doneClose">Close</button>');
+  document.getElementById("openRecycleDone").onclick=function(){bridge.openPath(data.recycle||"");};
+  document.getElementById("openDupDone").onclick=function(){bridge.openPath(data.duplicates||"");};
+  document.getElementById("undoDone").onclick=function(){
+    confirmModal("Undo last run?","Restore files moved by the last Apply operation?","Undo",function(){bridge.undoLastRun();});
+  };
+  document.getElementById("mapDone").onclick=function(){closeModal();bridge.openReleaseMap();};
+  document.getElementById("doneClose").onclick=closeModal;
+}
+function handleEvent(raw){
+  const e=typeof raw==="string"?JSON.parse(raw):raw;
+  if(e.type==="error"||e.type==="info"){messageModal(e.title||"Duplicate / Edition Analyzer",e.message||"");return;}
+  if(e.type==="phraseReview"){phraseReview(e);return;}
+  if(e.type==="patternReview"){patternReview(e);return;}
+  if(e.type==="done"){doneModal(e);return;}
+}
+function syncPaths(){
+  if(!bridge)return;
+  bridge.setPaths(document.getElementById("existingPath").value,document.getElementById("recyclePath").value);
+}
+
+document.getElementById("browseExisting").onclick=function(){bridge.browseFolder("existing",renderState);};
+document.getElementById("browseRecycle").onclick=function(){bridge.browseFolder("recycle",renderState);};
+document.getElementById("clearExisting").onclick=function(){document.getElementById("existingPath").value="";bridge.setPaths("",document.getElementById("recyclePath").value,renderState);};
+document.getElementById("existingPath").onchange=syncPaths;
+document.getElementById("recyclePath").onchange=syncPaths;
+document.getElementById("saveRemixes").onchange=function(){bridge.setOption("saveRemixes",this.checked,renderState);};
+document.getElementById("saveLive").onchange=function(){bridge.setOption("saveLive",this.checked,renderState);};
+document.getElementById("logging").onchange=function(){bridge.setOption("logging",this.checked,renderState);};
+document.getElementById("openLogs").onclick=function(){bridge.openLogsFolder();};
+document.getElementById("personalPicks").onclick=function(){bridge.getPersonalPicks(personalPicksModal);};
+document.getElementById("analyzeBtn").onclick=function(){
+  bridge.startAnalyze(
+    document.getElementById("existingPath").value,
+    document.getElementById("recyclePath").value,
+    document.getElementById("saveRemixes").checked,
+    document.getElementById("saveLive").checked,
+    document.getElementById("logging").checked,
+    renderState
+  );
+};
+document.getElementById("undoBtn").onclick=function(){
+  confirmModal("Undo last run?","Restore files moved by the last Apply operation?","Undo",function(){bridge.undoLastRun();});
+};
+document.getElementById("mapBtn").onclick=function(){bridge.openReleaseMap();};
+document.getElementById("closeBtn").onclick=function(){bridge.closeApp();};
+
+new QWebChannel(qt.webChannelTransport,function(channel){
+  bridge=channel.objects.bridge;
+  bridge.stateChanged.connect(renderState);
+  bridge.eventRaised.connect(handleEvent);
+  bridge.getState(renderState);
+});
+</script>
+</body>
+</html>'''
+    return html.replace("__APP_VERSION__", APP_VERSION)
+
+
+def _qt_main_app() -> int:
+    ensure_qt_release_map_dependencies()
+    from PySide6.QtCore import QObject, QUrl, Signal, Slot
+    from PySide6.QtGui import QDesktopServices
+    from PySide6.QtWidgets import QApplication, QFileDialog, QMainWindow
+    from PySide6.QtWebChannel import QWebChannel
+    from PySide6.QtWebEngineWidgets import QWebEngineView
+
+    class MainBridge(QObject):
+        stateChanged = Signal(str)
+        eventRaised = Signal(str)
+        closeRequested = Signal()
+
+        def __init__(self):
+            super().__init__()
+            saved = _load_app_settings()
+            self.existing_path = str(saved.get("existing_discography", "") or "")
+            self.recycle_path = str(saved.get("recycle_update_folder", "") or "")
+            if "save_remixes" in saved:
+                self.save_remixes = bool(saved.get("save_remixes"))
+            else:
+                self.save_remixes = not bool(saved.get("exclude_remixes", True))
+            if "save_live" in saved:
+                self.save_live = bool(saved.get("save_live"))
+            else:
+                self.save_live = not bool(saved.get("exclude_live", True))
+            self.logging_enabled = bool(saved.get("logging_enabled", False))
+            saved_patterns = saved.get("unusual_pattern_preferences_v5", {})
+            self.pattern_preferences: Dict[str, bool] = (
+                {str(k): bool(v) for k, v in saved_patterns.items()}
+                if isinstance(saved_patterns, dict)
+                else {}
+            )
+            saved_personal = saved.get("personal_keep_rules_v1", [])
+            self.personal_keep_rules: List[Dict[str, str]] = []
+            if isinstance(saved_personal, list):
+                for item in saved_personal:
+                    if not isinstance(item, dict):
+                        continue
+                    mode = str(item.get("mode", "contains")).strip().lower()
+                    value = str(item.get("value", "")).strip()
+                    if mode in {"contains", "exact"} and value:
+                        self.personal_keep_rules.append({"mode": mode, "value": value})
+
+            self.status = "Ready"
+            self.progress_pct = 0.0
+            self.progress_count = ""
+            self.activity: List[str] = []
+            self.running = False
+            self.review_pending = False
+            self.map_open = False
+            self.run_started_epoch_ms = 0
+            self._last_progress_stage = ""
+            self._last_emit = 0.0
+            self._lock = threading.RLock()
+            self._decision_snapshot: List[Dict[str, object]] = _load_decision_snapshot()
+            self._live_release_map_session: Optional[Dict[str, object]] = None
+            self._pending_analysis: Optional[Dict[str, object]] = None
+
+        def _save_settings(self) -> None:
+            _save_app_settings(
+                self.existing_path,
+                self.recycle_path,
+                self.save_remixes,
+                self.save_live,
+                self.logging_enabled,
+                self.pattern_preferences,
+                self.personal_keep_rules,
+            )
+
+        def _state_payload(self) -> Dict[str, object]:
+            with self._lock:
+                return {
+                    "existingPath": self.existing_path,
+                    "recyclePath": self.recycle_path,
+                    "saveRemixes": self.save_remixes,
+                    "saveLive": self.save_live,
+                    "logging": self.logging_enabled,
+                    "personalCount": len(self.personal_keep_rules),
+                    "status": self.status,
+                    "progressPct": round(self.progress_pct, 3),
+                    "progressCount": self.progress_count,
+                    "activity": list(self.activity[-600:]),
+                    "running": self.running,
+                    "reviewPending": self.review_pending,
+                    "mapOpen": self.map_open,
+                    "runStartedEpochMs": self.run_started_epoch_ms,
+                    "mapAvailable": bool(self._decision_snapshot),
+                }
+
+        def _state_json(self) -> str:
+            return json.dumps(self._state_payload(), ensure_ascii=False)
+
+        def _emit_state(self, force: bool = True) -> None:
+            now = time.monotonic()
+            if not force and now - self._last_emit < 0.05:
+                return
+            self._last_emit = now
+            self.stateChanged.emit(self._state_json())
+
+        def _event(self, payload: Dict[str, object]) -> None:
+            self.eventRaised.emit(json.dumps(payload, ensure_ascii=False))
+
+        def _append_activity(self, text: str) -> None:
+            if not text:
+                return
+            with self._lock:
+                stamp = datetime.now().strftime("%H:%M:%S")
+                self.activity.append(f"{stamp}  {text}")
+                if len(self.activity) > 600:
+                    self.activity = self.activity[-600:]
+
+        def _clear_activity(self) -> None:
+            with self._lock:
+                self.activity.clear()
+
+        def _set_running(self, running: bool) -> None:
+            with self._lock:
+                self.running = bool(running)
+                if running:
+                    self.run_started_epoch_ms = int(time.time() * 1000)
+                else:
+                    self.run_started_epoch_ms = 0
+            self._emit_state()
+
+        def _error(self, message: str, title: str = APP_NAME) -> None:
+            with self._lock:
+                self.running = False
+                self.review_pending = False
+                self.map_open = False
+                self.status = "Failed"
+                self.run_started_epoch_ms = 0
+            self._append_activity(f"Failed: {message}")
+            self._emit_state()
+            self._event({"type": "error", "title": title, "message": message})
+
+        def _info(self, message: str, title: str = APP_NAME) -> None:
+            self._event({"type": "info", "title": title, "message": message})
+
+        def _progress(self, text: str, current: int, total: int) -> None:
+            pct = 0.0 if total <= 0 else (current / total) * 100.0
+            stage = text.rstrip(".")
+            with self._lock:
+                if stage != self._last_progress_stage:
+                    self._last_progress_stage = stage
+                    self._append_activity(stage)
+                self.status = stage
+                self.progress_pct = pct
+                self.progress_count = f"{current:,} / {total:,} ({pct:.0f}%)" if total > 0 else ""
+            self._emit_state(force=(current >= total or current == 0))
+
+        @Slot(result=str)
+        def getState(self):
+            return self._state_json()
+
+        @Slot(str, str, result=str)
+        def setPaths(self, existing: str, recycle: str):
+            if self.running or self.review_pending or self.map_open:
+                return self._state_json()
+            self.existing_path = str(existing or "").strip()
+            self.recycle_path = str(recycle or "").strip()
+            self._save_settings()
+            return self._state_json()
+
+        @Slot(str, result=str)
+        def browseFolder(self, kind: str):
+            if self.running or self.review_pending or self.map_open:
+                return self._state_json()
+            current = self.existing_path if kind == "existing" else self.recycle_path
+            start = current if current and Path(current).is_dir() else str(Path.home())
+            title = "Select existing discography" if kind == "existing" else "Select new / update releases"
+            chosen = QFileDialog.getExistingDirectory(QApplication.activeWindow(), title, start)
+            if chosen:
+                if kind == "existing":
+                    self.existing_path = chosen
+                else:
+                    self.recycle_path = chosen
+                self._save_settings()
+            return self._state_json()
+
+        @Slot(str, bool, result=str)
+        def setOption(self, name: str, value: bool):
+            if self.running or self.review_pending or self.map_open:
+                return self._state_json()
+            if name == "saveRemixes":
+                self.save_remixes = bool(value)
+            elif name == "saveLive":
+                self.save_live = bool(value)
+            elif name == "logging":
+                self.logging_enabled = bool(value)
+            self._save_settings()
+            return self._state_json()
+
+        @Slot(result=str)
+        def getPersonalPicks(self):
+            return json.dumps({"rules": self.personal_keep_rules}, ensure_ascii=False)
+
+        @Slot(str, result=str)
+        def savePersonalPicks(self, raw: str):
+            if self.running or self.review_pending or self.map_open:
+                return self._state_json()
+            try:
+                incoming = json.loads(raw or "[]")
+            except Exception:
+                incoming = []
+            cleaned: List[Dict[str, str]] = []
+            seen: Set[Tuple[str, str]] = set()
+            if isinstance(incoming, list):
+                for item in incoming:
+                    if not isinstance(item, dict):
+                        continue
+                    mode = "exact" if str(item.get("mode", "")).lower() == "exact" else "contains"
+                    value = str(item.get("value", "")).strip()
+                    key = (mode, _personal_pick_normalize(value))
+                    if value and key[1] and key not in seen:
+                        seen.add(key)
+                        cleaned.append({"mode": mode, "value": value})
+            self.personal_keep_rules = cleaned
+            self._save_settings()
+            return self._state_json()
+
+        @Slot(str)
+        def copyText(self, value: str):
+            QApplication.clipboard().setText(value or "")
+
+        @Slot()
+        def openLogsFolder(self):
+            try:
+                _migrate_legacy_app_data()
+                path = _logs_dir()
+                path.mkdir(parents=True, exist_ok=True)
+                QDesktopServices.openUrl(QUrl.fromLocalFile(str(path)))
+            except Exception as exc:
+                self._event({"type": "error", "title": APP_NAME, "message": f"Could not open logs folder:\n\n{exc}"})
+
+        @Slot(str)
+        def openPath(self, value: str):
+            if value:
+                QDesktopServices.openUrl(QUrl.fromLocalFile(str(value)))
+
+        @Slot()
+        def closeApp(self):
+            self._save_settings()
+            self.closeRequested.emit()
+
+        @Slot(str, str, bool, bool, bool, result=str)
+        def startAnalyze(
+            self,
+            existing_text: str,
+            recycle_text: str,
+            save_remixes: bool,
+            save_live: bool,
+            logging_enabled: bool,
+        ):
+            if self.running or self.review_pending or self.map_open:
+                return self._state_json()
+
+            self.existing_path = str(existing_text or "").strip()
+            self.recycle_path = str(recycle_text or "").strip()
+            self.save_remixes = bool(save_remixes)
+            self.save_live = bool(save_live)
+            self.logging_enabled = bool(logging_enabled)
+            self._save_settings()
+
+            existing = Path(self.existing_path) if self.existing_path else None
+            recycle = Path(self.recycle_path) if self.recycle_path else None
+            if recycle is None or not recycle.is_dir():
+                self._event({"type": "error", "title": APP_NAME, "message": "Invalid New / update releases folder."})
+                return self._state_json()
+            if existing is not None and not existing.is_dir():
+                self._event({"type": "error", "title": APP_NAME, "message": "Invalid Existing discography folder."})
+                return self._state_json()
+            if existing is not None:
+                try:
+                    if (
+                        existing.resolve() == recycle.resolve()
+                        or _is_ancestor(existing, recycle)
+                        or _is_ancestor(recycle, existing)
+                    ):
+                        self._event({
+                            "type": "error",
+                            "title": APP_NAME,
+                            "message": "Existing and New / update folders must be separate and non-nested.",
+                        })
+                        return self._state_json()
+                except Exception:
+                    pass
+
+            self._live_release_map_session = None
+            self._pending_analysis = None
+            self.review_pending = False
+            self.progress_pct = 0.0
+            self.progress_count = ""
+            self.status = "Scanning phrases and track patterns"
+            self._last_progress_stage = ""
+            self._clear_activity()
+            self._append_activity("Started")
+            if self.logging_enabled:
+                self._append_activity("Logging enabled")
+            if self.personal_keep_rules:
+                self._append_activity(f"Personal Picks: {len(self.personal_keep_rules)} rule(s)")
+            self._set_running(True)
+
+            threading.Thread(
+                target=self._preflight_worker,
+                args=(existing, recycle, self.save_remixes, self.save_live, self.logging_enabled),
+                daemon=True,
+            ).start()
+            return self._state_json()
+
+        def _preflight_worker(
+            self,
+            existing: Optional[Path],
+            recycle: Path,
+            save_remixes: bool,
+            save_live: bool,
+            logging_enabled: bool,
+        ) -> None:
+            try:
+                releases, tracks = prepare_analysis(existing, recycle, self._progress)
+                patterns = collect_track_patterns(tracks)
+                phrase_candidates = detect_personal_pick_phrases_from_tracks(
+                    tracks,
+                    include_remixes=not save_remixes,
+                    include_live=not save_live,
+                )
+                self._pending_analysis = {
+                    "existing": existing,
+                    "recycle": recycle,
+                    "save_remixes": save_remixes,
+                    "save_live": save_live,
+                    "logging_enabled": logging_enabled,
+                    "releases": releases,
+                    "tracks": tracks,
+                    "patterns": patterns,
+                }
+                self.running = False
+                self.run_started_epoch_ms = 0
+                self.review_pending = bool(phrase_candidates or patterns)
+                self._emit_state()
+                if phrase_candidates:
+                    existing_keys = {
+                        _personal_pick_normalize(str(item.get("value", "")))
+                        for item in self.personal_keep_rules
+                        if isinstance(item, dict)
+                    }
+                    rows = []
+                    for phrase, count, examples in phrase_candidates:
+                        kinds: List[str] = []
+                        if is_live_text(phrase):
+                            kinds.append("Live")
+                        if is_remix_text(phrase):
+                            kinds.append("Remix")
+                        rows.append({
+                            "phrase": phrase,
+                            "count": int(count),
+                            "examples": [str(x) for x in examples[:3]],
+                            "kind": " / ".join(kinds) if kinds else "Version",
+                            "existing": _personal_pick_normalize(phrase) in existing_keys,
+                        })
+                    self._event({"type": "phraseReview", "candidates": rows})
+                    return
+                self._append_activity("No skipped live/remix phrase candidates detected")
+                self._show_pattern_review_or_continue()
+            except Exception as exc:
+                self._error(str(exc))
+
+        @Slot(str)
+        def submitPhraseReview(self, raw: str):
+            if not self._pending_analysis:
+                return
+            try:
+                selected = json.loads(raw or "[]")
+            except Exception:
+                selected = []
+            existing_keys = {
+                _personal_pick_normalize(str(item.get("value", "")))
+                for item in self.personal_keep_rules
+                if isinstance(item, dict)
+            }
+            added = 0
+            if isinstance(selected, list):
+                for phrase in selected:
+                    phrase = str(phrase or "").strip()
+                    key = _personal_pick_normalize(phrase)
+                    if key and key not in existing_keys:
+                        self.personal_keep_rules.append({"mode": "contains", "value": phrase})
+                        existing_keys.add(key)
+                        added += 1
+            if added:
+                self._save_settings()
+                self._append_activity(f"Personal Picks: added {added} phrase(s)")
+            else:
+                self._append_activity("Personal Picks review complete: no new phrases added")
+            self._show_pattern_review_or_continue()
+
+        def _show_pattern_review_or_continue(self) -> None:
+            ctx = self._pending_analysis or {}
+            patterns = list(ctx.get("patterns", []) or [])
+            if patterns:
+                self.review_pending = True
+                self._emit_state()
+                rows = []
+                for item in patterns:
+                    key = str(item.get("key", ""))
+                    rows.append({
+                        "key": key,
+                        "label": str(item.get("label", key)),
+                        "count": int(item.get("count", 0) or 0),
+                        "variants": [str(x) for x in item.get("variants", [])],
+                        "examples": [str(x) for x in item.get("examples", [])],
+                        "keep": bool(self.pattern_preferences.get(key, True)),
+                    })
+                self._event({"type": "patternReview", "patterns": rows})
+                return
+            self._append_activity("No version-style track patterns detected")
+            self._begin_prepared_analysis(set())
+
+        @Slot(str)
+        def submitPatternReview(self, raw: str):
+            if not self._pending_analysis:
+                return
+            try:
+                result = json.loads(raw or "{}")
+            except Exception:
+                result = {}
+            if not isinstance(result, dict):
+                result = {}
+            cleaned = {str(k): bool(v) for k, v in result.items()}
+            self.pattern_preferences.update(cleaned)
+            self._save_settings()
+            excluded = {key for key, keep in cleaned.items() if not keep}
+            self._append_activity(
+                f"Pattern review complete: {len(cleaned)} pattern(s), {len(excluded)} excluded"
+            )
+            self._begin_prepared_analysis(excluded)
+
+        @Slot()
+        def cancelReview(self):
+            if not self.review_pending:
+                return
+            self._pending_analysis = None
+            self.review_pending = False
+            self.running = False
+            self.status = "Cancelled"
+            self.progress_count = ""
+            self._append_activity("Cancelled before audio comparison")
+            self._emit_state()
+
+        def _begin_prepared_analysis(self, excluded_pattern_keys: Set[str]) -> None:
+            ctx = self._pending_analysis
+            if not ctx:
+                return
+            self.review_pending = False
+            self.status = "Continuing analysis"
+            self.progress_pct = 0.0
+            self.progress_count = ""
+            self._last_progress_stage = ""
+            self._set_running(True)
+            threading.Thread(
+                target=self._prepared_worker,
+                args=(ctx, set(excluded_pattern_keys)),
+                daemon=True,
+            ).start()
+
+        def _prepared_worker(self, ctx: Dict[str, object], excluded_pattern_keys: Set[str]) -> None:
+            try:
+                recycle = ctx["recycle"]
+                assert isinstance(recycle, Path)
+                logging_enabled = bool(ctx.get("logging_enabled"))
+                comparison_log_path = _new_comparison_log_path(recycle) if logging_enabled else None
+                result = analyze_prepared(
+                    ctx["releases"],
+                    ctx["tracks"],
+                    True,
+                    self._progress,
+                    not bool(ctx.get("save_remixes")),
+                    not bool(ctx.get("save_live")),
+                    excluded_pattern_keys,
+                    comparison_log_path,
+                    [dict(item) for item in self.personal_keep_rules],
+                )
+                self._analysis_done(ctx, result)
+            except Exception as exc:
+                self._error(str(exc))
+
+        def _analysis_done(self, ctx: Dict[str, object], result) -> None:
+            self.running = False
+            self.run_started_epoch_ms = 0
+            self.review_pending = False
+            self.progress_pct = 100.0
+            self.progress_count = "100%"
+            self._append_activity("Analysis complete")
+
+            releases, tracks, groups, selected, reviews, notes = result
+            comparison_log = next(
+                (
+                    n.split("COMPARISON LOG:", 1)[1].strip()
+                    for n in notes
+                    if n.startswith("COMPARISON LOG:")
+                ),
+                "",
+            )
+            if comparison_log:
+                self._append_activity(f"Comparison log: {comparison_log}")
+
+            blocked_release_ids: Set[int] = set()
+            decisions = build_release_decisions(
+                releases,
+                tracks,
+                selected,
+                reviews,
+                blocked_release_ids,
+            )
+            counts = action_summary(decisions)
+            recycle_kept = sum(
+                1
+                for d in decisions
+                if next(r for r in releases if r.rid == d.release_id).root_kind == "recycle"
+                and d.action in {"ADD", "REPLACE", "KEEP"}
+            )
+            initial_intra_duplicates = plan_intra_release_duplicates(releases, decisions)
+
+            self._decision_snapshot = build_decision_snapshot(
+                releases,
+                tracks,
+                selected,
+                decisions,
+                blocked_release_ids,
+            )
+            _save_decision_snapshot(self._decision_snapshot)
+            self.status = "Analysis complete - review Release Map"
+            retained_count = sum(
+                1 for d in decisions if d.action in {"KEEP", "ADD", "REPLACE"}
+            )
+            self._append_activity(f"Release Map ready: {retained_count} retained release(s)")
+
+            summary_parts = [
+                f"Retained recycle releases: {recycle_kept}",
+                f"Hidden duplicate recycle releases: {counts['SKIP']}",
+            ]
+            existing = ctx.get("existing")
+            if existing is not None:
+                summary_parts.append(f"Hidden duplicate existing releases: {counts['REMOVE']}")
+            if initial_intra_duplicates:
+                summary_parts.append(
+                    f"Duplicate files inside retained releases: {len(initial_intra_duplicates)}"
+                )
+            if comparison_log:
+                summary_parts.append("Detailed comparison logging is enabled.")
+
+            session: Dict[str, object] = {
+                "snapshots": list(self._decision_snapshot),
+                "initial_plan_counts": _release_map_plan_counts(self._decision_snapshot),
+                "allow_apply": True,
+                "summary_text": " | ".join(summary_parts),
+                "existing": existing,
+                "recycle": ctx.get("recycle"),
+                "releases": releases,
+                "tracks": tracks,
+                "groups": groups,
+                "selected": set(selected),
+                "reviews": list(reviews),
+                "decisions": list(decisions),
+                "blocked_release_ids": set(blocked_release_ids),
+            }
+            self._live_release_map_session = session
+            self._pending_analysis = None
+            self._emit_state()
+            self._launch_release_map()
+
+        def _update_live_release_map_session(
+            self,
+            session: Dict[str, object],
+            map_result: Dict[str, object],
+        ) -> None:
+            session["snapshots"] = list(
+                map_result.get("snapshots", session.get("snapshots", [])) or []
+            )
+            session["selected"] = set(
+                map_result.get("selected", session.get("selected", set())) or set()
+            )
+            session["decisions"] = list(
+                map_result.get("decisions", session.get("decisions", [])) or []
+            )
+            session["blocked_release_ids"] = set(
+                map_result.get(
+                    "blocked_release_ids",
+                    session.get("blocked_release_ids", set()),
+                )
+                or set()
+            )
+            incoming_initial = map_result.get("initial_plan_counts")
+            if isinstance(incoming_initial, dict):
+                session["initial_plan_counts"] = {
+                    "releases": max(0, int(incoming_initial.get("releases", 0) or 0)),
+                    "tracks": max(0, int(incoming_initial.get("tracks", 0) or 0)),
+                }
+            self._decision_snapshot = list(session["snapshots"])
+            _save_decision_snapshot(self._decision_snapshot)
+
+        @Slot()
+        def openReleaseMap(self):
+            if self.running or self.review_pending or self.map_open:
+                return
+            self._launch_release_map()
+
+        def _launch_release_map(self) -> None:
+            if self.map_open:
+                return
+            session = self._live_release_map_session
+            if session is None:
+                snapshots = self._decision_snapshot or _load_decision_snapshot()
+                if not snapshots:
+                    self._info("No analyzed release decisions are available yet.")
+                    return
+                session = {
+                    "snapshots": snapshots,
+                    "allow_apply": False,
+                }
+            self.map_open = True
+            self.status = "Opening Release Map"
+            self._emit_state()
+            threading.Thread(
+                target=self._release_map_worker,
+                args=(session, self._live_release_map_session is not None),
+                daemon=True,
+            ).start()
+
+        def _release_map_worker(self, session: Dict[str, object], live: bool) -> None:
+            try:
+                map_result = launch_qt_release_map(dict(session))
+                if live and self._live_release_map_session is not None:
+                    self._handle_live_map_result(self._live_release_map_session, map_result)
+                else:
+                    self.map_open = False
+                    self.status = "Ready"
+                    self._emit_state()
+            except Exception as exc:
+                self.map_open = False
+                self._error(f"Release Map failed:\n\n{exc}")
+
+        def _handle_live_map_result(
+            self,
+            session: Dict[str, object],
+            map_result: Dict[str, object],
+        ) -> None:
+            self._update_live_release_map_session(session, map_result)
+            self.map_open = False
+            if map_result.get("action") != "apply":
+                self.status = "Analysis complete - plan not applied."
+                self._emit_state()
+                return
+
+            existing = session.get("existing")
+            recycle = session.get("recycle")
+            releases = session.get("releases")
+            decisions = list(session.get("decisions", []) or [])
+            if not isinstance(recycle, Path) or not isinstance(releases, list):
+                self._error("The live analysis context is no longer available.")
+                return
+
+            counts = action_summary(decisions)
+            intra_duplicates = plan_intra_release_duplicates(releases, decisions)
+            to_move = counts["SKIP"] + counts["REMOVE"] + len(intra_duplicates)
+            if to_move == 0:
+                self.status = "Analysis complete - no moves in current plan."
+                self._append_activity("Current plan contains no filesystem moves.")
+                self._emit_state()
+                return
+
+            self._live_release_map_session = None
+            self.progress_pct = 0.0
+            self.progress_count = ""
+            self.status = "Applying moves"
+            self._last_progress_stage = ""
+            self._append_activity("Applying moves")
+            self._set_running(True)
+            try:
+                result = apply_automatic_plan(
+                    existing,
+                    recycle,
+                    releases,
+                    decisions,
+                    intra_duplicates,
+                    self._progress,
+                )
+                self._apply_done(recycle, result)
+            except Exception as exc:
+                self._error(str(exc))
+
+        def _apply_done(self, recycle: Path, result: Dict[str, object]) -> None:
+            self.running = False
+            self.run_started_epoch_ms = 0
+            self.progress_pct = 100.0
+            self.progress_count = "100%"
+            self.status = "Complete"
+            self._append_activity("Moves complete")
+            self._emit_state()
+            duplicates = str(result.get("duplicates", ""))
+            self._event({
+                "type": "done",
+                "recycle": str(recycle),
+                "duplicates": duplicates,
+                "result": result,
+            })
+
+        @Slot()
+        def undoLastRun(self):
+            if self.running or self.review_pending or self.map_open:
+                return
+            self.status = "Undoing last run"
+            self.progress_pct = 0.0
+            self.progress_count = ""
+            self._append_activity("Undo last run")
+            self._set_running(True)
+            threading.Thread(target=self._undo_worker, daemon=True).start()
+
+        def _undo_worker(self) -> None:
+            try:
+                restored, conflicts = undo_last_run()
+                self.running = False
+                self.run_started_epoch_ms = 0
+                self.status = "Ready"
+                self.progress_pct = 0.0
+                self.progress_count = ""
+                self._append_activity(
+                    f"Undo complete: restored {restored}, conflicts {len(conflicts)}"
+                )
+                self._emit_state()
+                if conflicts:
+                    self._info(
+                        f"Restored: {restored}\nConflicts: {len(conflicts)}",
+                        "Undo complete",
+                    )
+                else:
+                    self._info(f"Restored: {restored}", "Undo complete")
+            except Exception as exc:
+                self._error(str(exc))
+
+    app = QApplication.instance() or QApplication(sys.argv[:1])
+    app.setApplicationName(APP_NAME)
+    window = QMainWindow()
+    window.setWindowTitle(f"{APP_NAME} {APP_VERSION}")
+    window.resize(1040, 760)
+    window.setMinimumSize(880, 640)
+
+    view = QWebEngineView(window)
+    channel = QWebChannel(view.page())
+    bridge = MainBridge()
+    channel.registerObject("bridge", bridge)
+    view.page().setWebChannel(channel)
+    view.setHtml(_qt_main_html(), QUrl("about:blank"))
+    window.setCentralWidget(view)
+    bridge.closeRequested.connect(window.close)
+    window.show()
+    return app.exec()
+
 def main():
     if len(sys.argv) >= 4 and sys.argv[1] == "--qt-release-map":
         raise SystemExit(
             _qt_release_map_process(Path(sys.argv[2]), Path(sys.argv[3]))
         )
     try:
-        app = App()
-        app.mainloop()
+        raise SystemExit(_qt_main_app())
+    except SystemExit:
+        raise
     except Exception as exc:
         _report_startup_crash(exc)
         raise

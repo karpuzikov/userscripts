@@ -901,3 +901,11 @@ This taxonomy is a standing rule for all future Duplicate Edition Analyzer work.
 - Track count means tracks currently participating in coverage inside retained releases; tracks skipped by active options or the manual ignore list are not included in this counter.
 - The Re-Analyze result drawer must repeat the cumulative Initial -> Result release/track totals so the impact remains visible alongside the concrete release additions/removals.
 - The main window must provide a compact folder control immediately beside Logging that opens this program's isolated `Documents\\Karpuzikov Tools\\Duplicate Edition Analyzer\\logs` directory.
+
+
+### Main UI technology
+
+- The active Duplicate Edition Analyzer main window uses the same PySide6 + Qt WebEngine + HTML/CSS/JavaScript UI stack as Release Map.
+- Keep the main window and Release Map visually unified: same dark palette, Segoe UI hierarchy, compact controls, border/radius language, status/progress treatment, and interaction density.
+- Do not revert the active main window to Tkinter in future updates unless the user explicitly requests it.
+- Keep long-running work off the WebEngine/UI thread; progress and activity must remain live through the Qt bridge.
