@@ -1,15 +1,15 @@
 // ==UserScript==
 // @name         MusicBrainz ToolBox
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.0.15
+// @version      1.0.16
 // @description  Combined MusicBrainz release-editor, recording, barcode, Spotify linking, search, cover-art, Disc ID, and duplicate-edit tools.
 // @author       karpuzikov
 // @license      MIT
 // @match        https://musicbrainz.org/*
 // @match        https://beta.musicbrainz.org/*
 // @match        https://open.spotify.com/*
-// @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/toolbox/MusicBrainz_ToolBox.user.js?v=1.0.15
-// @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/toolbox/MusicBrainz_ToolBox.user.js?v=1.0.15
+// @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/toolbox/MusicBrainz_ToolBox.user.js?v=1.0.16
+// @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/toolbox/MusicBrainz_ToolBox.user.js?v=1.0.16
 // @supportURL   https://github.com/karpuzikov/userscripts
 // @grant        GM_getValue
 // @grant        GM_setValue
@@ -7120,9 +7120,9 @@
         const LINK_CLASS = 'mb-toolbox-spotify-release-link';
         const TITLE_ROW_CLASS = 'mb-toolbox-spotify-title-row';
         const STYLE_ID = 'mb-toolbox-spotify-release-link-style';
-        const CACHE_KEY = 'mb-toolbox-spotify-release-links-v1';
+        const CACHE_KEY = 'mb-toolbox-spotify-release-links-v2';
         const FOUND_TTL = 30 * 24 * 60 * 60 * 1000;
-        const MISSING_TTL = 24 * 60 * 60 * 1000;
+        const MISSING_TTL = 15 * 1000;
         const MAX_CACHE_ENTRIES = 500;
         const REQUEST_INTERVAL = 1100;
         const HARMONY_URL = 'https://harmony.pulsewidth.org.uk/';
@@ -7130,6 +7130,8 @@
 
         let currentAlbumId = '';
         let currentReleases = null;
+        let currentLookupAt = 0;
+        let lookupInFlight = false;
         let requestGeneration = 0;
         let lastRequestAt = 0;
         let scanQueued = false;
@@ -7252,8 +7254,8 @@
             return [...unique.values()];
         }
 
-        async function lookupMusicBrainzReleases(albumId) {
-            const cached = cachedReleases(albumId);
+        async function lookupMusicBrainzReleases(albumId, force = false) {
+            const cached = force ? null : cachedReleases(albumId);
             if (cached) return cached;
 
             await throttleMusicBrainz();
@@ -7391,32 +7393,61 @@
             return true;
         }
 
+        async function refreshCurrentAlbum(force = false) {
+            const albumId = albumIdFromLocation();
+            if (!albumId || lookupInFlight) return;
+
+            lookupInFlight = true;
+            const generation = requestGeneration;
+
+            try {
+                const releases = await lookupMusicBrainzReleases(albumId, force);
+
+                if (
+                    generation !== requestGeneration ||
+                    albumId !== currentAlbumId ||
+                    albumId !== albumIdFromLocation()
+                ) {
+                    return;
+                }
+
+                currentLookupAt = Date.now();
+                currentReleases = releases;
+                renderLinks();
+            } finally {
+                lookupInFlight = false;
+            }
+        }
+
         async function handleRouteChange() {
             const albumId = albumIdFromLocation();
 
             if (albumId === currentAlbumId) {
-                if (Array.isArray(currentReleases)) renderLinks();
+                if (Array.isArray(currentReleases)) {
+                    renderLinks();
+
+                    // "Not found" is deliberately short-lived. This lets a
+                    // newly-added MusicBrainz relationship replace the Harmony
+                    // fallback without requiring a browser restart.
+                    if (
+                        currentReleases.length === 0 &&
+                        Date.now() - currentLookupAt >= MISSING_TTL
+                    ) {
+                        refreshCurrentAlbum(true);
+                    }
+                }
                 return;
             }
 
             currentAlbumId = albumId;
             currentReleases = null;
-            const generation = ++requestGeneration;
+            currentLookupAt = 0;
+            ++requestGeneration;
             removeLinks();
 
             if (!albumId) return;
 
-            const releases = await lookupMusicBrainzReleases(albumId);
-
-            if (
-                generation !== requestGeneration ||
-                albumId !== albumIdFromLocation()
-            ) {
-                return;
-            }
-
-            currentReleases = releases;
-            renderLinks();
+            refreshCurrentAlbum(false);
         }
 
         function queueScan() {
@@ -7432,6 +7463,25 @@
         observer.observe(document.documentElement, {
             childList: true,
             subtree: true,
+        });
+
+        // Returning from MusicBrainz after adding the Spotify relationship
+        // forces an immediate recheck instead of trusting a previous miss.
+        window.addEventListener('focus', () => {
+            if (currentAlbumId && Array.isArray(currentReleases) && currentReleases.length === 0) {
+                refreshCurrentAlbum(true);
+            }
+        });
+
+        document.addEventListener('visibilitychange', () => {
+            if (
+                document.visibilityState === 'visible' &&
+                currentAlbumId &&
+                Array.isArray(currentReleases) &&
+                currentReleases.length === 0
+            ) {
+                refreshCurrentAlbum(true);
+            }
         });
 
         setInterval(handleRouteChange, 500);
