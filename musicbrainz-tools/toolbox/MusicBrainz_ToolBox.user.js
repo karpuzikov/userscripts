@@ -1,14 +1,14 @@
 // ==UserScript==
 // @name         MusicBrainz ToolBox
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.0.12
+// @version      1.0.13
 // @description  Combined MusicBrainz release-editor, recording, barcode, search, cover-art, Disc ID, and duplicate-edit tools.
 // @author       karpuzikov
 // @license      MIT
 // @match        https://musicbrainz.org/*
 // @match        https://beta.musicbrainz.org/*
-// @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/toolbox/MusicBrainz_ToolBox.user.js?v=1.0.12
-// @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/toolbox/MusicBrainz_ToolBox.user.js?v=1.0.12
+// @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/toolbox/MusicBrainz_ToolBox.user.js?v=1.0.13
+// @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/toolbox/MusicBrainz_ToolBox.user.js?v=1.0.13
 // @supportURL   https://github.com/karpuzikov/userscripts
 // @grant        GM_getValue
 // @grant        GM_setValue
@@ -6189,7 +6189,7 @@
                 : [];
         }
     
-        function keepExactIsrcAssociationAcrossTracklistEdits(trackModel, recordingEntity) {
+        function keepRecordingAssociationLocked(trackModel, recordingEntity) {
             if (
                 !trackModel ||
                 typeof trackModel.recording !== 'function' ||
@@ -6199,7 +6199,17 @@
             }
 
             const expectedGid = String(recordingEntity.gid).toLowerCase();
-            const previous = trackModel.__mbToolBoxExactIsrcGuard;
+            const previous =
+                trackModel.__mbToolBoxRecordingLock ||
+                trackModel.__mbToolBoxExactIsrcGuard;
+
+            if (
+                previous?.expectedGid === expectedGid &&
+                previous?.recordingEntity
+            ) {
+                return;
+            }
+
             previous?.dispose?.();
 
             const guard = {
@@ -6207,26 +6217,18 @@
                 recordingEntity,
                 subscriptions: [],
                 restoring: false,
-                recentTracklistChangeUntil: 0,
                 dispose: null,
             };
 
-            trackModel.__mbToolBoxExactIsrcGuard = guard;
-
-            const recordingsTabVisible = () => {
-                const recordings = document.getElementById('recordings');
-                if (!recordings) return false;
-                return recordings.offsetParent !== null &&
-                    getComputedStyle(recordings).display !== 'none' &&
-                    getComputedStyle(recordings).visibility !== 'hidden';
-            };
+            trackModel.__mbToolBoxRecordingLock = guard;
+            delete trackModel.__mbToolBoxExactIsrcGuard;
 
             const disposeGuard = () => {
-                if (trackModel.__mbToolBoxExactIsrcGuard !== guard) return;
+                if (trackModel.__mbToolBoxRecordingLock !== guard) return;
                 for (const subscription of guard.subscriptions) {
                     subscription?.dispose?.();
                 }
-                delete trackModel.__mbToolBoxExactIsrcGuard;
+                delete trackModel.__mbToolBoxRecordingLock;
             };
             guard.dispose = disposeGuard;
 
@@ -6238,7 +6240,7 @@
             };
 
             const refreshSavedComparisonState = () => {
-                if (trackModel.__mbToolBoxExactIsrcGuard !== guard) return;
+                if (trackModel.__mbToolBoxRecordingLock !== guard) return;
 
                 if (typeof trackModel.name === 'function') {
                     trackModel.name.saved = readObservable(trackModel.name);
@@ -6248,54 +6250,38 @@
                     trackModel.length.saved = readObservable(trackModel.length);
                 }
 
-                // MusicBrainz's native watcher restores recording.saved when
-                // Tracklist title/length still match the saved comparison state.
-                // Keep the exact ISRC-selected recording as that saved target.
+                /*
+                 * MusicBrainz's native recording-association watcher uses this
+                 * saved recording when Tracklist metadata changes. Once a track
+                 * is linked, that association is authoritative until the user
+                 * explicitly removes it.
+                 */
                 if (trackModel.recording) {
                     trackModel.recording.saved = recordingEntity;
                 }
             };
 
-            const restoreIfMusicBrainzUnlinked = () => {
+            const restoreLockedRecording = () => {
                 if (
                     guard.restoring ||
-                    trackModel.__mbToolBoxExactIsrcGuard !== guard
+                    trackModel.__mbToolBoxRecordingLock !== guard
                 ) {
                     return;
                 }
 
                 const current = readObservable(trackModel.recording);
                 const currentGid = String(current?.gid || '').toLowerCase();
-
-                if (currentGid && currentGid !== expectedGid) {
-                    // A deliberate switch to another recording wins.
-                    disposeGuard();
-                    return;
-                }
-
                 if (currentGid === expectedGid) return;
-
-                /*
-                 * An empty recording while the Recordings tab is visible and no
-                 * Tracklist edit has just happened is a deliberate manual unlink.
-                 * Otherwise it is MusicBrainz's Tracklist-change watcher clearing
-                 * the association, which must not override an exact ISRC match.
-                 */
-                if (
-                    recordingsTabVisible() &&
-                    Date.now() > guard.recentTracklistChangeUntil
-                ) {
-                    disposeGuard();
-                    return;
-                }
 
                 guard.restoring = true;
                 try {
                     refreshSavedComparisonState();
                     trackModel.recording(recordingEntity);
+
                     if (typeof trackModel.hasNewRecording === 'function') {
                         trackModel.hasNewRecording(false);
                     }
+
                     refreshSavedComparisonState();
                 } finally {
                     guard.restoring = false;
@@ -6305,10 +6291,9 @@
             refreshSavedComparisonState();
 
             /*
-             * MusicBrainz currently reevaluates recording association roughly
-             * 500 ms after Tracklist changes. Track every Tracklist observable
-             * that can participate in that edit flow, keep the saved title/length
-             * baselines current, and check again after the native debounce.
+             * Tracklist edits must never change a recording association. Keep
+             * MusicBrainz's title/length comparison baseline synchronized, then
+             * verify again after its native debounced watcher has run.
              */
             const tracklistObservables = [
                 trackModel.name,
@@ -6324,19 +6309,18 @@
                 if (typeof observable?.subscribe !== 'function') continue;
 
                 guard.subscriptions.push(observable.subscribe(() => {
-                    guard.recentTracklistChangeUntil = Date.now() + 2500;
                     refreshSavedComparisonState();
-
-                    setTimeout(restoreIfMusicBrainzUnlinked, 0);
-                    setTimeout(restoreIfMusicBrainzUnlinked, 650);
-                    setTimeout(restoreIfMusicBrainzUnlinked, 1200);
+                    setTimeout(restoreLockedRecording, 0);
+                    setTimeout(restoreLockedRecording, 650);
+                    setTimeout(restoreLockedRecording, 1200);
                 }));
             }
 
             /*
-             * Subscribe to the underlying observable, not only the writable
-             * computed. This sees MusicBrainz's own setRecordingValue -> null
-             * transition immediately and restores the exact ISRC association.
+             * Watch the underlying observable so any automatic MusicBrainz
+             * unlink/relink is reversed immediately. Manual unlink is handled
+             * separately by disposing this lock before MusicBrainz processes
+             * the user's explicit "Add a new recording" choice.
              */
             const recordingObservable =
                 typeof trackModel.recordingValue?.subscribe === 'function'
@@ -6344,34 +6328,94 @@
                     : trackModel.recording;
 
             if (typeof recordingObservable?.subscribe === 'function') {
-                guard.subscriptions.push(recordingObservable.subscribe(value => {
-                    if (guard.restoring) return;
-
-                    const gid = String(value?.gid || '').toLowerCase();
-
-                    if (gid && gid !== expectedGid) {
-                        disposeGuard();
-                        return;
-                    }
-
-                    if (!gid) {
-                        setTimeout(restoreIfMusicBrainzUnlinked, 0);
+                guard.subscriptions.push(recordingObservable.subscribe(() => {
+                    if (!guard.restoring) {
+                        setTimeout(restoreLockedRecording, 0);
                     }
                 }));
             }
 
             if (typeof trackModel.hasNewRecording?.subscribe === 'function') {
                 guard.subscriptions.push(trackModel.hasNewRecording.subscribe(value => {
-                    if (
-                        value &&
-                        recordingsTabVisible() &&
-                        Date.now() > guard.recentTracklistChangeUntil
-                    ) {
-                        disposeGuard();
+                    if (value && !guard.restoring) {
+                        setTimeout(restoreLockedRecording, 0);
                     }
                 }));
             }
         }
+
+        function installRecordingLockWatcher(trackModel) {
+            if (
+                !trackModel ||
+                trackModel.__mbToolBoxRecordingLockWatcher ||
+                typeof trackModel.recordingValue?.subscribe !== 'function'
+            ) {
+                return;
+            }
+
+            const subscription = trackModel.recordingValue.subscribe(value => {
+                if (
+                    value?.gid &&
+                    !trackModel.__mbToolBoxRecordingLock
+                ) {
+                    keepRecordingAssociationLocked(trackModel, value);
+                }
+            });
+
+            trackModel.__mbToolBoxRecordingLockWatcher = subscription;
+        }
+
+        function protectAllLinkedRecordings() {
+            for (const trackModel of releaseTrackModels()) {
+                installRecordingLockWatcher(trackModel);
+
+                const recording =
+                    typeof trackModel.recording === 'function'
+                        ? (
+                            typeof trackModel.recording.peek === 'function'
+                                ? trackModel.recording.peek()
+                                : trackModel.recording()
+                        )
+                        : null;
+
+                if (recording?.gid && !trackModel.__mbToolBoxRecordingLock) {
+                    keepRecordingAssociationLocked(trackModel, recording);
+                }
+            }
+        }
+
+        function allowExplicitManualRecordingRemoval() {
+            const bubble = PAGE_WINDOW.MB?.releaseEditor?.recordingBubble;
+            const trackModel =
+                typeof bubble?.currentTrack === 'function'
+                    ? bubble.currentTrack()
+                    : (
+                        typeof bubble?.target === 'function'
+                            ? bubble.target()
+                            : null
+                    );
+
+            trackModel?.__mbToolBoxRecordingLock?.dispose?.();
+            trackModel?.__mbToolBoxExactIsrcGuard?.dispose?.();
+        }
+
+        /*
+         * This is the one native manual unlink path in the release editor:
+         * selecting "Add a new recording" explicitly removes the current
+         * recording association. Capture the real user click before Knockout
+         * changes the model so the lock does not fight the user's request.
+         */
+        document.addEventListener('click', event => {
+            if (!event.isTrusted) return;
+
+            const input = event.target?.closest?.(
+                '#recording-assoc-bubble input#add-new-recording[name="recording-selection"]'
+            );
+
+            if (input) {
+                allowExplicitManualRecordingRemoval();
+            }
+        }, true);
 
         async function linkExactIsrcRecording(row, trackModel, candidate, expectedIsrc) {
             if (!trackModel || typeof trackModel.recording !== 'function') {
@@ -6391,7 +6435,7 @@
             if (typeof trackModel.hasNewRecording === 'function') {
                 trackModel.hasNewRecording(false);
             }
-            keepExactIsrcAssociationAcrossTracklistEdits(trackModel, entity);
+            keepRecordingAssociationLocked(trackModel, entity);
     
             const linked = await waitFor(() => {
                 const current = readLinkedRecording(row);
@@ -6596,7 +6640,8 @@
         }
     
         function unlinkRecordingAssociationOnly(track) {
-            // Explicit ToolBox unlink must cancel any exact-ISRC persistence guard.
+            // Explicit ToolBox unlink is allowed to release the recording lock.
+            track?.__mbToolBoxRecordingLock?.dispose?.();
             track?.__mbToolBoxExactIsrcGuard?.dispose?.();
 
             /*
@@ -7029,6 +7074,7 @@
             migrateLocalIsrcChoices();
             updateGithubCacheButton(panel);
             syncGithubCacheQuietly(panel);
+            protectAllLinkedRecordings();
             return true;
         }
     
@@ -7036,8 +7082,26 @@
         if (noteRoot) new MutationObserver(appendNoteIfPossible).observe(noteRoot, {childList: true, subtree: true});
         document.getElementById('enter-edit')?.addEventListener('click', appendNoteIfPossible, true);
         if (!addControls()) {
-            const observer = new MutationObserver(() => { if (addControls()) observer.disconnect(); });
+            const observer = new MutationObserver(() => {
+                if (addControls()) {
+                    observer.disconnect();
+                    protectAllLinkedRecordings();
+                }
+            });
             observer.observe(document.body, {childList: true, subtree: true});
+        }
+
+        const recordingsRoot = document.getElementById('recordings');
+        if (recordingsRoot) {
+            let lockScanQueued = false;
+            new MutationObserver(() => {
+                if (lockScanQueued) return;
+                lockScanQueued = true;
+                setTimeout(() => {
+                    lockScanQueued = false;
+                    protectAllLinkedRecordings();
+                }, 0);
+            }).observe(recordingsRoot, {childList: true, subtree: true});
         }
     })();
     }
