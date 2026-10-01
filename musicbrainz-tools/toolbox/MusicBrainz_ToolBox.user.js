@@ -1,14 +1,14 @@
 // ==UserScript==
 // @name         MusicBrainz ToolBox
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.0.8
+// @version      1.0.9
 // @description  Combined MusicBrainz release-editor, recording, barcode, search, cover-art, Disc ID, and duplicate-edit tools.
 // @author       karpuzikov
 // @license      MIT
 // @match        https://musicbrainz.org/*
 // @match        https://beta.musicbrainz.org/*
-// @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/toolbox/MusicBrainz_ToolBox.user.js?v=1.0.8
-// @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/toolbox/MusicBrainz_ToolBox.user.js?v=1.0.8
+// @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/toolbox/MusicBrainz_ToolBox.user.js?v=1.0.9
+// @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/toolbox/MusicBrainz_ToolBox.user.js?v=1.0.9
 // @supportURL   https://github.com/karpuzikov/userscripts
 // @grant        GM_getValue
 // @grant        GM_setValue
@@ -6542,146 +6542,106 @@
             return current.length === rows.length && rows.every((row, index) => row === current[index]);
         }
     
-        function snapshotTrackLength(track) {
-            const lengthObservable = track?.length;
-            const formattedObservable = track?.formattedLength;
-
-            return {
-                value: typeof lengthObservable === 'function'
-                    ? lengthObservable()
-                    : undefined,
-                formatted: typeof formattedObservable === 'function'
-                    ? formattedObservable()
-                    : undefined,
-                hasOriginal: Boolean(
-                    lengthObservable &&
-                    Object.prototype.hasOwnProperty.call(lengthObservable, 'original')
-                ),
-                original: lengthObservable?.original,
-                hasSaved: Boolean(
-                    lengthObservable &&
-                    Object.prototype.hasOwnProperty.call(lengthObservable, 'saved')
-                ),
-                saved: lengthObservable?.saved,
-            };
-        }
-
-        function restoreTrackLength(track, snapshot) {
-            const lengthObservable = track?.length;
-            const formattedObservable = track?.formattedLength;
-
-            if (typeof formattedObservable === 'function' &&
-                formattedObservable() !== snapshot.formatted) {
-                formattedObservable(snapshot.formatted);
+        function unlinkRecordingAssociationOnly(track) {
+            /*
+             * Do not call track.recording(null): that goes through MusicBrainz's
+             * Track#setRecordingValue machinery, which also maintains comparison
+             * state used by Tracklist fields. "Remove all links" must change only
+             * the recording association.
+             *
+             * Write directly to the dedicated recordingValue observable instead.
+             * No title, artist-credit, length, formatted-length, number, position,
+             * or other Tracklist observable is read or written here.
+             */
+            if (typeof track?.recordingValue !== 'function') {
+                throw new Error('MusicBrainz recording association model is unavailable.');
             }
 
-            if (typeof lengthObservable === 'function' &&
-                lengthObservable() !== snapshot.value) {
-                lengthObservable(snapshot.value);
+            const Recording = PAGE_WINDOW.MB?.entity?.Recording;
+            if (typeof Recording !== 'function') {
+                throw new Error('MusicBrainz Recording entity constructor is unavailable.');
             }
 
-            if (lengthObservable) {
-                if (snapshot.hasOriginal) lengthObservable.original = snapshot.original;
-                if (snapshot.hasSaved) lengthObservable.saved = snapshot.saved;
+            const emptyRecording = new Recording({name: ''});
+
+            track.recordingValue(emptyRecording);
+
+            // Keep this as an unlinked track, not "Add a new recording".
+            if (typeof track.hasNewRecording === 'function') {
+                track.hasNewRecording(false);
             }
-        }
 
-        function trackLengthMatchesSnapshot(track, snapshot) {
-            const value = typeof track?.length === 'function'
-                ? track.length()
-                : undefined;
-            const formatted = typeof track?.formattedLength === 'function'
-                ? track.formattedLength()
-                : undefined;
-
-            return value === snapshot.value && formatted === snapshot.formatted;
+            // Prevent MusicBrainz's recording-association watcher from restoring
+            // the just-removed recording on a later metadata change. This is
+            // recording-association state only; Tracklist values are untouched.
+            if (track.recording) {
+                track.recording.saved = emptyRecording;
+                track.recording.savedEditData = null;
+            }
         }
 
         async function removeAllLinks(panel) {
             if (running) return;
-    
+
             const release = PAGE_WINDOW.MB?.releaseEditor?.rootField?.release?.();
             const status = panel.querySelector('.mb-safe-status');
             const list = panel.querySelector('.mb-safe-results');
             const toggle = panel.querySelector('.mb-safe-toggle');
-    
+
             if (!release || typeof release.allTracks !== 'function') {
-                status.textContent = 'MusicBrainz release track model is unavailable.';
+                status.textContent = 'MusicBrainz release recording model is unavailable.';
                 return;
             }
-    
-            // MusicBrainz Release#allTracks() is a generator, not an array.
-            const tracks = [...release.allTracks()];
-            const linked = tracks.filter(track =>
+
+            // Only inspect recording associations. Do not inspect or mutate any
+            // Tracklist metadata fields.
+            const linked = [...release.allTracks()].filter(track =>
                 typeof track?.hasExistingRecording === 'function' &&
                 track.hasExistingRecording()
             );
-    
+
             if (!linked.length) {
                 const visibleLinked = [...document.querySelectorAll('#recordings tr.track')]
                     .filter(row => Boolean(recordingIdFromCell(row.querySelectorAll('td.name')[1])));
-    
+
                 status.textContent = visibleLinked.length
-                    ? `Error: MusicBrainz shows ${visibleLinked.length} linked recording(s), but the release model returned none. No links were changed.`
+                    ? `Error: MusicBrainz shows ${visibleLinked.length} linked recording(s), but the recording model returned none. No links were changed.`
                     : 'No recording links to remove.';
                 return;
             }
-    
+
             if (!confirm(`Remove all ${linked.length} recording links from this release?`)) return;
 
-            /*
-             * Removing a recording association must never modify track duration.
-             * Snapshot every track's raw and formatted length before touching
-             * recording state, then restore it after MusicBrainz has processed
-             * the unlink and again on the next task to catch delayed subscribers.
-             */
-            const lengthSnapshots = new Map(
-                tracks.map(track => [track, snapshotTrackLength(track)])
-            );
-    
+            let removed = 0;
             for (const track of linked) {
-                track.recording(null);
-                if (typeof track.hasNewRecording === 'function') {
-                    track.hasNewRecording(false);
-                }
+                unlinkRecordingAssociationOnly(track);
 
-                restoreTrackLength(track, lengthSnapshots.get(track));
-            }
-
-            await new Promise(resolve => setTimeout(resolve, 0));
-
-            let repairedLengths = 0;
-            for (const track of tracks) {
-                const snapshot = lengthSnapshots.get(track);
-                if (!trackLengthMatchesSnapshot(track, snapshot)) {
-                    restoreTrackLength(track, snapshot);
-                    repairedLengths++;
+                if (
+                    typeof track?.hasExistingRecording === 'function' &&
+                    !track.hasExistingRecording()
+                ) {
+                    removed++;
                 }
             }
-    
-            const remaining = [...release.allTracks()].filter(track =>
-                typeof track?.hasExistingRecording === 'function' &&
-                track.hasExistingRecording()
-            );
-    
+
             list.replaceChildren();
             list.hidden = true;
             toggle.hidden = true;
             toggle.textContent = 'Show results';
-    
-            if (remaining.length) {
-                status.textContent = `Removed ${linked.length - remaining.length}/${linked.length} recording links; ${remaining.length} remain linked.`;
+
+            if (removed !== linked.length) {
+                status.textContent =
+                    `Removed ${removed}/${linked.length} recording links. No Tracklist fields were touched.`;
                 return;
             }
-    
+
             needsAttribution = true;
             appendNoteIfPossible();
-            status.textContent = repairedLengths
-                ? `Removed all ${linked.length} recording links. Preserved/restored track lengths on ${repairedLengths} track(s).`
-                : `Removed all ${linked.length} recording links. Track lengths preserved.`;
+            status.textContent =
+                `Removed all ${linked.length} recording links. Tracklist data was not touched.`;
             updateDuplicateHighlights();
         }
-    
+
         async function runMatcher(panel, isrcs = null, targetRows = null, options = {}) {
             if (running) return;
     
