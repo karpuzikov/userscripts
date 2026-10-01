@@ -809,7 +809,7 @@ Do not flatten release folders into the duplicate root. After successful moves, 
 
 - The Release Map must show **all analyzed releases at the same time in one graph**. Never replace the full graph with a selected-release subgraph, neighborhood-only view, drill-down graph, or any other sub-map.
 - The graph contains release nodes only. Selecting a release may highlight/dim relationships, but must not remove other release nodes from the map.
-- **Duplicate releases must not appear on the graph.** Any release whose current optimized action is `SKIP` or `REMOVE` because it is redundant/duplicate is omitted from the Release Map entirely.
+- **Duplicate releases appear on the Release Map only as secondary duplicate rows connected to the retained release(s) that cover them.** They must be visually distinct from retained releases and must never be mistaken for retained output.
 - **Remix-only releases must not appear on the graph when Save Remixes is unchecked.** A release whose only relevant/included material is excluded by the remix setting is omitted from the graph.
 - **Live-only releases must not appear on the graph when Save Live recordings is unchecked.** A release whose only relevant/included material is excluded by the live setting is omitted from the graph.
 - These are visibility rules for the graph, not deletion rules. Hidden duplicate/remix/live releases remain part of the analyzed result/state where needed for re-optimization, explanations, undo, and future setting changes.
@@ -817,8 +817,8 @@ Do not flatten release folders into the duplicate root. After successful moves, 
 
 - No nested navigation: no release list + map pairing, no menus within menus, no sub-maps, and no multi-level drill-down navigation. A release click opens one direct details surface for that release while the full graph remains visible.
 - The Release Map UI must no longer use Tkinter/ttk. Use a modern GPU/web-rendered UI stack suitable for a large interactive graph and normal Windows window management.
-- Preferred architecture: **PySide6 / Qt 6** as the Windows desktop shell, **Qt WebEngine** for the graph surface, and **Sigma.js + Graphology** for the full release network. Python remains the analyzer/backend and communicates with the UI through a direct Qt bridge.
-- The graph must support pan, zoom, fit/center, hover, click selection, connected-edge highlighting, search-to-node, and smooth interaction while all release nodes remain loaded and visible.
+- Preferred architecture: **PySide6 / Qt 6** as the Windows desktop shell with **Qt WebEngine** rendering a custom HTML/CSS/SVG release board. Python remains the analyzer/backend and communicates with the UI through a direct Qt bridge. A force-directed node library is not required for the chronological board.
+- The Release Map must support smooth scrolling, search-to-release, click selection, connected-line highlighting, and track-carrier highlighting while all currently relevant release rows remain loaded in the same board.
 - Selecting a release must not navigate away from the graph. Show release/track details in a single flat side or bottom panel; closing/changing selection returns focus to the same full graph state.
 
 ### Release Map interaction workflow
@@ -855,3 +855,17 @@ Do not flatten release folders into the duplicate root. After successful moves, 
 - If Re-Analyze produces no plan change, say so explicitly in the result drawer and do not falsely highlight Apply as if there were new filesystem actions.
 - The graph after Re-Analyze still follows graph visibility rules: duplicate/redundant releases, remix-only releases when remixes are disabled, and live-only releases when live is disabled stay hidden unless they become retained/otherwise visible under the new plan.
 - Unique-track badges, unique-track highlighting, release details, and result-drawer deltas must all refresh from the same newly computed plan so the UI never shows stale pre-analysis values.
+
+### Chronological folder-board layout and connection semantics
+
+- The Release Map is a chronological **folder-style release board**, not a force-directed bubble/circle graph.
+- Sort all visible release rows by the date prefix in the release folder name (`YYYY-MM-DD`, then `YYYY-MM`, then `YYYY`; undated rows last). Preserve ascending chronological order across columns.
+- Lay releases out in compact vertical columns resembling Windows Explorer folder rows. The release folder name is the primary text; do not use oversized cards or circular nodes.
+- Retained releases use normal high-contrast rows. Duplicate/redundant releases use visually secondary rows marked `DUP`.
+- The small red/yellow/green unique-track badge remains only on retained rows. Duplicate rows use a neutral duplicate marker instead.
+- Default connection lines have exactly one meaning: **duplicate release -> retained release(s) that cover its included recording groups**. Do not draw generic connections merely because two retained releases share some audio.
+- Duplicate connection lines must be clearly visible but visually secondary. Selecting a release strengthens only the duplicate relationships touching that release.
+- Clicking a track in release details activates **track-carrier mode**. Every visible release containing that exact recording group is highlighted, all other release rows dim, and bright connection lines run from the selected release to every other visible carrier.
+- Track-carrier mode includes duplicate releases, so the user can immediately see previously rejected/duplicate releases that contain the same recording.
+- The UI must state how many visible releases contain the selected track and provide one direct `Clear track highlight` action.
+- Clicking another release clears track-carrier mode unless the user selects a track again. The full chronological board remains present at all times; there is never a sub-map.

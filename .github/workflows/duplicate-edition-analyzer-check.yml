@@ -54,8 +54,8 @@ jobs:
 
           latest = max(files, key=version_key)
           source = latest.read_text(encoding="utf-8")
-          if "function buildGraph() {function buildGraph() {" in source:
-              raise SystemExit("Duplicated buildGraph function boundary found")
+          if "function renderBoard() {function renderBoard() {" in source:
+              raise SystemExit("Duplicated renderBoard function boundary found")
 
           html_match = re.search(r'html = r"""(.*?)"""\n\s+return \(', source, re.S)
           if not html_match:
@@ -65,7 +65,7 @@ jobs:
               raise SystemExit("Release Map module script not found")
 
           js = script_match.group(1)
-          js = js.replace("__APP_VERSION__", "test").replace("__SIGMA_VERSION__", "3.0.3").replace("__GRAPHOLOGY_VERSION__", "0.26.0")
+          js = js.replace("__APP_VERSION__", "test")
           check = Path("release-map-check.mjs")
           check.write_text(js, encoding="utf-8")
           subprocess.run(["node", "--check", str(check)], check=True)

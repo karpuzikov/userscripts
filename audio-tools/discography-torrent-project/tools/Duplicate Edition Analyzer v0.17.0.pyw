@@ -33,11 +33,9 @@ import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 
 APP_NAME = "Duplicate / Edition Analyzer"
-APP_VERSION = "0.16.3"
+APP_VERSION = "0.17.0"
 PROGRAM_DATA_DIR_NAME = "Duplicate Edition Analyzer"
 PYSIDE6_VERSION = "6.11.2"
-SIGMA_VERSION = "3.0.3"
-GRAPHOLOGY_VERSION = "0.26.0"
 AUDIO_EXTS = {".m4a", ".flac", ".wav", ".ape", ".wv", ".mp3", ".aac", ".ogg", ".opus"}
 def _logical_cpu_count() -> int:
     return max(1, os.cpu_count() or 1)
@@ -6173,10 +6171,10 @@ def _qt_release_map_html() -> str:
 <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
 <style>
 :root {
-  color-scheme: dark;
-  --bg:#0b0c0f; --panel:#12141a; --panel2:#171a21; --line:#2a2e39;
-  --text:#f5f7fb; --muted:#9aa3b2; --blue:#5ea0ff; --red:#ef4444;
-  --yellow:#f59e0b; --green:#22c55e; --purple:#a78bfa;
+  color-scheme:dark;
+  --bg:#0b0c0f; --panel:#11141a; --panel2:#171b22; --line:#2a303a;
+  --text:#f3f6fb; --muted:#9ca7b8; --blue:#66a9ff; --cyan:#55d7ff;
+  --red:#ef4444; --yellow:#f59e0b; --green:#22c55e; --dup:#788393;
 }
 * { box-sizing:border-box; }
 html,body { margin:0; width:100%; height:100%; overflow:hidden; background:var(--bg); color:var(--text);
@@ -6185,145 +6183,155 @@ body { display:flex; flex-direction:column; }
 button,input { font:inherit; }
 #toolbar {
   height:56px; min-height:56px; display:flex; align-items:center; gap:8px; padding:0 14px;
-  background:#101218; border-bottom:1px solid var(--line);
+  background:#101319; border-bottom:1px solid var(--line); z-index:20;
 }
-#title { font-weight:700; font-size:17px; margin-right:10px; white-space:nowrap; }
+#title { font-weight:750; font-size:17px; margin-right:10px; white-space:nowrap; }
 #search {
-  width:min(540px,42vw); height:34px; border:1px solid #363b48; border-radius:9px;
-  background:#181b22; color:var(--text); padding:0 12px; outline:none;
+  width:min(520px,38vw); height:34px; border:1px solid #37404d; border-radius:8px;
+  background:#181c23; color:var(--text); padding:0 11px; outline:none;
 }
-#search:focus { border-color:var(--blue); box-shadow:0 0 0 2px rgba(94,160,255,.16); }
+#search:focus { border-color:var(--blue); box-shadow:0 0 0 2px rgba(102,169,255,.16); }
 .btn {
-  height:34px; border:1px solid #363b48; border-radius:9px; background:#1b1e26; color:var(--text);
-  padding:0 13px; cursor:pointer; transition:.14s ease;
+  height:34px; border:1px solid #3a4351; border-radius:8px; background:#1b2028; color:var(--text);
+  padding:0 12px; cursor:pointer; transition:.12s ease;
 }
-.btn:hover:not(:disabled) { background:#242834; border-color:#4a5262; }
+.btn:hover:not(:disabled) { background:#252c36; border-color:#596579; }
 .btn:disabled { opacity:.38; cursor:default; }
-.btn.dirty { border-color:var(--yellow); color:#ffd87a; box-shadow:0 0 0 2px rgba(245,158,11,.16); }
+.btn.dirty { border-color:var(--yellow); color:#ffd77a; box-shadow:0 0 0 2px rgba(245,158,11,.16); }
 .btn.apply-ready { background:#12351f; border-color:#2f9e55; color:#b8f7c9; box-shadow:0 0 0 2px rgba(34,197,94,.16); }
+#modeText {
+  min-width:0; max-width:440px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  color:#b9c4d3; font-size:12px; padding-left:4px;
+}
 #spacer { flex:1; }
 #main { min-height:0; flex:1; display:flex; position:relative; }
-#graphWrap { position:relative; flex:1; min-width:0; background:
-  radial-gradient(circle at 50% 40%,rgba(36,47,68,.34),rgba(11,12,15,0) 45%); }
-#graph { position:absolute; inset:0; }
-#nodesLayer { position:absolute; inset:0; pointer-events:none; overflow:hidden; z-index:4; }
-.releaseCard {
-  position:absolute; width:228px; min-height:46px;
-  padding:8px 34px 8px 10px; border:1px solid #475569; border-radius:8px;
-  background:rgba(23,26,33,.96); color:#f8fafc; box-shadow:0 4px 16px rgba(0,0,0,.38);
-  pointer-events:auto; cursor:pointer; user-select:none; transition:border-color .12s ease,background .12s ease,opacity .12s ease;
-  overflow:hidden;
+#boardViewport {
+  position:relative; min-width:0; flex:1; overflow:auto; background:linear-gradient(180deg,#0c0e12,#0a0c0f);
 }
-.releaseCard:hover { background:#202631; border-color:#7da7dc; z-index:8; }
-.releaseCard.selected { border-color:#72b3ff; background:#18283a; box-shadow:0 0 0 2px rgba(94,160,255,.22),0 8px 22px rgba(0,0,0,.45); z-index:9; }
-.releaseCard.dimmed { opacity:.34; }
-.releaseCard .releaseLabel {
-  color:#f8fafc; font-size:12px; font-weight:650; line-height:1.23;
-  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-shadow:0 1px 1px #000;
+#boardContent {
+  position:relative; min-width:100%; min-height:100%; width:max-content; padding:14px 18px 24px;
 }
-.releaseCard .releaseSub {
-  margin-top:3px; color:#aeb8c7; font-size:10px; line-height:1.1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+#connections { position:absolute; inset:0; pointer-events:none; overflow:visible; z-index:1; }
+#columns { position:relative; z-index:2; display:flex; align-items:flex-start; gap:34px; width:max-content; }
+.releaseColumn { width:355px; flex:0 0 355px; display:flex; flex-direction:column; gap:3px; }
+.releaseRow {
+  position:relative; height:34px; display:flex; align-items:center; gap:8px; padding:0 8px;
+  border:1px solid transparent; border-radius:6px; color:#e8edf5; cursor:pointer; user-select:none;
+  transition:background .10s ease,border-color .10s ease,opacity .10s ease,box-shadow .10s ease;
 }
-.releaseBadge {
-  position:absolute; right:7px; top:50%; transform:translateY(-50%);
-  min-width:22px; height:22px; padding:0 6px; border-radius:11px; display:flex;
-  align-items:center; justify-content:center; font-size:10px; font-weight:850; color:#0b0c0f;
-  border:1px solid rgba(255,255,255,.65); box-shadow:0 2px 7px rgba(0,0,0,.42);
+.releaseRow:hover { background:#171c23; border-color:#343d49; }
+.releaseRow.selected { background:#18283a; border-color:#68a9f5; box-shadow:0 0 0 1px rgba(104,169,245,.18); }
+.releaseRow.duplicate { color:#a9b1be; background:rgba(17,20,25,.56); }
+.releaseRow.duplicate .releaseName { color:#a9b1be; }
+.releaseRow.carrier { border-color:#54d6ff; background:#102934; color:#e8fbff; box-shadow:0 0 0 1px rgba(84,214,255,.24); }
+.releaseRow.dimmed { opacity:.18; }
+.folderIcon {
+  position:relative; width:16px; height:11px; flex:0 0 16px; border-radius:2px;
+  background:#e1b548; box-shadow:inset 0 -1px rgba(0,0,0,.22);
 }
-.releaseBadge.red { background:var(--red); color:#fff; }
-.releaseBadge.yellow { background:var(--yellow); }
-.releaseBadge.green { background:var(--green); }
-.releaseBadge.neutral { background:#64748b; color:#fff; }
-#legend {
-  position:absolute; left:14px; bottom:14px; display:flex; gap:12px; align-items:center;
-  padding:8px 10px; border:1px solid var(--line); border-radius:10px; background:rgba(16,18,24,.90);
-  color:var(--muted); font-size:12px; backdrop-filter:blur(8px);
+.folderIcon:before {
+  content:""; position:absolute; left:1px; top:-4px; width:8px; height:5px; border-radius:2px 2px 0 0;
+  background:#f2cb62;
 }
-.dot { width:9px; height:9px; border-radius:50%; display:inline-block; margin-right:5px; }
+.releaseName { min-width:0; flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-size:12px; }
+.releaseMeta { flex:0 0 auto; color:#707b8b; font-size:10px; }
+.uniqueBadge,.duplicateBadge {
+  flex:0 0 auto; min-width:22px; height:20px; padding:0 6px; border-radius:10px;
+  display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:800;
+}
+.uniqueBadge.red { background:var(--red); color:#fff; }
+.uniqueBadge.yellow { background:var(--yellow); color:#17130a; }
+.uniqueBadge.green { background:var(--green); color:#07140a; }
+.uniqueBadge.neutral { background:#64748b; color:#fff; }
+.duplicateBadge { border:1px solid #4f5968; color:#9aa5b5; background:#20252d; font-weight:700; }
+#boardHint {
+  position:sticky; left:12px; bottom:12px; z-index:8; display:inline-flex; gap:10px; align-items:center;
+  margin-top:12px; padding:7px 10px; border:1px solid #303744; border-radius:8px;
+  background:rgba(16,19,25,.94); color:#9ca7b8; font-size:11px;
+}
+.legendLine { display:inline-flex; align-items:center; gap:5px; }
+.legendStroke { width:22px; height:0; border-top:2px solid #6d798a; }
+.legendStroke.track { border-top:3px solid var(--cyan); }
 #details {
-  width:0; overflow:hidden; transition:width .18s ease; border-left:0 solid var(--line);
-  background:var(--panel); display:flex; flex-direction:column;
+  width:0; overflow:hidden; transition:width .16s ease; border-left:0 solid var(--line);
+  background:var(--panel); display:flex; flex-direction:column; z-index:10;
 }
-#details.open { width:min(560px,42vw); border-left-width:1px; }
-#detailsInner { width:min(560px,42vw); min-width:430px; height:100%; display:flex; flex-direction:column; }
-#detailsHead { padding:16px 16px 12px; border-bottom:1px solid var(--line); }
-#releaseName { font-size:18px; line-height:1.25; font-weight:750; margin-bottom:6px; }
-#releaseMeta { color:var(--muted); font-size:12px; margin-bottom:12px; }
+#details.open { width:min(590px,43vw); border-left-width:1px; }
+#detailsInner { width:min(590px,43vw); min-width:440px; height:100%; display:flex; flex-direction:column; }
+#emptyDetails { margin:auto; color:var(--muted); text-align:center; padding:30px; }
+#detailsHead { padding:15px 16px 12px; border-bottom:1px solid var(--line); }
+#releaseName { font-size:17px; line-height:1.28; font-weight:750; margin-bottom:5px; }
+#releaseMeta { color:var(--muted); font-size:12px; margin-bottom:10px; }
+#releaseActions { display:flex; gap:8px; margin-bottom:10px; }
+#ignoreReleaseBtn { background:#5b2026; border-color:#a33b44; color:#ffe8ea; font-weight:750; }
+#ignoreReleaseBtn:hover { background:#742932; border-color:#ff7c86; color:#fff; }
 #pathRow { display:flex; gap:8px; align-items:center; }
 #releasePath {
-  flex:1; min-width:0; color:#c7d2e3; background:#0f1116; border:1px solid #303541;
-  border-radius:8px; padding:7px 9px; font-family:"Cascadia Mono",Consolas,monospace; font-size:11px;
+  flex:1; min-width:0; color:#c7d2e3; background:#0d1015; border:1px solid #303744;
+  border-radius:7px; padding:7px 9px; font-family:"Cascadia Mono",Consolas,monospace; font-size:11px;
   overflow:hidden; text-overflow:ellipsis; white-space:nowrap; user-select:text;
 }
-#reason { margin-top:11px; color:#d8dde8; font-size:13px; line-height:1.42; }
-#releaseActions { display:flex; gap:8px; margin-top:12px; }
-#tracksTitle { padding:12px 16px 8px; font-size:13px; font-weight:700; color:#dfe5ef; }
+#reason { margin-top:10px; color:#d4dbe7; font-size:12px; line-height:1.42; }
+#tracksTitle {
+  padding:11px 16px 7px; font-size:13px; font-weight:750; color:#e4e9f1;
+  display:flex; justify-content:space-between; gap:10px;
+}
+#tracksTitle small { color:#8793a4; font-weight:400; }
 #tracks { min-height:0; flex:1; overflow:auto; padding:0 8px 14px; }
 .track {
-  position:relative; display:grid; grid-template-columns:42px minmax(180px,1fr) 70px 118px;
-  gap:8px; align-items:center; min-height:42px; padding:6px 10px; border-bottom:1px solid #232733;
-  border-radius:7px; color:#e9edf4; font-size:12px;
+  position:relative; display:grid; grid-template-columns:36px minmax(190px,1fr) 66px 138px;
+  gap:8px; align-items:center; min-height:40px; padding:5px 10px;
+  border-bottom:1px solid #232933; border-radius:6px; color:#edf1f7; font-size:12px; cursor:pointer;
 }
-.track:hover { background:#1a1e27; }
+.track:hover { background:#1a2029; }
 .track.unique { background:rgba(245,158,11,.12); box-shadow:inset 3px 0 var(--yellow); }
 .track.orphan { background:rgba(239,68,68,.14); box-shadow:inset 3px 0 var(--red); }
+.track.activeTrack { background:rgba(85,215,255,.12); box-shadow:inset 3px 0 var(--cyan); }
 .track.manual { color:#c4b5fd; }
-.track .num,.track .dur { color:var(--muted); text-align:center; }
+.track .num,.track .dur { color:#8793a4; text-align:center; }
 .track .titleText { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.track .status { color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.track .status { color:#929eae; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .ignoreTrack {
-  position:absolute; right:8px; top:6px; height:30px; opacity:0; pointer-events:none;
+  position:absolute; right:8px; top:5px; height:30px; opacity:0; pointer-events:none;
   border:1px solid #a33b44; border-radius:7px; background:#5b2026; color:#ffe8ea; padding:0 11px;
-  font-weight:700; transition:.12s ease; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,.35);
+  font-weight:700; transition:.10s ease; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,.35);
 }
 .track:hover .ignoreTrack { opacity:1; pointer-events:auto; }
 .ignoreTrack:hover { border-color:#ff7c86; background:#742932; color:#fff; }
-#ignoreReleaseBtn {
-  background:#5b2026; border-color:#a33b44; color:#ffe8ea; font-weight:750;
-}
-#ignoreReleaseBtn:hover { background:#742932; border-color:#ff7c86; color:#fff; }
-#emptyDetails { margin:auto; color:var(--muted); text-align:center; padding:30px; }
 #resultDrawer {
-  display:none; border-top:1px solid var(--line); background:#101218; padding:12px 16px 14px;
-  max-height:230px; overflow:auto;
+  display:none; border-top:1px solid var(--line); background:#101319; padding:11px 16px 13px;
+  max-height:220px; overflow:auto;
 }
 #resultDrawer.open { display:block; }
-#resultTitle { font-weight:750; margin-bottom:8px; }
+#resultTitle { font-weight:750; margin-bottom:7px; }
 .resultLine { color:#d9dfeb; font-size:13px; line-height:1.45; margin:3px 0; }
-.resultAdd { color:#98f5b3; }
-.resultRemove { color:#ffaaaa; }
-#loading {
-  position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
-  background:#0b0c0f; color:var(--muted); z-index:20;
-}
+.resultAdd { color:#98f5b3; } .resultRemove { color:#ffaaaa; }
 </style>
 </head>
 <body>
 <div id="toolbar">
   <div id="title">Release Map</div>
   <input id="search" placeholder="Find release...">
-  <button class="btn" id="fitBtn">Fit</button>
+  <button class="btn" id="clearTrackBtn" style="display:none">Clear track highlight</button>
+  <div id="modeText">Chronological release board</div>
   <button class="btn" id="reanalyzeBtn" disabled>Re-Analyze</button>
   <button class="btn" id="applyBtn" disabled>Apply</button>
   <div id="spacer"></div>
   <button class="btn" id="closeBtn">Close</button>
 </div>
 <div id="main">
-  <div id="graphWrap">
-    <div id="graph"></div>
-    <div id="nodesLayer"></div>
-    <div id="legend">
-      <strong style="color:#e8edf5">Unique tracks:</strong>
-      <span><span class="dot" style="background:#ef4444"></span>1-2</span>
-      <span><span class="dot" style="background:#f59e0b"></span>3-5</span>
-      <span><span class="dot" style="background:#22c55e"></span>6+</span>
+  <div id="boardViewport">
+    <div id="boardContent">
+      <svg id="connections"></svg>
+      <div id="columns"></div>
+      <div id="boardHint">
+        <span class="legendLine"><span class="legendStroke"></span>duplicate -> retained source</span>
+        <span class="legendLine"><span class="legendStroke track"></span>selected track exists here</span>
+      </div>
     </div>
-    <div id="loading">Loading release graph...</div>
   </div>
   <aside id="details">
-    <div id="detailsInner">
-      <div id="emptyDetails">Click a release to inspect it.</div>
-    </div>
+    <div id="detailsInner"><div id="emptyDetails">Click a release to inspect it.</div></div>
   </aside>
 </div>
 <div id="resultDrawer">
@@ -6331,16 +6339,12 @@ button,input { font:inherit; }
   <div id="resultBody"></div>
 </div>
 <script type="module">
-import Graph from "https://cdn.jsdelivr.net/npm/graphology@__GRAPHOLOGY_VERSION__/+esm?dea=__APP_VERSION__";
-import Sigma from "https://cdn.jsdelivr.net/npm/sigma@__SIGMA_VERSION__/+esm?dea=__APP_VERSION__";
-
 let bridge = null;
 let state = null;
-let graph = null;
-let renderer = null;
 let selectedId = null;
-let cardEls = new Map();
-let rafStarted = false;
+let activeTrack = null;
+let rowEls = new Map();
+let resizeTimer = null;
 
 function esc(v) {
   return String(v == null ? "" : v)
@@ -6353,277 +6357,206 @@ function badgeClass(n) {
   if (n >= 1) return "red";
   return "neutral";
 }
-function retainedIds() {
-  return new Set((state.nodes || []).map(n => String(n.id)));
+function getNode(id) {
+  return (state.nodes || []).find(function(n){ return Number(n.id) === Number(id); });
 }
-function layoutGraph() {
-  const ids = graph.nodes();
-  const count = ids.length;
-  if (!count) return;
-  const golden = Math.PI * (3 - Math.sqrt(5));
-  ids.forEach((id, i) => {
-    const radius = 18 + Math.sqrt(i + 1) * 15;
-    const angle = i * golden;
-    graph.setNodeAttribute(id, "x", Math.cos(angle) * radius);
-    graph.setNodeAttribute(id, "y", Math.sin(angle) * radius);
-  });
-  if (count > 650) return;
-  const iterations = count < 220 ? 110 : 65;
-  const area = Math.max(6500, count * 190);
-  const k = Math.sqrt(area / count);
-  const edgePairs = graph.edges().map(e => graph.extremities(e));
-  for (let it = 0; it < iterations; it++) {
-    const dx = Object.create(null), dy = Object.create(null);
-    ids.forEach(id => { dx[id] = 0; dy[id] = 0; });
-    for (let i = 0; i < count; i++) {
-      const a = ids[i], aa = graph.getNodeAttributes(a);
-      for (let j = i + 1; j < count; j++) {
-        const b = ids[j], bb = graph.getNodeAttributes(b);
-        let vx = aa.x - bb.x, vy = aa.y - bb.y;
-        let dist = Math.sqrt(vx*vx + vy*vy) + 0.05;
-        let force = (k*k) / dist;
-        let fx = (vx / dist) * force, fy = (vy / dist) * force;
-        dx[a] += fx; dy[a] += fy; dx[b] -= fx; dy[b] -= fy;
-      }
-    }
-    edgePairs.forEach(pair => {
-      const a = pair[0], b = pair[1], aa = graph.getNodeAttributes(a), bb = graph.getNodeAttributes(b);
-      let vx = aa.x - bb.x, vy = aa.y - bb.y;
-      let dist = Math.sqrt(vx*vx + vy*vy) + 0.05;
-      let force = (dist*dist) / k;
-      let fx = (vx / dist) * force, fy = (vy / dist) * force;
-      dx[a] -= fx; dy[a] -= fy; dx[b] += fx; dy[b] += fy;
-    });
-    const temp = Math.max(0.18, 7.0 * (1 - it / iterations));
-    ids.forEach(id => {
-      const a = graph.getNodeAttributes(id);
-      const d = Math.sqrt(dx[id]*dx[id] + dy[id]*dy[id]) || 1;
-      graph.setNodeAttribute(id, "x", a.x + (dx[id] / d) * Math.min(d, temp));
-      graph.setNodeAttribute(id, "y", a.y + (dy[id] / d) * Math.min(d, temp));
-    });
-  }
-}
-function buildCards() {
-  const host = document.getElementById("nodesLayer");
-  host.innerHTML = "";
-  cardEls = new Map();
-  (state.nodes || []).forEach(n => {
-    const card = document.createElement("div");
-    card.className = "releaseCard";
-    card.dataset.node = String(n.id);
-    card.title = n.name;
-    card.innerHTML =
-      '<div class="releaseLabel">'+esc(n.name)+'</div>'
-      +'<div class="releaseSub">'+esc(n.action)+' · '+n.includedTracks+' tracks</div>'
-      +'<div class="releaseBadge '+badgeClass(n.uniqueCount)+'">'+n.uniqueCount+'</div>';
-    card.onclick = ev => {
-      ev.stopPropagation();
-      selectRelease(Number(n.id));
-    };
-    host.appendChild(card);
-    cardEls.set(String(n.id), card);
+function carriersForGroup(groupId) {
+  if (groupId == null || Number(groupId) < 0) return [];
+  return (state.nodes || []).filter(function(n) {
+    return (n.tracks || []).some(function(t){ return Number(t.groupId) === Number(groupId); });
   });
 }
-function syncCards() {
-  if (renderer && graph) {
-    const cameraRatio = Math.max(.01, renderer.getCamera().getState().ratio || 1);
-    const scale = Math.max(.58, Math.min(1.0, 1 / Math.sqrt(cameraRatio)));
-    const sid = selectedId == null ? null : String(selectedId);
-    cardEls.forEach((card,id) => {
-      if (!graph.hasNode(id)) { card.style.display = "none"; return; }
-      const a = graph.getNodeAttributes(id);
-      const p = renderer.graphToViewport({x:a.x,y:a.y});
-      card.style.display = "";
-      card.style.left = p.x+"px";
-      card.style.top = p.y+"px";
-      card.style.transform = "translate(-50%,-50%) scale("+scale+")";
-      const selected = sid === id;
-      const neighbor = sid == null || selected || (graph.hasNode(sid) && graph.areNeighbors(id,sid));
-      card.classList.toggle("selected",selected);
-      card.classList.toggle("dimmed",!neighbor);
+function rowCenter(id) {
+  const el = rowEls.get(String(id));
+  const content = document.getElementById("boardContent");
+  if (!el || !content) return null;
+  const a = el.getBoundingClientRect();
+  const b = content.getBoundingClientRect();
+  return {x:a.left-b.left+a.width/2,y:a.top-b.top+a.height/2};
+}
+function addCurve(svg,a,b,color,width,opacity) {
+  if (!a || !b) return;
+  const dx=b.x-a.x, bend=Math.max(42,Math.min(170,Math.abs(dx)*0.42)), sign=dx>=0?1:-1;
+  const p=document.createElementNS("http://www.w3.org/2000/svg","path");
+  p.setAttribute("d","M "+a.x+" "+a.y+" C "+(a.x+bend*sign)+" "+a.y+", "+(b.x-bend*sign)+" "+b.y+", "+b.x+" "+b.y);
+  p.setAttribute("fill","none"); p.setAttribute("stroke",color); p.setAttribute("stroke-width",String(width));
+  p.setAttribute("stroke-opacity",String(opacity)); p.setAttribute("stroke-linecap","round"); svg.appendChild(p);
+}
+function updateRowHighlights() {
+  const carrierIds=new Set();
+  if(activeTrack) carriersForGroup(activeTrack.groupId).forEach(function(n){carrierIds.add(String(n.id));});
+  rowEls.forEach(function(el,id){
+    el.classList.toggle("selected",selectedId!=null && Number(id)===Number(selectedId));
+    if(activeTrack){
+      const carrier=carrierIds.has(id); el.classList.toggle("carrier",carrier); el.classList.toggle("dimmed",!carrier);
+    } else { el.classList.remove("carrier"); el.classList.remove("dimmed"); }
+  });
+}
+function drawConnections() {
+  if(!state) return;
+  const svg=document.getElementById("connections"), content=document.getElementById("boardContent");
+  const width=Math.max(content.scrollWidth,content.clientWidth), height=Math.max(content.scrollHeight,content.clientHeight);
+  svg.setAttribute("width",String(width)); svg.setAttribute("height",String(height));
+  svg.setAttribute("viewBox","0 0 "+width+" "+height); svg.innerHTML="";
+  const selected=selectedId==null?null:Number(selectedId);
+  (state.duplicateLinks||[]).forEach(function(link){
+    const touch=selected!=null && (Number(link.duplicate)===selected || Number(link.retained)===selected);
+    const opacity=activeTrack?0.06:(selected==null?0.24:(touch?0.72:0.10));
+    addCurve(svg,rowCenter(link.duplicate),rowCenter(link.retained),"#758296",touch?2.4:1.15,opacity);
+  });
+  if(activeTrack){
+    const source=rowCenter(activeTrack.releaseId);
+    carriersForGroup(activeTrack.groupId).forEach(function(n){
+      if(Number(n.id)===Number(activeTrack.releaseId)) return;
+      addCurve(svg,source,rowCenter(n.id),"#55d7ff",3.3,0.94);
     });
   }
-  requestAnimationFrame(syncCards);
 }
-function buildGraph() {
-  const container = document.getElementById("graph");
-  if (renderer) { renderer.kill(); renderer = null; }
-  container.innerHTML = "";
-  graph = new Graph({multi:false,type:"undirected"});
-  (state.nodes || []).forEach(n => {
-    graph.addNode(String(n.id), {
-      label:"",
-      x:0,y:0,
-      size:2.2,
-      color:"#64748b",
-      uniqueCount:n.uniqueCount
+function renderBoard() {
+  if(!state) return;
+  const viewport=document.getElementById("boardViewport"), columns=document.getElementById("columns");
+  const usableHeight=Math.max(420,viewport.clientHeight-48), perColumn=Math.max(10,Math.floor(usableHeight/37));
+  columns.innerHTML=""; rowEls=new Map();
+  const nodes=state.nodes||[];
+  for(let start=0;start<nodes.length;start+=perColumn){
+    const col=document.createElement("div"); col.className="releaseColumn";
+    nodes.slice(start,start+perColumn).forEach(function(n){
+      const row=document.createElement("div");
+      row.className="releaseRow "+(n.kind==="duplicate"?"duplicate":"retained");
+      row.dataset.id=String(n.id); row.title=n.name;
+      const badge=n.kind==="duplicate"
+        ?'<span class="duplicateBadge">DUP</span>'
+        :'<span class="uniqueBadge '+badgeClass(n.uniqueCount)+'">'+n.uniqueCount+'</span>';
+      row.innerHTML='<span class="folderIcon"></span><span class="releaseName">'+esc(n.name)+'</span>'
+        +'<span class="releaseMeta">'+esc(n.action)+'</span>'+badge;
+      row.onclick=function(){ selectedId=Number(n.id); activeTrack=null; openDetails(n); updateRowHighlights(); drawConnections(); updateTrackMode(); };
+      col.appendChild(row); rowEls.set(String(n.id),row);
     });
-  });
-  (state.edges || []).forEach((e,i) => {
-    const s=String(e.source), t=String(e.target);
-    if (graph.hasNode(s) && graph.hasNode(t) && s !== t && !graph.hasEdge(s,t)) {
-      graph.addUndirectedEdgeWithKey("e"+i,s,t,{size:Math.max(1.6,Math.min(5.5,1.25 + e.shared*0.62)),color:"#71809a"});
-    }
-  });
-  layoutGraph();
-  renderer = new Sigma(graph, container, {
-    renderEdgeLabels:false,
-    renderLabels:false,
-    defaultEdgeColor:"#71809a",
-    defaultNodeColor:"#64748b",
-    minEdgeThickness:1.4,
-    hideEdgesOnMove:false,
-    zIndex:true,
-    nodeReducer:(node,data) => {
-      const res = {...data};
-      if (selectedId != null) {
-        const sid = String(selectedId);
-        const isSel = node === sid;
-        const neighbor = isSel || (graph.hasNode(sid) && graph.areNeighbors(node,sid));
-        if (!neighbor) {
-          res.color = "#252b35";
-          res.zIndex = 0;
-        } else {
-          res.zIndex = isSel ? 3 : 2;
-          if (isSel) res.size = data.size * 1.8;
-        }
-      }
-      return res;
-    },
-    edgeReducer:(edge,data) => {
-      const res={...data};
-      if (selectedId != null) {
-        const ext=graph.extremities(edge);
-        const on=ext.includes(String(selectedId));
-        res.color=on ? "#79b7ff" : "#495568";
-        res.size=on ? Math.max(2.8,data.size*1.8) : Math.max(0.9,data.size*0.7);
-        res.zIndex=on ? 2 : 0;
-      }
-      return res;
-    }
-  });
-  renderer.on("clickNode", ({node}) => selectRelease(Number(node)));
-  renderer.on("clickStage", () => { selectedId=null; renderer.refresh(); closeDetails(); });
-  buildCards();
-  if (!rafStarted) { rafStarted=true; requestAnimationFrame(syncCards); }
-  document.getElementById("loading").style.display="none";
+    columns.appendChild(col);
+  }
+  updateRowHighlights(); requestAnimationFrame(drawConnections);
 }
-function getNode(id) { return (state.nodes || []).find(n => Number(n.id) === Number(id)); }
-function selectRelease(id) {
-  const n=getNode(id); if(!n) return;
-  selectedId=id;
-  renderer.refresh();
-  openDetails(n);
+function updateTrackMode() {
+  const clear=document.getElementById("clearTrackBtn"), mode=document.getElementById("modeText");
+  if(activeTrack){
+    const carriers=carriersForGroup(activeTrack.groupId); clear.style.display="";
+    mode.textContent='"'+activeTrack.title+'" - '+carriers.length+' release(s)';
+  } else { clear.style.display="none"; mode.textContent="Chronological release board"; }
 }
-function closeDetails() {
-  document.getElementById("details").classList.remove("open");
-  document.getElementById("detailsInner").innerHTML='<div id="emptyDetails">Click a release to inspect it.</div>';
+function selectTrack(releaseId,track) {
+  if(Number(track.groupId)<0) return;
+  selectedId=Number(releaseId);
+  activeTrack={releaseId:Number(releaseId),groupId:Number(track.groupId),title:String(track.title||"")};
+  updateRowHighlights(); drawConnections(); updateTrackMode();
+  document.querySelectorAll(".track").forEach(function(el){
+    el.classList.toggle("activeTrack",Number(el.dataset.group)===Number(activeTrack.groupId));
+  });
 }
 function trackStatus(t) {
-  if (t.pendingIgnore) return "Pending ignore - Re-Analyze required";
-  if (t.manualSkip) return "Ignored by you";
-  if (t.orphaned) return "Unique - release removal would lose it";
-  if (t.unique) return "Unique to this retained release";
-  if (t.coveredBy && t.coveredBy.length) return "Also on: " + t.coveredBy.slice(0,2).join("; ");
-  if (t.excluded) return "Skipped by active options";
-  if (t.distinction) return t.distinction;
+  if(t.pendingIgnore) return "Pending ignore - Re-Analyze required";
+  if(t.manualSkip) return "Ignored by you";
+  if(t.orphaned) return "Unique - release removal would lose it";
+  if(t.unique) return "Unique to this retained release";
+  if(t.coveredBy && t.coveredBy.length) return "Also on: "+t.coveredBy.slice(0,2).join("; ");
+  if(t.excluded) return "Skipped by active options";
+  if(t.distinction) return t.distinction;
   return "Included";
 }
 function openDetails(n) {
-  const aside=document.getElementById("details");
-  const inner=document.getElementById("detailsInner");
+  const aside=document.getElementById("details"), inner=document.getElementById("detailsInner");
   let tracks="";
-  (n.tracks || []).forEach(t => {
-    const cls=["track"];
-    if(t.orphaned) cls.push("orphan"); else if(t.unique) cls.push("unique");
-    if(t.manualSkip || t.pendingIgnore) cls.push("manual");
+  (n.tracks||[]).forEach(function(t){
+    const cls=["track"]; if(t.orphaned) cls.push("orphan"); else if(t.unique) cls.push("unique");
+    if(t.manualSkip||t.pendingIgnore) cls.push("manual");
+    if(activeTrack && Number(activeTrack.groupId)===Number(t.groupId)) cls.push("activeTrack");
     let action="";
-    if(state.editable && !t.excluded) {
-      const label=(t.manualSkip || t.pendingIgnore) ? "Restore" : "Ignore";
+    if(state.editable && !t.excluded){
+      const label=(t.manualSkip||t.pendingIgnore)?"Restore":"Ignore";
       action='<button class="ignoreTrack" data-track="'+t.index+'">'+label+'</button>';
     }
-    tracks += '<div class="'+cls.join(" ")+'" title="'+esc(t.distinction || trackStatus(t))+'">'
-      +'<div class="num">'+esc(t.number)+'</div>'
-      +'<div class="titleText">'+esc(t.title)+'</div>'
-      +'<div class="dur">'+esc(t.duration)+'</div>'
-      +'<div class="status">'+esc(trackStatus(t))+'</div>'+action+'</div>';
+    tracks+='<div class="'+cls.join(" ")+'" data-group="'+t.groupId+'" data-index="'+t.index+'" title="'+esc(t.distinction||trackStatus(t))+'">'
+      +'<div class="num">'+esc(t.number)+'</div><div class="titleText">'+esc(t.title)+'</div>'
+      +'<div class="dur">'+esc(t.duration)+'</div><div class="status">'+esc(trackStatus(t))+'</div>'+action+'</div>';
   });
   let ignoreRelease="";
-  if(state.editable) {
-    const label=n.pendingReleaseIgnore ? "Restore release" : "Ignore release";
+  if(state.editable && n.kind==="retained"){
+    const label=n.pendingReleaseIgnore?"Restore release":"Ignore release";
     ignoreRelease='<button class="btn" id="ignoreReleaseBtn">'+label+'</button>';
   }
-  inner.innerHTML=
-    '<div id="detailsHead"><div id="releaseName">'+esc(n.name)+'</div>'
-    +'<div id="releaseMeta">'+esc(n.action)+' · '+n.uniqueCount+' unique · '+n.includedTracks+' included</div>'
-    +'<div id="releaseActions">'+ignoreRelease+'</div>'
-    +'<div id="pathRow"><div id="releasePath">'+esc(n.path)+'</div>'
+  inner.innerHTML='<div id="detailsHead"><div id="releaseName">'+esc(n.name)+'</div>'
+    +'<div id="releaseMeta">'+esc(n.kind==="duplicate"?"DUPLICATE / "+n.action:n.action)
+    +' | '+n.uniqueCount+' unique | '+n.includedTracks+' included</div>'
+    +'<div id="releaseActions">'+ignoreRelease+'</div><div id="pathRow"><div id="releasePath">'+esc(n.path)+'</div>'
     +'<button class="btn" id="copyPathBtn">Copy</button><button class="btn" id="openFolderBtn">Open folder</button></div>'
     +'<div id="reason">'+esc(n.reason)+'</div></div>'
-    +'<div id="tracksTitle">Tracks</div><div id="tracks">'+tracks+'</div>';
+    +'<div id="tracksTitle"><span>Tracks</span><small>Click a track to highlight every release containing it</small></div>'
+    +'<div id="tracks">'+tracks+'</div>';
   aside.classList.add("open");
-  document.getElementById("copyPathBtn").onclick=()=>bridge.copyPath(n.path);
-  document.getElementById("openFolderBtn").onclick=()=>bridge.openFolder(n.path);
-  const rb=document.getElementById("ignoreReleaseBtn");
-  if(rb) rb.onclick=()=>bridge.toggleRelease(Number(n.id), receiveState);
-  inner.querySelectorAll(".ignoreTrack").forEach(btn=>{
-    btn.onclick=(ev)=>{ ev.stopPropagation(); bridge.toggleTrack(Number(btn.dataset.track), receiveState); };
+  document.getElementById("copyPathBtn").onclick=function(){bridge.copyPath(n.path);};
+  document.getElementById("openFolderBtn").onclick=function(){bridge.openFolder(n.path);};
+  const rb=document.getElementById("ignoreReleaseBtn"); if(rb) rb.onclick=function(){bridge.toggleRelease(Number(n.id),receiveState);};
+  inner.querySelectorAll(".track").forEach(function(el){
+    const index=Number(el.dataset.index), track=(n.tracks||[]).find(function(t){return Number(t.index)===index;});
+    if(track) el.onclick=function(ev){ if(ev.target && ev.target.classList.contains("ignoreTrack")) return; selectTrack(n.id,track); };
+  });
+  inner.querySelectorAll(".ignoreTrack").forEach(function(btn){
+    btn.onclick=function(ev){ev.stopPropagation();bridge.toggleTrack(Number(btn.dataset.track),receiveState);};
   });
 }
 function receiveState(raw) {
-  state=JSON.parse(raw);
-  updateButtons();
-  buildGraph();
-  if(selectedId != null && getNode(selectedId)) selectRelease(selectedId);
-  else closeDetails();
-  renderResult();
+  state=JSON.parse(raw); updateButtons(); renderBoard();
+  if(selectedId!=null && getNode(selectedId)) openDetails(getNode(selectedId));
+  else document.getElementById("details").classList.remove("open");
+  updateTrackMode(); renderResult();
 }
 function updateButtons() {
-  const r=document.getElementById("reanalyzeBtn");
-  const a=document.getElementById("applyBtn");
-  r.disabled=!state.editable || !state.dirty;
-  r.classList.toggle("dirty",!!state.dirty);
-  a.disabled=!state.editable || !state.applyEnabled || !!state.dirty;
-  a.classList.toggle("apply-ready",!!state.applyHighlighted && !state.dirty);
+  const r=document.getElementById("reanalyzeBtn"), a=document.getElementById("applyBtn");
+  r.disabled=!state.editable||!state.dirty; r.classList.toggle("dirty",!!state.dirty);
+  a.disabled=!state.editable||!state.applyEnabled||!!state.dirty;
+  a.classList.toggle("apply-ready",!!state.applyHighlighted&&!state.dirty);
 }
 function renderResult() {
-  const drawer=document.getElementById("resultDrawer");
-  const body=document.getElementById("resultBody");
-  if(!state.result || !state.result.show) { drawer.classList.remove("open"); body.innerHTML=""; return; }
-  let html="";
-  (state.result.causes || []).forEach(x=>{ html+='<div class="resultLine">'+esc(x)+'</div>'; });
-  if(state.result.added && state.result.added.length)
-    html+='<div class="resultLine resultAdd">THEN added: '+state.result.added.map(esc).join("; ")+'</div>';
-  if(state.result.removed && state.result.removed.length)
-    html+='<div class="resultLine resultRemove">THEN removed: '+state.result.removed.map(esc).join("; ")+'</div>';
-  if((!state.result.added || !state.result.added.length) && (!state.result.removed || !state.result.removed.length))
+  const drawer=document.getElementById("resultDrawer"), body=document.getElementById("resultBody");
+  if(!state.result||!state.result.show){drawer.classList.remove("open");body.innerHTML="";return;}
+  let html=""; (state.result.causes||[]).forEach(function(x){html+='<div class="resultLine">'+esc(x)+'</div>';});
+  if(state.result.added&&state.result.added.length) html+='<div class="resultLine resultAdd">THEN added: '+state.result.added.map(esc).join("; ")+'</div>';
+  if(state.result.removed&&state.result.removed.length) html+='<div class="resultLine resultRemove">THEN removed: '+state.result.removed.map(esc).join("; ")+'</div>';
+  if((!state.result.added||!state.result.added.length)&&(!state.result.removed||!state.result.removed.length))
     html+='<div class="resultLine">THEN no release-selection change.</div>';
-  body.innerHTML=html;
-  drawer.classList.add("open");
+  body.innerHTML=html; drawer.classList.add("open");
 }
-document.getElementById("fitBtn").onclick=()=>{ if(renderer) renderer.getCamera().animatedReset({duration:300}); };
-document.getElementById("reanalyzeBtn").onclick=()=>bridge.reanalyze(receiveState);
-document.getElementById("applyBtn").onclick=()=>bridge.apply();
-document.getElementById("closeBtn").onclick=()=>bridge.closeMap();
-document.getElementById("search").addEventListener("keydown",e=>{
-  if(e.key!=="Enter" || !renderer) return;
-  const q=e.target.value.trim().toLowerCase(); if(!q) return;
-  const n=(state.nodes || []).find(x=>x.name.toLowerCase().includes(q)); if(!n) return;
-  selectRelease(Number(n.id));
-  const a=graph.getNodeAttributes(String(n.id));
-  renderer.getCamera().animate({x:a.x,y:a.y,ratio:0.28},{duration:350});
+document.getElementById("clearTrackBtn").onclick=function(){
+  activeTrack=null;updateRowHighlights();drawConnections();updateTrackMode();
+  document.querySelectorAll(".track").forEach(function(el){el.classList.remove("activeTrack");});
+};
+document.getElementById("reanalyzeBtn").onclick=function(){bridge.reanalyze(receiveState);};
+document.getElementById("applyBtn").onclick=function(){bridge.apply();};
+document.getElementById("closeBtn").onclick=function(){bridge.closeMap();};
+document.getElementById("search").addEventListener("keydown",function(e){
+  if(e.key!=="Enter") return; const q=e.target.value.trim().toLowerCase(); if(!q) return;
+  const n=(state.nodes||[]).find(function(x){return x.name.toLowerCase().includes(q);}); if(!n) return;
+  selectedId=Number(n.id);activeTrack=null;openDetails(n);updateRowHighlights();drawConnections();updateTrackMode();
+  const row=rowEls.get(String(n.id));if(row)row.scrollIntoView({behavior:"smooth",block:"center",inline:"center"});
 });
-new QWebChannel(qt.webChannelTransport, channel => {
-  bridge=channel.objects.bridge;
-  bridge.getState(receiveState);
-});
+window.addEventListener("resize",function(){clearTimeout(resizeTimer);resizeTimer=setTimeout(renderBoard,100);});
+new ResizeObserver(function(){drawConnections();}).observe(document.getElementById("boardContent"));
+new QWebChannel(qt.webChannelTransport,function(channel){bridge=channel.objects.bridge;bridge.getState(receiveState);});
 </script>
 </body>
 </html>"""
+    return html
+
+
+def _release_date_sort_key_for_map(name: str) -> Tuple[int, int, int, str]:
+    text = normalize_space(name)
+    match = re.match(r"^\s*(\d{4})(?:-(\d{2}))?(?:-(\d{2}))?", text)
+    if not match:
+        return (9999, 12, 31, text.casefold())
     return (
-        html.replace("__APP_VERSION__", APP_VERSION)
-        .replace("__SIGMA_VERSION__", SIGMA_VERSION)
-        .replace("__GRAPHOLOGY_VERSION__", GRAPHOLOGY_VERSION)
+        int(match.group(1)),
+        int(match.group(2) or 0),
+        int(match.group(3) or 0),
+        text.casefold(),
     )
 
 
@@ -6639,66 +6572,90 @@ def _release_map_state_for_ui(
     result: Optional[Dict[str, object]] = None,
 ) -> Dict[str, object]:
     visible = [
-        item for item in snapshots
-        if str(item.get("action", "")) in {"KEEP", "ADD", "REPLACE"}
+        item
+        for item in snapshots
+        if int(item.get("included_tracks", 0) or 0) > 0
         and not bool(item.get("manual_removed"))
     ]
+    visible.sort(key=lambda item: _release_date_sort_key_for_map(str(item.get("name", ""))))
     visible_ids = {int(item.get("release_id", -1)) for item in visible}
+
     nodes: List[Dict[str, object]] = []
     for item in visible:
         rid = int(item.get("release_id", -1))
+        action = str(item.get("action", ""))
+        retained = action in {"KEEP", "ADD", "REPLACE"}
         ui_tracks: List[Dict[str, object]] = []
         unique_count = 0
         for row in item.get("tracklist", []) or []:
             track_index = int(row.get("track_global_index", -1))
-            unique = bool(row.get("unique_to_release"))
+            unique = bool(row.get("unique_to_release")) if retained else False
             if unique:
                 unique_count += 1
             manual_skip = bool(row.get("manual_skip"))
             if tracks is not None and 0 <= track_index < len(tracks):
                 manual_skip = bool(tracks[track_index].manual_skip_rule)
-            ui_tracks.append({
-                "index": track_index,
-                "number": row.get("number", ""),
-                "title": str(row.get("title", "")),
-                "duration": str(row.get("duration", "")),
-                "excluded": bool(row.get("excluded")),
-                "manualSkip": manual_skip,
-                "pendingIgnore": track_index in pending_track_indices,
-                "unique": unique,
-                "orphaned": bool(row.get("orphaned")),
-                "coveredBy": list(row.get("covered_by_names", []) or []),
-                "distinction": str(row.get("distinction", "")),
-            })
-        nodes.append({
-            "id": rid,
-            "name": str(item.get("name", "")),
-            "path": str(item.get("path", "")),
-            "action": str(item.get("action", "")),
-            "reason": str(item.get("reason", "")),
-            "includedTracks": int(item.get("included_tracks", 0) or 0),
-            "uniqueCount": unique_count,
-            "pendingReleaseIgnore": rid in pending_release_ids,
-            "tracks": ui_tracks,
-        })
+            ui_tracks.append(
+                {
+                    "index": track_index,
+                    "number": row.get("number", ""),
+                    "title": str(row.get("title", "")),
+                    "duration": str(row.get("duration", "")),
+                    "groupId": int(row.get("group_id", -1) or -1),
+                    "excluded": bool(row.get("excluded")),
+                    "manualSkip": manual_skip,
+                    "pendingIgnore": track_index in pending_track_indices,
+                    "unique": unique,
+                    "orphaned": bool(row.get("orphaned")),
+                    "coveredBy": list(row.get("covered_by_names", []) or []),
+                    "distinction": str(row.get("distinction", "")),
+                }
+            )
+        nodes.append(
+            {
+                "id": rid,
+                "name": str(item.get("name", "")),
+                "path": str(item.get("path", "")),
+                "action": action,
+                "kind": "retained" if retained else "duplicate",
+                "reason": str(item.get("reason", "")),
+                "includedTracks": int(item.get("included_tracks", 0) or 0),
+                "uniqueCount": unique_count,
+                "pendingReleaseIgnore": rid in pending_release_ids,
+                "tracks": ui_tracks,
+            }
+        )
 
-    edges: List[Dict[str, object]] = []
-    seen_edges: Set[Tuple[int, int]] = set()
+    duplicate_links: List[Dict[str, int]] = []
+    seen_links: Set[Tuple[int, int]] = set()
+    snapshot_by_id = {int(item.get("release_id", -1)): item for item in visible}
     for item in visible:
-        source = int(item.get("release_id", -1))
-        for row in item.get("affected", []) or []:
+        duplicate_id = int(item.get("release_id", -1))
+        if str(item.get("action", "")) in {"KEEP", "ADD", "REPLACE"}:
+            continue
+
+        targets: List[int] = []
+        for row in item.get("coverage", []) or []:
             target = int(row.get("release_id", -1))
-            if target not in visible_ids or target == source:
+            if target in visible_ids:
+                targets.append(target)
+
+        if not targets:
+            for row in item.get("related", []) or []:
+                target = int(row.get("release_id", -1))
+                target_item = snapshot_by_id.get(target)
+                if (
+                    target_item is not None
+                    and str(target_item.get("action", "")) in {"KEEP", "ADD", "REPLACE"}
+                ):
+                    targets.append(target)
+
+        for target in targets:
+            key = (duplicate_id, target)
+            if key in seen_links or duplicate_id == target:
                 continue
-            key = (min(source, target), max(source, target))
-            if key in seen_edges:
-                continue
-            seen_edges.add(key)
-            edges.append({
-                "source": key[0],
-                "target": key[1],
-                "shared": int(row.get("shared_groups", 1) or 1),
-            })
+            seen_links.add(key)
+            duplicate_links.append({"duplicate": duplicate_id, "retained": target})
 
     return {
         "editable": bool(editable),
@@ -6706,12 +6663,12 @@ def _release_map_state_for_ui(
         "applyEnabled": bool(apply_enabled),
         "applyHighlighted": bool(apply_highlighted),
         "nodes": nodes,
-        "edges": edges,
+        "duplicateLinks": duplicate_links,
         "result": result or {"show": False, "causes": [], "added": [], "removed": []},
     }
 
 
-def _qt_release_map_process(session_path: Path, result_path: Path) -> int:
+def _qt_release_map_process(session_path: Path, result_path: Path) -> int:def _qt_release_map_process(session_path: Path, result_path: Path) -> int:
     ensure_qt_release_map_dependencies()
     from PySide6.QtCore import QObject, QTimer, QUrl, Signal, Slot
     from PySide6.QtGui import QDesktopServices
