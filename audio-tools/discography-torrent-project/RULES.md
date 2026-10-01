@@ -832,7 +832,7 @@ Do not flatten release folders into the duplicate root. After successful moves, 
   - **1-2 unique tracks:** red badge.
   - **3-5 unique tracks:** yellow badge.
   - **6+ unique tracks:** green badge.
-  - A release with zero unique tracks should normally not survive the retained-plan optimization; if it does for another explicit rule, show `0` with a neutral badge and expose the reason in details.
+  - A retained release with zero unique tracks shows **no unique-track badge**. Never render a `0` bubble. If such a release survives for another explicit rule, explain the reason in details without inventing a numeric badge.
 - Clicking a release does not navigate away from the full graph. Its details panel unfolds in place while **all visible releases remain on the same map**.
 - The details panel must show the full currently relevant track list. Tracks that are unique to the selected retained release are visually highlighted.
 - Hovering a track exposes a compact **Ignore** action for that track. Do not permanently show Ignore buttons on every row.

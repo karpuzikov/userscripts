@@ -33,7 +33,7 @@ import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 
 APP_NAME = "Duplicate / Edition Analyzer"
-APP_VERSION = "0.17.9"
+APP_VERSION = "0.17.10"
 PROGRAM_DATA_DIR_NAME = "Duplicate Edition Analyzer"
 PYSIDE6_VERSION = "6.11.2"
 AUDIO_EXTS = {".m4a", ".flac", ".wav", ".ape", ".wv", ".mp3", ".aac", ".ogg", ".opus"}
@@ -6346,8 +6346,7 @@ function esc(v) {
 function badgeClass(n) {
   if (n >= 6) return "green";
   if (n >= 3) return "yellow";
-  if (n >= 1) return "red";
-  return "neutral";
+  return "red";
 }
 function getNode(id) {
   return (state.nodes || []).find(function(n){ return Number(n.id) === Number(id); });
@@ -6482,7 +6481,9 @@ function renderBoard() {
         ?'<span class="duplicateBadge">DUP</span>'
         :(n.isGem
           ?'<span class="uniqueBadge gem" title="Gem track: '+esc((n.gemTitles||[]).join("; "))+'">💎</span>'
-          :'<span class="uniqueBadge '+badgeClass(n.uniqueCount)+'">'+n.uniqueCount+'</span>');
+          :(Number(n.uniqueCount)>0
+            ?'<span class="uniqueBadge '+badgeClass(n.uniqueCount)+'">'+n.uniqueCount+'</span>'
+            :""));
       row.innerHTML='<span class="folderIcon"></span><span class="releaseName">'+esc(n.name)+'</span>'
         +'<span class="releaseMeta">'+esc(n.action)+'</span>'+badge;
       row.onclick=function(){

@@ -4,7 +4,7 @@ Complete project source and workflow assets for the discography torrent automati
 
 ## Current tools
 
-- `tools/Duplicate Edition Analyzer v0.17.9.pyw` - Release 💎 and track 💎 now use one identical rule. A release can show 💎 only when at least one visible retained track in that release also shows 💎. There is no separate looser release-only Gem calculation anymore, eliminating cases where a release was marked Gem while none of its songs qualified. v0.17.8 acoustic-first duplicate identity remains intact. Under construction ⚠️
+- `tools/Duplicate Edition Analyzer v0.17.10.pyw` - Removed the invented neutral `0` unique-track bubble. Retained releases with zero unique tracks now show no numeric badge at all; `1-2` remains red, `3-5` yellow, `6+` green, and 💎 remains reserved for Gem releases. v0.17.9 Gem consistency and v0.17.8 acoustic-first identity remain intact. Under construction ⚠️
 - `tools/AudioChecker Automation v0.1.pyw` - AudioChecker batch automation.
 - `tools/ALAC Conversion Automation v0.2.pyw` - lossless -> ALAC conversion. Under construction ⚠️
 - `tools/CUE Corrector - MusicBrainz DiscID 1.3.pyw` - MusicBrainz DiscID/CUE workflow.
