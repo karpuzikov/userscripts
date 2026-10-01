@@ -1,13 +1,13 @@
 // ==UserScript==
 // @name         MusicBrainz ToolBox
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.0.9
+// @version      1.0.10
 // @description  Combined MusicBrainz release-editor, recording, barcode, search, cover-art, Disc ID, and duplicate-edit tools.
 // @author       karpuzikov
 // @license      MIT
 // @match        https://musicbrainz.org/*
 // @match        https://beta.musicbrainz.org/*
-// @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/toolbox/MusicBrainz_ToolBox.user.js?v=1.0.9
+// @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/toolbox/MusicBrainz_ToolBox.user.js
 // @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/toolbox/MusicBrainz_ToolBox.user.js?v=1.0.9
 // @supportURL   https://github.com/karpuzikov/userscripts
 // @grant        GM_getValue
