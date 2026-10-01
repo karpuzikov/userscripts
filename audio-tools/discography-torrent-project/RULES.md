@@ -869,3 +869,10 @@ Do not flatten release folders into the duplicate root. After successful moves, 
 - Track-carrier mode includes duplicate releases, so the user can immediately see previously rejected/duplicate releases that contain the same recording.
 - The UI must state how many visible releases contain the selected track and provide one direct `Clear track highlight` action.
 - Clicking another release clears track-carrier mode unless the user selects a track again. The full chronological board remains present at all times; there is never a sub-map.
+
+### Personal Picks phrase extraction and review
+
+- Personal Picks phrase detection must extract the version/remixer descriptor, not the base song title. For `Club Rocker (Play & Win Remix)`, the reusable candidate is `Play & Win Remix`; the full title must not also appear as a phrase candidate.
+- The same applies to `Gimme Gimme (Ness Remix)` and `Gimme, Gimme (Dirty Nano Remix)`: use the bracketed remix descriptor only.
+- A full-title fallback is permitted only when the input is genuinely a descriptor string rather than a complete track title.
+- Personal Picks Review must provide direct clipboard access: each detected candidate has a Copy action and the review has Copy all review text. The persistent Personal Picks list must support Ctrl+C for selected rows and a Copy all action.
