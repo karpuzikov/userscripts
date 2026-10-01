@@ -33,7 +33,7 @@ import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 
 APP_NAME = "Duplicate / Edition Analyzer"
-APP_VERSION = "0.17.4"
+APP_VERSION = "0.17.5"
 PROGRAM_DATA_DIR_NAME = "Duplicate Edition Analyzer"
 PYSIDE6_VERSION = "6.11.2"
 AUDIO_EXTS = {".m4a", ".flac", ".wav", ".ape", ".wv", ".mp3", ".aac", ".ogg", ".opus"}
@@ -5545,6 +5545,7 @@ def build_decision_snapshot(
                     "orphaned": orphaned,
                     "distinction": distinction,
                     "base_title_key": base_key,
+                    "is_remix": bool(track.is_remix),
                 }
             )
 
@@ -6297,15 +6298,11 @@ button,input { font:inherit; }
 .uniqueBadge.yellow { background:var(--yellow); color:#17130a; }
 .uniqueBadge.green { background:var(--green); color:#07140a; }
 .uniqueBadge.neutral { background:#64748b; color:#fff; }
-.duplicateBadge { border:1px solid #4f5968; color:#9aa5b5; background:#20252d; font-weight:700; }
-#boardHint {
-  position:sticky; left:12px; bottom:12px; z-index:8; display:inline-flex; gap:10px; align-items:center;
-  margin-top:12px; padding:7px 10px; border:1px solid #303744; border-radius:8px;
-  background:rgba(16,19,25,.94); color:#9ca7b8; font-size:11px;
+.uniqueBadge.gem {
+  background:var(--red); color:#fff; font-size:14px; line-height:20px;
+  font-family:"Segoe UI Emoji","Segoe UI Symbol","Segoe UI",sans-serif;
 }
-.legendLine { display:inline-flex; align-items:center; gap:5px; }
-.legendStroke { width:22px; height:0; border-top:2px solid #6d798a; }
-.legendStroke.track { border-top:3px solid var(--cyan); }
+.duplicateBadge { border:1px solid #4f5968; color:#9aa5b5; background:#20252d; font-weight:700; }
 #details {
   width:0; overflow:hidden; transition:width .16s ease; border-left:0 solid var(--line);
   background:var(--panel); display:flex; flex-direction:column; z-index:10;
@@ -6333,7 +6330,7 @@ button,input { font:inherit; }
 #tracksTitle small { color:#8793a4; font-weight:400; }
 #tracks { min-height:0; flex:1; overflow:auto; padding:0 8px 14px; }
 .track {
-  position:relative; display:grid; grid-template-columns:36px minmax(180px,1fr) 58px 88px 138px;
+  position:relative; display:grid; grid-template-columns:36px minmax(170px,1fr) 58px 132px 122px;
   gap:8px; align-items:center; min-height:40px; padding:5px 10px;
   border-bottom:1px solid #232933; border-radius:6px; color:#edf1f7; font-size:12px; cursor:pointer;
 }
@@ -6345,21 +6342,27 @@ button,input { font:inherit; }
 .track .num,.track .dur { color:#8793a4; text-align:center; }
 .track .titleText { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .track .status { color:#929eae; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.versionsCell { display:flex; justify-content:center; }
-.versionsTrack {
-  height:26px; border:1px solid #3d637a; border-radius:7px; background:#12232d; color:#9de6ff;
-  padding:0 8px; cursor:pointer; font-size:10px; font-weight:750; white-space:nowrap;
+.versionsCell { display:flex; justify-content:center; gap:4px; }
+.versionsTrack,.remixesTrack {
+  height:26px; border-radius:7px; padding:0 7px; cursor:pointer;
+  font-size:10px; font-weight:750; white-space:nowrap;
 }
-.versionsTrack:hover { background:#17313f; border-color:#55d7ff; color:#d7f7ff; }
-.altVersions {
-  display:none; margin:2px 8px 7px 52px; border:1px solid #2d4554; border-radius:8px;
-  background:#0e171d; overflow:hidden;
+.versionsTrack { border:1px solid #806c34; background:#2a2413; color:#f3d17a; }
+.versionsTrack:hover { background:#382f17; border-color:#f3c969; color:#fff0b8; }
+.remixesTrack { border:1px solid #644786; background:#21172d; color:#d9b4ff; }
+.remixesTrack:hover { background:#2b1c3c; border-color:#b989ef; color:#f0ddff; }
+.altVersions,.altRemixes {
+  display:none; margin:2px 8px 7px 52px; border-radius:8px; overflow:hidden;
 }
-.altVersions.open { display:block; }
-.altVersionsHead {
-  padding:7px 10px; color:#8fcfe6; background:#101d25; border-bottom:1px solid #263a46;
+.altVersions { border:1px solid #5d522b; background:#18160d; }
+.altRemixes { border:1px solid #4e3965; background:#15101c; }
+.altVersions.open,.altRemixes.open { display:block; }
+.altVersionsHead,.altRemixesHead {
+  padding:7px 10px; border-bottom:1px solid #263a46;
   font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:.04em;
 }
+.altVersionsHead { color:#f3d17a; background:#211d0f; border-bottom-color:#4c4324; }
+.altRemixesHead { color:#d9b4ff; background:#1d1428; border-bottom-color:#443157; }
 .altVersion {
   width:100%; display:grid; grid-template-columns:minmax(180px,1fr) 54px 80px minmax(130px,1fr);
   gap:8px; align-items:center; padding:7px 10px; border:0; border-bottom:1px solid #1f303a;
@@ -6406,10 +6409,6 @@ button,input { font:inherit; }
     <div id="boardContent">
       <svg id="connections"></svg>
       <div id="columns"></div>
-      <div id="boardHint">
-        <span class="legendLine"><span class="legendStroke"></span>duplicate -> retained source</span>
-        <span class="legendLine"><span class="legendStroke track"></span>selected track exists here</span>
-      </div>
     </div>
   </div>
   <aside id="details">
@@ -6448,6 +6447,26 @@ function carriersForGroup(groupId) {
     return (n.tracks || []).some(function(t){ return Number(t.groupId) === Number(groupId); });
   });
 }
+function baseRelationsForRelease(releaseId) {
+  const source=getNode(releaseId), versionIds=new Set(), remixIds=new Set();
+  if(!source) return {versions:versionIds,remixes:remixIds};
+  (state.nodes||[]).forEach(function(other){
+    if(Number(other.id)===Number(source.id)) return;
+    let hasVersion=false, hasRemix=false;
+    (source.tracks||[]).forEach(function(a){
+      if(a.excluded || Number(a.groupId)<0 || !a.baseKey) return;
+      (other.tracks||[]).forEach(function(b){
+        if(b.excluded || Number(b.groupId)<0 || !b.baseKey) return;
+        if(a.baseKey!==b.baseKey || Number(a.groupId)===Number(b.groupId)) return;
+        if(a.isRemix || b.isRemix) hasRemix=true;
+        else hasVersion=true;
+      });
+    });
+    if(hasVersion) versionIds.add(String(other.id));
+    else if(hasRemix) remixIds.add(String(other.id));
+  });
+  return {versions:versionIds,remixes:remixIds};
+}
 function rowCenter(id) {
   const el = rowEls.get(String(id));
   const content = document.getElementById("boardContent");
@@ -6456,13 +6475,15 @@ function rowCenter(id) {
   const b = content.getBoundingClientRect();
   return {x:a.left-b.left+a.width/2,y:a.top-b.top+a.height/2};
 }
-function addCurve(svg,a,b,color,width,opacity) {
+function addCurve(svg,a,b,color,width,opacity,dash) {
   if (!a || !b) return;
   const dx=b.x-a.x, bend=Math.max(42,Math.min(170,Math.abs(dx)*0.42)), sign=dx>=0?1:-1;
   const p=document.createElementNS("http://www.w3.org/2000/svg","path");
   p.setAttribute("d","M "+a.x+" "+a.y+" C "+(a.x+bend*sign)+" "+a.y+", "+(b.x-bend*sign)+" "+b.y+", "+b.x+" "+b.y);
   p.setAttribute("fill","none"); p.setAttribute("stroke",color); p.setAttribute("stroke-width",String(width));
-  p.setAttribute("stroke-opacity",String(opacity)); p.setAttribute("stroke-linecap","round"); svg.appendChild(p);
+  p.setAttribute("stroke-opacity",String(opacity)); p.setAttribute("stroke-linecap","round");
+  if(dash) p.setAttribute("stroke-dasharray",dash);
+  svg.appendChild(p);
 }
 let searchCursor=-1;
 let lastSearchQuery="";
@@ -6517,6 +6538,15 @@ function drawConnections() {
     const opacity=activeTrack?0.06:(selected==null?0.24:(touch?0.72:0.10));
     addCurve(svg,rowCenter(link.duplicate),rowCenter(link.retained),"#758296",touch?2.4:1.15,opacity);
   });
+  if(selected!=null && !activeTrack){
+    const related=baseRelationsForRelease(selected), source=rowCenter(selected);
+    related.versions.forEach(function(id){
+      addCurve(svg,source,rowCenter(id),"#f3c969",2.6,0.88,"8 5");
+    });
+    related.remixes.forEach(function(id){
+      addCurve(svg,source,rowCenter(id),"#b989ef",2.2,0.70,"3 6");
+    });
+  }
   if(activeTrack){
     const source=rowCenter(activeTrack.releaseId);
     carriersForGroup(activeTrack.groupId).forEach(function(n){
@@ -6539,7 +6569,9 @@ function renderBoard() {
       row.dataset.id=String(n.id); row.title=n.name;
       const badge=n.kind==="duplicate"
         ?'<span class="duplicateBadge">DUP</span>'
-        :'<span class="uniqueBadge '+badgeClass(n.uniqueCount)+'">'+n.uniqueCount+'</span>';
+        :(n.isGem
+          ?'<span class="uniqueBadge gem" title="Gem: '+esc((n.gemTitles||[]).join("; "))+'">💎</span>'
+          :'<span class="uniqueBadge '+badgeClass(n.uniqueCount)+'">'+n.uniqueCount+'</span>');
       row.innerHTML='<span class="folderIcon"></span><span class="releaseName">'+esc(n.name)+'</span>'
         +'<span class="releaseMeta">'+esc(n.action)+'</span>'+badge;
       row.onclick=function(){ selectedId=Number(n.id); activeTrack=null; openDetails(n); updateRowHighlights(); drawConnections(); updateTrackMode(); };
@@ -6570,11 +6602,15 @@ function selectTrack(releaseId,track) {
     el.classList.toggle("activeTrack",Number(el.dataset.group)===Number(activeTrack.groupId));
   });
 }
-function versionsForTrack(t) {
+function alternativesForTrack(t,wantRemix) {
   if(!state || !state.versionFamilies || !t || !t.baseKey) return [];
   const family=state.versionFamilies[t.baseKey]||[];
-  return family.filter(function(v){return Number(v.groupId)!==Number(t.groupId);});
+  return family.filter(function(v){
+    return Number(v.groupId)!==Number(t.groupId) && Boolean(v.isRemix)===Boolean(wantRemix);
+  });
 }
+function versionsForTrack(t) { return alternativesForTrack(t,false); }
+function remixesForTrack(t) { return alternativesForTrack(t,true); }
 function highlightAlternativeVersion(v) {
   if(!v || Number(v.groupId)<0 || Number(v.releaseId)<0) return;
   activeTrack={
@@ -6611,25 +6647,31 @@ function openDetails(n) {
       const label=(t.manualSkip||t.pendingIgnore)?"Restore":"Ignore";
       action='<button class="ignoreTrack" data-track="'+t.index+'">'+label+'</button>';
     }
-    const versions=versionsForTrack(t);
-    const versionsCell=versions.length
-      ?'<div class="versionsCell"><button class="versionsTrack" data-track="'+t.index+'">Versions '+versions.length+'</button></div>'
-      :'<div class="versionsCell"></div>';
+    const versions=versionsForTrack(t), remixes=remixesForTrack(t);
+    let altButtons="";
+    if(versions.length) altButtons+='<button class="versionsTrack" data-track="'+t.index+'">Versions '+versions.length+'</button>';
+    if(remixes.length) altButtons+='<button class="remixesTrack" data-track="'+t.index+'">Remixes '+remixes.length+'</button>';
+    const versionsCell='<div class="versionsCell">'+altButtons+'</div>';
     tracks+='<div class="'+cls.join(" ")+'" data-group="'+t.groupId+'" data-index="'+t.index+'" title="'+esc(t.distinction||trackStatus(t))+'">'
       +'<div class="num">'+esc(t.number)+'</div><div class="titleText">'+esc(t.title)+'</div>'
       +'<div class="dur">'+esc(t.duration)+'</div>'+versionsCell+'<div class="status">'+esc(trackStatus(t))+'</div>'+action+'</div>';
-    if(versions.length){
-      let versionRows="";
-      versions.forEach(function(v){
+    function addAlternativePanel(items,kind){
+      if(!items.length) return "";
+      let rows="";
+      items.forEach(function(v){
         const stateText=v.retained?"Retained":(v.available?"Available":"Ignored");
         const stateClass=v.retained?"retained":(v.available?"available":"");
         const releaseText=(v.retainedReleaseNames&&v.retainedReleaseNames.length?v.retainedReleaseNames:v.releaseNames||[]).slice(0,2).join("; ");
-        versionRows+='<button class="altVersion" data-parent="'+t.index+'" data-group="'+v.groupId+'" data-release="'+v.releaseId+'">'
+        rows+='<button class="altVersion" data-kind="'+kind+'" data-parent="'+t.index+'" data-group="'+v.groupId+'" data-release="'+v.releaseId+'">'
           +'<span class="altTitle">'+esc(v.title)+'</span><span class="altDuration">'+esc(v.duration||"")+'</span>'
           +'<span class="altState '+stateClass+'">'+esc(stateText)+'</span><span class="altReleases">'+esc(releaseText)+'</span></button>';
       });
-      tracks+='<div class="altVersions" data-for="'+t.index+'"><div class="altVersionsHead">Alternative versions - different audio groups, not duplicates</div>'+versionRows+'</div>';
+      const isRemix=kind==="remix";
+      return '<div class="'+(isRemix?"altRemixes":"altVersions")+'" data-for="'+t.index+'"><div class="'+(isRemix?"altRemixesHead":"altVersionsHead")+'">'
+        +(isRemix?"Remixes":"Alternative versions - different audio groups, not duplicates")+'</div>'+rows+'</div>';
     }
+    tracks+=addAlternativePanel(versions,"version");
+    tracks+=addAlternativePanel(remixes,"remix");
   });
   let ignoreRelease="";
   if(state.editable && n.kind==="retained"){
@@ -6642,7 +6684,7 @@ function openDetails(n) {
     +'<div id="releaseActions">'+ignoreRelease+'</div><div id="pathRow"><div id="releasePath">'+esc(n.path)+'</div>'
     +'<button class="btn" id="copyPathBtn">Copy</button><button class="btn" id="openFolderBtn">Open folder</button></div>'
     +'<div id="reason">'+esc(n.reason)+'</div></div>'
-    +'<div id="tracksTitle"><span>Tracks</span><small>Track = exact audio group; Versions = other edits/mixes of the same base song</small></div>'
+    +'<div id="tracksTitle"><span>Tracks</span><small>Track = exact audio group; Versions and Remixes are separate same-song alternatives</small></div>'
     +'<div id="tracks">'+tracks+'</div>';
   aside.classList.add("open");
   document.getElementById("copyPathBtn").onclick=function(){bridge.copyPath(n.path);};
@@ -6651,7 +6693,11 @@ function openDetails(n) {
   inner.querySelectorAll(".track").forEach(function(el){
     const index=Number(el.dataset.index), track=(n.tracks||[]).find(function(t){return Number(t.index)===index;});
     if(track) el.onclick=function(ev){
-      if(ev.target && (ev.target.classList.contains("ignoreTrack")||ev.target.classList.contains("versionsTrack"))) return;
+      if(ev.target && (
+        ev.target.classList.contains("ignoreTrack")
+        || ev.target.classList.contains("versionsTrack")
+        || ev.target.classList.contains("remixesTrack")
+      )) return;
       selectTrack(n.id,track);
     };
   });
@@ -6665,12 +6711,20 @@ function openDetails(n) {
       if(panel) panel.classList.toggle("open");
     };
   });
+  inner.querySelectorAll(".remixesTrack").forEach(function(btn){
+    btn.onclick=function(ev){
+      ev.stopPropagation();
+      const panel=inner.querySelector('.altRemixes[data-for="'+btn.dataset.track+'"]');
+      if(panel) panel.classList.toggle("open");
+    };
+  });
   inner.querySelectorAll(".altVersion").forEach(function(btn){
     btn.onclick=function(ev){
       ev.stopPropagation();
       const parentIndex=Number(btn.dataset.parent);
       const parentTrack=(n.tracks||[]).find(function(t){return Number(t.index)===parentIndex;});
-      const version=(parentTrack?versionsForTrack(parentTrack):[]).find(function(v){return Number(v.groupId)===Number(btn.dataset.group);});
+      const pool=btn.dataset.kind==="remix" ? remixesForTrack(parentTrack) : versionsForTrack(parentTrack);
+      const version=(pool||[]).find(function(v){return Number(v.groupId)===Number(btn.dataset.group);});
       if(version) highlightAlternativeVersion(version);
     };
   });
@@ -6782,7 +6836,10 @@ def _release_map_state_for_ui(
         action = str(item.get("action", ""))
         release_retained = action in {"KEEP", "ADD", "REPLACE"}
         for row in item.get("tracklist", []) or []:
-            base_key = str(row.get("base_title_key", "") or "").strip()
+            base_key = (
+                str(row.get("base_title_key", "") or "").strip()
+                or _base_title_identity(str(row.get("title", "")))
+            )
             group_id = int(row.get("group_id", -1) or -1)
             if not base_key or group_id < 0:
                 continue
@@ -6791,6 +6848,7 @@ def _release_map_state_for_ui(
                 {
                     "aliases": set(),
                     "durations": [],
+                    "is_remix": False,
                     "carriers": {},
                 },
             )
@@ -6800,6 +6858,11 @@ def _release_map_state_for_ui(
             duration = str(row.get("duration", "") or "").strip()
             if duration and duration not in group["durations"]:
                 group["durations"].append(duration)
+            group["is_remix"] = bool(
+                group.get("is_remix")
+                or row.get("is_remix")
+                or is_remix_text(str(row.get("title", "")))
+            )
             included = bool(row.get("included")) and not bool(row.get("excluded"))
             carrier = group["carriers"].setdefault(
                 rid,
@@ -6838,6 +6901,7 @@ def _release_map_state_for_ui(
                 {
                     "groupId": int(group_id),
                     "title": aliases[0] if aliases else "Unknown version",
+                    "isRemix": bool(raw.get("is_remix")),
                     "aliases": aliases[:6],
                     "duration": (raw.get("durations", []) or [""])[0],
                     "releaseId": int(preferred[0].get("id", -1)) if preferred else -1,
@@ -6860,6 +6924,31 @@ def _release_map_state_for_ui(
         )
         version_families[base_key] = family_rows
 
+    # Gem means a retained release has a genuinely unique counted track whose
+    # base song has no other non-remix recording-group version in the analysis.
+    # Exact duplicate copies of the same group do not disqualify it; remixes are
+    # deliberately excluded from this test.
+    non_remix_groups_by_base: Dict[str, Set[int]] = defaultdict(set)
+    for item in snapshots:
+        for row in item.get("tracklist", []) or []:
+            base_key = (
+                str(row.get("base_title_key", "") or "").strip()
+                or _base_title_identity(str(row.get("title", "")))
+            )
+            group_id = int(row.get("group_id", -1) or -1)
+            row_is_remix = bool(
+                row.get("is_remix")
+                or is_remix_text(str(row.get("title", "")))
+            )
+            if (
+                base_key
+                and group_id >= 0
+                and bool(row.get("included"))
+                and not bool(row.get("excluded"))
+                and not row_is_remix
+            ):
+                non_remix_groups_by_base[base_key].add(group_id)
+
     nodes: List[Dict[str, object]] = []
     for item in visible:
         rid = int(item.get("release_id", -1))
@@ -6867,29 +6956,54 @@ def _release_map_state_for_ui(
         retained = action in {"KEEP", "ADD", "REPLACE"}
         ui_tracks: List[Dict[str, object]] = []
         unique_count = 0
+        gem_titles: List[str] = []
         for row in item.get("tracklist", []) or []:
             track_index = int(row.get("track_global_index", -1))
             unique = bool(row.get("unique_to_release")) if retained else False
             if unique:
                 unique_count += 1
             manual_skip = bool(row.get("manual_skip"))
+            is_remix = bool(
+                row.get("is_remix")
+                or is_remix_text(str(row.get("title", "")))
+            )
             if tracks is not None and 0 <= track_index < len(tracks):
                 manual_skip = bool(tracks[track_index].manual_skip_rule)
+                is_remix = bool(tracks[track_index].is_remix)
+            base_key = (
+                str(row.get("base_title_key", "") or "").strip()
+                or _base_title_identity(str(row.get("title", "")))
+            )
+            group_id = int(row.get("group_id", -1) or -1)
+            included = bool(row.get("included")) and not bool(row.get("excluded"))
+            if (
+                unique
+                and included
+                and group_id >= 0
+                and base_key
+                and not is_remix
+                and len(non_remix_groups_by_base.get(base_key, set())) == 1
+            ):
+                title = str(row.get("title", "") or "").strip()
+                if title and title not in gem_titles:
+                    gem_titles.append(title)
             ui_tracks.append(
                 {
                     "index": track_index,
                     "number": row.get("number", ""),
                     "title": str(row.get("title", "")),
                     "duration": str(row.get("duration", "")),
-                    "groupId": int(row.get("group_id", -1) or -1),
+                    "groupId": group_id,
+                    "included": included,
                     "excluded": bool(row.get("excluded")),
+                    "isRemix": is_remix,
                     "manualSkip": manual_skip,
                     "pendingIgnore": track_index in pending_track_indices,
                     "unique": unique,
                     "orphaned": bool(row.get("orphaned")),
                     "coveredBy": list(row.get("covered_by_names", []) or []),
                     "distinction": str(row.get("distinction", "")),
-                    "baseKey": str(row.get("base_title_key", "") or ""),
+                    "baseKey": base_key,
                 }
             )
         nodes.append(
@@ -6902,6 +7016,8 @@ def _release_map_state_for_ui(
                 "reason": str(item.get("reason", "")),
                 "includedTracks": int(item.get("included_tracks", 0) or 0),
                 "uniqueCount": unique_count,
+                "isGem": bool(gem_titles),
+                "gemTitles": gem_titles[:6],
                 "pendingReleaseIgnore": rid in pending_release_ids,
                 "tracks": ui_tracks,
             }
