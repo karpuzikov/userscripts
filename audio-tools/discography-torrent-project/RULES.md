@@ -883,7 +883,7 @@ Do not flatten release folders into the duplicate root. After successful moves, 
 This taxonomy is a standing rule for all future Duplicate Edition Analyzer work. These categories are mutually distinct and must never be collapsed into one generic "version" family.
 
 - **Version** means an alternate studio/release edit of the same underlying recording family, such as: Radio Edit, Radio Version, Extended Mix, Extended Version, Single Edit, Single Version, Main Version, Original/Main Mix, Album Version, Album Edit, or comparable non-remix/non-live edit/version wording.
-- **Remix** is a separate category. Remixes are **not Versions**, even when they are edits/extended forms of a remix. Examples include Producer/DJ Remix, Club Remix, Dub Remix, Remix Edit, Remix Radio Edit, Remix Extended, VIP Remix, and similar remix-family titles.
+- **Remix** is a separate category. Remixes are **not Versions**, even when they are edits/extended forms of a remix. Examples include Producer/DJ Remix, Club Remix, Dub Remix, Remix Edit, Remix Radio Edit, Remix Extended, VIP Remix, **Chillout Mix**, and similar remix-family titles. `Chillout Mix` must always be classified as Remix, never Version.
 - **Live recording** is a separate category. Live recordings are **not Versions**, even when the title literally contains the word `Version`, for example `Live Version`. Concert/live/stage recordings belong to the Live category, not Versions.
 - Classification must follow semantic meaning, not the literal presence of words such as `Version`, `Edit`, or `Mix`.
 - Release Map alternative-family UI, connection logic, counts, and Gem calculations must respect these categories independently. Remixes and Live recordings must never increase the `Versions N` count.

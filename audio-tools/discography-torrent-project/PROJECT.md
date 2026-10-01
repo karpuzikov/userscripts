@@ -503,3 +503,5 @@ Before any program/script change in this project, apply the newest stored softwa
 
 
 - Permanent taxonomy rule: Versions, Remixes, and Live recordings are three separate semantic families. Versions include studio/release edits such as Radio Edit, Extended Mix, Single Edit, Main Version, Album Version, etc. Remixes are never Versions. Live recordings are never Versions, even when titled `Live Version`. Release Map counts/connections and 💎 logic must use this taxonomy; Remix and Live families do not count as alternative Versions and do not disqualify a Gem merely by existing.
+
+- Permanent taxonomy clarification: `Chillout Mix` is a **Remix**, not a Version. It must be counted/shown with Remixes and must not increase `Versions N` or disqualify 💎 as another Version.
