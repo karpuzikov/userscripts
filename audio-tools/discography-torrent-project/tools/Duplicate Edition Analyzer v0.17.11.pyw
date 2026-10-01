@@ -33,7 +33,7 @@ import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 
 APP_NAME = "Duplicate / Edition Analyzer"
-APP_VERSION = "0.17.10"
+APP_VERSION = "0.17.11"
 PROGRAM_DATA_DIR_NAME = "Duplicate Edition Analyzer"
 PYSIDE6_VERSION = "6.11.2"
 AUDIO_EXTS = {".m4a", ".flac", ".wav", ".ape", ".wv", ".mp3", ".aac", ".ogg", ".opus"}
@@ -560,6 +560,7 @@ def semantic_qualifiers(text: str) -> Set[str]:
 
 REMIX_TRACK_RE = re.compile(r"\b(?:remix(?:es|ed)?|rmx|dub)\b", re.I)
 CLUB_MIX_RE = re.compile(r"\bclub\s+mix(?:es)?\b", re.I)
+CHILLOUT_MIX_RE = re.compile(r"\bchillout\s+mix(?:es)?\b", re.I)
 TEMPO_EFFECT_REMIX_RE = re.compile(
     r"\b(?:sped\s*up|speed\s*up|slowed(?:\s*down)?|reverb(?:ed)?|redux)\b",
     re.I,
@@ -570,14 +571,14 @@ TEMPO_EFFECT_REMIX_RE = re.compile(
 STANDARD_NON_REMIX_MIX_RE = re.compile(
     r"^(?:"
     r"original|extended|vip|v\.i\.p|radio|album|single|main|vocal|instrumental|studio|full|"
-    r"ambient|chillout|downtempo|garage|house|trance|dance|full continuous|"
+    r"ambient|downtempo|garage|house|trance|dance|full continuous|"
     r"7|12|7 dance|12 dance"
     r")\s+mix(?:\s*#?\d+)?$",
     re.I,
 )
 GENERIC_MIX_WORDS = {
     "original", "extended", "vip", "radio", "album", "single", "main", "vocal",
-    "instrumental", "studio", "full", "ambient", "chillout", "downtempo",
+    "instrumental", "studio", "full", "ambient", "downtempo",
     "garage", "house", "trance", "dance", "continuous", "mix", "new", "big",
     "smooth", "roll", "evolution",
 }
@@ -1005,6 +1006,7 @@ def is_remix_text(text: str) -> bool:
     if (
         REMIX_TRACK_RE.search(normalized)
         or CLUB_MIX_RE.search(normalized)
+        or CHILLOUT_MIX_RE.search(normalized)
         or TEMPO_EFFECT_REMIX_RE.search(normalized)
     ):
         return True
@@ -1013,6 +1015,75 @@ def is_remix_text(text: str) -> bool:
 
 def is_live_text(text: str) -> bool:
     return bool(LIVE_TRACK_RE.search(ascii_punctuation(text or "")))
+
+
+REMIX_CHILD_EDIT_RE = re.compile(
+    r"^(?P<credit>.+?)\s+(?:radio\s+(?:edit|version)|extended\s+(?:mix|version|edit)|"
+    r"single\s+(?:edit|version)|club\s+(?:edit|version))$",
+    re.I,
+)
+
+
+def _descriptor_parts(text: str) -> List[str]:
+    source = normalize_space(ascii_punctuation(text or ""))
+    return [
+        normalize_space(part)
+        for part in re.findall(r"[\(\[]([^\)\]]+)[\)\]]", source)
+        if normalize_space(part)
+    ]
+
+
+def _remix_credit_key_from_explicit_descriptor(text: str) -> str:
+    value = normalize_space(ascii_punctuation(text or "")).strip("()[] ")
+    match = re.match(r"^(.*?)\s+(?:remix(?:ed)?|rmx|dub)\b", value, re.I)
+    if match:
+        return re.sub(r"[^a-z0-9]+", "", normalize_title(match.group(1)))
+    if _is_named_person_mix_descriptor(value):
+        prefix = re.sub(r"\s+mix(?:\s*#?\d+)?(?:\s+by\s+.+)?\s*$", "", value, flags=re.I)
+        return re.sub(r"[^a-z0-9]+", "", normalize_title(prefix))
+    return ""
+
+
+def _remix_credit_key_from_child_edit(text: str) -> str:
+    value = normalize_space(ascii_punctuation(text or "")).strip("()[] ")
+    match = REMIX_CHILD_EDIT_RE.fullmatch(value)
+    if not match:
+        return ""
+    return re.sub(r"[^a-z0-9]+", "", normalize_title(match.group("credit")))
+
+
+def _contextual_remix_track_ids(releases: List["Release"]) -> Set[int]:
+    """Infer edit-of-remix children only from explicit sibling evidence.
+
+    Example: on a remix release containing both "Sebastien Remix" and
+    "Sebastien Radio Edit", the radio edit inherits the Remix family.
+    """
+    result: Set[int] = set()
+    for release in releases:
+        release_text = f"{release.title} {release.path.name}"
+        if not REMIX_RELEASE_RE.search(ascii_punctuation(release_text)):
+            continue
+
+        explicit_by_base: Dict[str, Set[str]] = defaultdict(set)
+        for track in release.tracks:
+            base_key = _base_title_identity(track.display_title)
+            if not base_key:
+                continue
+            for part in _descriptor_parts(track.display_title):
+                key = _remix_credit_key_from_explicit_descriptor(part)
+                if key:
+                    explicit_by_base[base_key].add(key)
+
+        for track in release.tracks:
+            base_key = _base_title_identity(track.display_title)
+            if not base_key or not explicit_by_base.get(base_key):
+                continue
+            for part in _descriptor_parts(track.display_title):
+                key = _remix_credit_key_from_child_edit(part)
+                if key and key in explicit_by_base[base_key]:
+                    result.add(id(track))
+                    break
+    return result
 
 
 def version_labels(text: str) -> Set[str]:
@@ -1501,10 +1572,14 @@ def configure_exclusions(
     """
     tracks = [track for rel in releases for track in rel.tracks]
     rules = list(personal_keep_rules or [])
+    contextual_remix_ids = _contextual_remix_track_ids(releases)
 
     for track in tracks:
         classification_text = f"{track.display_title} {strip_track_number(track.path.stem)}"
-        track.is_remix = is_remix_text(classification_text)
+        track.is_remix = bool(
+            is_remix_text(classification_text)
+            or id(track) in contextual_remix_ids
+        )
         track.is_live = is_live_text(classification_text)
         track.remix_feature_exception = False
         track.personal_keep_rule = ""
@@ -5445,6 +5520,7 @@ def build_decision_snapshot(
                     "distinction": distinction,
                     "base_title_key": base_key,
                     "is_remix": bool(track.is_remix),
+                    "is_live": bool(track.is_live),
                 }
             )
 
@@ -6254,7 +6330,7 @@ button,input { font:inherit; }
 }
 .track .status { color:#929eae; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .versionsCell { display:flex; justify-content:center; gap:4px; }
-.versionsTrack,.remixesTrack {
+.versionsTrack,.remixesTrack,.liveTrack {
   height:26px; border-radius:7px; padding:0 7px; cursor:pointer;
   font-size:10px; font-weight:750; white-space:nowrap;
 }
@@ -6262,18 +6338,22 @@ button,input { font:inherit; }
 .versionsTrack:hover { background:#382f17; border-color:#f3c969; color:#fff0b8; }
 .remixesTrack { border:1px solid #644786; background:#21172d; color:#d9b4ff; }
 .remixesTrack:hover { background:#2b1c3c; border-color:#b989ef; color:#f0ddff; }
-.altVersions,.altRemixes {
+.liveTrack { border:1px solid #346b5d; background:#10251f; color:#98ebce; }
+.liveTrack:hover { background:#16352b; border-color:#6ee7b7; color:#d7fff1; }
+.altVersions,.altRemixes,.altLive {
   display:none; margin:2px 8px 7px 52px; border-radius:8px; overflow:hidden;
 }
 .altVersions { border:1px solid #5d522b; background:#18160d; }
 .altRemixes { border:1px solid #4e3965; background:#15101c; }
-.altVersions.open,.altRemixes.open { display:block; }
-.altVersionsHead,.altRemixesHead {
+.altLive { border:1px solid #315d52; background:#0f1c18; }
+.altVersions.open,.altRemixes.open,.altLive.open { display:block; }
+.altVersionsHead,.altRemixesHead,.altLiveHead {
   padding:7px 10px; border-bottom:1px solid #263a46;
   font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:.04em;
 }
 .altVersionsHead { color:#f3d17a; background:#211d0f; border-bottom-color:#4c4324; }
 .altRemixesHead { color:#d9b4ff; background:#1d1428; border-bottom-color:#443157; }
+.altLiveHead { color:#98ebce; background:#10251f; border-bottom-color:#315d52; }
 .altVersion {
   width:100%; display:grid; grid-template-columns:minmax(180px,1fr) 54px 80px minmax(130px,1fr);
   gap:8px; align-items:center; padding:7px 10px; border:0; border-bottom:1px solid #1f303a;
@@ -6358,24 +6438,27 @@ function carriersForGroup(groupId) {
   });
 }
 function baseRelationsForRelease(releaseId) {
-  const source=getNode(releaseId), versionIds=new Set(), remixIds=new Set();
-  if(!source) return {versions:versionIds,remixes:remixIds};
+  const source=getNode(releaseId), versionIds=new Set(), remixIds=new Set(), liveIds=new Set();
+  if(!source) return {versions:versionIds,remixes:remixIds,live:liveIds};
   (state.nodes||[]).forEach(function(other){
     if(Number(other.id)===Number(source.id)) return;
-    let hasVersion=false, hasRemix=false;
+    let hasVersion=false, hasRemix=false, hasLive=false;
     (source.tracks||[]).forEach(function(a){
       if(a.excluded || Number(a.groupId)<0 || !a.baseKey) return;
       (other.tracks||[]).forEach(function(b){
         if(b.excluded || Number(b.groupId)<0 || !b.baseKey) return;
         if(a.baseKey!==b.baseKey || Number(a.groupId)===Number(b.groupId)) return;
-        if(a.isRemix || b.isRemix) hasRemix=true;
+        const af=String(a.family||"version"), bf=String(b.family||"version");
+        if(af==="live" || bf==="live") hasLive=true;
+        else if(af==="remix" || bf==="remix") hasRemix=true;
         else hasVersion=true;
       });
     });
     if(hasVersion) versionIds.add(String(other.id));
     else if(hasRemix) remixIds.add(String(other.id));
+    else if(hasLive) liveIds.add(String(other.id));
   });
-  return {versions:versionIds,remixes:remixIds};
+  return {versions:versionIds,remixes:remixIds,live:liveIds};
 }
 function rowCenter(id) {
   const el = rowEls.get(String(id));
@@ -6456,6 +6539,9 @@ function drawConnections() {
     related.remixes.forEach(function(id){
       addCurve(svg,source,rowCenter(id),"#b989ef",2.2,0.70,"3 6");
     });
+    related.live.forEach(function(id){
+      addCurve(svg,source,rowCenter(id),"#6ee7b7",2.2,0.72,"10 4 2 4");
+    });
   }
   if(activeTrack){
     const source=rowCenter(activeTrack.releaseId);
@@ -6521,15 +6607,16 @@ function selectTrack(releaseId,track) {
     el.classList.toggle("activeTrack",Number(el.dataset.group)===Number(activeTrack.groupId));
   });
 }
-function alternativesForTrack(t,wantRemix) {
+function alternativesForTrack(t,wantFamily) {
   if(!state || !state.versionFamilies || !t || !t.baseKey) return [];
   const family=state.versionFamilies[t.baseKey]||[];
   return family.filter(function(v){
-    return Number(v.groupId)!==Number(t.groupId) && Boolean(v.isRemix)===Boolean(wantRemix);
+    return Number(v.groupId)!==Number(t.groupId) && String(v.family||"version")===String(wantFamily);
   });
 }
-function versionsForTrack(t) { return alternativesForTrack(t,false); }
-function remixesForTrack(t) { return alternativesForTrack(t,true); }
+function versionsForTrack(t) { return alternativesForTrack(t,"version"); }
+function remixesForTrack(t) { return alternativesForTrack(t,"remix"); }
+function liveForTrack(t) { return alternativesForTrack(t,"live"); }
 function highlightAlternativeVersion(v) {
   if(!v || Number(v.groupId)<0 || Number(v.releaseId)<0) return;
   activeTrack={
@@ -6577,11 +6664,12 @@ function openDetails(n) {
       const label=(t.manualSkip||t.pendingIgnore)?"Restore":"Ignore";
       action='<button class="ignoreTrack" data-track="'+t.index+'">'+label+'</button>';
     }
-    const versions=versionsForTrack(t), remixes=remixesForTrack(t);
+    const versions=versionsForTrack(t), remixes=remixesForTrack(t), live=liveForTrack(t);
     let altButtons="";
-    if(t.isGem) altButtons+='<span class="trackGem" title="Gem: no duplicates or other versions">💎</span>';
+    if(t.isGem) altButtons+='<span class="trackGem" title="Gem: no duplicates or other Versions">💎</span>';
     if(versions.length) altButtons+='<button class="versionsTrack" data-track="'+t.index+'">Versions '+versions.length+'</button>';
     if(remixes.length) altButtons+='<button class="remixesTrack" data-track="'+t.index+'">Remixes '+remixes.length+'</button>';
+    if(live.length) altButtons+='<button class="liveTrack" data-track="'+t.index+'">Live '+live.length+'</button>';
     const versionsCell='<div class="versionsCell">'+altButtons+'</div>';
     tracks+='<div class="'+cls.join(" ")+'" data-group="'+t.groupId+'" data-index="'+t.index+'" title="'+esc(t.distinction||trackStatus(t))+'">'
       +'<div class="num">'+esc(t.number)+'</div><div class="titleText">'+esc(t.title)+'</div>'
@@ -6597,12 +6685,14 @@ function openDetails(n) {
           +'<span class="altTitle">'+esc(v.title)+'</span><span class="altDuration">'+esc(v.duration||"")+'</span>'
           +'<span class="altState '+stateClass+'">'+esc(stateText)+'</span><span class="altReleases">'+esc(releaseText)+'</span></button>';
       });
-      const isRemix=kind==="remix";
-      return '<div class="'+(isRemix?"altRemixes":"altVersions")+'" data-for="'+t.index+'"><div class="'+(isRemix?"altRemixesHead":"altVersionsHead")+'">'
-        +(isRemix?"Remixes":"Alternative versions - different audio groups, not duplicates")+'</div>'+rows+'</div>';
+      const panelClass=kind==="remix"?"altRemixes":(kind==="live"?"altLive":"altVersions");
+      const headClass=kind==="remix"?"altRemixesHead":(kind==="live"?"altLiveHead":"altVersionsHead");
+      const heading=kind==="remix"?"Remixes":(kind==="live"?"Live recordings":"Alternative versions - different audio groups, not duplicates");
+      return '<div class="'+panelClass+'" data-for="'+t.index+'"><div class="'+headClass+'">'+heading+'</div>'+rows+'</div>';
     }
     tracks+=addAlternativePanel(versions,"version");
     tracks+=addAlternativePanel(remixes,"remix");
+    tracks+=addAlternativePanel(live,"live");
   });
   let ignoreRelease="";
   if(state.editable && n.kind==="retained"){
@@ -6615,7 +6705,7 @@ function openDetails(n) {
     +'<div id="releaseActions">'+ignoreRelease+'</div><div id="pathRow"><div id="releasePath">'+esc(n.path)+'</div>'
     +'<button class="btn" id="copyPathBtn">Copy</button><button class="btn" id="openFolderBtn">Open folder</button></div>'
     +'<div id="reason">'+esc(n.reason)+'</div></div>'
-    +'<div id="tracksTitle"><span>Tracks</span><small>Track = exact audio group; Versions and Remixes are separate same-song alternatives</small></div>'
+    +'<div id="tracksTitle"><span>Tracks</span><small>Track = exact audio group; Versions, Remixes, and Live recordings are separate families</small></div>'
     +'<div id="tracks">'+tracks+'</div>';
   aside.classList.add("open");
   document.getElementById("closeDetailsBtn").onclick=closeDetails;
@@ -6629,6 +6719,7 @@ function openDetails(n) {
         ev.target.classList.contains("ignoreTrack")
         || ev.target.classList.contains("versionsTrack")
         || ev.target.classList.contains("remixesTrack")
+        || ev.target.classList.contains("liveTrack")
       )) return;
       selectTrack(n.id,track);
     };
@@ -6650,12 +6741,21 @@ function openDetails(n) {
       if(panel) panel.classList.toggle("open");
     };
   });
+  inner.querySelectorAll(".liveTrack").forEach(function(btn){
+    btn.onclick=function(ev){
+      ev.stopPropagation();
+      const panel=inner.querySelector('.altLive[data-for="'+btn.dataset.track+'"]');
+      if(panel) panel.classList.toggle("open");
+    };
+  });
   inner.querySelectorAll(".altVersion").forEach(function(btn){
     btn.onclick=function(ev){
       ev.stopPropagation();
       const parentIndex=Number(btn.dataset.parent);
       const parentTrack=(n.tracks||[]).find(function(t){return Number(t.index)===parentIndex;});
-      const pool=btn.dataset.kind==="remix" ? remixesForTrack(parentTrack) : versionsForTrack(parentTrack);
+      const pool=btn.dataset.kind==="remix"
+        ? remixesForTrack(parentTrack)
+        :(btn.dataset.kind==="live" ? liveForTrack(parentTrack) : versionsForTrack(parentTrack));
       const version=(pool||[]).find(function(v){return Number(v.groupId)===Number(btn.dataset.group);});
       if(version) highlightAlternativeVersion(version);
     };
@@ -6786,7 +6886,7 @@ def _release_map_state_for_ui(
                 {
                     "aliases": set(),
                     "durations": [],
-                    "is_remix": False,
+                    "families": set(),
                     "carriers": {},
                 },
             )
@@ -6796,11 +6896,20 @@ def _release_map_state_for_ui(
             duration = str(row.get("duration", "") or "").strip()
             if duration and duration not in group["durations"]:
                 group["durations"].append(duration)
-            group["is_remix"] = bool(
-                group.get("is_remix")
-                or row.get("is_remix")
+            row_is_live = bool(
+                row.get("is_live")
+                or is_live_text(str(row.get("title", "")))
+            )
+            row_is_remix = bool(
+                row.get("is_remix")
                 or is_remix_text(str(row.get("title", "")))
             )
+            if row_is_live:
+                group["families"].add("live")
+            elif row_is_remix:
+                group["families"].add("remix")
+            else:
+                group["families"].add("version")
             included = bool(row.get("included")) and not bool(row.get("excluded"))
             carrier = group["carriers"].setdefault(
                 rid,
@@ -6835,11 +6944,23 @@ def _release_map_state_for_ui(
             retained_carriers = [row for row in carriers if bool(row.get("retained"))]
             available_carriers = [row for row in carriers if bool(row.get("included"))]
             preferred = retained_carriers or available_carriers or carriers
+            raw_families = set(raw.get("families", set()) or set())
+            # If the same exact audio has conflicting labels, prefer a normal
+            # Version identity over a special-family alias; exact audio remains
+            # one group either way.
+            if "version" in raw_families:
+                semantic_family = "version"
+            elif "live" in raw_families:
+                semantic_family = "live"
+            else:
+                semantic_family = "remix"
             family_rows.append(
                 {
                     "groupId": int(group_id),
                     "title": aliases[0] if aliases else "Unknown version",
-                    "isRemix": bool(raw.get("is_remix")),
+                    "family": semantic_family,
+                    "isRemix": semantic_family == "remix",
+                    "isLive": semantic_family == "live",
                     "aliases": aliases[:6],
                     "duration": (raw.get("durations", []) or [""])[0],
                     "releaseId": int(preferred[0].get("id", -1)) if preferred else -1,
@@ -6863,11 +6984,9 @@ def _release_map_state_for_ui(
         version_families[base_key] = family_rows
 
     # Track-level Gem is the single source of truth for both track and release
-    # Gem badges: the exact recording group must physically
-    # occur in only one release across the whole scan, and the base song must
-    # have no other non-remix recording-group version anywhere in the scan.
-    # Pure remixes do not disqualify a track Gem.
-    all_non_remix_groups_by_base: Dict[str, Set[int]] = defaultdict(set)
+    # Gem badges. Only Version-family alternatives disqualify it. Remixes and
+    # Live recordings are separate families and therefore do not.
+    all_version_groups_by_base: Dict[str, Set[int]] = defaultdict(set)
     all_release_carriers_by_group: Dict[int, Set[int]] = defaultdict(set)
 
     for item in snapshots:
@@ -6882,10 +7001,14 @@ def _release_map_state_for_ui(
                 row.get("is_remix")
                 or is_remix_text(str(row.get("title", "")))
             )
+            row_is_live = bool(
+                row.get("is_live")
+                or is_live_text(str(row.get("title", "")))
+            )
             if group_id >= 0:
                 all_release_carriers_by_group[group_id].add(source_rid)
-            if base_key and group_id >= 0 and not row_is_remix:
-                all_non_remix_groups_by_base[base_key].add(group_id)
+            if base_key and group_id >= 0 and not row_is_remix and not row_is_live:
+                all_version_groups_by_base[base_key].add(group_id)
     nodes: List[Dict[str, object]] = []
     for item in visible:
         rid = int(item.get("release_id", -1))
@@ -6904,9 +7027,15 @@ def _release_map_state_for_ui(
                 row.get("is_remix")
                 or is_remix_text(str(row.get("title", "")))
             )
+            is_live = bool(
+                row.get("is_live")
+                or is_live_text(str(row.get("title", "")))
+            )
             if tracks is not None and 0 <= track_index < len(tracks):
                 manual_skip = bool(tracks[track_index].manual_skip_rule)
                 is_remix = bool(tracks[track_index].is_remix)
+                is_live = bool(tracks[track_index].is_live)
+            semantic_family = "live" if is_live else ("remix" if is_remix else "version")
             base_key = (
                 str(row.get("base_title_key", "") or "").strip()
                 or _base_title_identity(str(row.get("title", "")))
@@ -6918,9 +7047,9 @@ def _release_map_state_for_ui(
                 and included
                 and group_id >= 0
                 and base_key
-                and not is_remix
+                and semantic_family == "version"
                 and len(all_release_carriers_by_group.get(group_id, set())) == 1
-                and len(all_non_remix_groups_by_base.get(base_key, set())) == 1
+                and len(all_version_groups_by_base.get(base_key, set())) == 1
             )
             if track_is_gem:
                 title = str(row.get("title", "") or "").strip()
@@ -6937,6 +7066,8 @@ def _release_map_state_for_ui(
                     "included": included,
                     "excluded": bool(row.get("excluded")),
                     "isRemix": is_remix,
+                    "isLive": is_live,
+                    "family": semantic_family,
                     "isGem": track_is_gem,
                     "manualSkip": manual_skip,
                     "pendingIgnore": track_index in pending_track_indices,

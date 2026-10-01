@@ -4,7 +4,7 @@ Complete project source and workflow assets for the discography torrent automati
 
 ## Current tools
 
-- `tools/Duplicate Edition Analyzer v0.17.10.pyw` - Removed the invented neutral `0` unique-track bubble. Retained releases with zero unique tracks now show no numeric badge at all; `1-2` remains red, `3-5` yellow, `6+` green, and 💎 remains reserved for Gem releases. v0.17.9 Gem consistency and v0.17.8 acoustic-first identity remain intact. Under construction ⚠️
+- `tools/Duplicate Edition Analyzer v0.17.11.pyw` - Implements the permanent alternative-family taxonomy in code: Versions, Remixes, and Live recordings are distinct. `Chillout Mix` is always Remix. Remix child edits inherit Remix when explicit sibling evidence proves the parent family, so `Gimme Gimme (Sebastien Radio Edit)` is grouped with the sibling `Sebastien Remix` on the remix release without broadly reclassifying ordinary radio versions. Release Map track details now have separate `Versions N`, `Remixes N`, and `Live N` groups and separate relationship lines. Live and Remix families no longer count as Versions for 💎; only another Version-family recording disqualifies a Gem. The v0.17.10 no-zero-badge behavior remains. Under construction ⚠️
 - `tools/AudioChecker Automation v0.1.pyw` - AudioChecker batch automation.
 - `tools/ALAC Conversion Automation v0.2.pyw` - lossless -> ALAC conversion. Under construction ⚠️
 - `tools/CUE Corrector - MusicBrainz DiscID 1.3.pyw` - MusicBrainz DiscID/CUE workflow.
