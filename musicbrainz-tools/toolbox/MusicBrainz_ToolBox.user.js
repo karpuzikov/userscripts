@@ -1,15 +1,15 @@
 // ==UserScript==
 // @name         MusicBrainz ToolBox
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.0.14
+// @version      1.0.15
 // @description  Combined MusicBrainz release-editor, recording, barcode, Spotify linking, search, cover-art, Disc ID, and duplicate-edit tools.
 // @author       karpuzikov
 // @license      MIT
 // @match        https://musicbrainz.org/*
 // @match        https://beta.musicbrainz.org/*
 // @match        https://open.spotify.com/*
-// @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/toolbox/MusicBrainz_ToolBox.user.js?v=1.0.14
-// @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/toolbox/MusicBrainz_ToolBox.user.js?v=1.0.14
+// @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/toolbox/MusicBrainz_ToolBox.user.js?v=1.0.15
+// @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/toolbox/MusicBrainz_ToolBox.user.js?v=1.0.15
 // @supportURL   https://github.com/karpuzikov/userscripts
 // @grant        GM_getValue
 // @grant        GM_setValue
@@ -7125,9 +7125,11 @@
         const MISSING_TTL = 24 * 60 * 60 * 1000;
         const MAX_CACHE_ENTRIES = 500;
         const REQUEST_INTERVAL = 1100;
+        const HARMONY_URL = 'https://harmony.pulsewidth.org.uk/';
+        const HARMONY_LOGO_URL = HARMONY_URL + 'harmony-logo.svg';
 
         let currentAlbumId = '';
-        let currentReleases = [];
+        let currentReleases = null;
         let requestGeneration = 0;
         let lastRequestAt = 0;
         let scanQueued = false;
@@ -7269,7 +7271,7 @@
                 return releases;
             } catch (error) {
                 console.warn('[MusicBrainz ToolBox] Spotify MusicBrainz lookup failed:', error);
-                return [];
+                return null;
             }
         }
 
@@ -7319,7 +7321,7 @@
         }
 
         function renderLinks() {
-            if (!currentAlbumId || !currentReleases.length) return false;
+            if (!currentAlbumId || !Array.isArray(currentReleases)) return false;
 
             const title = document.querySelector(
                 '[data-testid="album-page"] [data-testid="entityTitle"]'
@@ -7331,36 +7333,54 @@
             const row = title.parentElement;
             row.classList.add(TITLE_ROW_CLASS);
 
-            const expectedIds = new Set(currentReleases.map(release => release.id));
+            const desired = currentReleases.length
+                ? currentReleases.map(release => ({
+                    key: 'mb:' + release.id,
+                    mbid: release.id,
+                    href: 'https://musicbrainz.org/release/' + release.id,
+                    image: 'https://musicbrainz.org/favicon.ico',
+                    alt: 'MusicBrainz',
+                    title: release.disambiguation
+                        ? `Open MusicBrainz release: ${release.title || release.id} (${release.disambiguation})`
+                        : `Open MusicBrainz release: ${release.title || release.id}`,
+                }))
+                : [{
+                    key: 'harmony',
+                    mbid: '',
+                    href:
+                        HARMONY_URL +
+                        'release?url=' +
+                        encodeURIComponent(canonicalSpotifyAlbumUrl(currentAlbumId)),
+                    image: HARMONY_LOGO_URL,
+                    alt: 'Harmony',
+                    title: 'Search this Spotify release in Harmony',
+                }];
+
+            const wantedKeys = new Set(desired.map(item => item.key));
             row.querySelectorAll('.' + LINK_CLASS).forEach(link => {
-                if (!expectedIds.has(link.dataset.mbid || '')) link.remove();
+                if (!wantedKeys.has(link.dataset.linkKey || '')) link.remove();
             });
 
-            for (const release of currentReleases) {
+            for (const item of desired) {
                 if (row.querySelector(
-                    `.${LINK_CLASS}[data-mbid="${CSS.escape(release.id)}"]`
+                    `.${LINK_CLASS}[data-link-key="${CSS.escape(item.key)}"]`
                 )) {
                     continue;
                 }
 
                 const link = document.createElement('a');
                 link.className = LINK_CLASS;
-                link.dataset.mbid = release.id;
-                link.href = 'https://musicbrainz.org/release/' + release.id;
+                link.dataset.linkKey = item.key;
+                if (item.mbid) link.dataset.mbid = item.mbid;
+                link.href = item.href;
                 link.target = '_blank';
                 link.rel = 'noopener noreferrer';
-
-                const label = release.title
-                    ? `Open MusicBrainz release: ${release.title}`
-                    : 'Open MusicBrainz release';
-                link.title = release.disambiguation
-                    ? `${label} (${release.disambiguation})`
-                    : label;
-                link.setAttribute('aria-label', link.title);
+                link.title = item.title;
+                link.setAttribute('aria-label', item.title);
 
                 const image = document.createElement('img');
-                image.src = 'https://musicbrainz.org/favicon.ico';
-                image.alt = 'MusicBrainz';
+                image.src = item.image;
+                image.alt = item.alt;
                 image.width = 28;
                 image.height = 28;
 
@@ -7375,12 +7395,12 @@
             const albumId = albumIdFromLocation();
 
             if (albumId === currentAlbumId) {
-                if (currentReleases.length) renderLinks();
+                if (Array.isArray(currentReleases)) renderLinks();
                 return;
             }
 
             currentAlbumId = albumId;
-            currentReleases = [];
+            currentReleases = null;
             const generation = ++requestGeneration;
             removeLinks();
 
