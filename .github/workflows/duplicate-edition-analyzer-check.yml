@@ -57,7 +57,7 @@ jobs:
           if "function renderBoard() {function renderBoard() {" in source:
               raise SystemExit("Duplicated renderBoard function boundary found")
 
-          html_match = re.search(r'html = r"""(.*?)"""\n\s+return \(', source, re.S)
+          html_match = re.search(r'html = r"""(.*?)"""\n\s+return(?:\s+html|\s*\()', source, re.S)
           if not html_match:
               raise SystemExit("Release Map HTML block not found")
           script_match = re.search(r'<script type="module">(.*?)</script>', html_match.group(1), re.S)
