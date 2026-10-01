@@ -33,7 +33,7 @@ import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 
 APP_NAME = "Duplicate / Edition Analyzer"
-APP_VERSION = "0.17.1"
+APP_VERSION = "0.17.2"
 PROGRAM_DATA_DIR_NAME = "Duplicate Edition Analyzer"
 PYSIDE6_VERSION = "6.11.2"
 AUDIO_EXTS = {".m4a", ".flac", ".wav", ".ape", ".wv", ".mp3", ".aac", ".ogg", ".opus"}
@@ -588,7 +588,7 @@ GENERIC_MIX_WORDS = {
 }
 
 
-def _mix_descriptor_candidates(text: str) -> List[str]:
+def _mix_descriptor_candidates(text: str, allow_bare: bool = True) -> List[str]:
     source = normalize_space(ascii_punctuation(text or ""))
     if not source:
         return []
@@ -603,8 +603,9 @@ def _mix_descriptor_candidates(text: str) -> List[str]:
     if trailing:
         candidates.append(normalize_space(trailing.group(1)))
 
-    # Also catch a bare descriptor passed directly to this function.
-    if re.fullmatch(r".+\bmix(?:\s*#?\d+)?", source, re.I):
+    # Also catch a bare descriptor only when explicitly allowed. Full track titles
+    # such as "Club Rocker (Play & Win Mix)" must not become phrase candidates.
+    if allow_bare and re.fullmatch(r".+\bmix(?:\s*#?\d+)?", source, re.I):
         candidates.append(source)
 
     seen: Set[str] = set()
@@ -1384,7 +1385,7 @@ def detect_personal_pick_phrases(roots: List[Path]) -> List[Tuple[str, int, List
             raw_parts = [normalize_space(x) for x in re.findall(r"[\(\[]([^\)\]]+)[\)\]]", source)]
 
             # Named/trailing Mix descriptors are not always bracketed.
-            raw_parts.extend(_mix_descriptor_candidates(source))
+            raw_parts.extend(_mix_descriptor_candidates(source, allow_bare=False))
 
             seen_here: Set[str] = set()
             for raw in raw_parts:
@@ -1444,12 +1445,12 @@ def detect_personal_pick_phrases_from_tracks(
             continue
 
         raw_parts = [normalize_space(x) for x in re.findall(r"[\(\[]([^\)\]]+)[\)\]]", source)]
-        raw_parts.extend(_mix_descriptor_candidates(source))
+        raw_parts.extend(_mix_descriptor_candidates(source, allow_bare=False))
 
         for pattern in (
             r"\bLive\s+(?:From|At)\s+.+$",
             r"\b[^()\[\]]{0,80}\b(?:Session|Sessions|Unplugged)\b[^()\[\]]*$",
-            r"(?:^|\s+-\s+)([^-]+\b(?:Remix|Rmx|Redux|Dub|Sped\s*Up|Speed\s*Up|Slowed(?:\s*Down)?|Reverb(?:ed)?)\b.*)$",
+            r"(?:\s+-\s+)([^-]+\b(?:Remix|Rmx|Redux|Dub|Sped\s*Up|Speed\s*Up|Slowed(?:\s*Down)?|Reverb(?:ed)?)\b.*)$",
         ):
             match = re.search(pattern, source, re.I)
             if match:
@@ -7103,6 +7104,14 @@ class PhraseReviewWindow(tk.Toplevel):
             justify="left",
         ).pack(anchor="w", pady=(5, 10))
 
+        review_toolbar = ttk.Frame(outer)
+        review_toolbar.pack(fill="x", pady=(0, 8))
+        ttk.Button(
+            review_toolbar,
+            text="Copy all review text",
+            command=self._copy_review_text,
+        ).pack(side="left")
+
         body = ttk.Frame(outer)
         body.pack(fill="both", expand=True)
         canvas = tk.Canvas(body, background=DARK_BG, highlightthickness=0, borderwidth=0)
@@ -7166,6 +7175,12 @@ class PhraseReviewWindow(tk.Toplevel):
                 button.grid(row=0, column=1, rowspan=2, sticky="e", padx=(12, 0))
                 self.buttons[key] = button
 
+            ttk.Button(
+                row,
+                text="Copy",
+                command=lambda p=phrase, c=count, e=list(examples): self._copy_candidate(p, c, e),
+            ).grid(row=0, column=2, rowspan=2, sticky="e", padx=(6, 0))
+
         footer = ttk.Frame(outer)
         footer.pack(fill="x", pady=(12, 0))
         ttk.Button(footer, text="Cancel", command=self._cancel).pack(side="right")
@@ -7175,6 +7190,32 @@ class PhraseReviewWindow(tk.Toplevel):
         self.transient(master)
         self.grab_set()
         self.focus_force()
+
+    def _candidate_copy_text(self, phrase: str, count: int, examples: List[str]) -> str:
+        kinds: List[str] = []
+        if is_live_text(phrase):
+            kinds.append("Live")
+        if is_remix_text(phrase):
+            kinds.append("Remix")
+        kind = " / ".join(kinds) if kinds else "Version"
+        lines = [f"{phrase} [{kind}] ({count})"]
+        if examples:
+            lines.append("Examples: " + "; ".join(examples[:3]))
+        return "\n".join(lines)
+
+    def _copy_candidate(self, phrase: str, count: int, examples: List[str]) -> None:
+        self.clipboard_clear()
+        self.clipboard_append(self._candidate_copy_text(phrase, count, examples))
+        self.update_idletasks()
+
+    def _copy_review_text(self) -> None:
+        text = "\n\n".join(
+            self._candidate_copy_text(phrase, count, examples)
+            for phrase, count, examples in self.candidates
+        )
+        self.clipboard_clear()
+        self.clipboard_append(text)
+        self.update_idletasks()
 
     def _add_phrase(self, phrase: str, key: str) -> None:
         if not key or key in self.existing or key in self.added:
@@ -7242,6 +7283,8 @@ class PersonalPicksWindow(tk.Toplevel):
             activestyle="none",
         )
         self.listbox.pack(fill="both", expand=True)
+        self.listbox.bind("<Control-c>", self._copy_selected)
+        self.listbox.bind("<Control-C>", self._copy_selected)
         self._refresh()
 
         entry_row = ttk.Frame(outer)
@@ -7257,6 +7300,7 @@ class PersonalPicksWindow(tk.Toplevel):
         toolbar.pack(fill="x", pady=(8, 0))
         ttk.Button(toolbar, text="Remove selected", command=self._remove).pack(side="left")
         ttk.Button(toolbar, text="Clear all", command=self._clear).pack(side="left", padx=(8, 0))
+        ttk.Button(toolbar, text="Copy all", command=self._copy_all).pack(side="left", padx=(8, 0))
 
         footer = ttk.Frame(outer)
         footer.pack(fill="x", pady=(12, 0))
@@ -7292,6 +7336,22 @@ class PersonalPicksWindow(tk.Toplevel):
         self.value_var.set("")
         self._refresh()
         self.listbox.see("end")
+
+    def _copy_selected(self, _event=None):
+        indexes = list(self.listbox.curselection())
+        if not indexes:
+            return "break"
+        lines = [self.listbox.get(index) for index in indexes]
+        self.clipboard_clear()
+        self.clipboard_append("\n".join(lines))
+        self.update_idletasks()
+        return "break"
+
+    def _copy_all(self) -> None:
+        lines = [self.listbox.get(index) for index in range(self.listbox.size())]
+        self.clipboard_clear()
+        self.clipboard_append("\n".join(lines))
+        self.update_idletasks()
 
     def _remove(self) -> None:
         indexes = list(self.listbox.curselection())
