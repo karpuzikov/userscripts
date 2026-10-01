@@ -480,3 +480,6 @@ Before any program/script change in this project, apply the newest stored softwa
 
 
 - v0.17.0 chronological release board: replaced the force-directed circular/card cloud with a Windows Explorer-like multi-column folder board sorted by the date prefix in each release folder name. Retained releases and useful duplicate releases are present simultaneously; duplicate rows are secondary and marked DUP. Default lines now mean only duplicate -> retained coverage, eliminating the previous generic shared-audio connections. Clicking any track activates recording-carrier mode: every visible release containing that exact fingerprint group (including duplicate releases) is highlighted, unrelated rows dim, and bright SVG connections show the alternative sources. The unique-track red/yellow/green badge remains on retained rows only. Qt WebEngine stays as the modern UI shell; Sigma.js/Graphology are no longer required because the UI is a chronological DOM/SVG board rather than a force graph.
+
+
+- v0.17.1 packaging fix: corrected the duplicated `_qt_release_map_process` function boundary introduced during the v0.17.0 Release Map replacement. No workflow behavior change; this is the compile/runtime correction for the chronological folder-board build.

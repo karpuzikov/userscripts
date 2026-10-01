@@ -33,7 +33,7 @@ import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 
 APP_NAME = "Duplicate / Edition Analyzer"
-APP_VERSION = "0.17.0"
+APP_VERSION = "0.17.1"
 PROGRAM_DATA_DIR_NAME = "Duplicate Edition Analyzer"
 PYSIDE6_VERSION = "6.11.2"
 AUDIO_EXTS = {".m4a", ".flac", ".wav", ".ape", ".wv", ".mp3", ".aac", ".ogg", ".opus"}
@@ -6668,7 +6668,7 @@ def _release_map_state_for_ui(
     }
 
 
-def _qt_release_map_process(session_path: Path, result_path: Path) -> int:def _qt_release_map_process(session_path: Path, result_path: Path) -> int:
+def _qt_release_map_process(session_path: Path, result_path: Path) -> int:
     ensure_qt_release_map_dependencies()
     from PySide6.QtCore import QObject, QTimer, QUrl, Signal, Slot
     from PySide6.QtGui import QDesktopServices
