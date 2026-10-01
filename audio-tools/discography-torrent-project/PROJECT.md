@@ -507,3 +507,5 @@ Before any program/script change in this project, apply the newest stored softwa
 - Permanent taxonomy clarification: `Chillout Mix` is a **Remix**, not a Version. It must be counted/shown with Remixes and must not increase `Versions N` or disqualify 💎 as another Version.
 
 - v0.17.10 Zero-badge cleanup: remove the neutral `0` unique-track bubble. A retained release with zero unique tracks has no badge; only positive unique counts are rendered numerically, while 💎 and DUP keep their existing meanings. The permanent RULES entry was corrected accordingly.
+
+- Permanent taxonomy clarification: parent-family precedence applies. A radio/extended/edit suffix attached to a remix-family recording stays Remix. Example: `Gimme Gimme (Sebastien Radio Edit)` = Remix, not Version. `Radio Edit` describes the edit of the Sebastien remix. This must count under `Remixes N`, never `Versions N`, and must not disqualify 💎 as another Version.
