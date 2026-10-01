@@ -33,7 +33,7 @@ import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 
 APP_NAME = "Duplicate / Edition Analyzer"
-APP_VERSION = "0.17.6"
+APP_VERSION = "0.17.7"
 PROGRAM_DATA_DIR_NAME = "Duplicate Edition Analyzer"
 PYSIDE6_VERSION = "6.11.2"
 AUDIO_EXTS = {".m4a", ".flac", ".wav", ".ape", ".wv", ".mp3", ".aac", ".ogg", ".opus"}
@@ -1198,23 +1198,32 @@ def _metadata_match_conflict(a: Track, b: Track) -> str:
     mbid_b = _normalized_identifier(b.mbid)
     isrc_a = _normalized_identifier(a.isrc)
     isrc_b = _normalized_identifier(b.isrc)
-
-    if mbid_a and mbid_b and mbid_a != mbid_b:
-        return f"different MusicBrainz recording MBIDs ({a.mbid} vs {b.mbid})"
-
     artists_a = _artist_signature(a.artist)
     artists_b = _artist_signature(b.artist)
     same_mbid = bool(mbid_a and mbid_b and mbid_a == mbid_b)
     same_isrc = bool(isrc_a and isrc_b and isrc_a == isrc_b)
+    exact_fingerprint = bool(
+        a.fingerprint
+        and b.fingerprint
+        and a.fingerprint == b.fingerprint
+        and abs((a.fingerprint_duration or a.duration or 0.0) - (b.fingerprint_duration or b.duration or 0.0)) <= 0.25
+    )
 
-    # A shared recording MBID is the strongest available identity evidence.
-    if same_mbid:
+    # Audio identity wins over database bookkeeping. Two MusicBrainz Recording
+    # entities can still point at the exact same audio. Never split a literal
+    # acoustic carbon copy merely because its recording MBID differs.
+    if same_mbid or exact_fingerprint:
         return ""
 
-    # A shared ISRC plus the same credited performers is strong enough to tolerate
-    # packaging/edition suffixes such as "(Pilule bleue)".
+    # A shared ISRC plus the same credited performers is also strong identity
+    # evidence once the audio matcher has already accepted the pair.
     if same_isrc and (not artists_a or not artists_b or artists_a == artists_b):
         return ""
+
+    # Different recording MBIDs remain a conservative veto only when the
+    # stronger exact-audio / same-ISRC identity evidence above is absent.
+    if mbid_a and mbid_b and mbid_a != mbid_b:
+        return f"different MusicBrainz recording MBIDs ({a.mbid} vs {b.mbid})"
 
     semantic_a = _semantic_version_descriptors(a.display_title)
     semantic_b = _semantic_version_descriptors(b.display_title)
@@ -3273,7 +3282,7 @@ def merge_equivalent_tracks(
                         "duration_delta_seconds_or_ratio": "12.0 seconds or 6% of longer track; unmatched part must be silence",
                     },
                     "metadata_safety_gate": [
-                        "different recording MBIDs",
+                        "different recording MBIDs unless exact fingerprint or shared ISRC+artist proves identity",
                         "semantic version descriptor conflict",
                         "different featured performers + different ISRCs",
                         "different credited artists + different ISRCs",
@@ -6345,11 +6354,13 @@ button,input { font:inherit; }
 .track.orphan { background:rgba(239,68,68,.14); box-shadow:inset 3px 0 var(--red); }
 .track.activeTrack { background:rgba(85,215,255,.12); box-shadow:inset 3px 0 var(--cyan); }
 .track.manual { color:#c4b5fd; }
+.track.skipped { opacity:.46; filter:grayscale(.82); }
+.track.skipped:hover { opacity:.60; }
 .track .num,.track .dur { color:#8793a4; text-align:center; }
 .track .titleText { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .trackGem {
-  display:inline-block; margin-right:5px; font-family:"Segoe UI Emoji","Segoe UI Symbol","Segoe UI",sans-serif;
-  font-size:14px; vertical-align:-1px;
+  display:inline-flex; align-items:center; justify-content:center; min-width:26px; height:26px;
+  font-family:"Segoe UI Emoji","Segoe UI Symbol","Segoe UI",sans-serif; font-size:15px;
 }
 .track .status { color:#929eae; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .versionsCell { display:flex; justify-content:center; gap:4px; }
@@ -6667,6 +6678,7 @@ function openDetails(n) {
   let tracks="";
   (n.tracks||[]).forEach(function(t){
     const cls=["track"]; if(t.orphaned) cls.push("orphan"); else if(t.unique) cls.push("unique");
+    if(t.excluded) cls.push("skipped");
     if(t.manualSkip||t.pendingIgnore) cls.push("manual");
     if(activeTrack && Number(activeTrack.groupId)===Number(t.groupId)) cls.push("activeTrack");
     let action="";
@@ -6676,12 +6688,12 @@ function openDetails(n) {
     }
     const versions=versionsForTrack(t), remixes=remixesForTrack(t);
     let altButtons="";
+    if(t.isGem) altButtons+='<span class="trackGem" title="Gem: no duplicates or other versions">💎</span>';
     if(versions.length) altButtons+='<button class="versionsTrack" data-track="'+t.index+'">Versions '+versions.length+'</button>';
     if(remixes.length) altButtons+='<button class="remixesTrack" data-track="'+t.index+'">Remixes '+remixes.length+'</button>';
     const versionsCell='<div class="versionsCell">'+altButtons+'</div>';
-    const gem=t.isGem?'<span class="trackGem" title="Gem: no duplicates or other versions">💎</span>':"";
     tracks+='<div class="'+cls.join(" ")+'" data-group="'+t.groupId+'" data-index="'+t.index+'" title="'+esc(t.distinction||trackStatus(t))+'">'
-      +'<div class="num">'+esc(t.number)+'</div><div class="titleText">'+gem+esc(t.title)+'</div>'
+      +'<div class="num">'+esc(t.number)+'</div><div class="titleText">'+esc(t.title)+'</div>'
       +'<div class="dur">'+esc(t.duration)+'</div>'+versionsCell+'<div class="status">'+esc(trackStatus(t))+'</div>'+action+'</div>';
     function addAlternativePanel(items,kind){
       if(!items.length) return "";
