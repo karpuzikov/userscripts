@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MusicBrainz ToolBox
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.0.20
+// @version      1.0.21
 // @description  Combined MusicBrainz release-editor, recording, barcode, Spotify/Apple Music/BPTopTracker linking, search, cover-art, Disc ID, and duplicate-edit tools.
 // @author       karpuzikov
 // @license      MIT
@@ -11,8 +11,8 @@
 // @match        https://music.apple.com/*
 // @match        https://www.bptoptracker.com/*
 // @match        https://bptoptracker.com/*
-// @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/toolbox/MusicBrainz_ToolBox.user.js?v=1.0.20
-// @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/toolbox/MusicBrainz_ToolBox.user.js?v=1.0.20
+// @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/toolbox/MusicBrainz_ToolBox.user.js?v=1.0.21
+// @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/toolbox/MusicBrainz_ToolBox.user.js?v=1.0.21
 // @supportURL   https://github.com/karpuzikov/userscripts
 // @grant        GM_getValue
 // @grant        GM_setValue
@@ -7959,10 +7959,19 @@
             return new Promise(resolve => setTimeout(resolve, ms));
         }
 
-        async function throttleMusicBrainz() {
-            const wait = Math.max(0, REQUEST_INTERVAL - (Date.now() - lastRequestAt));
-            if (wait) await sleep(wait);
-            lastRequestAt = Date.now();
+        function queueMusicBrainzRequest(task) {
+            const run = requestQueue.then(async () => {
+                const wait = Math.max(
+                    0,
+                    REQUEST_INTERVAL - (Date.now() - lastRequestAt)
+                );
+                if (wait) await sleep(wait);
+                lastRequestAt = Date.now();
+                return task();
+            });
+
+            requestQueue = run.catch(() => {});
+            return run;
         }
 
         function readCache() {
