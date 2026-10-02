@@ -7,7 +7,7 @@ Complete project source and workflow assets for the discography torrent automati
 - `tools/Duplicate Edition Analyzer v0.18.2.pyw` - Fixes the WebEngine completion crash `Object of type WindowsPath is not JSON serializable`. Filesystem paths returned by Apply are converted to strings at the source, and both Release Map and main-window QWebChannel JSON boundaries now safely serialize `Path`/`WindowsPath` values (plus sets) instead of crashing. Also applies the pending Gem UI change: 💎 is rendered with no red background/bubble. v0.18.1 ignored-release inspection/restoration remains intact. Under construction ⚠️
 - `tools/AudioChecker Automation v0.1.pyw` - AudioChecker batch automation.
 - `tools/ALAC Conversion Automation v0.2.pyw` - lossless -> ALAC conversion. Under construction ⚠️
-- `tools/CUE Corrector - MusicBrainz DiscID 1.3.pyw` - MusicBrainz DiscID/CUE workflow.
+- `tools/CUE Corrector - MusicBrainz DiscID 1.3.1.pyw` - MusicBrainz DiscID/CUE workflow.
 - `tools/Folder Structure Scanner.pyw` - recursive folder structure report.
 
 ## Existing workflow assets
