@@ -1,16 +1,18 @@
 // ==UserScript==
 // @name         MusicBrainz ToolBox
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.0.18
-// @description  Combined MusicBrainz release-editor, recording, barcode, Spotify/Apple Music linking, search, cover-art, Disc ID, and duplicate-edit tools.
+// @version      1.0.19
+// @description  Combined MusicBrainz release-editor, recording, barcode, Spotify/Apple Music/BPTopTracker linking, search, cover-art, Disc ID, and duplicate-edit tools.
 // @author       karpuzikov
 // @license      MIT
 // @match        https://musicbrainz.org/*
 // @match        https://beta.musicbrainz.org/*
 // @match        https://open.spotify.com/*
 // @match        https://music.apple.com/*
-// @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/toolbox/MusicBrainz_ToolBox.user.js?v=1.0.18
-// @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/toolbox/MusicBrainz_ToolBox.user.js?v=1.0.18
+// @match        https://www.bptoptracker.com/*
+// @match        https://bptoptracker.com/*
+// @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/toolbox/MusicBrainz_ToolBox.user.js?v=1.0.19
+// @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/toolbox/MusicBrainz_ToolBox.user.js?v=1.0.19
 // @supportURL   https://github.com/karpuzikov/userscripts
 // @grant        GM_getValue
 // @grant        GM_setValue
@@ -7907,6 +7909,514 @@
 
         setInterval(handleRouteChange, 500);
         handleRouteChange();
+    })();
+    }
+
+
+    // ============================================================================
+    // Release-list indicators
+    // - Apple Music artist / release-card pages
+    // - BPTopTracker artist release lists
+    // - BPTopTracker individual release pages
+    //
+    // Exact external release URLs are resolved through MusicBrainz URL relations.
+    // Found -> MusicBrainz icon. Missing -> Harmony lookup icon.
+    // ============================================================================
+    if (
+        location.hostname === 'music.apple.com' ||
+        location.hostname === 'www.bptoptracker.com' ||
+        location.hostname === 'bptoptracker.com'
+    ) {
+    (() => {
+        'use strict';
+
+        const INDICATOR_CLASS = 'mb-toolbox-release-list-indicator';
+        const LARGE_CLASS = 'mb-toolbox-release-list-indicator--large';
+        const STYLE_ID = 'mb-toolbox-release-list-indicator-style';
+        const CACHE_KEY = 'mb-toolbox-release-list-links-v1';
+        const FOUND_TTL = 30 * 24 * 60 * 60 * 1000;
+        const MISSING_TTL = 15 * 1000;
+        const MAX_CACHE_ENTRIES = 1000;
+        const REQUEST_INTERVAL = 1100;
+        const HARMONY_URL = 'https://harmony.pulsewidth.org.uk/';
+        const HARMONY_LOGO_SVG = "<svg viewBox=\"0 0 200 200\" xmlns=\"http://www.w3.org/2000/svg\" aria-hidden=\"true\"><defs><linearGradient id=\"mbtb-harmony-list-gradient\" x1=\"-51.64\" y1=\"190.18\" x2=\"287.01\" y2=\"-2.23\" gradientUnits=\"userSpaceOnUse\"><stop offset=\".29\" stop-color=\"#ffb92c\"/><stop offset=\"1\" stop-color=\"#c45555\"/></linearGradient></defs><path fill=\"#c45555\" d=\"M68.08 122.59c4.17 2.66 9.11 4.23 14.42 4.23 14.82 0 26.84-12.02 26.84-26.84S97.32 73.14 82.5 73.14c-5.35 0-10.31 1.58-14.5 4.28-.31.02-.63.02-.94.02-2.42 0-4.85-.49-6.9-1.86-2.99-1.99-4.29-6.45-4.77-11.01V21.54L7.74 48.87v102.25l47.64 27.34v-43.03c.49-4.57 1.78-9.02 4.77-11.01 2.06-1.37 4.48-1.86 6.9-1.86.34 0 .68 0 1.02.03Z\"/><path fill=\"url(#mbtb-harmony-list-gradient)\" d=\"M63.67 175.1v-39.19c.38-3.11 1.04-4.35 1.25-4.68.26-.13.6-.23 1-.29 5.1 2.74 10.78 4.18 16.58 4.18 19.37 0 35.13-15.76 35.13-35.13S101.87 64.86 82.5 64.86c-5.83 0-11.53 1.45-16.64 4.21-.38-.06-.69-.16-.94-.28-.21-.33-.87-1.57-1.25-4.68V24.9L107.08 0l85.18 48.87v102.25L107.08 200l-43.4-24.9Z\"/></svg>";
+
+        const pendingLookups = new Map();
+        let lastRequestAt = 0;
+        let scanQueued = false;
+
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        async function throttleMusicBrainz() {
+            const wait = Math.max(0, REQUEST_INTERVAL - (Date.now() - lastRequestAt));
+            if (wait) await sleep(wait);
+            lastRequestAt = Date.now();
+        }
+
+        function readCache() {
+            try {
+                const value = GM_getValue(CACHE_KEY, {});
+                return value && typeof value === 'object' ? value : {};
+            } catch {
+                return {};
+            }
+        }
+
+        function writeCache(cache) {
+            try {
+                const entries = Object.entries(cache)
+                    .sort((a, b) => Number(b[1]?.checkedAt || 0) - Number(a[1]?.checkedAt || 0))
+                    .slice(0, MAX_CACHE_ENTRIES);
+                GM_setValue(CACHE_KEY, Object.fromEntries(entries));
+            } catch {
+                // Cache failure must never break the source site.
+            }
+        }
+
+        function cachedResult(resource, force = false) {
+            if (force) return null;
+
+            const item = readCache()[resource];
+            if (!item?.checkedAt || !Array.isArray(item.releases)) return null;
+
+            const ttl = item.releases.length ? FOUND_TTL : MISSING_TTL;
+            if (Date.now() - Number(item.checkedAt) > ttl) return null;
+
+            return item.releases;
+        }
+
+        function storeResult(resource, releases) {
+            const cache = readCache();
+            cache[resource] = {
+                checkedAt: Date.now(),
+                releases,
+            };
+            writeCache(cache);
+        }
+
+        function requestJson(url) {
+            return new Promise((resolve, reject) => {
+                GM_xmlhttpRequest({
+                    method: 'GET',
+                    url,
+                    headers: { Accept: 'application/json' },
+                    timeout: 15000,
+                    onload(response) {
+                        if (response.status === 404) {
+                            resolve(null);
+                            return;
+                        }
+                        if (response.status < 200 || response.status >= 300) {
+                            reject(new Error(`MusicBrainz HTTP ${response.status}`));
+                            return;
+                        }
+
+                        try {
+                            resolve(JSON.parse(response.responseText));
+                        } catch (error) {
+                            reject(error);
+                        }
+                    },
+                    onerror() {
+                        reject(new Error('MusicBrainz request failed'));
+                    },
+                    ontimeout() {
+                        reject(new Error('MusicBrainz request timed out'));
+                    },
+                });
+            });
+        }
+
+        function parseReleaseRelations(data) {
+            const relations = Array.isArray(data?.relations) ? data.relations : [];
+            const unique = new Map();
+
+            for (const relation of relations) {
+                const release = relation?.release;
+                const id = String(release?.id || '').trim().toLowerCase();
+
+                if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)) {
+                    continue;
+                }
+
+                if (!unique.has(id)) {
+                    unique.set(id, {
+                        id,
+                        title: String(release?.title || '').trim(),
+                        disambiguation: String(release?.disambiguation || '').trim(),
+                    });
+                }
+            }
+
+            return [...unique.values()];
+        }
+
+        async function lookupResource(resource, force = false) {
+            const cached = cachedResult(resource, force);
+            if (cached) return cached;
+
+            const pendingKey = resource + (force ? ':force' : '');
+            if (pendingLookups.has(pendingKey)) {
+                return pendingLookups.get(pendingKey);
+            }
+
+            const promise = (async () => {
+                await throttleMusicBrainz();
+
+                const endpoint =
+                    'https://musicbrainz.org/ws/2/url' +
+                    '?resource=' + encodeURIComponent(resource) +
+                    '&inc=release-rels&fmt=json';
+
+                try {
+                    const data = await requestJson(endpoint);
+                    const releases = parseReleaseRelations(data);
+                    storeResult(resource, releases);
+                    return releases;
+                } catch (error) {
+                    console.warn(
+                        '[MusicBrainz ToolBox] Release-list MusicBrainz lookup failed:',
+                        resource,
+                        error
+                    );
+                    return null;
+                } finally {
+                    pendingLookups.delete(pendingKey);
+                }
+            })();
+
+            pendingLookups.set(pendingKey, promise);
+            return promise;
+        }
+
+        function appleAlbumInfo(value) {
+            let url;
+            try {
+                url = new URL(value, location.href);
+            } catch {
+                return null;
+            }
+
+            if (url.hostname !== 'music.apple.com') return null;
+
+            const parts = url.pathname.split('/').filter(Boolean);
+            const albumIndex = parts.findIndex(part => part.toLowerCase() === 'album');
+            if (albumIndex < 0) return null;
+
+            const id = parts
+                .slice(albumIndex + 1)
+                .reverse()
+                .find(part => /^\d+$/.test(part));
+            if (!id) return null;
+
+            const storefront =
+                albumIndex > 0 && /^[a-z]{2}$/i.test(parts[albumIndex - 1])
+                    ? parts[albumIndex - 1].toLowerCase()
+                    : 'us';
+
+            const harmonyUrl = new URL(url.href);
+            harmonyUrl.hash = '';
+            harmonyUrl.search = '';
+
+            return {
+                key: 'apple:' + storefront + ':' + id,
+                resource: `https://music.apple.com/${storefront}/album/${id}`,
+                harmonyUrl: harmonyUrl.href,
+            };
+        }
+
+        function beatportInfoFromBpTopTracker(value) {
+            let url;
+            try {
+                url = new URL(value, location.href);
+            } catch {
+                return null;
+            }
+
+            const host = url.hostname.toLowerCase().replace(/^www\./, '');
+            if (host !== 'bptoptracker.com') return null;
+
+            const match = url.pathname.match(
+                /^\/release\/([a-z0-9!-]+)\/([1-9][0-9]*)(?:\/|$)/i
+            );
+            if (!match) return null;
+
+            const slug = match[1].toLowerCase();
+            const id = String(Number(match[2]));
+            const resource = `https://www.beatport.com/release/${slug}/${id}`;
+
+            return {
+                key: 'beatport:' + id,
+                resource,
+                harmonyUrl: resource,
+            };
+        }
+
+        function installStyles() {
+            if (document.getElementById(STYLE_ID)) return;
+
+            const style = document.createElement('style');
+            style.id = STYLE_ID;
+            style.textContent = `
+                .${INDICATOR_CLASS} {
+                    display: inline-flex !important;
+                    align-items: center !important;
+                    justify-content: center !important;
+                    width: 18px !important;
+                    height: 18px !important;
+                    margin-left: 6px !important;
+                    vertical-align: -3px !important;
+                    flex: 0 0 auto !important;
+                    text-decoration: none !important;
+                    opacity: .94 !important;
+                    transition: transform .12s ease, opacity .12s ease !important;
+                }
+                .${INDICATOR_CLASS}:hover {
+                    opacity: 1 !important;
+                    transform: scale(1.12) !important;
+                }
+                .${INDICATOR_CLASS} img,
+                .${INDICATOR_CLASS} svg {
+                    display: block !important;
+                    width: 18px !important;
+                    height: 18px !important;
+                    max-width: none !important;
+                    border: 0 !important;
+                }
+                .${INDICATOR_CLASS}.${LARGE_CLASS} {
+                    width: 26px !important;
+                    height: 26px !important;
+                    margin-left: 9px !important;
+                    vertical-align: -4px !important;
+                }
+                .${INDICATOR_CLASS}.${LARGE_CLASS} img,
+                .${INDICATOR_CLASS}.${LARGE_CLASS} svg {
+                    width: 26px !important;
+                    height: 26px !important;
+                }
+            `;
+            document.head.appendChild(style);
+        }
+
+        function indicatorKey(info) {
+            return encodeURIComponent(info.key);
+        }
+
+        function removeExistingForTarget(target, keepKey) {
+            const parent = target.parentElement;
+            if (!parent) return;
+
+            parent.querySelectorAll('.' + INDICATOR_CLASS).forEach(node => {
+                if (
+                    node.dataset.mbtbTarget === target.dataset.mbtbIndicatorTarget &&
+                    node.dataset.mbtbKey !== keepKey
+                ) {
+                    node.remove();
+                }
+            });
+        }
+
+        function createIndicator(info, releases, large = false) {
+            const link = document.createElement('a');
+            link.className =
+                INDICATOR_CLASS + (large ? ' ' + LARGE_CLASS : '');
+            link.dataset.mbtbKey = indicatorKey(info);
+            link.target = '_blank';
+            link.rel = 'noopener noreferrer';
+
+            if (releases.length) {
+                const release = releases[0];
+                link.href = 'https://musicbrainz.org/release/' + release.id;
+
+                const label = release.title
+                    ? `Open MusicBrainz release: ${release.title}`
+                    : 'Open MusicBrainz release';
+                link.title = release.disambiguation
+                    ? `${label} (${release.disambiguation})`
+                    : label;
+                link.setAttribute('aria-label', link.title);
+
+                const image = document.createElement('img');
+                image.src = 'https://musicbrainz.org/favicon.ico';
+                image.alt = 'MusicBrainz';
+                image.width = large ? 26 : 18;
+                image.height = large ? 26 : 18;
+                link.appendChild(image);
+            } else {
+                link.href =
+                    HARMONY_URL +
+                    'release?url=' +
+                    encodeURIComponent(info.harmonyUrl);
+                link.title = 'Search this release in Harmony';
+                link.setAttribute('aria-label', link.title);
+
+                const holder = document.createElement('span');
+                holder.setAttribute('aria-hidden', 'true');
+                holder.innerHTML = HARMONY_LOGO_SVG;
+                if (holder.firstElementChild) {
+                    link.appendChild(holder.firstElementChild);
+                }
+            }
+
+            link.addEventListener('click', event => {
+                event.stopPropagation();
+            });
+
+            return link;
+        }
+
+        async function decorateTarget(target, info, large = false, force = false) {
+            if (!target || !info) return;
+
+            const key = indicatorKey(info);
+            const existing = target.parentElement?.querySelector(
+                `.${INDICATOR_CLASS}[data-mbtb-key="${CSS.escape(key)}"]`
+            );
+
+            if (existing && !force) return;
+
+            const releases = await lookupResource(info.resource, force);
+            if (!Array.isArray(releases) || !target.isConnected) return;
+
+            const latestInfo =
+                location.hostname === 'music.apple.com'
+                    ? appleAlbumInfo(target.href || '')
+                    : beatportInfoFromBpTopTracker(target.href || location.href);
+
+            if (!latestInfo || latestInfo.key !== info.key) return;
+
+            installStyles();
+
+            if (!target.dataset.mbtbIndicatorTarget) {
+                target.dataset.mbtbIndicatorTarget =
+                    Math.random().toString(36).slice(2);
+            }
+
+            if (existing) existing.remove();
+            removeExistingForTarget(target, key);
+
+            const indicator = createIndicator(info, releases, large);
+            indicator.dataset.mbtbTarget = target.dataset.mbtbIndicatorTarget;
+
+            if (large) {
+                target.appendChild(indicator);
+            } else {
+                target.insertAdjacentElement('afterend', indicator);
+            }
+        }
+
+        function appleTargets() {
+            const selectors = [
+                'a[data-testid="product-lockup-title"][href*="/album/"]',
+                '[data-testid="artist-featured-release-title"] > a[href*="/album/"]',
+            ];
+
+            return [...document.querySelectorAll(selectors.join(','))]
+                .map(target => ({
+                    target,
+                    info: appleAlbumInfo(target.href),
+                    large: false,
+                }))
+                .filter(item => item.info);
+        }
+
+        function bpTopTrackerTargets() {
+            const items = [];
+
+            document.querySelectorAll(
+                '#list-releases td.title > a[href*="/release/"]'
+            ).forEach(target => {
+                const info = beatportInfoFromBpTopTracker(target.href);
+                if (info) items.push({ target, info, large: false });
+            });
+
+            const current = beatportInfoFromBpTopTracker(location.href);
+            if (current) {
+                const heading = document.querySelector(
+                    '.wrapper section.g-bg-black-opacity-0_7 h1'
+                );
+
+                if (heading) {
+                    // Treat the page heading as the release title target.
+                    if (!heading.dataset.mbtbHref) {
+                        heading.dataset.mbtbHref = location.href;
+                    }
+
+                    const proxy = heading;
+                    Object.defineProperty(proxy, 'href', {
+                        configurable: true,
+                        get() {
+                            return proxy.dataset.mbtbHref || location.href;
+                        },
+                    });
+
+                    items.push({
+                        target: proxy,
+                        info: current,
+                        large: true,
+                    });
+                }
+            }
+
+            return items;
+        }
+
+        function allTargets() {
+            return location.hostname === 'music.apple.com'
+                ? appleTargets()
+                : bpTopTrackerTargets();
+        }
+
+        function scan(forceMissing = false) {
+            const tasks = allTargets().map(async item => {
+                let force = false;
+
+                if (forceMissing) {
+                    const cached = cachedResult(item.info.resource);
+                    force = Array.isArray(cached) && cached.length === 0;
+                }
+
+                await decorateTarget(
+                    item.target,
+                    item.info,
+                    item.large,
+                    force
+                );
+            });
+
+            return Promise.allSettled(tasks);
+        }
+
+        function queueScan() {
+            if (scanQueued) return;
+            scanQueued = true;
+
+            setTimeout(() => {
+                scanQueued = false;
+                scan(false);
+            }, 80);
+        }
+
+        const observer = new MutationObserver(queueScan);
+        observer.observe(document.documentElement, {
+            childList: true,
+            subtree: true,
+        });
+
+        window.addEventListener('focus', () => {
+            scan(true);
+        });
+
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') {
+                scan(true);
+            }
+        });
+
+        setInterval(() => scan(false), 5000);
+        scan(false);
     })();
     }
 
