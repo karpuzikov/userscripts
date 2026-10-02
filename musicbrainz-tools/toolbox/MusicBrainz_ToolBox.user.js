@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MusicBrainz ToolBox
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.0.35
+// @version      1.0.36
 // @description  Combined MusicBrainz release-editor, recording, barcode, Spotify/Apple Music linking, search, cover-art, Disc ID, and duplicate-edit tools.
 // @author       karpuzikov
 // @license      MIT
@@ -293,7 +293,7 @@
 
         if (!/(^|\.)musicbrainz\.org$/i.test(location.hostname)) return;
 
-        const CURRENT_VERSION = '1.0.35';
+        const CURRENT_VERSION = '1.0.36';
         const CHECK_KEY = 'mb-toolbox-self-update-check-v1';
         const CHECK_INTERVAL = 10 * 60 * 1000;
         const META_API =
@@ -8289,6 +8289,7 @@
         const MISSING_TTL = 15 * 1000;
         const MAX_CACHE_ENTRIES = 500;
         const REQUEST_INTERVAL = 1100;
+        const TRANSIENT_RETRY_MS = 5000;
         const HARMONY_URL = 'https://harmony.pulsewidth.org.uk/';
         const HARMONY_LOGO_SVG = "<svg viewBox=\"0 0 200 200\" xmlns=\"http://www.w3.org/2000/svg\" aria-hidden=\"true\"><defs><linearGradient id=\"mbtb-harmony-gradient\" x1=\"-51.64\" y1=\"190.18\" x2=\"287.01\" y2=\"-2.23\" gradientUnits=\"userSpaceOnUse\"><stop offset=\".29\" stop-color=\"#ffb92c\"/><stop offset=\"1\" stop-color=\"#c45555\"/></linearGradient></defs><path fill=\"#c45555\" d=\"M68.08 122.59c4.17 2.66 9.11 4.23 14.42 4.23 14.82 0 26.84-12.02 26.84-26.84S97.32 73.14 82.5 73.14c-5.35 0-10.31 1.58-14.5 4.28-.31.02-.63.02-.94.02-2.42 0-4.85-.49-6.9-1.86-2.99-1.99-4.29-6.45-4.77-11.01V21.54L7.74 48.87v102.25l47.64 27.34v-43.03c.49-4.57 1.78-9.02 4.77-11.01 2.06-1.37 4.48-1.86 6.9-1.86.34 0 .68 0 1.02.03Z\"/><path fill=\"url(#mbtb-harmony-gradient)\" d=\"M63.67 175.1v-39.19c.38-3.11 1.04-4.35 1.25-4.68.26-.13.6-.23 1-.29 5.1 2.74 10.78 4.18 16.58 4.18 19.37 0 35.13-15.76 35.13-35.13S101.87 64.86 82.5 64.86c-5.83 0-11.53 1.45-16.64 4.21-.38-.06-.69-.16-.94-.28-.21-.33-.87-1.57-1.25-4.68V24.9L107.08 0l85.18 48.87v102.25L107.08 200l-43.4-24.9Z\"/></svg>";
 
@@ -8296,6 +8297,8 @@
         let currentReleases = null;
         let currentLookupAt = 0;
         let lookupInFlight = false;
+        let lookupRetryTimer = null;
+        let currentLookupError = '';
         let requestGeneration = 0;
         let lastRequestAt = 0;
         let scanQueued = false;
@@ -8435,15 +8438,10 @@
                 '?resource=' + encodeURIComponent(resource) +
                 '&inc=release-rels&fmt=json';
 
-            try {
-                const data = await requestJson(endpoint);
-                const releases = parseReleaseRelations(data);
-                storeCachedReleases(albumId, releases);
-                return releases;
-            } catch (error) {
-                console.warn('[MusicBrainz ToolBox] Spotify MusicBrainz lookup failed:', error);
-                return null;
-            }
+            const data = await requestJson(endpoint);
+            const releases = parseReleaseRelations(data);
+            storeCachedReleases(albumId, releases);
+            return releases;
         }
 
         function installStyles() {
@@ -8481,30 +8479,82 @@
                     height: 28px;
                     border: 0;
                 }
+                .${LINK_CLASS}.mb-toolbox-spotify-loading {
+                    cursor: wait;
+                    pointer-events: none;
+                    opacity: 1;
+                    transform: none !important;
+                }
+                .mb-toolbox-spotify-spinner {
+                    box-sizing: border-box;
+                    width: 22px;
+                    height: 22px;
+                    border: 3px solid rgba(255, 255, 255, .28);
+                    border-top-color: #fff;
+                    border-radius: 50%;
+                    animation: mb-toolbox-spotify-spin .8s linear infinite;
+                }
+                @keyframes mb-toolbox-spotify-spin {
+                    to { transform: rotate(360deg); }
+                }
             `;
             document.head.appendChild(style);
         }
 
+        function spotifyTitleRow() {
+            const title = document.querySelector(
+                '[data-testid="album-page"] [data-testid="entityTitle"], ' +
+                'h1[data-testid="entityTitle"], ' +
+                '[data-testid="entityTitle"]'
+            );
+            return title?.parentElement || null;
+        }
+
         function removeLinks() {
+            if (lookupRetryTimer !== null) {
+                clearTimeout(lookupRetryTimer);
+                lookupRetryTimer = null;
+            }
             document.querySelectorAll('.' + LINK_CLASS).forEach(node => node.remove());
             document.querySelectorAll('.' + TITLE_ROW_CLASS).forEach(node => {
                 node.classList.remove(TITLE_ROW_CLASS);
             });
         }
 
+        function renderLoading(message = 'Checking MusicBrainz...') {
+            if (!currentAlbumId) return false;
+
+            const row = spotifyTitleRow();
+            if (!row) return false;
+
+            installStyles();
+            row.classList.add(TITLE_ROW_CLASS);
+
+            row.querySelectorAll('.' + LINK_CLASS).forEach(node => node.remove());
+
+            const loading = document.createElement('span');
+            loading.className = LINK_CLASS + ' mb-toolbox-spotify-loading';
+            loading.dataset.linkKey = 'loading';
+            loading.title = message;
+            loading.setAttribute('role', 'status');
+            loading.setAttribute('aria-label', message);
+
+            const spinner = document.createElement('span');
+            spinner.className = 'mb-toolbox-spotify-spinner';
+            spinner.setAttribute('aria-hidden', 'true');
+            loading.appendChild(spinner);
+
+            row.appendChild(loading);
+            return true;
+        }
+
         function renderLinks() {
             if (!currentAlbumId || !Array.isArray(currentReleases)) return false;
 
-            const title = document.querySelector(
-                '[data-testid="album-page"] [data-testid="entityTitle"], ' +
-                'h1[data-testid="entityTitle"], ' +
-                '[data-testid="entityTitle"]'
-            );
-            if (!title?.parentElement) return false;
+            const row = spotifyTitleRow();
+            if (!row) return false;
 
             installStyles();
-
-            const row = title.parentElement;
             row.classList.add(TITLE_ROW_CLASS);
 
             const desired = currentReleases.length
@@ -8572,12 +8622,44 @@
             return true;
         }
 
+        function scheduleLookupRetry(albumId, generation, error) {
+            if (
+                generation !== requestGeneration ||
+                albumId !== currentAlbumId ||
+                albumId !== albumIdFromLocation()
+            ) {
+                return;
+            }
+
+            currentLookupError = String(error?.message || error || 'lookup failed');
+            renderLoading('MusicBrainz lookup failed - retrying...');
+
+            if (lookupRetryTimer !== null) return;
+            lookupRetryTimer = setTimeout(() => {
+                lookupRetryTimer = null;
+                if (
+                    generation === requestGeneration &&
+                    albumId === currentAlbumId &&
+                    albumId === albumIdFromLocation()
+                ) {
+                    refreshCurrentAlbum(true);
+                }
+            }, TRANSIENT_RETRY_MS);
+        }
+
         async function refreshCurrentAlbum(force = false) {
             const albumId = albumIdFromLocation();
             if (!albumId || lookupInFlight) return;
 
+            if (lookupRetryTimer !== null) {
+                clearTimeout(lookupRetryTimer);
+                lookupRetryTimer = null;
+            }
+
             lookupInFlight = true;
+            currentLookupError = '';
             const generation = requestGeneration;
+            renderLoading('Checking MusicBrainz...');
 
             try {
                 const releases = await lookupMusicBrainzReleases(albumId, force);
@@ -8592,7 +8674,15 @@
 
                 currentLookupAt = Date.now();
                 currentReleases = releases;
+                currentLookupError = '';
                 renderLinks();
+            } catch (error) {
+                console.warn(
+                    '[MusicBrainz ToolBox] Spotify MusicBrainz lookup failed:',
+                    error
+                );
+                currentReleases = null;
+                scheduleLookupRetry(albumId, generation, error);
             } finally {
                 lookupInFlight = false;
             }
@@ -8602,7 +8692,11 @@
             const albumId = albumIdFromLocation();
 
             if (albumId === currentAlbumId) {
-                if (Array.isArray(currentReleases)) {
+                if (lookupInFlight) {
+                    renderLoading('Checking MusicBrainz...');
+                } else if (lookupRetryTimer !== null || currentLookupError) {
+                    renderLoading('MusicBrainz lookup failed - retrying...');
+                } else if (Array.isArray(currentReleases)) {
                     renderLinks();
 
                     // "Not found" is deliberately short-lived. This lets a
@@ -8621,6 +8715,7 @@
             currentAlbumId = albumId;
             currentReleases = null;
             currentLookupAt = 0;
+            currentLookupError = '';
             ++requestGeneration;
             removeLinks();
 
