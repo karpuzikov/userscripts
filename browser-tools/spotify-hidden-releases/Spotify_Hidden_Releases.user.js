@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify Hidden Releases
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      0.2.0
+// @version      0.2.1
 // @description  Finds Spotify releases missing from an artist's visible discography using Spotify Web API catalog data, market scans, and historical artist credits.
 // @author       karpuzikov
 // @match        https://open.spotify.com/artist/*
@@ -21,7 +21,7 @@
 (() => {
     'use strict';
 
-    const VERSION = '0.2.0';
+    const VERSION = '0.2.1';
     const CACHE_HOURS = 24;
     const BTN_ID = 'kz-shr-button';
     const MODAL_ID = 'kz-shr-modal';
@@ -168,11 +168,23 @@
                 continue;
             }
             let data = {};
-            try { data = JSON.parse(r.responseText || '{}'); } catch {}
+            const rawBody = String(r.responseText || '').trim();
+            try { data = JSON.parse(rawBody || '{}'); } catch {}
             if (r.status < 200 || r.status >= 300) {
-                const msg = data?.error?.message || data?.error_description || `Spotify API HTTP ${r.status}`;
+                const apiError = data?.error;
+                const apiMessage = typeof apiError === 'string' ? apiError : apiError?.message;
+                const reason = (typeof apiError === 'object' && apiError?.reason) || data?.reason || '';
+                let msg = apiMessage || data?.error_description || `Spotify API HTTP ${r.status}`;
+                if (reason) msg += ` [${reason}]`;
+                if (r.status === 403) {
+                    msg += ' - Spotify Development Mode requires the app owner account to have active Premium. If Premium is already active, verify that the app was created under that same Spotify account.';
+                }
+                if (rawBody && !apiMessage && !data?.error_description && rawBody.length <= 300) {
+                    msg += ` - ${rawBody}`;
+                }
                 const e = new Error(msg);
                 e.status = r.status;
+                e.responseBody = rawBody;
                 throw e;
             }
             return data;
