@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MusicBrainz ToolBox
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.0.22
+// @version      1.0.23
 // @description  Combined MusicBrainz release-editor, recording, barcode, Spotify/Apple Music/BPTopTracker linking, search, cover-art, Disc ID, and duplicate-edit tools.
 // @author       karpuzikov
 // @license      MIT
@@ -7929,7 +7929,9 @@
     // - BPTopTracker individual release pages
     //
     // Exact external release URLs are resolved through MusicBrainz URL relations.
-    // Found -> MusicBrainz icon. Missing -> Harmony lookup icon.
+    // Found -> one MusicBrainz icon per release.
+    // Missing BPTopTracker link -> MusicBrainz icon + catalog-number search ?.
+    // Missing Apple Music link -> Harmony fallback.
     // ============================================================================
     if (
         location.hostname === 'music.apple.com' ||
@@ -7941,6 +7943,8 @@
 
         const INDICATOR_CLASS = 'mb-toolbox-release-list-indicator';
         const LARGE_CLASS = 'mb-toolbox-release-list-indicator--large';
+        const SEARCH_CLASS = 'mb-toolbox-release-list-indicator--search';
+        const QUESTION_CLASS = 'mb-toolbox-release-list-question';
         const STYLE_ID = 'mb-toolbox-release-list-indicator-style';
         const CACHE_KEY = 'mb-toolbox-release-list-links-v1';
         const FOUND_TTL = 30 * 24 * 60 * 60 * 1000;
@@ -7951,12 +7955,106 @@
         const HARMONY_LOGO_SVG = "<svg viewBox=\"0 0 200 200\" xmlns=\"http://www.w3.org/2000/svg\" aria-hidden=\"true\"><defs><linearGradient id=\"mbtb-harmony-list-gradient\" x1=\"-51.64\" y1=\"190.18\" x2=\"287.01\" y2=\"-2.23\" gradientUnits=\"userSpaceOnUse\"><stop offset=\".29\" stop-color=\"#ffb92c\"/><stop offset=\"1\" stop-color=\"#c45555\"/></linearGradient></defs><path fill=\"#c45555\" d=\"M68.08 122.59c4.17 2.66 9.11 4.23 14.42 4.23 14.82 0 26.84-12.02 26.84-26.84S97.32 73.14 82.5 73.14c-5.35 0-10.31 1.58-14.5 4.28-.31.02-.63.02-.94.02-2.42 0-4.85-.49-6.9-1.86-2.99-1.99-4.29-6.45-4.77-11.01V21.54L7.74 48.87v102.25l47.64 27.34v-43.03c.49-4.57 1.78-9.02 4.77-11.01 2.06-1.37 4.48-1.86 6.9-1.86.34 0 .68 0 1.02.03Z\"/><path fill=\"url(#mbtb-harmony-list-gradient)\" d=\"M63.67 175.1v-39.19c.38-3.11 1.04-4.35 1.25-4.68.26-.13.6-.23 1-.29 5.1 2.74 10.78 4.18 16.58 4.18 19.37 0 35.13-15.76 35.13-35.13S101.87 64.86 82.5 64.86c-5.83 0-11.53 1.45-16.64 4.21-.38-.06-.69-.16-.94-.28-.21-.33-.87-1.57-1.25-4.68V24.9L107.08 0l85.18 48.87v102.25L107.08 200l-43.4-24.9Z\"/></svg>";
 
         const pendingLookups = new Map();
+        const catalogNumberLookups = new Map();
+        const targetLookupGeneration = new WeakMap();
         let requestQueue = Promise.resolve();
         let lastRequestAt = 0;
         let scanQueued = false;
 
         function sleep(ms) {
             return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        function normalizeWhitespace(value) {
+            return String(value ?? '').replace(/\s+/g, ' ').trim();
+        }
+
+        function catalogNumberFromDocument(doc) {
+            const section =
+                doc?.querySelector('.wrapper section.g-bg-black-opacity-0_7') ||
+                doc;
+
+            for (const iconClass of ['fa-file-o', 'fa-file']) {
+                const icon = section?.querySelector('i.' + iconClass);
+                if (!icon) continue;
+
+                const holder = icon.closest('div') || icon.parentElement;
+                if (!holder) continue;
+
+                const clone = holder.cloneNode(true);
+                clone.querySelectorAll('i').forEach(node => node.remove());
+                const value = normalizeWhitespace(clone.textContent);
+                if (value) return value;
+            }
+
+            const text = normalizeWhitespace(section?.textContent || '');
+            const match = text.match(
+                /(?:catalog(?:ue)?(?:\s+(?:number|no\.?))?|cat\.?\s*no\.?)\s*[:#-]?\s*([a-z0-9][a-z0-9._/ -]{1,60})/i
+            );
+            return normalizeWhitespace(match?.[1] || '');
+        }
+
+        async function catalogNumberForInfo(info) {
+            if (!info?.sourceUrl || !String(info.key || '').startsWith('beatport:')) {
+                return '';
+            }
+
+            if (catalogNumberLookups.has(info.key)) {
+                return catalogNumberLookups.get(info.key);
+            }
+
+            const promise = (async () => {
+                let source;
+                try {
+                    source = new URL(info.sourceUrl, location.href);
+                } catch {
+                    return '';
+                }
+
+                if (
+                    source.hostname === location.hostname &&
+                    source.pathname === location.pathname
+                ) {
+                    return catalogNumberFromDocument(document);
+                }
+
+                try {
+                    const response = await fetch(source.href, {
+                        credentials: 'same-origin',
+                    });
+                    if (!response.ok) return '';
+
+                    const html = await response.text();
+                    const doc = new DOMParser().parseFromString(html, 'text/html');
+                    return catalogNumberFromDocument(doc);
+                } catch (error) {
+                    console.warn(
+                        '[MusicBrainz ToolBox] BPTopTracker catalog-number lookup failed:',
+                        source.href,
+                        error
+                    );
+                    return '';
+                }
+            })();
+
+            catalogNumberLookups.set(info.key, promise);
+            return promise;
+        }
+
+        function musicBrainzCatalogSearchUrl(catalogNumber) {
+            const value = normalizeWhitespace(catalogNumber);
+            if (!value) return '';
+
+            const escaped = value.replace(/[\\"]/g, '\\        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        function queueMusicBrainzRequest(task) {');
+            const url = new URL('https://musicbrainz.org/search');
+            url.searchParams.set('query', 'catno:"' + escaped + '"');
+            url.searchParams.set('type', 'release');
+            url.searchParams.set('method', 'indexed');
+            return url.href;
         }
 
         function queueMusicBrainzRequest(task) {
@@ -8197,11 +8295,15 @@
             const releasePath = match[1].replace(/\/+$/, '');
             const id = String(Number(match[2]));
             const resource = 'https://www.beatport.com' + releasePath;
+            const sourceUrl = new URL(url.href);
+            sourceUrl.hash = '';
+            sourceUrl.search = '';
 
             return {
                 key: 'beatport:' + id,
                 resource,
                 harmonyUrl: resource,
+                sourceUrl: sourceUrl.href,
             };
         }
 
@@ -8227,6 +8329,33 @@
                 .${INDICATOR_CLASS}:hover {
                     opacity: 1 !important;
                     transform: scale(1.12) !important;
+                }
+                .${INDICATOR_CLASS}.${SEARCH_CLASS} {
+                    width: auto !important;
+                    gap: 3px !important;
+                    opacity: 1 !important;
+                    transform: none !important;
+                }
+                .${INDICATOR_CLASS}.${SEARCH_CLASS} > img {
+                    opacity: .72 !important;
+                }
+                .${QUESTION_CLASS} {
+                    display: inline-flex !important;
+                    align-items: center !important;
+                    justify-content: center !important;
+                    width: 15px !important;
+                    height: 15px !important;
+                    border: 1px solid rgba(255,255,255,.48) !important;
+                    border-radius: 50% !important;
+                    color: #fff !important;
+                    background: rgba(0,0,0,.28) !important;
+                    text-decoration: none !important;
+                    font: 700 11px/1 "Segoe UI", sans-serif !important;
+                    cursor: pointer !important;
+                }
+                .${QUESTION_CLASS}:hover {
+                    border-color: #fff !important;
+                    background: rgba(255,255,255,.14) !important;
                 }
                 .${INDICATOR_CLASS} img,
                 .${INDICATOR_CLASS} svg {
@@ -8255,30 +8384,49 @@
             return encodeURIComponent(info.key);
         }
 
-        function removeExistingForTarget(target, keepKey) {
-            const parent = target.parentElement;
-            if (!parent) return;
-
-            parent.querySelectorAll('.' + INDICATOR_CLASS).forEach(node => {
-                if (
-                    node.dataset.mbtbTarget === target.dataset.mbtbIndicatorTarget &&
-                    node.dataset.mbtbKey !== keepKey
-                ) {
-                    node.remove();
-                }
-            });
+        function ensureTargetId(target) {
+            if (!target.dataset.mbtbIndicatorTarget) {
+                target.dataset.mbtbIndicatorTarget =
+                    Math.random().toString(36).slice(2);
+            }
+            return target.dataset.mbtbIndicatorTarget;
         }
 
-        function createIndicator(info, releases, large = false) {
-            const link = document.createElement('a');
-            link.className =
-                INDICATOR_CLASS + (large ? ' ' + LARGE_CLASS : '');
-            link.dataset.mbtbKey = indicatorKey(info);
-            link.target = '_blank';
-            link.rel = 'noopener noreferrer';
+        function indicatorsForTarget(target) {
+            const parent = target.parentElement;
+            if (!parent) return [];
+
+            const targetId = ensureTargetId(target);
+            return [...parent.querySelectorAll('.' + INDICATOR_CLASS)]
+                .filter(node => node.dataset.mbtbTarget === targetId);
+        }
+
+        function collapseDuplicateIndicators(target) {
+            const nodes = indicatorsForTarget(target);
+            nodes.slice(1).forEach(node => node.remove());
+            return nodes[0] || null;
+        }
+
+        function makeMusicBrainzImage(large = false) {
+            const image = document.createElement('img');
+            image.src = 'https://musicbrainz.org/favicon.ico';
+            image.alt = 'MusicBrainz';
+            image.width = large ? 26 : 18;
+            image.height = large ? 26 : 18;
+            return image;
+        }
+
+        async function createIndicator(info, releases, large = false) {
+            const key = indicatorKey(info);
 
             if (releases.length) {
                 const release = releases[0];
+                const link = document.createElement('a');
+                link.className =
+                    INDICATOR_CLASS + (large ? ' ' + LARGE_CLASS : '');
+                link.dataset.mbtbKey = key;
+                link.target = '_blank';
+                link.rel = 'noopener noreferrer';
                 link.href = 'https://musicbrainz.org/release/' + release.id;
 
                 const label = release.title
@@ -8288,33 +8436,84 @@
                     ? `${label} (${release.disambiguation})`
                     : label;
                 link.setAttribute('aria-label', link.title);
+                link.appendChild(makeMusicBrainzImage(large));
 
-                const image = document.createElement('img');
-                image.src = 'https://musicbrainz.org/favicon.ico';
-                image.alt = 'MusicBrainz';
-                image.width = large ? 26 : 18;
-                image.height = large ? 26 : 18;
-                link.appendChild(image);
-            } else {
-                link.href =
-                    HARMONY_URL +
-                    'release?url=' +
-                    encodeURIComponent(info.harmonyUrl);
-                link.title = 'Search this release in Harmony';
-                link.setAttribute('aria-label', link.title);
+                link.addEventListener('click', event => {
+                    event.stopPropagation();
+                });
+                return link;
+            }
 
-                const holder = document.createElement('span');
-                holder.setAttribute('aria-hidden', 'true');
-                holder.innerHTML = HARMONY_LOGO_SVG;
-                if (holder.firstElementChild) {
-                    link.appendChild(holder.firstElementChild);
+            if (String(info.key || '').startsWith('beatport:')) {
+                const wrapper = document.createElement('span');
+                wrapper.className =
+                    INDICATOR_CLASS +
+                    ' ' +
+                    SEARCH_CLASS +
+                    (large ? ' ' + LARGE_CLASS : '');
+                wrapper.dataset.mbtbKey = key;
+                wrapper.title = 'No MusicBrainz release link found';
+
+                const image = makeMusicBrainzImage(large);
+                image.title = 'No MusicBrainz release link found';
+                wrapper.appendChild(image);
+
+                const catalogNumber = await catalogNumberForInfo(info);
+                const searchUrl = musicBrainzCatalogSearchUrl(catalogNumber);
+
+                const question = document.createElement('a');
+                question.className = QUESTION_CLASS;
+                question.textContent = '?';
+                question.target = '_blank';
+                question.rel = 'noopener noreferrer';
+
+                if (searchUrl) {
+                    question.href = searchUrl;
+                    question.title =
+                        'Search MusicBrainz releases by catalog number: ' +
+                        catalogNumber;
+                    question.setAttribute('aria-label', question.title);
+                } else {
+                    question.href =
+                        'https://musicbrainz.org/search?type=release&method=indexed&query=';
+                    question.title =
+                        'Catalog number was not found on BPTopTracker';
+                    question.setAttribute('aria-label', question.title);
                 }
+
+                question.addEventListener('click', event => {
+                    event.stopPropagation();
+                });
+                wrapper.addEventListener('click', event => {
+                    event.stopPropagation();
+                });
+                wrapper.appendChild(question);
+                return wrapper;
+            }
+
+            const link = document.createElement('a');
+            link.className =
+                INDICATOR_CLASS + (large ? ' ' + LARGE_CLASS : '');
+            link.dataset.mbtbKey = key;
+            link.target = '_blank';
+            link.rel = 'noopener noreferrer';
+            link.href =
+                HARMONY_URL +
+                'release?url=' +
+                encodeURIComponent(info.harmonyUrl);
+            link.title = 'Search this Apple Music release in Harmony';
+            link.setAttribute('aria-label', link.title);
+
+            const holder = document.createElement('span');
+            holder.setAttribute('aria-hidden', 'true');
+            holder.innerHTML = HARMONY_LOGO_SVG;
+            if (holder.firstElementChild) {
+                link.appendChild(holder.firstElementChild);
             }
 
             link.addEventListener('click', event => {
                 event.stopPropagation();
             });
-
             return link;
         }
 
@@ -8322,18 +8521,31 @@
             if (!target || !info) return;
 
             const key = indicatorKey(info);
-            const existing = target.parentElement?.querySelector(
-                `.${INDICATOR_CLASS}[data-mbtb-key="${CSS.escape(key)}"]`
-            );
+            const targetId = ensureTargetId(target);
 
-            // Keep a fresh cached icon, but automatically recheck an expired
-            // "not found" result even when the Harmony icon is already present.
-            if (existing && !force && cachedResult(info.resource) !== null) {
+            // Repair duplicate icons produced by older async scan races.
+            const existing = collapseDuplicateIndicators(target);
+            if (
+                existing &&
+                existing.dataset.mbtbKey === key &&
+                !force &&
+                cachedResult(info.resource) !== null
+            ) {
                 return;
             }
 
+            const generation =
+                (targetLookupGeneration.get(target) || 0) + 1;
+            targetLookupGeneration.set(target, generation);
+
             const releases = await lookupResource(info.resource, force);
-            if (!Array.isArray(releases) || !target.isConnected) return;
+            if (
+                !Array.isArray(releases) ||
+                !target.isConnected ||
+                targetLookupGeneration.get(target) !== generation
+            ) {
+                return;
+            }
 
             const sourceHref =
                 target.dataset.mbtbSourceHref ||
@@ -8351,16 +8563,17 @@
 
             installStyles();
 
-            if (!target.dataset.mbtbIndicatorTarget) {
-                target.dataset.mbtbIndicatorTarget =
-                    Math.random().toString(36).slice(2);
+            const indicator = await createIndicator(info, releases, large);
+            if (
+                !target.isConnected ||
+                targetLookupGeneration.get(target) !== generation
+            ) {
+                return;
             }
 
-            if (existing) existing.remove();
-            removeExistingForTarget(target, key);
-
-            const indicator = createIndicator(info, releases, large);
-            indicator.dataset.mbtbTarget = target.dataset.mbtbIndicatorTarget;
+            // Exactly one indicator container is allowed per release target.
+            indicatorsForTarget(target).forEach(node => node.remove());
+            indicator.dataset.mbtbTarget = targetId;
 
             if (large) {
                 target.appendChild(indicator);
