@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MusicBrainz ToolBox
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.0.36
+// @version      1.0.37
 // @description  Combined MusicBrainz release-editor, recording, barcode, Spotify/Apple Music linking, search, cover-art, Disc ID, and duplicate-edit tools.
 // @author       karpuzikov
 // @license      MIT
@@ -293,7 +293,7 @@
 
         if (!/(^|\.)musicbrainz\.org$/i.test(location.hostname)) return;
 
-        const CURRENT_VERSION = '1.0.36';
+        const CURRENT_VERSION = '1.0.37';
         const CHECK_KEY = 'mb-toolbox-self-update-check-v1';
         const CHECK_INTERVAL = 10 * 60 * 1000;
         const META_API =
@@ -4980,7 +4980,7 @@
         }
     
         async function lookupHarmonyByUrl(url) {
-            const lookupUrl = `${HARMONY_URL}release?url=${encodeURIComponent(url)}`;
+            const lookupUrl = `${HARMONY_URL}release?url=${encodeURIComponent(url)}&gtin=&region=&deezer=&spotify=&tidal=&qobuz=`;
             try {
                 const response = await harmonyRequest(lookupUrl);
                 const parsed = parseHarmony(response.html, lookupUrl);
@@ -8574,7 +8574,8 @@
                     href:
                         HARMONY_URL +
                         'release?url=' +
-                        encodeURIComponent(canonicalSpotifyAlbumUrl(currentAlbumId)),
+                        encodeURIComponent(canonicalSpotifyAlbumUrl(currentAlbumId)) +
+                        '&gtin=&region=&deezer=&spotify=&tidal=&qobuz=',
                     svg: HARMONY_LOGO_SVG,
                     alt: 'Harmony',
                     title: 'Search this Spotify release in Harmony',
@@ -9118,7 +9119,8 @@
                     href:
                         HARMONY_URL +
                         'release?url=' +
-                        encodeURIComponent(info.harmonyResource),
+                        encodeURIComponent(info.harmonyResource) +
+                        '&gtin=&region=&deezer=&spotify=&tidal=&qobuz=',
                     svg: HARMONY_LOGO_SVG,
                     alt: 'Harmony',
                     title: 'Search this Apple Music release in Harmony',
@@ -9687,7 +9689,8 @@
             link.href =
                 HARMONY_URL +
                 'release?url=' +
-                encodeURIComponent(info.harmonyUrl);
+                encodeURIComponent(info.harmonyUrl) +
+                '&gtin=&region=&deezer=&spotify=&tidal=&qobuz=';
             link.title = 'Search this Apple Music release in Harmony';
             link.setAttribute('aria-label', link.title);
 
