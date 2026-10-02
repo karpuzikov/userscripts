@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MusicBrainz ToolBox
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.0.29
+// @version      1.0.30
 // @description  Combined MusicBrainz release-editor, recording, barcode, Spotify/Apple Music linking, search, cover-art, Disc ID, and duplicate-edit tools.
 // @author       karpuzikov
 // @license      MIT
@@ -7846,19 +7846,13 @@
             return new Promise(resolve => setTimeout(resolve, ms));
         }
 
-        function queueMusicBrainzRequest(task) {
-            const run = requestQueue.then(async () => {
-                const wait = Math.max(
-                    0,
-                    REQUEST_INTERVAL - (Date.now() - lastRequestAt)
-                );
-                if (wait) await sleep(wait);
-                lastRequestAt = Date.now();
-                return task();
-            });
-
-            requestQueue = run.catch(() => {});
-            return run;
+        async function throttleMusicBrainz() {
+            const wait = Math.max(
+                0,
+                REQUEST_INTERVAL - (Date.now() - lastRequestAt)
+            );
+            if (wait) await sleep(wait);
+            lastRequestAt = Date.now();
         }
 
         function requestJson(url) {
@@ -7896,102 +7890,28 @@
         }
 
         function parseReleaseRelations(data) {
-            const sources = Array.isArray(data?.urls) ? data.urls : [data];
+            const relations = Array.isArray(data?.relations)
+                ? data.relations
+                : [];
             const unique = new Map();
 
-            for (const source of sources) {
-                const relations = Array.isArray(source?.relations)
-                    ? source.relations
-                    : [];
+            for (const relation of relations) {
+                const release = relation?.release;
+                const id = String(release?.id || '').trim().toLowerCase();
+                if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)) {
+                    continue;
+                }
 
-                for (const relation of relations) {
-                    const release = relation?.release;
-                    const id = String(release?.id || '').trim().toLowerCase();
-                    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)) {
-                        continue;
-                    }
-
-                    if (!unique.has(id)) {
-                        unique.set(id, {
-                            id,
-                            title: String(release?.title || '').trim(),
-                            disambiguation: String(release?.disambiguation || '').trim(),
-                        });
-                    }
+                if (!unique.has(id)) {
+                    unique.set(id, {
+                        id,
+                        title: String(release?.title || '').trim(),
+                        disambiguation: String(release?.disambiguation || '').trim(),
+                    });
                 }
             }
 
             return [...unique.values()];
-        }
-
-        function appleAlbumIdFromResource(value) {
-            let url;
-            try {
-                url = new URL(value);
-            } catch {
-                return '';
-            }
-
-            if (url.hostname.toLowerCase() !== 'music.apple.com') return '';
-
-            const parts = url.pathname.split('/').filter(Boolean);
-            const albumIndex = parts.findIndex(
-                part => part.toLowerCase() === 'album'
-            );
-            if (albumIndex < 0) return '';
-
-            return parts
-                .slice(albumIndex + 1)
-                .reverse()
-                .find(part => /^\d+$/.test(part)) || '';
-        }
-
-        async function lookupMusicBrainzResources(resources) {
-            const uniqueResources = [...new Set(
-                (resources || []).filter(Boolean)
-            )];
-            if (!uniqueResources.length) return [];
-
-            await throttleMusicBrainz();
-
-            const endpoint =
-                'https://musicbrainz.org/ws/2/url?' +
-                uniqueResources
-                    .map(resource => 'resource=' + encodeURIComponent(resource))
-                    .join('&') +
-                '&inc=release-rels&fmt=json';
-
-            const data = await requestJson(endpoint);
-            return parseReleaseRelations(data);
-        }
-
-        async function searchAppleMusicResourcesByAlbumId(albumId) {
-            await throttleMusicBrainz();
-
-            const searchQueries = [
-                'url:' + albumId + ' AND targettype:release',
-                albumId,
-            ];
-
-            for (const query of searchQueries) {
-                const endpoint =
-                    'https://musicbrainz.org/ws/2/url/?query=' +
-                    encodeURIComponent(query) +
-                    '&limit=100&fmt=json';
-
-                const data = await requestJson(endpoint);
-                const resources = [...new Set(
-                    (Array.isArray(data?.urls) ? data.urls : [])
-                        .map(item => String(item?.resource || '').trim())
-                        .filter(resource =>
-                            appleAlbumIdFromResource(resource) === albumId
-                        )
-                )];
-
-                if (resources.length) return resources;
-            }
-
-            return [];
         }
 
         async function lookupMusicBrainzReleases(albumId, force = false) {
@@ -8067,7 +7987,9 @@
             if (!currentAlbumId || !Array.isArray(currentReleases)) return false;
 
             const title = document.querySelector(
-                '[data-testid="album-page"] [data-testid="entityTitle"]'
+                '[data-testid="album-page"] [data-testid="entityTitle"], ' +
+                'h1[data-testid="entityTitle"], ' +
+                '[data-testid="entityTitle"]'
             );
             if (!title?.parentElement) return false;
 
@@ -8293,8 +8215,6 @@
                 // The Apple catalog ID is the identity. Storefront is only a URL variant.
                 musicBrainzResource:
                     `https://music.apple.com/${storefront}/album/${id}`,
-                usMusicBrainzResource:
-                    `https://music.apple.com/us/album/${id}`,
                 // Preserve the human-facing Apple page for Harmony.
                 harmonyResource: cleanPageUrl.href,
             };
@@ -8384,26 +8304,107 @@
         }
 
         function parseReleaseRelations(data) {
-            const relations = Array.isArray(data?.relations) ? data.relations : [];
+            const sources = Array.isArray(data?.urls) ? data.urls : [data];
             const unique = new Map();
 
-            for (const relation of relations) {
-                const release = relation?.release;
-                const id = String(release?.id || '').trim().toLowerCase();
-                if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)) {
-                    continue;
-                }
+            for (const source of sources) {
+                const relations = Array.isArray(source?.relations)
+                    ? source.relations
+                    : [];
 
-                if (!unique.has(id)) {
-                    unique.set(id, {
-                        id,
-                        title: String(release?.title || '').trim(),
-                        disambiguation: String(release?.disambiguation || '').trim(),
-                    });
+                for (const relation of relations) {
+                    const release = relation?.release;
+                    const id = String(release?.id || '').trim().toLowerCase();
+                    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)) {
+                        continue;
+                    }
+
+                    if (!unique.has(id)) {
+                        unique.set(id, {
+                            id,
+                            title: String(release?.title || '').trim(),
+                            disambiguation: String(release?.disambiguation || '').trim(),
+                        });
+                    }
                 }
             }
 
             return [...unique.values()];
+        }
+
+        function appleAlbumIdFromResource(value) {
+            let url;
+            try {
+                url = new URL(value);
+            } catch {
+                return '';
+            }
+
+            if (url.hostname.toLowerCase() !== 'music.apple.com') return '';
+
+            const parts = url.pathname.split('/').filter(Boolean);
+            const albumIndex = parts.findIndex(
+                part => part.toLowerCase() === 'album'
+            );
+            if (albumIndex < 0) return '';
+
+            return parts
+                .slice(albumIndex + 1)
+                .reverse()
+                .find(part => /^\d+$/.test(part)) || '';
+        }
+
+        function appleWildcardQueries(albumId) {
+            const base = 'https\\:\\/\\/music.apple.com\\/';
+            return [
+                'url:' + base + '*\\/album\\/*\\/' + albumId +
+                    ' AND targettype:release',
+                'url:' + base + '*\\/album\\/' + albumId +
+                    ' AND targettype:release',
+            ];
+        }
+
+        async function lookupMusicBrainzResources(resources) {
+            const uniqueResources = [...new Set(
+                (resources || []).filter(Boolean)
+            )];
+            if (!uniqueResources.length) return [];
+
+            await throttleMusicBrainz();
+
+            const endpoint =
+                'https://musicbrainz.org/ws/2/url?' +
+                uniqueResources
+                    .map(resource => 'resource=' + encodeURIComponent(resource))
+                    .join('&') +
+                '&inc=release-rels&fmt=json';
+
+            const data = await requestJson(endpoint);
+            return parseReleaseRelations(data);
+        }
+
+        async function searchAppleMusicResourcesByAlbumId(albumId) {
+            for (const query of appleWildcardQueries(albumId)) {
+                await throttleMusicBrainz();
+
+                const endpoint =
+                    'https://musicbrainz.org/ws/2/url/?query=' +
+                    encodeURIComponent(query) +
+                    '&limit=100&fmt=json';
+
+                const data = await requestJson(endpoint);
+                const resources = [...new Set(
+                    (Array.isArray(data?.urls) ? data.urls : [])
+                        .map(item => String(item?.resource || '').trim())
+                        .filter(resource =>
+                            appleAlbumIdFromResource(resource) === albumId
+                        )
+                )];
+
+                if (resources.length) return resources;
+            }
+
+            return [];
         }
 
         async function lookupMusicBrainzReleases(info, force = false) {
@@ -8411,17 +8412,17 @@
             if (cached) return cached;
 
             try {
-                // Fast path: current storefront plus the common US canonical URL.
+                // Fast path: exact URL for the storefront currently being viewed.
                 let releases = await lookupMusicBrainzResources([
                     info.musicBrainzResource,
-                    info.usMusicBrainzResource,
                 ]);
 
                 if (!releases.length) {
-                    // MusicBrainz stores Apple URLs with a storefront in the path.
-                    // Search its URL index by the storefront-independent Apple album ID,
-                    // then resolve the matching URL entity/entities to releases.
-                    const resources = await searchAppleMusicResourcesByAlbumId(info.id);
+                    // Storefront-independent lookup:
+                    // https://music.apple.com/*/album/*/<catalog-id>
+                    // https://music.apple.com/*/album/<catalog-id>
+                    const resources =
+                        await searchAppleMusicResourcesByAlbumId(info.id);
                     if (resources.length) {
                         releases = await lookupMusicBrainzResources(resources);
                     }
@@ -8870,9 +8871,12 @@
         }
 
         async function searchAppleResourcesByAlbumId(albumId) {
+            const base = 'https\\:\\/\\/music.apple.com\\/';
             const searchQueries = [
-                'url:' + albumId + ' AND targettype:release',
-                albumId,
+                'url:' + base + '*\\/album\\/*\\/' + albumId +
+                    ' AND targettype:release',
+                'url:' + base + '*\\/album\\/' + albumId +
+                    ' AND targettype:release',
             ];
 
             for (const query of searchQueries) {
@@ -8912,7 +8916,6 @@
                 try {
                     let releases = await lookupResources([
                         info.resource,
-                        info.usResource,
                     ]);
 
                     if (!releases.length) {
@@ -8982,8 +8985,6 @@
                     storefront +
                     '/album/' +
                     id,
-                usResource:
-                    'https://music.apple.com/us/album/' + id,
                 harmonyUrl: harmonyUrl.href,
             };
         }
