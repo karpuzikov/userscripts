@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MusicBrainz ToolBox
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.0.17
+// @version      1.0.18
 // @description  Combined MusicBrainz release-editor, recording, barcode, Spotify/Apple Music linking, search, cover-art, Disc ID, and duplicate-edit tools.
 // @author       karpuzikov
 // @license      MIT
@@ -9,8 +9,8 @@
 // @match        https://beta.musicbrainz.org/*
 // @match        https://open.spotify.com/*
 // @match        https://music.apple.com/*
-// @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/toolbox/MusicBrainz_ToolBox.user.js?v=1.0.17
-// @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/toolbox/MusicBrainz_ToolBox.user.js?v=1.0.17
+// @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/toolbox/MusicBrainz_ToolBox.user.js?v=1.0.18
+// @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/toolbox/MusicBrainz_ToolBox.user.js?v=1.0.18
 // @supportURL   https://github.com/karpuzikov/userscripts
 // @grant        GM_getValue
 // @grant        GM_setValue
@@ -7127,7 +7127,7 @@
         const MAX_CACHE_ENTRIES = 500;
         const REQUEST_INTERVAL = 1100;
         const HARMONY_URL = 'https://harmony.pulsewidth.org.uk/';
-        const HARMONY_LOGO_URL = HARMONY_URL + 'harmony-logo.svg';
+        const HARMONY_LOGO_SVG = "<svg viewBox=\"0 0 200 200\" xmlns=\"http://www.w3.org/2000/svg\" aria-hidden=\"true\"><defs><linearGradient id=\"mbtb-harmony-gradient\" x1=\"-51.64\" y1=\"190.18\" x2=\"287.01\" y2=\"-2.23\" gradientUnits=\"userSpaceOnUse\"><stop offset=\".29\" stop-color=\"#ffb92c\"/><stop offset=\"1\" stop-color=\"#c45555\"/></linearGradient></defs><path fill=\"#c45555\" d=\"M68.08 122.59c4.17 2.66 9.11 4.23 14.42 4.23 14.82 0 26.84-12.02 26.84-26.84S97.32 73.14 82.5 73.14c-5.35 0-10.31 1.58-14.5 4.28-.31.02-.63.02-.94.02-2.42 0-4.85-.49-6.9-1.86-2.99-1.99-4.29-6.45-4.77-11.01V21.54L7.74 48.87v102.25l47.64 27.34v-43.03c.49-4.57 1.78-9.02 4.77-11.01 2.06-1.37 4.48-1.86 6.9-1.86.34 0 .68 0 1.02.03Z\"/><path fill=\"url(#mbtb-harmony-gradient)\" d=\"M63.67 175.1v-39.19c.38-3.11 1.04-4.35 1.25-4.68.26-.13.6-.23 1-.29 5.1 2.74 10.78 4.18 16.58 4.18 19.37 0 35.13-15.76 35.13-35.13S101.87 64.86 82.5 64.86c-5.83 0-11.53 1.45-16.64 4.21-.38-.06-.69-.16-.94-.28-.21-.33-.87-1.57-1.25-4.68V24.9L107.08 0l85.18 48.87v102.25L107.08 200l-43.4-24.9Z\"/></svg>";
 
         let currentAlbumId = '';
         let currentReleases = null;
@@ -7306,7 +7306,8 @@
                     opacity: 1;
                     transform: scale(1.08);
                 }
-                .${LINK_CLASS} img {
+                .${LINK_CLASS} img,
+                .${LINK_CLASS} svg {
                     display: block;
                     width: 28px;
                     height: 28px;
@@ -7354,7 +7355,7 @@
                         HARMONY_URL +
                         'release?url=' +
                         encodeURIComponent(canonicalSpotifyAlbumUrl(currentAlbumId)),
-                    image: HARMONY_LOGO_URL,
+                    svg: HARMONY_LOGO_SVG,
                     alt: 'Harmony',
                     title: 'Search this Spotify release in Harmony',
                 }];
@@ -7381,13 +7382,20 @@
                 link.title = item.title;
                 link.setAttribute('aria-label', item.title);
 
-                const image = document.createElement('img');
-                image.src = item.image;
-                image.alt = item.alt;
-                image.width = 28;
-                image.height = 28;
+                if (item.svg) {
+                    const icon = document.createElement('span');
+                    icon.setAttribute('aria-hidden', 'true');
+                    icon.innerHTML = item.svg;
+                    link.appendChild(icon.firstElementChild);
+                } else {
+                    const image = document.createElement('img');
+                    image.src = item.image;
+                    image.alt = item.alt;
+                    image.width = 28;
+                    image.height = 28;
+                    link.appendChild(image);
+                }
 
-                link.appendChild(image);
                 row.appendChild(link);
             }
 
@@ -7509,7 +7517,7 @@
         const MAX_CACHE_ENTRIES = 500;
         const REQUEST_INTERVAL = 1100;
         const HARMONY_URL = 'https://harmony.pulsewidth.org.uk/';
-        const HARMONY_LOGO_URL = HARMONY_URL + 'harmony-logo.svg';
+        const HARMONY_LOGO_SVG = "<svg viewBox=\"0 0 200 200\" xmlns=\"http://www.w3.org/2000/svg\" aria-hidden=\"true\"><defs><linearGradient id=\"mbtb-harmony-gradient\" x1=\"-51.64\" y1=\"190.18\" x2=\"287.01\" y2=\"-2.23\" gradientUnits=\"userSpaceOnUse\"><stop offset=\".29\" stop-color=\"#ffb92c\"/><stop offset=\"1\" stop-color=\"#c45555\"/></linearGradient></defs><path fill=\"#c45555\" d=\"M68.08 122.59c4.17 2.66 9.11 4.23 14.42 4.23 14.82 0 26.84-12.02 26.84-26.84S97.32 73.14 82.5 73.14c-5.35 0-10.31 1.58-14.5 4.28-.31.02-.63.02-.94.02-2.42 0-4.85-.49-6.9-1.86-2.99-1.99-4.29-6.45-4.77-11.01V21.54L7.74 48.87v102.25l47.64 27.34v-43.03c.49-4.57 1.78-9.02 4.77-11.01 2.06-1.37 4.48-1.86 6.9-1.86.34 0 .68 0 1.02.03Z\"/><path fill=\"url(#mbtb-harmony-gradient)\" d=\"M63.67 175.1v-39.19c.38-3.11 1.04-4.35 1.25-4.68.26-.13.6-.23 1-.29 5.1 2.74 10.78 4.18 16.58 4.18 19.37 0 35.13-15.76 35.13-35.13S101.87 64.86 82.5 64.86c-5.83 0-11.53 1.45-16.64 4.21-.38-.06-.69-.16-.94-.28-.21-.33-.87-1.57-1.25-4.68V24.9L107.08 0l85.18 48.87v102.25L107.08 200l-43.4-24.9Z\"/></svg>";
 
         let currentAlbumKey = '';
         let currentReleases = null;
@@ -7708,7 +7716,8 @@
                     opacity: 1;
                     transform: scale(1.08);
                 }
-                .${LINK_CLASS} img {
+                .${LINK_CLASS} img,
+                .${LINK_CLASS} svg {
                     display: block;
                     width: 26px;
                     height: 26px;
@@ -7757,7 +7766,7 @@
                         HARMONY_URL +
                         'release?url=' +
                         encodeURIComponent(info.harmonyResource),
-                    image: HARMONY_LOGO_URL,
+                    svg: HARMONY_LOGO_SVG,
                     alt: 'Harmony',
                     title: 'Search this Apple Music release in Harmony',
                 }];
@@ -7784,13 +7793,20 @@
                 link.title = item.title;
                 link.setAttribute('aria-label', item.title);
 
-                const image = document.createElement('img');
-                image.src = item.image;
-                image.alt = item.alt;
-                image.width = 26;
-                image.height = 26;
+                if (item.svg) {
+                    const icon = document.createElement('span');
+                    icon.setAttribute('aria-hidden', 'true');
+                    icon.innerHTML = item.svg;
+                    link.appendChild(icon.firstElementChild);
+                } else {
+                    const image = document.createElement('img');
+                    image.src = item.image;
+                    image.alt = item.alt;
+                    image.width = 26;
+                    image.height = 26;
+                    link.appendChild(image);
+                }
 
-                link.appendChild(image);
                 title.appendChild(link);
             }
 
