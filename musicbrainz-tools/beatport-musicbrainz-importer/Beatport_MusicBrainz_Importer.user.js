@@ -1,14 +1,14 @@
 // ==UserScript==
 // @name         Beatport - MusicBrainz Importer
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.2.10
-// @description  Import Beatport and BPTopTracker releases into MusicBrainz with Beatport enrichment, ISRC matching, and release-source handling.
+// @version      1.2.11
+// @description  Import Beatport and BPTopTracker releases into MusicBrainz, with BPTopTracker 500-page redirect, Beatport enrichment, ISRC matching, and release-source handling.
 // @author       karpuzikov
 // @match        https://www.beatport.com/*
 // @match        https://musicbrainz.org/release/add*
 // @match        https://beta.musicbrainz.org/release/add*
-// @match        https://www.bptoptracker.com/release/*
-// @match        https://bptoptracker.com/release/*
+// @match        *://www.bptoptracker.com/*
+// @match        *://bptoptracker.com/*
 // @connect      musicbrainz.org
 // @connect      api.github.com
 // @connect      music.apple.com
@@ -21,6 +21,86 @@
 // @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/beatport-musicbrainz-importer/Beatport_MusicBrainz_Importer.user.js
 // @run-at       document-idle
 // ==/UserScript==
+
+// BPTopTracker HTTP 500 fallback
+(() => {
+    'use strict';
+
+    if (!/^(?:www\.)?bptoptracker\.com$/i.test(location.hostname)) return;
+
+    let redirected = false;
+
+    function redirectToBeatport() {
+        if (redirected) return;
+        redirected = true;
+        window.__beatportMbRedirecting = true;
+
+        const target =
+            'https://www.beatport.com' +
+            window.location.pathname +
+            window.location.search +
+            window.location.hash;
+
+        window.location.replace(target);
+    }
+
+    function getNavigationStatus() {
+        try {
+            const navigation = performance.getEntriesByType('navigation')[0];
+            const status = Number(navigation?.responseStatus);
+            return Number.isFinite(status) ? status : 0;
+        } catch {
+            return 0;
+        }
+    }
+
+    function looksLike500Page() {
+        const status = getNavigationStatus();
+        if (status === 500) return true;
+
+        const title = (document.title || '').replace(/\s+/g, ' ').trim();
+        const body = (document.body?.innerText || '')
+            .replace(/\s+/g, ' ')
+            .trim()
+            .slice(0, 10000);
+
+        const combined = (title + ' ' + body).toLowerCase();
+
+        if (
+            /\b500\b/.test(combined) &&
+            /(internal server error|server error|http error)/i.test(combined)
+        ) {
+            return true;
+        }
+
+        return /\binternal server error\b/i.test(title);
+    }
+
+    function check() {
+        if (!redirected && looksLike500Page()) {
+            redirectToBeatport();
+        }
+    }
+
+    check();
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', check, {once: true});
+    } else {
+        check();
+    }
+
+    window.addEventListener('load', check, {once: true});
+
+    const observer = new MutationObserver(check);
+    observer.observe(document.documentElement, {
+        childList: true,
+        subtree: true,
+        characterData: true,
+    });
+
+    setTimeout(() => observer.disconnect(), 10000);
+})();
 
 (() => {
     'use strict';
@@ -2434,6 +2514,8 @@
     'use strict';
 
     if (!/^(?:www\.)?bptoptracker\.com$/i.test(location.hostname)) return;
+    if (window.__beatportMbRedirecting) return;
+    if (!/^\/release\//i.test(location.pathname)) return;
 
     const MUSICBRAINZ_ADD_RELEASE_URL = 'https://musicbrainz.org/release/add';
     const MUSICBRAINZ_SEARCH_URL = 'https://musicbrainz.org/search';
