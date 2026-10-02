@@ -32,6 +32,20 @@ A first-time user must be able to understand every core UI element without prior
 - Every long-running operation must visibly prove that it is active: show the current stage, a progress bar where measurable, processed/total counts, elapsed time, and a compact activity/log area when multiple stages are involved.
 - Software must not appear frozen while doing background work.
 
+## MusicBrainz request reliability
+
+This is a mandatory global rule for **all current and future MusicBrainz-related software**, including userscripts, desktop tools, importers, matchers, lookup utilities, and any other software that sends requests to MusicBrainz.
+
+- Any MusicBrainz HTTP request that receives **HTTP 503 Service Unavailable** must automatically retry.
+- 503 retries are **unlimited**. Do not stop after a fixed attempt count.
+- Continue retrying until MusicBrainz returns a response whose status is not 503.
+- Respect the `Retry-After` response header when MusicBrainz provides one.
+- When `Retry-After` is absent or invalid, wait at least 5 seconds before retrying to avoid hammering the service.
+- Once a non-503 response is received, resume the software's normal handling for that status. Do not turn permanent 404/400/etc. responses into infinite retry loops.
+- A timeout, network failure, 429, or other status may use its own existing policy, but **503 must never fail permanently because an attempt limit was reached**.
+- This rule applies to every MusicBrainz request path, not only primary API calls. It includes Web Service requests, same-origin MusicBrainz helper endpoints, edit-preview/data requests, URL lookups, artist/recording/release lookups, and MusicBrainz requests made through `fetch`, XHR, `GM_xmlhttpRequest`, or equivalent clients.
+- New MusicBrainz-related code must use a shared 503-retry helper or equivalent centralized mechanism wherever practical so individual features cannot silently omit this behavior.
+
 ## Userscript distribution and update integrity
 
 This is a blocking rule. A userscript update is not considered published until every check below passes.
