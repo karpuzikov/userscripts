@@ -38,29 +38,24 @@ This is a blocking rule. A userscript update is not considered published until e
 
 ### Hard post-update delivery gate
 
-This gate exists specifically to prevent a same-version Tampermonkey **Reinstall** screen from ever being caused by a link supplied after publishing an update.
+This gate exists specifically to prevent a same-version Tampermonkey **Reinstall** screen and to enforce the user's rule: **never provide commit links**.
 
-- After publishing or modifying an already-installed userscript, the normal final response must **never contain any URL that Tampermonkey can interpret as a userscript installer**.
-- The required safe post-update link is the immutable **GitHub commit page** for the exact script commit:
-  `https://github.com/<owner>/<repo>/commit/<40-char-commit>`
-- Never use a GitHub `blob/.../*.user.js` page as the supposedly safe post-update link. Tampermonkey can intercept GitHub userscript file pages and open/convert them as raw installers, producing a same-version **Reinstall** screen.
-- Never use any post-update URL that:
-  - contains `raw.githubusercontent.com`;
-  - contains `/raw/`;
-  - ends in `.user.js`;
-  - is a GitHub `blob` page whose path ends in `.user.js`.
-- Label the safe commit-page link `GitHub commit`, `GitHub version commit`, or equivalent. Do not label it `Install` or `Update`.
-- A direct userscript installer URL is allowed only when one of these is true at the moment the link is sent:
+- Never give the user a GitHub commit link.
+- Never give the user a GitHub commit-page URL as a substitute for an installer/update link.
+- After publishing or modifying an already-installed userscript, do not provide any installer-capable URL unless it is explicitly safe at that moment.
+- A direct userscript installer URL is allowed only when one of these is true:
   1. the user explicitly wants a first install and the script is not installed; or
   2. the user's installed version is explicitly known to be lower than the verified target version.
-- If the installed version is equal to the target, unknown, may already have auto-updated, or cannot be re-verified, every installer-capable URL is forbidden.
-- A previous statement of the installed version is not enough if an update check or auto-update may have happened since then. When in doubt, use the GitHub commit page.
-- Never use wording such as `Download / Install`, `Update here`, or `Install latest` in a post-update reply for an already-installed script.
-- This gate overrides any preference to provide a "download link after every update": satisfy that preference with the immutable GitHub commit page unless an installer URL is explicitly safe under the conditions above.
+- If the installed version is equal to the target, unknown, may already have auto-updated, or cannot be re-verified, do not provide a direct `.user.js` installer URL. Tell the user to use Tampermonkey's native **Check for userscript updates** instead.
+- Never use a GitHub `blob/.../*.user.js` page as a supposedly safe fallback. Tampermonkey can intercept userscript file pages and open them as raw installers.
+- If a safe non-installer repository reference is genuinely useful, use a normal repository or directory page, never a commit page.
+- Never use wording such as `Download / Install`, `Update here`, or `Install latest` when the user's installed version may already equal the target.
+- This gate overrides any earlier preference to provide a link after every update when providing such a link could trigger **Reinstall** or would require a commit link.
 - Before sending every post-update reply, perform this exact final check:
-  - Does any link contain `raw.githubusercontent.com`, `/raw/`, `.user.js`, or a GitHub `blob` path ending in `.user.js`?
+  - Does the reply contain a GitHub commit link? If yes, remove it.
+  - Does the reply contain a direct `.user.js` installer or another installer-capable userscript URL?
   - If yes, is the installed version explicitly known **right now** to be lower than the target, or is this explicitly a first install?
-  - If no, remove that link and replace it with the immutable GitHub commit page.
+  - If not, remove that installer link and tell the user to use Tampermonkey's native update check.
 - Failure of this gate is a production-stop condition. Do not continue unrelated publishing until the delivery mistake is corrected.
 
 ### Tampermonkey UPDATE vs REINSTALL
