@@ -7194,10 +7194,19 @@
             return new Promise(resolve => setTimeout(resolve, ms));
         }
 
-        async function throttleMusicBrainz() {
-            const wait = Math.max(0, REQUEST_INTERVAL - (Date.now() - lastRequestAt));
-            if (wait) await sleep(wait);
-            lastRequestAt = Date.now();
+        function queueMusicBrainzRequest(task) {
+            const run = requestQueue.then(async () => {
+                const wait = Math.max(
+                    0,
+                    REQUEST_INTERVAL - (Date.now() - lastRequestAt)
+                );
+                if (wait) await sleep(wait);
+                lastRequestAt = Date.now();
+                return task();
+            });
+
+            requestQueue = run.catch(() => {});
+            return run;
         }
 
         function requestJson(url) {
@@ -7942,6 +7951,7 @@
         const HARMONY_LOGO_SVG = "<svg viewBox=\"0 0 200 200\" xmlns=\"http://www.w3.org/2000/svg\" aria-hidden=\"true\"><defs><linearGradient id=\"mbtb-harmony-list-gradient\" x1=\"-51.64\" y1=\"190.18\" x2=\"287.01\" y2=\"-2.23\" gradientUnits=\"userSpaceOnUse\"><stop offset=\".29\" stop-color=\"#ffb92c\"/><stop offset=\"1\" stop-color=\"#c45555\"/></linearGradient></defs><path fill=\"#c45555\" d=\"M68.08 122.59c4.17 2.66 9.11 4.23 14.42 4.23 14.82 0 26.84-12.02 26.84-26.84S97.32 73.14 82.5 73.14c-5.35 0-10.31 1.58-14.5 4.28-.31.02-.63.02-.94.02-2.42 0-4.85-.49-6.9-1.86-2.99-1.99-4.29-6.45-4.77-11.01V21.54L7.74 48.87v102.25l47.64 27.34v-43.03c.49-4.57 1.78-9.02 4.77-11.01 2.06-1.37 4.48-1.86 6.9-1.86.34 0 .68 0 1.02.03Z\"/><path fill=\"url(#mbtb-harmony-list-gradient)\" d=\"M63.67 175.1v-39.19c.38-3.11 1.04-4.35 1.25-4.68.26-.13.6-.23 1-.29 5.1 2.74 10.78 4.18 16.58 4.18 19.37 0 35.13-15.76 35.13-35.13S101.87 64.86 82.5 64.86c-5.83 0-11.53 1.45-16.64 4.21-.38-.06-.69-.16-.94-.28-.21-.33-.87-1.57-1.25-4.68V24.9L107.08 0l85.18 48.87v102.25L107.08 200l-43.4-24.9Z\"/></svg>";
 
         const pendingLookups = new Map();
+        let requestQueue = Promise.resolve();
         let lastRequestAt = 0;
         let scanQueued = false;
 
@@ -8063,15 +8073,15 @@
             }
 
             const promise = (async () => {
-                await throttleMusicBrainz();
-
                 const endpoint =
                     'https://musicbrainz.org/ws/2/url' +
                     '?resource=' + encodeURIComponent(resource) +
                     '&inc=release-rels&fmt=json';
 
                 try {
-                    const data = await requestJson(endpoint);
+                    const data = await queueMusicBrainzRequest(
+                        () => requestJson(endpoint)
+                    );
                     const releases = parseReleaseRelations(data);
                     storeResult(resource, releases);
                     return releases;
@@ -8275,15 +8285,23 @@
                 `.${INDICATOR_CLASS}[data-mbtb-key="${CSS.escape(key)}"]`
             );
 
-            if (existing && !force) return;
+            // Keep a fresh cached icon, but automatically recheck an expired
+            // "not found" result even when the Harmony icon is already present.
+            if (existing && !force && cachedResult(info.resource) !== null) {
+                return;
+            }
 
             const releases = await lookupResource(info.resource, force);
             if (!Array.isArray(releases) || !target.isConnected) return;
 
+            const sourceHref =
+                target.dataset.mbtbSourceHref ||
+                target.href ||
+                location.href;
             const latestInfo =
                 location.hostname === 'music.apple.com'
-                    ? appleAlbumInfo(target.href || '')
-                    : beatportInfoFromBpTopTracker(target.href || location.href);
+                    ? appleAlbumInfo(sourceHref)
+                    : beatportInfoFromBpTopTracker(sourceHref);
 
             if (!latestInfo || latestInfo.key !== info.key) return;
 
@@ -8339,21 +8357,12 @@
                 );
 
                 if (heading) {
-                    // Treat the page heading as the release title target.
-                    if (!heading.dataset.mbtbHref) {
-                        heading.dataset.mbtbHref = location.href;
-                    }
-
-                    const proxy = heading;
-                    Object.defineProperty(proxy, 'href', {
-                        configurable: true,
-                        get() {
-                            return proxy.dataset.mbtbHref || location.href;
-                        },
-                    });
+                    // Treat the page heading as the release title target without
+                    // adding or mutating any native BPTopTracker link properties.
+                    heading.dataset.mbtbSourceHref = location.href;
 
                     items.push({
-                        target: proxy,
+                        target: heading,
                         info: current,
                         large: true,
                     });
