@@ -8137,6 +8137,33 @@
             };
         }
 
+        function beatportInfoFromBeatport(value) {
+            let url;
+            try {
+                url = new URL(value, location.href);
+            } catch {
+                return null;
+            }
+
+            const host = url.hostname.toLowerCase().replace(/^www\./, '');
+            if (host !== 'beatport.com') return null;
+
+            const match = url.pathname.match(
+                /^\/release\/([a-z0-9!-]+)\/([1-9][0-9]*)(?:\/|$)/i
+            );
+            if (!match) return null;
+
+            const slug = match[1].toLowerCase();
+            const id = String(Number(match[2]));
+            const resource = `https://www.beatport.com/release/${slug}/${id}`;
+
+            return {
+                key: 'beatport:' + id,
+                resource,
+                harmonyUrl: resource,
+            };
+        }
+
         function beatportInfoFromBpTopTracker(value) {
             let url;
             try {
@@ -8301,7 +8328,10 @@
             const latestInfo =
                 location.hostname === 'music.apple.com'
                     ? appleAlbumInfo(sourceHref)
-                    : beatportInfoFromBpTopTracker(sourceHref);
+                    : (
+                        beatportInfoFromBeatport(sourceHref) ||
+                        beatportInfoFromBpTopTracker(sourceHref)
+                    );
 
             if (!latestInfo || latestInfo.key !== info.key) return;
 
@@ -8350,16 +8380,24 @@
                 if (info) items.push({ target, info, large: false });
             });
 
-            const current = beatportInfoFromBpTopTracker(location.href);
+            const directBeatportLink = document.querySelector(
+                '.wrapper section.g-bg-black-opacity-0_7 a[href*="beatport.com/release/"]'
+            );
+            const current =
+                beatportInfoFromBeatport(directBeatportLink?.href || '') ||
+                beatportInfoFromBpTopTracker(location.href);
+
             if (current) {
                 const heading = document.querySelector(
                     '.wrapper section.g-bg-black-opacity-0_7 h1'
                 );
 
                 if (heading) {
-                    // Treat the page heading as the release title target without
-                    // adding or mutating any native BPTopTracker link properties.
-                    heading.dataset.mbtbSourceHref = location.href;
+                    // Prefer BPTopTracker's own direct Beatport release URL when
+                    // available, because that is the exact external relationship
+                    // MusicBrainz stores.
+                    heading.dataset.mbtbSourceHref =
+                        directBeatportLink?.href || location.href;
 
                     items.push({
                         target: heading,
