@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MusicBrainz ToolBox
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.0.26
+// @version      1.0.27
 // @description  Combined MusicBrainz release-editor, recording, barcode, Spotify/Apple Music linking, search, cover-art, Disc ID, and duplicate-edit tools.
 // @author       karpuzikov
 // @license      MIT
@@ -1385,6 +1385,9 @@
         const REMIX_WORD = /\b(?:remix(?:ed)?|rmx|mix|rework|bootleg)\b/i;
 
         let running = false;
+        let scanning = false;
+        let scanTimer = 0;
+        let observerStarted = false;
 
         function pageWindow() {
             try {
@@ -1482,8 +1485,10 @@
             if (!contexts.length) return [];
 
             const credit = unwrap(track?.artistCredit);
-            const names = credit?.names || [];
+            const names = unwrap(credit?.names) || [];
             const indexes = [];
+
+            if (!Array.isArray(names)) return indexes;
 
             names.forEach((part, index) => {
                 const candidates = creditedNames(part);
@@ -1504,14 +1509,13 @@
             return id ? document.getElementById(id) : null;
         }
 
-        function currentIssues() {
-            return releaseTracks()
+        function issuesForTracks(tracks) {
+            return tracks
                 .map(track => {
                     const indexes = detectedRemixerIndexes(track);
                     const credit = unwrap(track?.artistCredit);
-                    const total = Array.isArray(credit?.names)
-                        ? credit.names.length
-                        : 0;
+                    const names = unwrap(credit?.names) || [];
+                    const total = Array.isArray(names) ? names.length : 0;
 
                     return {
                         track,
@@ -1521,6 +1525,10 @@
                     };
                 })
                 .filter(item => item.indexes.length > 0);
+        }
+
+        function currentIssues() {
+            return issuesForTracks(releaseTracks());
         }
 
         function installStyles() {
@@ -1548,7 +1556,10 @@
         function setStatus(text, kind = '') {
             const status = document.getElementById(STATUS_ID);
             if (!status) return;
-            status.textContent = text;
+
+            if (status.textContent !== text) {
+                status.textContent = text;
+            }
 
             if (typeof __mbToolBoxSetStatusKind === 'function') {
                 __mbToolBoxSetStatusKind(status, kind);
@@ -1562,7 +1573,7 @@
             let panel = document.getElementById(PANEL_ID);
 
             if (!issues.length) {
-                panel?.remove();
+                if (panel) panel.remove();
                 return null;
             }
 
@@ -1621,29 +1632,64 @@
             return panel;
         }
 
+        function observeTracklist() {
+            const tracklist = document.getElementById('tracklist');
+            if (!tracklist || !observerStarted) return;
+
+            observer.observe(tracklist, {
+                childList: true,
+                subtree: true,
+            });
+        }
+
         function scan() {
-            installStyles();
+            if (running || scanning) return [];
 
-            const tracks = releaseTracks();
-            const issues = currentIssues();
-            const issueByTrack = new Map(
-                issues.map(item => [item.track, item])
-            );
+            scanning = true;
+            if (observerStarted) observer.disconnect();
 
-            for (const track of tracks) {
-                const row = trackRow(track);
-                if (!row) continue;
+            try {
+                installStyles();
 
-                const issue = issueByTrack.get(track);
-                row.classList.toggle(ROW_CLASS, Boolean(issue));
-                row.classList.toggle(
-                    ALL_REMIXERS_CLASS,
-                    Boolean(issue && !issue.removable)
+                const tracks = releaseTracks();
+                const issues = issuesForTracks(tracks);
+                const issueByTrack = new Map(
+                    issues.map(item => [item.track, item])
                 );
-            }
 
-            ensurePanel(issues);
-            return issues;
+                for (const track of tracks) {
+                    const row = trackRow(track);
+                    if (!row) continue;
+
+                    const issue = issueByTrack.get(track);
+                    row.classList.toggle(ROW_CLASS, Boolean(issue));
+                    row.classList.toggle(
+                        ALL_REMIXERS_CLASS,
+                        Boolean(issue && !issue.removable)
+                    );
+                }
+
+                ensurePanel(issues);
+                return issues;
+            } catch (error) {
+                console.error(
+                    '[MusicBrainz ToolBox] Remixer scan failed:',
+                    error
+                );
+                return [];
+            } finally {
+                scanning = false;
+                observeTracklist();
+            }
+        }
+
+        function scheduleScan(delay = 120) {
+            if (running) return;
+            clearTimeout(scanTimer);
+            scanTimer = setTimeout(() => {
+                scanTimer = 0;
+                scan();
+            }, delay);
         }
 
         function joinPhrase(part) {
@@ -1657,10 +1703,11 @@
             removeIndexes
         ) {
             const source = unwrap(artistCredit);
-            const names = Array.isArray(source?.names)
-                ? source.names
-                : [];
+            const names = unwrap(source?.names) || [];
             const remove = new Set(removeIndexes);
+
+            if (!Array.isArray(names)) return null;
+
             const keptIndexes = names
                 .map((_, index) => index)
                 .filter(index => !remove.has(index));
@@ -1722,6 +1769,10 @@
         function removeDetectedRemixers() {
             if (running) return;
             running = true;
+            clearTimeout(scanTimer);
+            scanTimer = 0;
+
+            if (observerStarted) observer.disconnect();
 
             const button = document.getElementById(BUTTON_ID);
             if (button) button.disabled = true;
@@ -1794,23 +1845,26 @@
                 setStatus('Error: ' + error.message, 'bad');
             } finally {
                 running = false;
-                setTimeout(scan, 0);
+                observeTracklist();
+                scheduleScan(0);
             }
         }
 
         const observer = new MutationObserver(() => {
-            if (!running) scan();
+            scheduleScan();
         });
 
         function start() {
             const tracklist = document.getElementById('tracklist');
             if (!tracklist) return false;
 
-            observer.observe(tracklist, {
-                childList: true,
-                subtree: true,
-            });
+            if (!observerStarted) {
+                observerStarted = true;
+                tracklist.addEventListener('input', () => scheduleScan(), true);
+                tracklist.addEventListener('change', () => scheduleScan(), true);
+            }
 
+            observeTracklist();
             scan();
             return true;
         }
@@ -1825,10 +1879,6 @@
                 subtree: true,
             });
         }
-
-        setInterval(() => {
-            if (!running) scan();
-        }, 1000);
     })();
     }
 
