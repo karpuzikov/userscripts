@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Apple Music works credits -> MusicBrainz
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      2.3.11
+// @version      2.3.12
 // @description  Resolve the correct Apple Music release and import supported Apple Music credits to the proper MusicBrainz Recording, Work, or Release relationships.
 // @author       karpuzikov
 // @license      MIT
@@ -19,6 +19,107 @@
 // @grant        unsafeWindow
 // @run-at       document-end
 // ==/UserScript==
+
+const __amMbNativeFetch = window.fetch.bind(window);
+const __amMbNativeGmXmlhttpRequest = GM_xmlhttpRequest;
+
+function __amMbSleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function __amMbIsMusicBrainzUrl(value) {
+    const raw = typeof value === 'string'
+        ? value
+        : (value?.url || String(value || ''));
+    try {
+        const url = new URL(raw, location.href);
+        const host = url.hostname.toLowerCase();
+        return host === 'musicbrainz.org' ||
+            host.endsWith('.musicbrainz.org');
+    } catch {
+        return false;
+    }
+}
+
+function __amMbRetryAfterMs(value) {
+    const text = String(value || '').trim();
+    if (!text) return 0;
+    const seconds = Number(text);
+    if (Number.isFinite(seconds) && seconds >= 0) return seconds * 1000;
+    const date = Date.parse(text);
+    return Number.isFinite(date) ? Math.max(0, date - Date.now()) : 0;
+}
+
+function __amMbRawHeader(rawHeaders, name) {
+    const wanted = String(name || '').toLowerCase();
+    for (const line of String(rawHeaders || '').split(/\r?\n/)) {
+        const index = line.indexOf(':');
+        if (index < 0) continue;
+        if (line.slice(0, index).trim().toLowerCase() !== wanted) continue;
+        return line.slice(index + 1).trim();
+    }
+    return '';
+}
+
+async function __amMbFetch(input, init) {
+    if (!__amMbIsMusicBrainzUrl(input)) {
+        return __amMbNativeFetch(input, init);
+    }
+    for (;;) {
+        const response = await __amMbNativeFetch(input, init);
+        if (response.status !== 503) return response;
+        await __amMbSleep(Math.max(
+            5000,
+            __amMbRetryAfterMs(response.headers?.get?.('Retry-After'))
+        ));
+    }
+}
+
+function __amMbGmXmlhttpRequest(details) {
+    if (!__amMbIsMusicBrainzUrl(details?.url)) {
+        return __amMbNativeGmXmlhttpRequest(details);
+    }
+
+    let currentRequest = null;
+    let retryTimer = null;
+    let aborted = false;
+
+    const issue = () => {
+        if (aborted) return;
+        const originalOnload = details.onload;
+        currentRequest = __amMbNativeGmXmlhttpRequest({
+            ...details,
+            onload(response) {
+                if (aborted) return;
+                if (response.status === 503) {
+                    retryTimer = setTimeout(
+                        issue,
+                        Math.max(
+                            5000,
+                            __amMbRetryAfterMs(
+                                __amMbRawHeader(
+                                    response.responseHeaders,
+                                    'Retry-After'
+                                )
+                            )
+                        )
+                    );
+                    return;
+                }
+                originalOnload?.(response);
+            },
+        });
+    };
+
+    issue();
+    return {
+        abort() {
+            aborted = true;
+            if (retryTimer !== null) clearTimeout(retryTimer);
+            currentRequest?.abort?.();
+        },
+    };
+}
 
 (() => {
     'use strict';
@@ -160,7 +261,7 @@
             let response;
             try {
                 mbWsLastRequestAt = Date.now();
-                response = await fetch(url, {
+                response = await __amMbFetch(url, {
                     credentials: 'same-origin',
                     headers: { Accept: 'application/json' },
                 });
@@ -546,7 +647,7 @@
 
     function gmRequest(url, options = {}) {
         return new Promise((resolve, reject) => {
-            GM_xmlhttpRequest({
+            __amMbGmXmlhttpRequest({
                 method: options.method || 'GET',
                 url,
                 headers: options.headers || {},
@@ -1193,7 +1294,7 @@
 
     async function submitArtistAliasEdit(mbid, aliasName, artistName) {
         const addAliasUrl = `/artist/${encodeURIComponent(mbid)}/add-alias`;
-        const page = await fetch(addAliasUrl, {
+        const page = await __amMbFetch(addAliasUrl, {
             credentials: 'same-origin',
             headers: { Accept: 'text/html,application/xhtml+xml' },
         });
@@ -1231,7 +1332,7 @@
         );
 
         const action = new URL(form.getAttribute('action') || addAliasUrl, location.origin).href;
-        const response = await fetch(action, {
+        const response = await __amMbFetch(action, {
             method: 'POST',
             credentials: 'same-origin',
             headers: {
@@ -1278,7 +1379,7 @@
     }
 
     async function fetchMbEntity(mbid, fallbackEntityType = 'artist') {
-        const response = await fetch(`/ws/js/entity/${encodeURIComponent(mbid)}`, {
+        const response = await __amMbFetch(`/ws/js/entity/${encodeURIComponent(mbid)}`, {
             credentials: 'same-origin',
         });
 
