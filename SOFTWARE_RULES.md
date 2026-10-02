@@ -36,6 +36,27 @@ A first-time user must be able to understand every core UI element without prior
 
 This is a blocking rule. A userscript update is not considered published until every check below passes.
 
+### Hard post-update delivery gate
+
+This gate exists specifically to prevent a same-version Tampermonkey **Reinstall** screen from ever being caused by a link supplied after publishing an update.
+
+- After publishing or modifying an already-installed userscript, the normal final response must **never contain a direct/raw `.user.js` URL**.
+- The required post-update GitHub link is the immutable **GitHub source/version page** for the exact script commit, for example:
+  `https://github.com/<owner>/<repo>/blob/<40-char-commit>/<path>/<script>.user.js`
+- Do not label that safe GitHub page as `Install` or `Update`; label it `GitHub version`, `GitHub source`, or equivalent.
+- A raw/direct `.user.js` installer URL is allowed only when one of these is true at the moment the link is sent:
+  1. the user explicitly wants a first install and the script is not installed; or
+  2. the user's installed version is explicitly known to be lower than the verified target version.
+- If the installed version is equal to the target, unknown, may already have auto-updated, or cannot be re-verified, a raw/direct `.user.js` URL is forbidden.
+- A previous statement of the installed version is not enough if an update check or auto-update may have happened since then. When in doubt, use the safe GitHub source/version page.
+- Never use wording such as `Download / Install`, `Update here`, or `Install latest` in a post-update reply for an already-installed script.
+- This gate overrides any preference to provide a "download link after every update": satisfy that preference with the immutable GitHub source/version page unless a raw installer link is explicitly safe under the conditions above.
+- Before sending every post-update reply, perform this exact final check:
+  - Does the reply contain `raw.githubusercontent.com` or another direct `.user.js` installer URL?
+  - If yes, is the installed version explicitly known **right now** to be lower than the target?
+  - If no, remove the raw installer URL and replace it with the immutable GitHub source/version page.
+- Failure of this gate is a production-stop condition. Do not continue unrelated publishing until the delivery mistake is corrected.
+
 ### Tampermonkey UPDATE vs REINSTALL
 
 - A direct `.user.js` install URL is **not** an update button. If its `@version` equals the installed version, Tampermonkey correctly shows **Reinstall**, which can reset script settings.
