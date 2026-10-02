@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Harmony ToolBox
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.0.0
+// @version      1.0.1
 // @description  Combines Harmony ISRC copying and one-click MusicBrainz external-ID linking.
 // @author       karpuzikov
 // @license      MIT
@@ -118,6 +118,36 @@
     const RUNNER_HEARTBEAT_MS = 2000;
     const ALLOWED_ENTITY_TYPES = new Set(['artist', 'label', 'recording']);
     const SCRIPT_GITHUB_URL = 'https://github.com/karpuzikov/userscripts/blob/main/musicbrainz-tools/harmony-toolbox/Harmony_ToolBox.user.js';
+
+    function sleep(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    function retryAfterMsFromFetch(response) {
+        const value = response?.headers?.get?.('Retry-After') || '';
+        const seconds = Number(value);
+        if (Number.isFinite(seconds) && seconds >= 0) return seconds * 1000;
+        const date = Date.parse(value);
+        return Number.isFinite(date) ? Math.max(0, date - Date.now()) : 0;
+    }
+
+    function retryAfterMsFromRawHeaders(rawHeaders) {
+        const match = String(rawHeaders || '').match(/^retry-after:\s*(.+)$/im);
+        if (!match) return 0;
+        const value = match[1].trim();
+        const seconds = Number(value);
+        if (Number.isFinite(seconds) && seconds >= 0) return seconds * 1000;
+        const date = Date.parse(value);
+        return Number.isFinite(date) ? Math.max(0, date - Date.now()) : 0;
+    }
+
+    async function fetchMusicBrainzUntilAvailable(input, init) {
+        for (;;) {
+            const response = await fetch(input, init);
+            if (response.status !== 503) return response;
+            await sleep(Math.max(5000, retryAfterMsFromFetch(response)));
+        }
+    }
 
     function readQueue() {
         return GM_getValue(QUEUE_KEY, null);
@@ -256,29 +286,44 @@
 
     function gmJson(url) {
         return new Promise((resolve, reject) => {
-            GM_xmlhttpRequest({
-                method: 'GET',
-                url,
-                headers: { Accept: 'application/json' },
-                timeout: 30000,
-                onload(response) {
-                    if (response.status < 200 || response.status >= 300) {
-                        reject(new Error(`MusicBrainz lookup failed with HTTP ${response.status}.`));
-                        return;
+            const issue = () => {
+                GM_xmlhttpRequest({
+                    method: 'GET',
+                    url,
+                    headers: { Accept: 'application/json' },
+                    timeout: 30000,
+                    onload(response) {
+                        if (response.status === 503) {
+                            setTimeout(
+                                issue,
+                                Math.max(
+                                    5000,
+                                    retryAfterMsFromRawHeaders(
+                                        response.responseHeaders
+                                    )
+                                )
+                            );
+                            return;
+                        }
+                        if (response.status < 200 || response.status >= 300) {
+                            reject(new Error(`MusicBrainz lookup failed with HTTP ${response.status}.`));
+                            return;
+                        }
+                        try {
+                            resolve(JSON.parse(response.responseText));
+                        } catch {
+                            reject(new Error('MusicBrainz lookup returned invalid JSON.'));
+                        }
+                    },
+                    ontimeout() {
+                        reject(new Error('MusicBrainz release-group lookup timed out.'));
+                    },
+                    onerror() {
+                        reject(new Error('MusicBrainz release-group lookup failed.'));
                     }
-                    try {
-                        resolve(JSON.parse(response.responseText));
-                    } catch {
-                        reject(new Error('MusicBrainz lookup returned invalid JSON.'));
-                    }
-                },
-                ontimeout() {
-                    reject(new Error('MusicBrainz release-group lookup timed out.'));
-                },
-                onerror() {
-                    reject(new Error('MusicBrainz release-group lookup failed.'));
-                }
-            });
+                });
+            };
+            issue();
         });
     }
 
@@ -756,7 +801,7 @@
     }
 
     async function submitItem(item) {
-        const getResponse = await fetch(item.url, {
+        const getResponse = await fetchMusicBrainzUntilAvailable(item.url, {
             method: 'GET',
             credentials: 'include',
             cache: 'no-store',
@@ -812,7 +857,7 @@
         const action = new URL(form.getAttribute('action') || getResponse.url, getResponse.url);
         action.hash = '';
 
-        const postResponse = await fetch(action.href, {
+        const postResponse = await fetchMusicBrainzUntilAvailable(action.href, {
             method: 'POST',
             credentials: 'include',
             cache: 'no-store',
