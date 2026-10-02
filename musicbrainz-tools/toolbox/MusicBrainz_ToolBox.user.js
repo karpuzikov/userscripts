@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MusicBrainz ToolBox
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.0.24
+// @version      1.0.25
 // @description  Combined MusicBrainz release-editor, recording, barcode, Spotify/Apple Music/BPTopTracker linking, search, cover-art, Disc ID, and duplicate-edit tools.
 // @author       karpuzikov
 // @license      MIT
@@ -1364,6 +1364,473 @@
         });
 
         reconcileDialog();
+    })();
+    }
+
+    // ============================================================================
+    // Remixer Artist-Credit Checker
+    // Highlights tracks where a remixer named in the track title is also present
+    // in the track artist credit, and offers one-click removal.
+    // ============================================================================
+    if (__mbToolBoxShouldRun(["https://musicbrainz.org/release/add*","https://musicbrainz.org/release/*/edit*","https://beta.musicbrainz.org/release/add*","https://beta.musicbrainz.org/release/*/edit*"], [])) {
+    (() => {
+        'use strict';
+
+        const SCRIPT_URL =
+            'https://github.com/karpuzikov/userscripts/blob/main/musicbrainz-tools/toolbox/MusicBrainz_ToolBox.user.js';
+        const STYLE_ID = 'mb-toolbox-remixer-credit-style';
+        const PANEL_ID = 'mb-toolbox-remixer-credit-panel';
+        const BUTTON_ID = 'mb-toolbox-remove-remixers';
+        const STATUS_ID = 'mb-toolbox-remixer-credit-status';
+        const ROW_CLASS = 'mb-toolbox-remixer-credit-row';
+        const ALL_REMIXERS_CLASS = 'mb-toolbox-remixer-credit-all-remixers';
+        const REMIX_WORD = /\b(?:remix(?:ed)?|rmx|mix|rework|bootleg)\b/i;
+
+        let running = false;
+
+        function pageWindow() {
+            try {
+                return typeof unsafeWindow !== 'undefined' ? unsafeWindow : window;
+            } catch {
+                return window;
+            }
+        }
+
+        function unwrap(value) {
+            return typeof value === 'function' ? value() : value;
+        }
+
+        function editor() {
+            return pageWindow().MB?.releaseEditor ||
+                pageWindow().MB?._releaseEditor ||
+                null;
+        }
+
+        function releaseTracks() {
+            const release = editor()?.rootField?.release?.();
+            if (!release) return [];
+
+            if (typeof release.allTracks === 'function') {
+                return [...release.allTracks()];
+            }
+
+            const tracks = [];
+            for (const medium of unwrap(release.mediums) || []) {
+                for (const track of unwrap(medium.tracks) || []) {
+                    tracks.push(track);
+                }
+            }
+            return tracks;
+        }
+
+        function normalizeMatchText(value) {
+            return String(value ?? '')
+                .normalize('NFKD')
+                .replace(/\p{M}+/gu, '')
+                .toLocaleLowerCase()
+                .replace(/&/g, ' and ')
+                .replace(/[^\p{L}\p{N}]+/gu, ' ')
+                .replace(/\s+/g, ' ')
+                .trim();
+        }
+
+        function remixContexts(title) {
+            const source = String(title || '');
+            const contexts = [];
+
+            const bracketPattern = /[\(\[\{]([^\)\]\}]{1,240})[\)\]\}]/g;
+            for (const match of source.matchAll(bracketPattern)) {
+                const value = String(match[1] || '').trim();
+                if (REMIX_WORD.test(value)) contexts.push(value);
+            }
+
+            const suffixParts = source.split(/\s(?:-|–|—|:)\s/);
+            if (suffixParts.length > 1) {
+                for (let index = 1; index < suffixParts.length; index++) {
+                    const value = suffixParts.slice(index).join(' - ').trim();
+                    if (REMIX_WORD.test(value)) contexts.push(value);
+                }
+            }
+
+            const remixedBy = source.match(/\bremixed\s+by\s+(.{1,180})$/i);
+            if (remixedBy) contexts.push('remixed by ' + remixedBy[1]);
+
+            return [...new Set(
+                contexts.map(value => value.trim()).filter(Boolean)
+            )];
+        }
+
+        function creditedNames(part) {
+            const artist = unwrap(part?.artist) || {};
+            return [
+                unwrap(part?.name),
+                unwrap(artist.name),
+            ]
+                .map(value => String(value || '').trim())
+                .filter(Boolean);
+        }
+
+        function contextContainsArtist(context, artistName) {
+            const haystack = normalizeMatchText(context);
+            const needle = normalizeMatchText(artistName);
+            if (needle.length < 2) return false;
+
+            return (' ' + haystack + ' ').includes(' ' + needle + ' ');
+        }
+
+        function detectedRemixerIndexes(track) {
+            const title = String(unwrap(track?.name) || '').trim();
+            const contexts = remixContexts(title);
+            if (!contexts.length) return [];
+
+            const credit = unwrap(track?.artistCredit);
+            const names = credit?.names || [];
+            const indexes = [];
+
+            names.forEach((part, index) => {
+                const candidates = creditedNames(part);
+                if (!candidates.length) return;
+
+                const matched = contexts.some(context =>
+                    candidates.some(name => contextContainsArtist(context, name))
+                );
+
+                if (matched) indexes.push(index);
+            });
+
+            return indexes;
+        }
+
+        function trackRow(track) {
+            const id = String(track?.elementID || '').trim();
+            return id ? document.getElementById(id) : null;
+        }
+
+        function currentIssues() {
+            return releaseTracks()
+                .map(track => {
+                    const indexes = detectedRemixerIndexes(track);
+                    const credit = unwrap(track?.artistCredit);
+                    const total = Array.isArray(credit?.names)
+                        ? credit.names.length
+                        : 0;
+
+                    return {
+                        track,
+                        indexes,
+                        total,
+                        removable: indexes.length > 0 && indexes.length < total,
+                    };
+                })
+                .filter(item => item.indexes.length > 0);
+        }
+
+        function installStyles() {
+            if (document.getElementById(STYLE_ID)) return;
+
+            const style = document.createElement('style');
+            style.id = STYLE_ID;
+            style.textContent = [
+                '#tracklist tr.' + ROW_CLASS + ' > td {',
+                '    background: #ffd7d7 !important;',
+                '}',
+                '#tracklist tr.' + ROW_CLASS + ' > td:first-child {',
+                '    box-shadow: inset 4px 0 0 #c62828 !important;',
+                '}',
+                '#tracklist tr.' + ALL_REMIXERS_CLASS + ' > td {',
+                '    background: #ffe8c2 !important;',
+                '}',
+                '#tracklist tr.' + ALL_REMIXERS_CLASS + ' > td:first-child {',
+                '    box-shadow: inset 4px 0 0 #d97706 !important;',
+                '}',
+            ].join('\n');
+            document.head.appendChild(style);
+        }
+
+        function setStatus(text, kind = '') {
+            const status = document.getElementById(STATUS_ID);
+            if (!status) return;
+            status.textContent = text;
+
+            if (typeof __mbToolBoxSetStatusKind === 'function') {
+                __mbToolBoxSetStatusKind(status, kind);
+            }
+        }
+
+        function ensurePanel(issues) {
+            const tracklist = document.getElementById('tracklist');
+            if (!tracklist) return null;
+
+            let panel = document.getElementById(PANEL_ID);
+
+            if (!issues.length) {
+                panel?.remove();
+                return null;
+            }
+
+            if (!panel) {
+                panel = document.createElement('fieldset');
+                panel.id = PANEL_ID;
+                panel.className = 'mb-toolbox-native-panel';
+
+                const legend = document.createElement('legend');
+                legend.textContent = 'Remixer credits';
+
+                const actions = document.createElement('div');
+                actions.className = 'buttons mb-toolbox-native-actions';
+
+                const button = document.createElement('button');
+                button.id = BUTTON_ID;
+                button.type = 'button';
+                button.textContent = 'Remove remixers';
+                button.addEventListener('click', removeDetectedRemixers);
+
+                const status = document.createElement('span');
+                status.id = STATUS_ID;
+                status.className = 'mb-toolbox-native-status';
+                status.setAttribute('role', 'status');
+
+                actions.append(button);
+                panel.append(legend, actions, status);
+                tracklist.insertBefore(panel, tracklist.firstChild);
+            }
+
+            const button = document.getElementById(BUTTON_ID);
+            const removable = issues.filter(item => item.removable).length;
+            const totalParts = issues.reduce(
+                (sum, item) => sum + item.indexes.length,
+                0
+            );
+
+            if (button) {
+                button.disabled = running || removable === 0;
+                button.title =
+                    totalParts + ' remixer artist-credit part(s) detected across ' +
+                    issues.length + ' track(s).';
+            }
+
+            if (!running) {
+                const manual = issues.length - removable;
+                setStatus(
+                    totalParts + ' remixer credit(s) detected across ' +
+                    issues.length + ' track(s)' +
+                    (manual
+                        ? ' | ' + manual + ' track(s) need manual review'
+                        : '')
+                );
+            }
+
+            return panel;
+        }
+
+        function scan() {
+            installStyles();
+
+            const tracks = releaseTracks();
+            const issues = currentIssues();
+            const issueByTrack = new Map(
+                issues.map(item => [item.track, item])
+            );
+
+            for (const track of tracks) {
+                const row = trackRow(track);
+                if (!row) continue;
+
+                const issue = issueByTrack.get(track);
+                row.classList.toggle(ROW_CLASS, Boolean(issue));
+                row.classList.toggle(
+                    ALL_REMIXERS_CLASS,
+                    Boolean(issue && !issue.removable)
+                );
+            }
+
+            ensurePanel(issues);
+            return issues;
+        }
+
+        function joinPhrase(part) {
+            return String(
+                unwrap(part?.joinPhrase ?? part?.join_phrase) || ''
+            );
+        }
+
+        function rebuildArtistCreditWithoutIndexes(
+            artistCredit,
+            removeIndexes
+        ) {
+            const source = unwrap(artistCredit);
+            const names = Array.isArray(source?.names)
+                ? source.names
+                : [];
+            const remove = new Set(removeIndexes);
+            const keptIndexes = names
+                .map((_, index) => index)
+                .filter(index => !remove.has(index));
+
+            if (!keptIndexes.length) return null;
+
+            const nextNames = keptIndexes.map(
+                (originalIndex, keptPosition) => {
+                    const part = names[originalIndex];
+                    const copy = {...part};
+
+                    if (keptPosition === keptIndexes.length - 1) {
+                        copy.joinPhrase = '';
+                        if ('join_phrase' in copy) copy.join_phrase = '';
+                        return copy;
+                    }
+
+                    const nextOriginalIndex =
+                        keptIndexes[keptPosition + 1];
+                    let bridge = '';
+
+                    for (
+                        let index = originalIndex;
+                        index < nextOriginalIndex;
+                        index++
+                    ) {
+                        const value = joinPhrase(names[index]);
+                        if (value) bridge = value;
+                    }
+
+                    copy.joinPhrase = bridge;
+                    if ('join_phrase' in copy) {
+                        copy.join_phrase = bridge;
+                    }
+                    return copy;
+                }
+            );
+
+            return {
+                ...source,
+                names: nextNames,
+            };
+        }
+
+        function appendEditNote() {
+            const editNote = editor()?.rootField?.editNote;
+            if (typeof editNote !== 'function') return;
+
+            const current = String(editNote() || '');
+            if (current.includes(SCRIPT_URL)) return;
+
+            editNote(
+                current.trimEnd()
+                    ? current.trimEnd() + '\n\nScript: ' + SCRIPT_URL
+                    : 'Script: ' + SCRIPT_URL
+            );
+        }
+
+        function removeDetectedRemixers() {
+            if (running) return;
+            running = true;
+
+            const button = document.getElementById(BUTTON_ID);
+            if (button) button.disabled = true;
+            setStatus('Removing detected remixer credits...');
+
+            try {
+                const issues = currentIssues();
+                let changedTracks = 0;
+                let removedParts = 0;
+                let skippedTracks = 0;
+
+                for (const issue of issues) {
+                    if (!issue.removable) {
+                        skippedTracks++;
+                        continue;
+                    }
+
+                    if (
+                        typeof issue.track.artistCredit !== 'function'
+                    ) {
+                        skippedTracks++;
+                        continue;
+                    }
+
+                    const nextCredit =
+                        rebuildArtistCreditWithoutIndexes(
+                            issue.track.artistCredit,
+                            issue.indexes
+                        );
+
+                    if (!nextCredit) {
+                        skippedTracks++;
+                        continue;
+                    }
+
+                    issue.track.artistCredit(nextCredit);
+                    changedTracks++;
+                    removedParts += issue.indexes.length;
+                }
+
+                if (changedTracks) appendEditNote();
+
+                const parts = [];
+                if (removedParts) {
+                    parts.push(
+                        removedParts +
+                        ' remixer credit(s) removed from ' +
+                        changedTracks +
+                        ' track(s)'
+                    );
+                }
+                if (skippedTracks) {
+                    parts.push(
+                        skippedTracks +
+                        ' track(s) skipped because removing every artist would leave an empty credit'
+                    );
+                }
+
+                setStatus(
+                    parts.length
+                        ? parts.join(' | ')
+                        : 'No removable remixer credits found.',
+                    removedParts ? 'ok' : ''
+                );
+            } catch (error) {
+                console.error(
+                    '[MusicBrainz ToolBox] Remove remixers failed:',
+                    error
+                );
+                setStatus('Error: ' + error.message, 'bad');
+            } finally {
+                running = false;
+                setTimeout(scan, 0);
+            }
+        }
+
+        const observer = new MutationObserver(() => {
+            if (!running) scan();
+        });
+
+        function start() {
+            const tracklist = document.getElementById('tracklist');
+            if (!tracklist) return false;
+
+            observer.observe(tracklist, {
+                childList: true,
+                subtree: true,
+            });
+
+            scan();
+            return true;
+        }
+
+        if (!start()) {
+            const bootstrapObserver = new MutationObserver(() => {
+                if (start()) bootstrapObserver.disconnect();
+            });
+
+            bootstrapObserver.observe(document.documentElement, {
+                childList: true,
+                subtree: true,
+            });
+        }
+
+        setInterval(() => {
+            if (!running) scan();
+        }, 1000);
     })();
     }
 
