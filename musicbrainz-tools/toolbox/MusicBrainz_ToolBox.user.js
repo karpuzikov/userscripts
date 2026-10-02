@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MusicBrainz ToolBox
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.0.19
+// @version      1.0.20
 // @description  Combined MusicBrainz release-editor, recording, barcode, Spotify/Apple Music/BPTopTracker linking, search, cover-art, Disc ID, and duplicate-edit tools.
 // @author       karpuzikov
 // @license      MIT
@@ -11,8 +11,8 @@
 // @match        https://music.apple.com/*
 // @match        https://www.bptoptracker.com/*
 // @match        https://bptoptracker.com/*
-// @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/toolbox/MusicBrainz_ToolBox.user.js?v=1.0.19
-// @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/toolbox/MusicBrainz_ToolBox.user.js?v=1.0.19
+// @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/toolbox/MusicBrainz_ToolBox.user.js?v=1.0.20
+// @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/toolbox/MusicBrainz_ToolBox.user.js?v=1.0.20
 // @supportURL   https://github.com/karpuzikov/userscripts
 // @grant        GM_getValue
 // @grant        GM_setValue
@@ -8175,14 +8175,19 @@
             const host = url.hostname.toLowerCase().replace(/^www\./, '');
             if (host !== 'bptoptracker.com') return null;
 
+            /*
+             * BPTopTracker is a mirror of Beatport. Never query MusicBrainz for
+             * a bptoptracker.com URL. Convert the release URL 1:1 to Beatport
+             * and use that external URL for both MusicBrainz and Harmony.
+             */
             const match = url.pathname.match(
-                /^\/release\/([a-z0-9!-]+)\/([1-9][0-9]*)(?:\/|$)/i
+                /^(\/release\/[^/?#]+\/([1-9][0-9]*))(?:\/|$)/i
             );
             if (!match) return null;
 
-            const slug = match[1].toLowerCase();
+            const releasePath = match[1].replace(/\/+$/, '');
             const id = String(Number(match[2]));
-            const resource = `https://www.beatport.com/release/${slug}/${id}`;
+            const resource = 'https://www.beatport.com' + releasePath;
 
             return {
                 key: 'beatport:' + id,
@@ -8383,9 +8388,13 @@
             const directBeatportLink = document.querySelector(
                 '.wrapper section.g-bg-black-opacity-0_7 a[href*="beatport.com/release/"]'
             );
+
+            // BPTopTracker's own release URL is authoritative for the mirror
+            // mapping. Convert it to Beatport first; the visible Beatport link
+            // is only a fallback.
             const current =
-                beatportInfoFromBeatport(directBeatportLink?.href || '') ||
-                beatportInfoFromBpTopTracker(location.href);
+                beatportInfoFromBpTopTracker(location.href) ||
+                beatportInfoFromBeatport(directBeatportLink?.href || '');
 
             if (current) {
                 const heading = document.querySelector(
@@ -8396,8 +8405,7 @@
                     // Prefer BPTopTracker's own direct Beatport release URL when
                     // available, because that is the exact external relationship
                     // MusicBrainz stores.
-                    heading.dataset.mbtbSourceHref =
-                        directBeatportLink?.href || location.href;
+                    heading.dataset.mbtbSourceHref = location.href;
 
                     items.push({
                         target: heading,
