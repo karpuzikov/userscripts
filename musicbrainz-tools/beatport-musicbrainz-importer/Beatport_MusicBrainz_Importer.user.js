@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Beatport - MusicBrainz Importer
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.2.11
+// @version      1.2.12
 // @description  Import Beatport and BPTopTracker releases into MusicBrainz, with BPTopTracker 500-page redirect, Beatport enrichment, ISRC matching, and release-source handling.
 // @author       karpuzikov
 // @match        https://www.beatport.com/*
@@ -2694,13 +2694,29 @@
             .filter(Boolean);
     }
 
+    function releaseHeadingText(section) {
+        const heading =
+            section?.querySelector('h1') ||
+            document.querySelector('h1');
+
+        if (!heading) return '';
+
+        const clone = heading.cloneNode(true);
+        clone.querySelectorAll(
+            [
+                '.mb-toolbox-release-list-indicator',
+                '#beatport-mb-release-indicator',
+                '[data-mbtb-target]',
+            ].join(',')
+        ).forEach(node => node.remove());
+
+        return normalizeWhitespace(clone.textContent);
+    }
+
     function parsePage() {
         const section = findReleaseSection();
 
-        const title = normalizeWhitespace(
-            section.querySelector('h1')?.textContent ||
-                document.querySelector('h1')?.textContent
-        );
+        const title = releaseHeadingText(section);
 
         const releaseArtistContainer =
             section.querySelector('h1 + .g-font-size-18') ||
