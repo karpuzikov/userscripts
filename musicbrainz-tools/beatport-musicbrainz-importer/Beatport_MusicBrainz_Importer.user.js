@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Beatport - MusicBrainz Importer
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.2.13
+// @version      1.2.14
 // @description  Import Beatport and BPTopTracker releases into MusicBrainz, with BPTopTracker 500-page redirect, Beatport enrichment, ISRC matching, and release-source handling.
 // @author       karpuzikov
 // @match        https://www.beatport.com/*
@@ -21,6 +21,107 @@
 // @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/beatport-musicbrainz-importer/Beatport_MusicBrainz_Importer.user.js
 // @run-at       document-idle
 // ==/UserScript==
+
+const __bpMbNativeFetch = window.fetch.bind(window);
+const __bpMbNativeGmXmlhttpRequest = GM_xmlhttpRequest;
+
+function __bpMbSleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function __bpMbIsMusicBrainzUrl(value) {
+    const raw = typeof value === 'string'
+        ? value
+        : (value?.url || String(value || ''));
+    try {
+        const url = new URL(raw, location.href);
+        const host = url.hostname.toLowerCase();
+        return host === 'musicbrainz.org' ||
+            host.endsWith('.musicbrainz.org');
+    } catch {
+        return false;
+    }
+}
+
+function __bpMbRetryAfterMs(value) {
+    const text = String(value || '').trim();
+    if (!text) return 0;
+    const seconds = Number(text);
+    if (Number.isFinite(seconds) && seconds >= 0) return seconds * 1000;
+    const date = Date.parse(text);
+    return Number.isFinite(date) ? Math.max(0, date - Date.now()) : 0;
+}
+
+function __bpMbRawHeader(rawHeaders, name) {
+    const wanted = String(name || '').toLowerCase();
+    for (const line of String(rawHeaders || '').split(/\r?\n/)) {
+        const index = line.indexOf(':');
+        if (index < 0) continue;
+        if (line.slice(0, index).trim().toLowerCase() !== wanted) continue;
+        return line.slice(index + 1).trim();
+    }
+    return '';
+}
+
+async function __bpMbFetch(input, init) {
+    if (!__bpMbIsMusicBrainzUrl(input)) {
+        return __bpMbNativeFetch(input, init);
+    }
+    for (;;) {
+        const response = await __bpMbNativeFetch(input, init);
+        if (response.status !== 503) return response;
+        await __bpMbSleep(Math.max(
+            5000,
+            __bpMbRetryAfterMs(response.headers?.get?.('Retry-After'))
+        ));
+    }
+}
+
+function __bpMbGmXmlhttpRequest(details) {
+    if (!__bpMbIsMusicBrainzUrl(details?.url)) {
+        return __bpMbNativeGmXmlhttpRequest(details);
+    }
+
+    let currentRequest = null;
+    let retryTimer = null;
+    let aborted = false;
+
+    const issue = () => {
+        if (aborted) return;
+        const originalOnload = details.onload;
+        currentRequest = __bpMbNativeGmXmlhttpRequest({
+            ...details,
+            onload(response) {
+                if (aborted) return;
+                if (response.status === 503) {
+                    retryTimer = setTimeout(
+                        issue,
+                        Math.max(
+                            5000,
+                            __bpMbRetryAfterMs(
+                                __bpMbRawHeader(
+                                    response.responseHeaders,
+                                    'Retry-After'
+                                )
+                            )
+                        )
+                    );
+                    return;
+                }
+                originalOnload?.(response);
+            },
+        });
+    };
+
+    issue();
+    return {
+        abort() {
+            aborted = true;
+            if (retryTimer !== null) clearTimeout(retryTimer);
+            currentRequest?.abort?.();
+        },
+    };
+}
 
 // BPTopTracker HTTP 500 fallback
 (() => {
@@ -255,7 +356,7 @@
         if (page > 1) {
             url += `&per_page=100&page=${page}&description=${encodeURIComponent(parts.slug)}`;
         }
-        const response = await fetch(url, { credentials: 'same-origin' });
+        const response = await __bpMbFetch(url, { credentials: 'same-origin' });
         if (!response.ok) throw new Error(`Beatport metadata request failed: HTTP ${response.status}`);
         const json = await response.json();
         return json.pageProps || json.props?.pageProps || null;
@@ -406,7 +507,7 @@
 
     function gmTextRequest(url, { headers = {}, timeout = 60000, allow404 = false } = {}) {
         return new Promise((resolve, reject) => {
-            GM_xmlhttpRequest({
+            __bpMbGmXmlhttpRequest({
                 method: 'GET',
                 url,
                 headers,
@@ -436,7 +537,7 @@
 
     function mbHttpGet(url) {
         return new Promise((resolve, reject) => {
-            GM_xmlhttpRequest({
+            __bpMbGmXmlhttpRequest({
                 method: 'GET',
                 url,
                 headers: { Accept: 'application/json' },
@@ -914,7 +1015,7 @@
 
     function githubCacheGet(url) {
         return new Promise((resolve, reject) => {
-            GM_xmlhttpRequest({
+            __bpMbGmXmlhttpRequest({
                 method: 'GET',
                 url,
                 headers: {
@@ -1251,7 +1352,7 @@
 
     function gmFormRequest(method, url, body = null) {
         return new Promise((resolve, reject) => {
-            GM_xmlhttpRequest({
+            __bpMbGmXmlhttpRequest({
                 method,
                 url,
                 headers: body ? {
@@ -2588,7 +2689,7 @@
             }
 
             try {
-                const response = await fetch(source.href, {
+                const response = await __bpMbFetch(source.href, {
                     credentials: 'same-origin',
                 });
                 if (!response.ok) return '';
@@ -2687,7 +2788,7 @@
 
     function requestJson(url) {
         return new Promise((resolve, reject) => {
-            GM_xmlhttpRequest({
+            __bpMbGmXmlhttpRequest({
                 method: 'GET',
                 url,
                 headers: {Accept: 'application/json'},
