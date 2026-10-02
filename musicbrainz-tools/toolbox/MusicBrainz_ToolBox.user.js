@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MusicBrainz ToolBox
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.0.27
+// @version      1.0.28
 // @description  Combined MusicBrainz release-editor, recording, barcode, Spotify/Apple Music linking, search, cover-art, Disc ID, and duplicate-edit tools.
 // @author       karpuzikov
 // @license      MIT
@@ -6712,6 +6712,7 @@
         function keepRecordingAssociationLocked(trackModel, recordingEntity) {
             if (
                 !trackModel ||
+                trackModel.__mbToolBoxManualRecordingEdit ||
                 typeof trackModel.recording !== 'function' ||
                 !recordingEntity?.gid
             ) {
@@ -6876,7 +6877,8 @@
             const subscription = trackModel.recordingValue.subscribe(value => {
                 if (
                     value?.gid &&
-                    !trackModel.__mbToolBoxRecordingLock
+                    !trackModel.__mbToolBoxRecordingLock &&
+                    !trackModel.__mbToolBoxManualRecordingEdit
                 ) {
                     keepRecordingAssociationLocked(trackModel, value);
                 }
@@ -6888,6 +6890,10 @@
         function protectAllLinkedRecordings() {
             for (const trackModel of releaseTrackModels()) {
                 installRecordingLockWatcher(trackModel);
+
+                if (trackModel?.__mbToolBoxManualRecordingEdit) {
+                    continue;
+                }
 
                 const recording =
                     typeof trackModel.recording === 'function'
@@ -6904,38 +6910,168 @@
             }
         }
 
-        function allowExplicitManualRecordingRemoval() {
-            const bubble = PAGE_WINDOW.MB?.releaseEditor?.recordingBubble;
-            const trackModel =
-                typeof bubble?.currentTrack === 'function'
-                    ? bubble.currentTrack()
-                    : (
-                        typeof bubble?.target === 'function'
-                            ? bubble.target()
-                            : null
-                    );
+        let manualRecordingEditTrack = null;
+        let manualRecordingEditToken = 0;
+        let manualRecordingOpenRequested = false;
 
-            trackModel?.__mbToolBoxRecordingLock?.dispose?.();
-            trackModel?.__mbToolBoxExactIsrcGuard?.dispose?.();
+        function currentRecordingForTrack(trackModel) {
+            if (typeof trackModel?.recording !== 'function') return null;
+            return typeof trackModel.recording.peek === 'function'
+                ? trackModel.recording.peek()
+                : trackModel.recording();
         }
 
-        /*
-         * This is the one native manual unlink path in the release editor:
-         * selecting "Add a new recording" explicitly removes the current
-         * recording association. Capture the real user click before Knockout
-         * changes the model so the lock does not fight the user's request.
-         */
-        document.addEventListener('click', event => {
-            if (!event.isTrusted) return;
-
-            const input = event.target?.closest?.(
-                '#recording-assoc-bubble input#add-new-recording[name="recording-selection"]'
-            );
-
-            if (input) {
-                allowExplicitManualRecordingRemoval();
+        function finishManualRecordingEdit(trackModel, token) {
+            if (
+                !trackModel ||
+                trackModel.__mbToolBoxManualRecordingEdit !== token
+            ) {
+                return;
             }
-        }, true);
+
+            delete trackModel.__mbToolBoxManualRecordingEdit;
+
+            if (manualRecordingEditTrack === trackModel) {
+                manualRecordingEditTrack = null;
+            }
+
+            const recording = currentRecordingForTrack(trackModel);
+            if (recording?.gid) {
+                keepRecordingAssociationLocked(trackModel, recording);
+            }
+        }
+
+        function beginManualRecordingEdit(trackModel) {
+            if (!trackModel) return;
+
+            if (
+                manualRecordingEditTrack &&
+                manualRecordingEditTrack !== trackModel
+            ) {
+                const previousTrack = manualRecordingEditTrack;
+                const previousToken =
+                    previousTrack.__mbToolBoxManualRecordingEdit;
+                finishManualRecordingEdit(previousTrack, previousToken);
+            }
+
+            const token = ++manualRecordingEditToken;
+            trackModel.__mbToolBoxManualRecordingEdit = token;
+            manualRecordingEditTrack = trackModel;
+
+            /*
+             * The lock exists only to prevent MusicBrainz from automatically
+             * dropping a recording because track metadata changed. Once the
+             * user explicitly opens the native Recording editor, every manual
+             * recording choice must be allowed.
+             */
+            trackModel.__mbToolBoxRecordingLock?.dispose?.();
+            trackModel.__mbToolBoxExactIsrcGuard?.dispose?.();
+        }
+
+        function installManualRecordingEditSupport() {
+            const bubble = PAGE_WINDOW.MB?.releaseEditor?.recordingBubble;
+            if (!bubble || bubble.__mbToolBoxManualEditSupport) return;
+
+            bubble.__mbToolBoxManualEditSupport = true;
+
+            if (typeof bubble.visible?.subscribe === 'function') {
+                bubble.visible.subscribe(visible => {
+                    if (visible) {
+                        if (manualRecordingOpenRequested) {
+                            const trackModel =
+                                typeof bubble.currentTrack === 'function'
+                                    ? bubble.currentTrack()
+                                    : (
+                                        typeof bubble.target === 'function'
+                                            ? bubble.target()
+                                            : null
+                                    );
+                            beginManualRecordingEdit(trackModel);
+                        }
+
+                        manualRecordingOpenRequested = false;
+                        return;
+                    }
+
+                    manualRecordingOpenRequested = false;
+
+                    if (manualRecordingEditTrack) {
+                        const trackModel = manualRecordingEditTrack;
+                        const token =
+                            trackModel.__mbToolBoxManualRecordingEdit;
+
+                        setTimeout(
+                            () => finishManualRecordingEdit(trackModel, token),
+                            0
+                        );
+                    }
+                });
+            }
+
+            /*
+             * The native Recording bubble can move to the previous/next track
+             * without closing. Transfer the manual-edit session with it.
+             */
+            if (typeof bubble.target?.subscribe === 'function') {
+                bubble.target.subscribe(trackModel => {
+                    if (
+                        !manualRecordingEditTrack ||
+                        !bubble.visible?.() ||
+                        !trackModel ||
+                        trackModel === manualRecordingEditTrack
+                    ) {
+                        return;
+                    }
+
+                    const previousTrack = manualRecordingEditTrack;
+                    const previousToken =
+                        previousTrack.__mbToolBoxManualRecordingEdit;
+
+                    finishManualRecordingEdit(
+                        previousTrack,
+                        previousToken
+                    );
+                    beginManualRecordingEdit(trackModel);
+                });
+            }
+
+            document.addEventListener('click', event => {
+                if (!event.isTrusted) return;
+
+                const editButton = event.target?.closest?.(
+                    'button.edit-track-recording'
+                );
+
+                if (editButton) {
+                    manualRecordingOpenRequested = true;
+
+                    // Clear a stale request if MusicBrainz does not open the
+                    // bubble for any reason.
+                    setTimeout(() => {
+                        manualRecordingOpenRequested = false;
+                    }, 1000);
+                    return;
+                }
+
+                const explicitChoice = event.target?.closest?.(
+                    '#recording-assoc-bubble input[name="recording-selection"], ' +
+                    '#recording-assoc-bubble label[for="add-new-recording"]'
+                );
+
+                if (!explicitChoice) return;
+
+                const trackModel =
+                    typeof bubble.currentTrack === 'function'
+                        ? bubble.currentTrack()
+                        : (
+                            typeof bubble.target === 'function'
+                                ? bubble.target()
+                                : null
+                        );
+
+                beginManualRecordingEdit(trackModel);
+            }, true);
+        }
 
         async function linkExactIsrcRecording(row, trackModel, candidate, expectedIsrc) {
             if (!trackModel || typeof trackModel.recording !== 'function') {
@@ -7594,6 +7730,7 @@
             migrateLocalIsrcChoices();
             updateGithubCacheButton(panel);
             syncGithubCacheQuietly(panel);
+            installManualRecordingEditSupport();
             protectAllLinkedRecordings();
             return true;
         }
