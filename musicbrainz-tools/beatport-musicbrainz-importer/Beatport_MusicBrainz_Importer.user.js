@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Beatport - MusicBrainz Importer
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.2.8
+// @version      1.2.10
 // @description  Import Beatport and BPTopTracker releases into MusicBrainz with Beatport enrichment, ISRC matching, and release-source handling.
 // @author       karpuzikov
 // @match        https://www.beatport.com/*
@@ -35,6 +35,11 @@
     const PAID_STREAMING = 980;
     const VARIOUS_ARTISTS_MBID = '89ad4ac3-39f7-470e-963a-56509c546377';
     const UI_ID = 'beatport-musicbrainz-importer';
+    const MB_RELEASE_INDICATOR_ID = 'beatport-mb-release-indicator';
+    const MB_RELEASE_INDICATOR_STYLE_ID = 'beatport-mb-release-indicator-style';
+    const MB_RELEASE_LINK_CACHE_KEY = 'beatport-mb-release-links:v1';
+    const MB_RELEASE_FOUND_TTL = 30 * 24 * 60 * 60 * 1000;
+    const MB_RELEASE_MISSING_TTL = 15 * 1000;
     const MAX_DIFFERENCE_MS = 7000;
     const MB_REQUEST_GAP_MS = 1100;
     const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -77,6 +82,8 @@
     let nextMbRequestAt = 0;
     let appleTokenPromise = null;
     let processSerial = 0;
+    const mbReleaseLinkPending = new Map();
+    let currentReleaseForIndicator = null;
 
     const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -1434,7 +1441,11 @@
             try {
                 const json = await appleApiRequest(url.href, 'https://music.apple.com/us/browse');
                 const albums = (json.data || []).filter(item => item.type === 'albums');
-                const album = albums.find(item => equalGtin(item.attributes?.upc, barcode)) || albums[0];
+                // Apple may return non-matching albums for filter[upc]; never fall back to an unchecked result.
+                const album = albums.find(item => {
+                    const candidateUpc = item?.attributes?.upc;
+                    return candidateUpc && equalGtin(candidateUpc, barcode);
+                });
                 if (album?.attributes?.url) {
                     return {
                         url: album.attributes.url,
@@ -1609,6 +1620,266 @@
             `ISRCs imported from Beatport: ${cleanBeatportUrl()}\nImporter: ${GITHUB_SCRIPT_URL}`
         );
         window.open(target.toString(), '_blank', 'noopener');
+    }
+
+
+    function canonicalBeatportReleaseResource() {
+        const parts = releasePathParts();
+        if (!parts) return '';
+        return `https://www.beatport.com/release/${parts.slug.toLowerCase()}/${String(Number(parts.id))}`;
+    }
+
+    function readMbReleaseLinkCache() {
+        try {
+            const value = GM_getValue(MB_RELEASE_LINK_CACHE_KEY, {});
+            return value && typeof value === 'object' ? value : {};
+        } catch {
+            return {};
+        }
+    }
+
+    function writeMbReleaseLinkCache(cache) {
+        try {
+            const entries = Object.entries(cache)
+                .sort((a, b) => Number(b[1]?.checkedAt || 0) - Number(a[1]?.checkedAt || 0))
+                .slice(0, 500);
+            GM_setValue(MB_RELEASE_LINK_CACHE_KEY, Object.fromEntries(entries));
+        } catch {
+            // Cache failure must never break the importer.
+        }
+    }
+
+    function cachedMbReleaseLinks(resource, force = false) {
+        if (force || !resource) return null;
+        const item = readMbReleaseLinkCache()[resource];
+        if (!item?.checkedAt || !Array.isArray(item.releases)) return null;
+
+        const ttl = item.releases.length
+            ? MB_RELEASE_FOUND_TTL
+            : MB_RELEASE_MISSING_TTL;
+        return Date.now() - Number(item.checkedAt) <= ttl
+            ? item.releases
+            : null;
+    }
+
+    function storeMbReleaseLinks(resource, releases) {
+        const cache = readMbReleaseLinkCache();
+        cache[resource] = {
+            checkedAt: Date.now(),
+            releases,
+        };
+        writeMbReleaseLinkCache(cache);
+    }
+
+    function parseMbReleaseRelations(data) {
+        const unique = new Map();
+
+        for (const relation of Array.isArray(data?.relations) ? data.relations : []) {
+            const release = relation?.release;
+            const id = String(release?.id || '').trim().toLowerCase();
+            if (!UUID.test(id) || unique.has(id)) continue;
+
+            unique.set(id, {
+                id,
+                title: normalizeSpace(release?.title),
+                disambiguation: normalizeSpace(release?.disambiguation),
+            });
+        }
+
+        return [...unique.values()];
+    }
+
+    async function lookupMbReleasesForBeatport(resource, force = false) {
+        const cached = cachedMbReleaseLinks(resource, force);
+        if (cached !== null) return cached;
+
+        const pendingKey = resource + (force ? ':force' : '');
+        if (mbReleaseLinkPending.has(pendingKey)) {
+            return mbReleaseLinkPending.get(pendingKey);
+        }
+
+        const promise = (async () => {
+            try {
+                const data = await mbJson(
+                    '/url?resource=' + encodeURIComponent(resource) +
+                    '&inc=release-rels&fmt=json',
+                    {allow404: true}
+                );
+                const releases = parseMbReleaseRelations(data);
+                storeMbReleaseLinks(resource, releases);
+                return releases;
+            } catch (error) {
+                console.warn(
+                    '[Beatport MB Importer] MusicBrainz release-link lookup failed:',
+                    resource,
+                    error
+                );
+                return null;
+            } finally {
+                mbReleaseLinkPending.delete(pendingKey);
+            }
+        })();
+
+        mbReleaseLinkPending.set(pendingKey, promise);
+        return promise;
+    }
+
+    function musicBrainzCatalogSearchUrl(catalogNumber) {
+        const value = normalizeSpace(catalogNumber);
+        if (!value) return 'https://musicbrainz.org/search?type=release&method=indexed&query=';
+
+        const url = new URL('https://musicbrainz.org/search');
+        url.searchParams.set('query', 'catno:"' + value.replace(/"/g, '\\"') + '"');
+        url.searchParams.set('type', 'release');
+        url.searchParams.set('method', 'indexed');
+        return url.href;
+    }
+
+    function installMbReleaseIndicatorStyles() {
+        if (document.getElementById(MB_RELEASE_INDICATOR_STYLE_ID)) return;
+
+        const style = document.createElement('style');
+        style.id = MB_RELEASE_INDICATOR_STYLE_ID;
+        style.textContent = `
+            #${MB_RELEASE_INDICATOR_ID} {
+                display: inline-flex !important;
+                align-items: center !important;
+                gap: 4px !important;
+                margin-left: 9px !important;
+                vertical-align: middle !important;
+                text-decoration: none !important;
+            }
+            #${MB_RELEASE_INDICATOR_ID} > a,
+            #${MB_RELEASE_INDICATOR_ID} > span {
+                display: inline-flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+            }
+            #${MB_RELEASE_INDICATOR_ID} img {
+                display: block !important;
+                width: 26px !important;
+                height: 26px !important;
+                max-width: none !important;
+                border: 0 !important;
+                opacity: .94 !important;
+                transition: transform .12s ease, opacity .12s ease !important;
+            }
+            #${MB_RELEASE_INDICATOR_ID} a:hover img {
+                opacity: 1 !important;
+                transform: scale(1.12) !important;
+            }
+            #${MB_RELEASE_INDICATOR_ID} .beatport-mb-release-search {
+                width: 16px !important;
+                height: 16px !important;
+                border: 1px solid rgba(255,255,255,.48) !important;
+                border-radius: 50% !important;
+                color: #fff !important;
+                background: rgba(0,0,0,.28) !important;
+                text-decoration: none !important;
+                font: 700 11px/1 "Segoe UI", sans-serif !important;
+            }
+        `;
+        document.head.appendChild(style);
+    }
+
+    function findBeatportReleaseHeading() {
+        return document.querySelector(
+            'main h1, div[class^="ReleaseDetailCard-style__"] h1, h1'
+        );
+    }
+
+    function makeMbFavicon() {
+        const image = document.createElement('img');
+        image.src = 'https://musicbrainz.org/favicon.ico';
+        image.alt = 'MusicBrainz';
+        image.width = 26;
+        image.height = 26;
+        return image;
+    }
+
+    async function updateMusicBrainzReleaseIndicator(release, serial, force = false) {
+        const resource = canonicalBeatportReleaseResource();
+        if (!resource) {
+            document.getElementById(MB_RELEASE_INDICATOR_ID)?.remove();
+            return;
+        }
+
+        const heading = findBeatportReleaseHeading();
+        if (!heading) return;
+
+        const releases = await lookupMbReleasesForBeatport(resource, force);
+        if (
+            !Array.isArray(releases) ||
+            serial !== processSerial ||
+            resource !== canonicalBeatportReleaseResource()
+        ) {
+            return;
+        }
+
+        const currentHeading = findBeatportReleaseHeading();
+        if (!currentHeading) return;
+
+        installMbReleaseIndicatorStyles();
+        document.getElementById(MB_RELEASE_INDICATOR_ID)?.remove();
+
+        const holder = document.createElement('span');
+        holder.id = MB_RELEASE_INDICATOR_ID;
+        holder.dataset.resource = resource;
+        holder.dataset.missing = releases.length ? '0' : '1';
+
+        if (releases.length) {
+            const linkedRelease = releases[0];
+            const link = document.createElement('a');
+            link.href = 'https://musicbrainz.org/release/' + linkedRelease.id;
+            link.target = '_blank';
+            link.rel = 'noopener noreferrer';
+
+            const label = linkedRelease.title
+                ? 'Open MusicBrainz release: ' + linkedRelease.title
+                : 'Open MusicBrainz release';
+            link.title = linkedRelease.disambiguation
+                ? label + ' (' + linkedRelease.disambiguation + ')'
+                : label;
+            link.setAttribute('aria-label', link.title);
+            link.appendChild(makeMbFavicon());
+            holder.appendChild(link);
+        } else {
+            const icon = document.createElement('span');
+            icon.title = 'No MusicBrainz release link found';
+            icon.appendChild(makeMbFavicon());
+
+            const question = document.createElement('a');
+            question.className = 'beatport-mb-release-search';
+            question.textContent = '?';
+            question.href = musicBrainzCatalogSearchUrl(release?.catalog_number);
+            question.target = '_blank';
+            question.rel = 'noopener noreferrer';
+            question.title = release?.catalog_number
+                ? 'Search MusicBrainz releases by catalog number: ' + release.catalog_number
+                : 'Search MusicBrainz releases';
+            question.setAttribute('aria-label', question.title);
+
+            holder.append(icon, question);
+        }
+
+        currentHeading.appendChild(holder);
+    }
+
+    function refreshMissingMusicBrainzReleaseIndicator() {
+        if (!currentReleaseForIndicator) return;
+
+        const resource = canonicalBeatportReleaseResource();
+        const holder = document.getElementById(MB_RELEASE_INDICATOR_ID);
+        if (!resource || holder?.dataset.resource !== resource) return;
+
+        const cached = cachedMbReleaseLinks(resource);
+        if (holder.dataset.missing === '1' && cached !== null) {
+            void updateMusicBrainzReleaseIndicator(
+                currentReleaseForIndicator.release,
+                currentReleaseForIndicator.serial,
+                true
+            );
+        }
     }
 
     function makeButton(text, primary = false) {
@@ -1841,6 +2112,8 @@
 
         if (!releasePathParts()) {
             document.getElementById(UI_ID)?.remove();
+            document.getElementById(MB_RELEASE_INDICATOR_ID)?.remove();
+            currentReleaseForIndicator = null;
             removeImporterMetadata();
             return;
         }
@@ -1868,6 +2141,8 @@
             displayReleaseMetadata(release, tracks);
             setNativeStatus('');
             installIdleUi(release, trackResults, serial);
+            currentReleaseForIndicator = {release, serial};
+            void updateMusicBrainzReleaseIndicator(release, serial);
         } catch (error) {
             console.error('[Beatport MB Importer]', error);
             if (serial !== processSerial) return;
@@ -1882,6 +2157,13 @@
         lastUrl = location.href;
         void processBeatportRelease();
     };
+
+    window.addEventListener('focus', refreshMissingMusicBrainzReleaseIndicator);
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+            refreshMissingMusicBrainzReleaseIndicator();
+        }
+    });
 
     refresh();
     setInterval(refresh, 750);
