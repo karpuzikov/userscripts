@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MusicBrainz ToolBox
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.0.30
+// @version      1.0.31
 // @description  Combined MusicBrainz release-editor, recording, barcode, Spotify/Apple Music linking, search, cover-art, Disc ID, and duplicate-edit tools.
 // @author       karpuzikov
 // @license      MIT
@@ -122,6 +122,184 @@
     }
 
     __mbToolBoxInstallNativeUiStyles();
+
+    // ============================================================================
+    // Remember Release Language + Script by artist
+    // Remembers the last submitted Language/Script pair for the primary release
+    // artist and pre-fills only missing values on the next release add.
+    // ============================================================================
+    if (__mbToolBoxShouldRun([
+        "https://musicbrainz.org/release/add*",
+        "https://beta.musicbrainz.org/release/add*"
+    ], [])) {
+    (() => {
+        'use strict';
+
+        const PAGE_WINDOW =
+            typeof unsafeWindow !== 'undefined' ? unsafeWindow : window;
+        const STORAGE_KEY =
+            'mb-toolbox-release-language-script-by-artist-v1';
+        const MAX_ENTRIES = 1000;
+        const VARIOUS_ARTISTS_GID =
+            '89ad4ac3-39f7-470e-963a-56509c546377';
+
+        let installed = false;
+        let currentArtistGid = '';
+
+        function unwrap(value) {
+            return typeof value === 'function' ? value() : value;
+        }
+
+        function readStore() {
+            try {
+                const value = GM_getValue(STORAGE_KEY, {});
+                return value && typeof value === 'object' ? value : {};
+            } catch {
+                return {};
+            }
+        }
+
+        function writeStore(store) {
+            try {
+                const entries = Object.entries(store)
+                    .sort(
+                        (a, b) =>
+                            Number(b[1]?.updatedAt || 0) -
+                            Number(a[1]?.updatedAt || 0)
+                    )
+                    .slice(0, MAX_ENTRIES);
+
+                GM_setValue(STORAGE_KEY, Object.fromEntries(entries));
+            } catch {
+                // Persistent memory failure must never break the release editor.
+            }
+        }
+
+        function primaryArtistGid(release) {
+            const credit = unwrap(release?.artistCredit);
+            const names = Array.isArray(credit?.names) ? credit.names : [];
+
+            for (const part of names) {
+                const gid = String(part?.artist?.gid || '')
+                    .trim()
+                    .toLowerCase();
+
+                if (
+                    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+                        gid
+                    )
+                ) {
+                    return gid === VARIOUS_ARTISTS_GID ? '' : gid;
+                }
+            }
+
+            return '';
+        }
+
+        function isUnset(value) {
+            return value === null || value === undefined || value === '';
+        }
+
+        function applySavedValues(release, artistGid) {
+            if (!artistGid) return;
+
+            const saved = readStore()[artistGid];
+            if (!saved || typeof saved !== 'object') return;
+
+            const currentLanguage = unwrap(release.languageID);
+            const currentScript = unwrap(release.scriptID);
+
+            if (
+                isUnset(currentLanguage) &&
+                !isUnset(saved.languageID) &&
+                typeof release.languageID === 'function'
+            ) {
+                release.languageID(saved.languageID);
+            }
+
+            if (
+                isUnset(currentScript) &&
+                !isUnset(saved.scriptID) &&
+                typeof release.scriptID === 'function'
+            ) {
+                release.scriptID(saved.scriptID);
+            }
+        }
+
+        function rememberCurrentValues(release) {
+            const artistGid = primaryArtistGid(release);
+            if (!artistGid) return;
+
+            const languageID = unwrap(release.languageID);
+            const scriptID = unwrap(release.scriptID);
+
+            // Store a complete pair only. A half-filled editor should not
+            // replace a previously useful artist default.
+            if (isUnset(languageID) || isUnset(scriptID)) return;
+
+            const store = readStore();
+            store[artistGid] = {
+                languageID,
+                scriptID,
+                updatedAt: Date.now(),
+            };
+            writeStore(store);
+        }
+
+        function handleArtistChange(release) {
+            const artistGid = primaryArtistGid(release);
+            if (artistGid === currentArtistGid) return;
+
+            currentArtistGid = artistGid;
+            applySavedValues(release, artistGid);
+        }
+
+        function install() {
+            if (installed) return true;
+
+            const release =
+                PAGE_WINDOW.MB?.releaseEditor?.rootField?.release?.();
+
+            if (
+                !release ||
+                typeof release.artistCredit?.subscribe !== 'function' ||
+                typeof release.languageID !== 'function' ||
+                typeof release.scriptID !== 'function'
+            ) {
+                return false;
+            }
+
+            installed = true;
+            currentArtistGid = primaryArtistGid(release);
+            applySavedValues(release, currentArtistGid);
+
+            release.artistCredit.subscribe(() => {
+                handleArtistChange(release);
+            });
+
+            document.addEventListener('click', event => {
+                if (
+                    event.target?.closest?.('#enter-edit') &&
+                    !event.target?.closest?.('#enter-edit')?.disabled
+                ) {
+                    rememberCurrentValues(release);
+                }
+            }, true);
+
+            return true;
+        }
+
+        if (!install()) {
+            let attempts = 0;
+            const timer = setInterval(() => {
+                attempts += 1;
+                if (install() || attempts >= 100) {
+                    clearInterval(timer);
+                }
+            }, 100);
+        }
+    })();
+    }
 
     // ============================================================================
     // Auto-Select Single Disc ID Artist
