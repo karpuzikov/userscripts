@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MusicBrainz ToolBox
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.0.34
+// @version      1.0.35
 // @description  Combined MusicBrainz release-editor, recording, barcode, Spotify/Apple Music linking, search, cover-art, Disc ID, and duplicate-edit tools.
 // @author       karpuzikov
 // @license      MIT
@@ -10,7 +10,7 @@
 // @match        https://open.spotify.com/*
 // @match        https://music.apple.com/*
 // @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/toolbox/MusicBrainz_ToolBox.user.js
-// @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/toolbox/MusicBrainz_ToolBox.user.js
+// @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/toolbox/MusicBrainz_ToolBox.meta.js
 // @supportURL   https://github.com/karpuzikov/userscripts
 // @grant        GM_getValue
 // @grant        GM_setValue
@@ -293,7 +293,7 @@
 
         if (!/(^|\.)musicbrainz\.org$/i.test(location.hostname)) return;
 
-        const CURRENT_VERSION = '1.0.34';
+        const CURRENT_VERSION = '1.0.35';
         const CHECK_KEY = 'mb-toolbox-self-update-check-v1';
         const CHECK_INTERVAL = 10 * 60 * 1000;
         const META_API =
