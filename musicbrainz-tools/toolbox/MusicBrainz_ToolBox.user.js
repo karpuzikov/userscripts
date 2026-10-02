@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MusicBrainz ToolBox
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.0.23
+// @version      1.0.24
 // @description  Combined MusicBrainz release-editor, recording, barcode, Spotify/Apple Music/BPTopTracker linking, search, cover-art, Disc ID, and duplicate-edit tools.
 // @author       karpuzikov
 // @license      MIT
@@ -8045,11 +8045,7 @@
             const value = normalizeWhitespace(catalogNumber);
             if (!value) return '';
 
-            const escaped = value.replace(/[\\"]/g, '\\        function sleep(ms) {
-            return new Promise(resolve => setTimeout(resolve, ms));
-        }
-
-        function queueMusicBrainzRequest(task) {');
+            const escaped = value.replace(/"/g, '\\"');
             const url = new URL('https://musicbrainz.org/search');
             url.searchParams.set('query', 'catno:"' + escaped + '"');
             url.searchParams.set('type', 'release');
