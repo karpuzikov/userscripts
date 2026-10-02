@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Beatport - MusicBrainz Importer
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.2.8
+// @version      1.2.9
 // @description  Import Beatport and BPTopTracker releases into MusicBrainz with Beatport enrichment, ISRC matching, and release-source handling.
 // @author       karpuzikov
 // @match        https://www.beatport.com/*
@@ -1434,7 +1434,11 @@
             try {
                 const json = await appleApiRequest(url.href, 'https://music.apple.com/us/browse');
                 const albums = (json.data || []).filter(item => item.type === 'albums');
-                const album = albums.find(item => equalGtin(item.attributes?.upc, barcode)) || albums[0];
+                // Apple may return non-matching albums for filter[upc]; never fall back to an unchecked result.
+                const album = albums.find(item => {
+                    const candidateUpc = item?.attributes?.upc;
+                    return candidateUpc && equalGtin(candidateUpc, barcode);
+                });
                 if (album?.attributes?.url) {
                     return {
                         url: album.attributes.url,
