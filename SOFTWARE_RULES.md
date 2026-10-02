@@ -85,7 +85,9 @@ This gate exists specifically to prevent a same-version Tampermonkey **Reinstall
 
 - Never use query-string cache busting on GitHub Raw userscript URLs. Parameters such as `?v=1.2.3` are forbidden because GitHub Raw/CDN caching has repeatedly served stale script bodies even when the query string changed.
 - Every README/manual install link for a userscript in this repository must use an immutable `raw.githubusercontent.com` URL pinned to a full 40-character Git commit SHA that contains the exact current script.
-- `@updateURL` and `@downloadURL`, when present, must use the clean mutable `main` raw URL for the script path, with no query parameters and no commit pin. These URLs are for Tampermonkey native update discovery/download, not for a manual "Update" button.
+- `@downloadURL`, when present, must use the clean mutable `main` raw URL for the full `.user.js` script, with no query parameters and no commit pin.
+- `@updateURL` may either use that same clean mutable `.user.js` URL or a dedicated clean mutable `.meta.js` metadata manifest on `main`. A dedicated `.meta.js` manifest is preferred for large userscripts or scripts where update detection reliability is important.
+- When a dedicated `.meta.js` manifest is used, its `@name`, `@namespace`, `@version`, `@updateURL`, and `@downloadURL` must stay synchronized with the published userscript.
 - Never provide a mutable `main` raw URL as a manual install link when a commit-pinned URL can be provided.
 
 ### Identity and version integrity
@@ -100,12 +102,13 @@ This gate exists specifically to prevent a same-version Tampermonkey **Reinstall
 
 1. Update the script and increase `@version`.
 2. Preserve `@name` and `@namespace`; verify any grant/sandbox changes.
-3. Keep `@updateURL`/`@downloadURL` on the clean `main` raw URL.
+3. Keep `@downloadURL` on the clean `main` raw `.user.js` URL. Keep `@updateURL` on either that URL or the script's dedicated clean `main` raw `.meta.js` manifest.
 4. Commit the script.
-5. Fetch the immutable commit-pinned raw URL and verify its `@version` and body.
-6. Update the README **Install** link to that immutable URL in a separate commit.
-7. Verify the userscript metadata, version, raw source, and README link directly during the publish operation. Do not create or run a GitHub Actions workflow for this validation.
-8. Before giving a direct link to the user, compare the known installed version with the target. Only call it **Update** when installed < target.
+5. If the script uses a dedicated `.meta.js` manifest, publish/synchronize that manifest to the exact same `@version`.
+6. Fetch the immutable commit-pinned raw userscript URL and verify its `@version` and body.
+7. Update the README **Install** link to that immutable userscript URL in a separate commit.
+8. Verify the userscript metadata, optional `.meta.js` metadata, version, raw source, and README link directly during the publish operation. Do not create or run a GitHub Actions workflow for this validation.
+9. Before giving a direct link to the user, compare the known installed version with the target. Only call it **Update** when installed < target.
 
 ### Failure handling
 
