@@ -1,15 +1,16 @@
 // ==UserScript==
 // @name         Harmony ToolBox
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.0.1
+// @version      1.0.2
 // @description  Combines Harmony ISRC copying and one-click MusicBrainz external-ID linking.
 // @author       karpuzikov
 // @license      MIT
 // @match        https://harmony.pulsewidth.org.uk/release*
 // @match        https://musicbrainz.org/release-group/*
 // @connect      musicbrainz.org
+// @connect      api.github.com
 // @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/harmony-toolbox/Harmony_ToolBox.user.js
-// @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/harmony-toolbox/Harmony_ToolBox.user.js
+// @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/harmony-toolbox/Harmony_ToolBox.meta.js
 // @supportURL   https://github.com/karpuzikov/userscripts
 // @grant        GM_getValue
 // @grant        GM_setValue
@@ -18,6 +19,161 @@
 // @grant        GM_setClipboard
 // @run-at       document-idle
 // ==/UserScript==
+
+// Reliable update fallback
+(() => {
+    'use strict';
+
+    const CURRENT_VERSION = '1.0.2';
+    const CHECK_KEY = 'harmony-toolbox-self-update-check-v1';
+    const CHECK_INTERVAL = 10 * 60 * 1000;
+    const META_API =
+        'https://api.github.com/repos/karpuzikov/userscripts/contents/' +
+        'musicbrainz-tools/harmony-toolbox/Harmony_ToolBox.meta.js?ref=main';
+    const COMMITS_API =
+        'https://api.github.com/repos/karpuzikov/userscripts/commits' +
+        '?path=musicbrainz-tools/harmony-toolbox/Harmony_ToolBox.user.js' +
+        '&sha=main&per_page=1';
+
+    function compareVersions(left, right) {
+        const a = String(left || '').split('.').map(part => Number.parseInt(part, 10) || 0);
+        const b = String(right || '').split('.').map(part => Number.parseInt(part, 10) || 0);
+        const length = Math.max(a.length, b.length);
+
+        for (let index = 0; index < length; index += 1) {
+            const av = a[index] || 0;
+            const bv = b[index] || 0;
+            if (av !== bv) return av > bv ? 1 : -1;
+        }
+        return 0;
+    }
+
+    function requestJson(url) {
+        return new Promise((resolve, reject) => {
+            GM_xmlhttpRequest({
+                method: 'GET',
+                url,
+                headers: {Accept: 'application/vnd.github+json'},
+                timeout: 15000,
+                onload(response) {
+                    if (response.status < 200 || response.status >= 300) {
+                        reject(new Error('GitHub API HTTP ' + response.status));
+                        return;
+                    }
+                    try {
+                        resolve(JSON.parse(response.responseText));
+                    } catch (error) {
+                        reject(error);
+                    }
+                },
+                onerror() {
+                    reject(new Error('GitHub API request failed'));
+                },
+                ontimeout() {
+                    reject(new Error('GitHub API request timed out'));
+                },
+            });
+        });
+    }
+
+    function decodeBase64Utf8(value) {
+        const binary = atob(String(value || '').replace(/\s+/g, ''));
+        const bytes = Uint8Array.from(binary, char => char.charCodeAt(0));
+        return new TextDecoder().decode(bytes);
+    }
+
+    function parseRemoteVersion(metadataText) {
+        const match = String(metadataText || '').match(
+            /^\/\/\s*@version\s+([^\s]+)\s*$/m
+        );
+        return match ? match[1].trim() : '';
+    }
+
+    function showUpdate(remoteVersion, commitSha) {
+        if (compareVersions(remoteVersion, CURRENT_VERSION) <= 0) return;
+        if (!/^[0-9a-f]{40}$/i.test(String(commitSha || ''))) return;
+        if (document.getElementById('harmony-toolbox-update-available')) return;
+
+        const updateUrl =
+            'https://raw.githubusercontent.com/karpuzikov/userscripts/' +
+            commitSha +
+            '/musicbrainz-tools/harmony-toolbox/Harmony_ToolBox.user.js';
+
+        const box = document.createElement('div');
+        box.id = 'harmony-toolbox-update-available';
+        box.style.cssText = [
+            'position:fixed',
+            'right:16px',
+            'bottom:16px',
+            'z-index:2147483647',
+            'padding:10px 12px',
+            'background:#222',
+            'color:#fff',
+            'border:1px solid #666',
+            'border-radius:6px',
+            'box-shadow:0 3px 14px rgba(0,0,0,.35)',
+            'font:13px/1.35 sans-serif',
+        ].join(';');
+
+        const text = document.createElement('span');
+        text.textContent =
+            'Harmony ToolBox v' + remoteVersion + ' update available.';
+
+        const update = document.createElement('button');
+        update.type = 'button';
+        update.textContent = 'Update';
+        update.style.marginLeft = '10px';
+        update.addEventListener('click', () => {
+            window.open(updateUrl, '_blank', 'noopener');
+        });
+
+        const later = document.createElement('button');
+        later.type = 'button';
+        later.textContent = 'Later';
+        later.style.marginLeft = '6px';
+        later.addEventListener('click', () => box.remove());
+
+        box.append(text, update, later);
+        document.body.appendChild(box);
+    }
+
+    async function checkNow() {
+        try {
+            const metadata = await requestJson(META_API);
+            const metadataText = decodeBase64Utf8(metadata?.content);
+            const remoteVersion = parseRemoteVersion(metadataText);
+            if (!remoteVersion) return;
+
+            let commitSha = '';
+            if (compareVersions(remoteVersion, CURRENT_VERSION) > 0) {
+                const commits = await requestJson(COMMITS_API);
+                commitSha = String(commits?.[0]?.sha || '');
+            }
+
+            GM_setValue(CHECK_KEY, {
+                checkedAt: Date.now(),
+                remoteVersion,
+                commitSha,
+            });
+
+            showUpdate(remoteVersion, commitSha);
+        } catch (error) {
+            console.warn('[Harmony ToolBox] Self-update check failed:', error);
+        }
+    }
+
+    const cached = GM_getValue(CHECK_KEY, null);
+    if (
+        cached &&
+        Number(cached.checkedAt) > 0 &&
+        Date.now() - Number(cached.checkedAt) < CHECK_INTERVAL
+    ) {
+        showUpdate(cached.remoteVersion, cached.commitSha);
+        return;
+    }
+
+    checkNow();
+})();
 
 // Copy ISRCs
 (() => {
