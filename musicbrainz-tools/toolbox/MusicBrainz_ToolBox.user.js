@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MusicBrainz ToolBox
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.0.31
+// @version      1.0.32
 // @description  Combined MusicBrainz release-editor, recording, barcode, Spotify/Apple Music linking, search, cover-art, Disc ID, and duplicate-edit tools.
 // @author       karpuzikov
 // @license      MIT
@@ -44,6 +44,147 @@
 
     function __mbToolBoxShouldRun(matches, excludes = []) {
         return matches.some(__mbToolBoxPattern) && !excludes.some(__mbToolBoxPattern);
+    }
+
+    const __mbToolBoxPageWindow =
+        typeof unsafeWindow !== 'undefined' ? unsafeWindow : window;
+    const __mbToolBoxNativeFetch =
+        typeof __mbToolBoxPageWindow.fetch === 'function'
+            ? __mbToolBoxPageWindow.fetch.bind(__mbToolBoxPageWindow)
+            : window.fetch.bind(window);
+    const __mbToolBoxNativeGmXmlhttpRequest = GM_xmlhttpRequest;
+
+    function __mbToolBoxSleep(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    function __mbToolBoxIsMusicBrainzUrl(value) {
+        const raw =
+            typeof value === 'string'
+                ? value
+                : (value?.url || String(value || ''));
+
+        try {
+            const url = new URL(raw, location.href);
+            const host = url.hostname.toLowerCase();
+            return host === 'musicbrainz.org' ||
+                host.endsWith('.musicbrainz.org');
+        } catch {
+            return false;
+        }
+    }
+
+    function __mbToolBoxRetryAfterMs(value) {
+        const text = String(value || '').trim();
+        if (!text) return 0;
+
+        const seconds = Number(text);
+        if (Number.isFinite(seconds) && seconds >= 0) {
+            return seconds * 1000;
+        }
+
+        const date = Date.parse(text);
+        if (Number.isFinite(date)) {
+            return Math.max(0, date - Date.now());
+        }
+
+        return 0;
+    }
+
+    function __mbToolBoxRawHeader(rawHeaders, wantedName) {
+        const wanted = String(wantedName || '').toLowerCase();
+        for (const line of String(rawHeaders || '').split(/\r?\n/)) {
+            const index = line.indexOf(':');
+            if (index < 0) continue;
+            if (line.slice(0, index).trim().toLowerCase() !== wanted) continue;
+            return line.slice(index + 1).trim();
+        }
+        return '';
+    }
+
+    function __mbToolBox503Delay(retryAfterValue) {
+        return Math.max(
+            5000,
+            __mbToolBoxRetryAfterMs(retryAfterValue)
+        );
+    }
+
+    async function __mbToolBoxFetch(input, init) {
+        if (!__mbToolBoxIsMusicBrainzUrl(input)) {
+            return __mbToolBoxNativeFetch(input, init);
+        }
+
+        for (;;) {
+            const response = await __mbToolBoxNativeFetch(input, init);
+            if (response.status !== 503) {
+                return response;
+            }
+
+            const delay = __mbToolBox503Delay(
+                response.headers?.get?.('Retry-After')
+            );
+            console.warn(
+                '[MusicBrainz ToolBox] MusicBrainz HTTP 503; retrying in ' +
+                Math.ceil(delay / 1000) +
+                's.'
+            );
+            await __mbToolBoxSleep(delay);
+        }
+    }
+
+    function __mbToolBoxGmXmlhttpRequest(details) {
+        if (!__mbToolBoxIsMusicBrainzUrl(details?.url)) {
+            return __mbToolBoxNativeGmXmlhttpRequest(details);
+        }
+
+        let currentRequest = null;
+        let retryTimer = null;
+        let aborted = false;
+
+        const issue = () => {
+            if (aborted) return;
+
+            const originalOnload = details.onload;
+            currentRequest = __mbToolBoxNativeGmXmlhttpRequest({
+                ...details,
+                onload(response) {
+                    if (aborted) return;
+
+                    if (response.status === 503) {
+                        const delay = __mbToolBox503Delay(
+                            __mbToolBoxRawHeader(
+                                response.responseHeaders,
+                                'Retry-After'
+                            )
+                        );
+                        console.warn(
+                            '[MusicBrainz ToolBox] MusicBrainz HTTP 503; retrying in ' +
+                            Math.ceil(delay / 1000) +
+                            's.'
+                        );
+                        retryTimer = setTimeout(issue, delay);
+                        return;
+                    }
+
+                    if (typeof originalOnload === 'function') {
+                        originalOnload(response);
+                    }
+                },
+            });
+        };
+
+        issue();
+
+        return {
+            abort() {
+                aborted = true;
+                if (retryTimer !== null) {
+                    clearTimeout(retryTimer);
+                    retryTimer = null;
+                }
+                currentRequest?.abort?.();
+            },
+        };
     }
 
     function __mbToolBoxSetStatusKind(node, kind = '') {
@@ -1064,7 +1205,7 @@
             apiUrl.searchParams.set('limit', catalogNumber ? '100' : '2');
     
             try {
-                const response = await fetch(apiUrl, {
+                const response = await __mbToolBoxFetch(apiUrl, {
                     credentials: 'same-origin',
                     headers: {
                         Accept: 'application/json'
@@ -2276,7 +2417,7 @@
             }
     
             const promise = (async () => {
-                const response = await fetch('/ws/js/entity/' + encodeURIComponent(gid), {
+                const response = await __mbToolBoxFetch('/ws/js/entity/' + encodeURIComponent(gid), {
                     credentials: 'same-origin',
                     headers: {Accept: 'application/json'},
                 });
@@ -2913,7 +3054,7 @@
             }
     
             const promise = (async () => {
-                const response = await fetch('/ws/js/entity/' + encodeURIComponent(gid), {
+                const response = await __mbToolBoxFetch('/ws/js/entity/' + encodeURIComponent(gid), {
                     credentials: 'same-origin',
                     headers: {Accept: 'application/json'},
                 });
@@ -3466,7 +3607,7 @@
         async function requestMissingPreviews(edits) {
             if (!edits.length) return [];
     
-            const response = await pageWindow().fetch('/ws/js/edit/preview', {
+            const response = await __mbToolBoxFetch('/ws/js/edit/preview', {
                 method: 'POST',
                 credentials: 'same-origin',
                 headers: {
@@ -3577,7 +3718,7 @@
         }
     
         async function fetchDocument(url) {
-            const response = await pageWindow().fetch(url, {
+            const response = await __mbToolBoxFetch(url, {
                 credentials: 'same-origin',
                 headers: {Accept: 'text/html'},
             });
@@ -3645,7 +3786,7 @@
         }
     
         async function fetchEditData(id) {
-            const response = await pageWindow().fetch(`/edit/${id}/data`, {
+            const response = await __mbToolBoxFetch(`/edit/${id}/data`, {
                 credentials: 'same-origin',
                 headers: {Accept: 'application/json'},
             });
@@ -4330,7 +4471,7 @@
     
         function gmTextRequest(url, { headers = {}, timeout = 60000 } = {}) {
             return new Promise((resolve, reject) => {
-                GM_xmlhttpRequest({
+                __mbToolBoxGmXmlhttpRequest({
                     method: 'GET',
                     url,
                     headers,
@@ -4574,7 +4715,7 @@
     
         function harmonyRequest(url) {
             return new Promise((resolve, reject) => {
-                GM_xmlhttpRequest({
+                __mbToolBoxGmXmlhttpRequest({
                     method: 'GET',
                     url,
                     headers: { Accept: 'text/html,application/xhtml+xml' },
@@ -4717,7 +4858,7 @@
             while (true) {
                 const url = `/ws/2/release?release-group=${encodeURIComponent(releaseGroupMbid)}` +
                     `&inc=media+url-rels&fmt=json&limit=${limit}&offset=${offset}`;
-                const response = await fetch(url, {
+                const response = await __mbToolBoxFetch(url, {
                     credentials: 'same-origin',
                     headers: { Accept: 'application/json' },
                 });
@@ -6084,7 +6225,7 @@
                     return;
                 }
     
-                GM_xmlhttpRequest({
+                __mbToolBoxGmXmlhttpRequest({
                     method,
                     url,
                     headers: {
@@ -6656,7 +6797,7 @@
                 const timeout = setTimeout(() => controller.abort(), 12000);
                 let response;
                 try {
-                    response = await fetch(url, {
+                    response = await __mbToolBoxFetch(url, {
                         credentials: 'same-origin',
                         headers: {Accept: 'application/json'},
                         signal: controller.signal,
@@ -6697,7 +6838,7 @@
             if (artistCache.has(key)) return artistCache.get(key);
     
             await throttle();
-            const response = await fetch('/ws/2/artist/' + key + '?fmt=json&inc=aliases', {
+            const response = await __mbToolBoxFetch('/ws/2/artist/' + key + '?fmt=json&inc=aliases', {
                 credentials: 'same-origin',
                 headers: {Accept: 'application/json'},
             });
@@ -6778,7 +6919,7 @@
                 const timeout = setTimeout(() => controller.abort(), 12000);
                 let response;
                 try {
-                    response = await fetch(url, {
+                    response = await __mbToolBoxFetch(url, {
                         credentials: 'same-origin',
                         headers: {Accept: 'application/json'},
                         signal: controller.signal,
@@ -6834,7 +6975,7 @@
                     let response;
     
                     try {
-                        response = await fetch(
+                        response = await __mbToolBoxFetch(
                             '/ws/2/recording/' + encodeURIComponent(id) + '?fmt=json&inc=isrcs',
                             {
                                 credentials: 'same-origin',
@@ -8035,7 +8176,7 @@
 
         function requestJson(url) {
             return new Promise((resolve, reject) => {
-                GM_xmlhttpRequest({
+                __mbToolBoxGmXmlhttpRequest({
                     method: 'GET',
                     url,
                     headers: {
@@ -8450,7 +8591,7 @@
 
         function requestJson(url) {
             return new Promise((resolve, reject) => {
-                GM_xmlhttpRequest({
+                __mbToolBoxGmXmlhttpRequest({
                     method: 'GET',
                     url,
                     headers: { Accept: 'application/json' },
@@ -8931,7 +9072,7 @@
 
         function requestJson(url) {
             return new Promise((resolve, reject) => {
-                GM_xmlhttpRequest({
+                __mbToolBoxGmXmlhttpRequest({
                     method: 'GET',
                     url,
                     headers: {Accept: 'application/json'},
