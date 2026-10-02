@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MusicBrainz ToolBox
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.0.37
+// @version      1.0.38
 // @description  Combined MusicBrainz release-editor, recording, barcode, Spotify/Apple Music linking, search, cover-art, Disc ID, and duplicate-edit tools.
 // @author       karpuzikov
 // @license      MIT
@@ -293,7 +293,7 @@
 
         if (!/(^|\.)musicbrainz\.org$/i.test(location.hostname)) return;
 
-        const CURRENT_VERSION = '1.0.37';
+        const CURRENT_VERSION = '1.0.38';
         const CHECK_KEY = 'mb-toolbox-self-update-check-v1';
         const CHECK_INTERVAL = 10 * 60 * 1000;
         const META_API =
@@ -7544,6 +7544,48 @@
                 });
             }
 
+            const currentBubbleTrack = () => (
+                typeof bubble.currentTrack === 'function'
+                    ? bubble.currentTrack()
+                    : (
+                        typeof bubble.target === 'function'
+                            ? bubble.target()
+                            : null
+                    )
+            );
+
+            const beginFromTrustedBubbleInteraction = event => {
+                if (!event.isTrusted) return;
+
+                const target = event.target;
+                if (!target || typeof target.closest !== 'function') return;
+                if (!target.closest('#recording-assoc-bubble')) return;
+
+                /*
+                 * Auto Match can leave the native recording bubble open.
+                 * A user may then type/paste an ISRC, click a search result,
+                 * or choose a radio without clicking Edit again. Any real user
+                 * interaction inside the native bubble means the recording
+                 * choice is now manual and must take priority over the lock.
+                 */
+                beginManualRecordingEdit(currentBubbleTrack());
+            };
+
+            for (const type of [
+                'pointerdown',
+                'click',
+                'keydown',
+                'input',
+                'change',
+                'paste',
+            ]) {
+                document.addEventListener(
+                    type,
+                    beginFromTrustedBubbleInteraction,
+                    true
+                );
+            }
+
             document.addEventListener('click', event => {
                 if (!event.isTrusted) return;
 
@@ -7551,34 +7593,15 @@
                     'button.edit-track-recording'
                 );
 
-                if (editButton) {
-                    manualRecordingOpenRequested = true;
+                if (!editButton) return;
 
-                    // Clear a stale request if MusicBrainz does not open the
-                    // bubble for any reason.
-                    setTimeout(() => {
-                        manualRecordingOpenRequested = false;
-                    }, 1000);
-                    return;
-                }
+                manualRecordingOpenRequested = true;
 
-                const explicitChoice = event.target?.closest?.(
-                    '#recording-assoc-bubble input[name="recording-selection"], ' +
-                    '#recording-assoc-bubble label[for="add-new-recording"]'
-                );
-
-                if (!explicitChoice) return;
-
-                const trackModel =
-                    typeof bubble.currentTrack === 'function'
-                        ? bubble.currentTrack()
-                        : (
-                            typeof bubble.target === 'function'
-                                ? bubble.target()
-                                : null
-                        );
-
-                beginManualRecordingEdit(trackModel);
+                // Clear a stale request if MusicBrainz does not open the
+                // bubble for any reason.
+                setTimeout(() => {
+                    manualRecordingOpenRequested = false;
+                }, 1000);
             }, true);
         }
 
@@ -7596,6 +7619,12 @@
             }
     
             const entity = recordingEntityFromWs(candidate);
+
+            // This is an explicit ToolBox replacement chosen from the user's
+            // supplied ISRC. The old association lock must not fight it.
+            trackModel.__mbToolBoxRecordingLock?.dispose?.();
+            trackModel.__mbToolBoxExactIsrcGuard?.dispose?.();
+
             trackModel.recording(entity);
             if (typeof trackModel.hasNewRecording === 'function') {
                 trackModel.hasNewRecording(false);
@@ -7916,6 +7945,7 @@
                 ? targetRows.filter(row => row?.isConnected)
                 : allRows;
             const allowLinked = Boolean(options.allowLinked);
+            const requireLinked = Boolean(options.requireLinked);
             const highlightedMode = Boolean(options.highlighted);
             const allTrackModels = isrcs ? releaseTrackModels() : [];
     
@@ -7985,7 +8015,7 @@
                         continue;
                     }
     
-                    if (allowLinked && !existing.id) {
+                    if (requireLinked && !existing.id) {
                         review++;
                         showResult(list, row, 'Review', `${display} - highlighted recording link is no longer present`);
                         continue;
@@ -8092,7 +8122,9 @@
                 }
     
                 if (!status.textContent.startsWith('Stopped:')) {
-                    const unchangedText = highlightedMode ? `, ${unchanged} already correct` : '';
+                    const unchangedText = allowLinked && unchanged
+                        ? `, ${unchanged} already correct`
+                        : '';
                     status.textContent = `${stopRequested ? 'Stopped' : 'Finished'}: ${matched} matched${unchangedText}, ${review} need review, ${processed}/${rows.length} checked. Review all associations before submitting.`;
                 }
             } finally {
@@ -8112,6 +8144,7 @@
             const rows = highlightedEditorRows();
             runMatcher(panel, null, rows, {
                 allowLinked: true,
+                requireLinked: true,
                 highlighted: true,
             });
         }
@@ -8189,7 +8222,9 @@
 
                     const codes = parseIsrcInput(input.value, rows.length);
                     close();
-                    runMatcher(panel, codes);
+                    runMatcher(panel, codes, null, {
+                        allowLinked: true,
+                    });
                 } catch (cause) {
                     error.textContent = cause.message;
                 }
