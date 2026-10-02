@@ -33,7 +33,7 @@ import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 
 APP_NAME = "Duplicate / Edition Analyzer"
-APP_VERSION = "0.18.1"
+APP_VERSION = "0.18.2"
 PROGRAM_DATA_DIR_NAME = "Duplicate Edition Analyzer"
 PYSIDE6_VERSION = "6.11.2"
 AUDIO_EXTS = {".m4a", ".flac", ".wav", ".ape", ".wv", ".mp3", ".aac", ".ogg", ".opus"}
@@ -258,6 +258,24 @@ def _atomic_write_json(path: Path, data: dict) -> None:
     tmp = path.with_suffix(path.suffix + ".tmp")
     tmp.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
     os.replace(tmp, path)
+
+
+def _json_ui_default(value):
+    """Safe JSON fallback for values crossing the Qt WebEngine bridge."""
+    if isinstance(value, Path):
+        return str(value)
+    if isinstance(value, set):
+        try:
+            return sorted(value)
+        except Exception:
+            return list(value)
+    raise TypeError(
+        f"Object of type {type(value).__name__} is not JSON serializable"
+    )
+
+
+def _json_ui_dumps(value) -> str:
+    return json.dumps(value, ensure_ascii=False, default=_json_ui_default)
 
 
 _DATA_MIGRATION_DONE = False
@@ -6085,7 +6103,7 @@ def apply_automatic_plan(
     )
     remix_release_ids = {release.rid for release, _decision in moves if release.has_remixes}
     return {
-        "duplicates": duplicates,
+        "duplicates": str(duplicates),
         "moved": len(moves),
         "moved_folders": len(planned),
         "intra_duplicate_files": len(planned_files),
@@ -6314,7 +6332,8 @@ button,input { font:inherit; }
 .uniqueBadge.green { background:var(--green); color:#07140a; }
 .uniqueBadge.neutral { background:#64748b; color:#fff; }
 .uniqueBadge.gem {
-  background:var(--red); color:#fff; font-size:14px; line-height:20px;
+  min-width:20px; padding:0; background:transparent; color:inherit;
+  font-size:14px; line-height:20px;
   font-family:"Segoe UI Emoji","Segoe UI Symbol","Segoe UI",sans-serif;
 }
 .duplicateBadge { border:1px solid #4f5968; color:#9aa5b5; background:#20252d; font-weight:700; }
@@ -7392,7 +7411,7 @@ def _qt_release_map_process(session_path: Path, result_path: Path) -> int:
                 self.initial_plan_counts,
                 self.result,
             )
-            return json.dumps(payload, ensure_ascii=False)
+            return _json_ui_dumps(payload)
 
         def _mark_dirty(self, cause: str) -> None:
             self.dirty = True
@@ -9516,7 +9535,7 @@ def _qt_main_app() -> int:
                 }
 
         def _state_json(self) -> str:
-            return json.dumps(self._state_payload(), ensure_ascii=False)
+            return _json_ui_dumps(self._state_payload())
 
         def _emit_state(self, force: bool = True) -> None:
             now = time.monotonic()
@@ -9526,7 +9545,7 @@ def _qt_main_app() -> int:
             self.stateChanged.emit(self._state_json())
 
         def _event(self, payload: Dict[str, object]) -> None:
-            self.eventRaised.emit(json.dumps(payload, ensure_ascii=False))
+            self.eventRaised.emit(_json_ui_dumps(payload))
 
         def _append_activity(self, text: str) -> None:
             if not text:

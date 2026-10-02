@@ -4,7 +4,7 @@ Complete project source and workflow assets for the discography torrent automati
 
 ## Current tools
 
-- `tools/Duplicate Edition Analyzer v0.18.1.pyw` - Release Ignore is now inspectable and reversible. An ignored release never disappears from Release Map: it remains chronologically in place with a strong `IGN` / `IGNORED BY YOU` state. Pending Ignore/Restore states are visible before Re-Analyze. The selected release stays open across Re-Analyze, and each included track shows its exact retained replacement source (`Sourced from: ...`) or a red `NO REPLACEMENT` warning. The Re-Analyze result drawer repeats track-by-track replacement sourcing for ignored releases. Ignored releases have an obvious `Restore release` action; restoring is completed by Re-Analyze. No filesystem change occurs until Apply. Under construction ⚠️
+- `tools/Duplicate Edition Analyzer v0.18.2.pyw` - Fixes the WebEngine completion crash `Object of type WindowsPath is not JSON serializable`. Filesystem paths returned by Apply are converted to strings at the source, and both Release Map and main-window QWebChannel JSON boundaries now safely serialize `Path`/`WindowsPath` values (plus sets) instead of crashing. Also applies the pending Gem UI change: 💎 is rendered with no red background/bubble. v0.18.1 ignored-release inspection/restoration remains intact. Under construction ⚠️
 - `tools/AudioChecker Automation v0.1.pyw` - AudioChecker batch automation.
 - `tools/ALAC Conversion Automation v0.2.pyw` - lossless -> ALAC conversion. Under construction ⚠️
 - `tools/CUE Corrector - MusicBrainz DiscID 1.3.pyw` - MusicBrainz DiscID/CUE workflow.
