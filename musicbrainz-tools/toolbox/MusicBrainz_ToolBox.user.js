@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MusicBrainz ToolBox
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.0.32
+// @version      1.0.33
 // @description  Combined MusicBrainz release-editor, recording, barcode, Spotify/Apple Music linking, search, cover-art, Disc ID, and duplicate-edit tools.
 // @author       karpuzikov
 // @license      MIT
@@ -114,8 +114,14 @@
             return __mbToolBoxNativeFetch(input, init);
         }
 
+        let requestInit = init;
+        let saw503 = false;
+
         for (;;) {
-            const response = await __mbToolBoxNativeFetch(input, init);
+            const response = await __mbToolBoxNativeFetch(
+                input,
+                requestInit
+            );
             if (response.status !== 503) {
                 return response;
             }
@@ -128,6 +134,19 @@
                 Math.ceil(delay / 1000) +
                 's.'
             );
+
+            /*
+             * Some older feature-local request code uses a short AbortController
+             * timeout. Once MusicBrainz has explicitly returned 503, that
+             * one-shot timeout must not terminate the required unlimited retry
+             * cycle. Later retries therefore run without the old signal.
+             */
+            if (!saw503 && requestInit?.signal) {
+                requestInit = {...requestInit};
+                delete requestInit.signal;
+            }
+            saw503 = true;
+
             await __mbToolBoxSleep(delay);
         }
     }
