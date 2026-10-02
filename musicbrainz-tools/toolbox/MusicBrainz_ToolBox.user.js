@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MusicBrainz ToolBox
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.0.25
+// @version      1.0.24
 // @description  Combined MusicBrainz release-editor, recording, barcode, Spotify/Apple Music/BPTopTracker linking, search, cover-art, Disc ID, and duplicate-edit tools.
 // @author       karpuzikov
 // @license      MIT
@@ -10,7 +10,6 @@
 // @match        https://open.spotify.com/*
 // @match        https://music.apple.com/*
 // @match        https://www.bptoptracker.com/*
-// @match        https://www.beatport.com/*
 // @match        https://bptoptracker.com/*
 // @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/toolbox/MusicBrainz_ToolBox.user.js
 // @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/toolbox/MusicBrainz_ToolBox.user.js
@@ -7937,9 +7936,7 @@
     if (
         location.hostname === 'music.apple.com' ||
         location.hostname === 'www.bptoptracker.com' ||
-        location.hostname === 'bptoptracker.com' ||
-        location.hostname === 'www.beatport.com' ||
-        location.hostname === 'beatport.com'
+        location.hostname === 'bptoptracker.com'
     ) {
     (() => {
         'use strict';
@@ -8596,29 +8593,6 @@
                 .filter(item => item.info);
         }
 
-        function beatportTargets() {
-            const items = [];
-            const current = beatportInfoFromBeatport(location.href);
-            if (!current) return items;
-
-            // Beatport release pages: put the same MusicBrainz indicator next to
-            // the main release title, using the exact Beatport URL as the lookup key.
-            const heading =
-                document.querySelector('main h1') ||
-                document.querySelector('h1');
-
-            if (heading) {
-                heading.dataset.mbtbSourceHref = current.resource;
-                items.push({
-                    target: heading,
-                    info: current,
-                    large: true,
-                });
-            }
-
-            return items;
-        }
-
         function bpTopTrackerTargets() {
             const items = [];
 
@@ -8663,17 +8637,9 @@
         }
 
         function allTargets() {
-            const host = location.hostname.toLowerCase().replace(/^www\./, '');
-
-            if (host === 'music.apple.com') {
-                return appleTargets();
-            }
-
-            if (host === 'beatport.com') {
-                return beatportTargets();
-            }
-
-            return bpTopTrackerTargets();
+            return location.hostname === 'music.apple.com'
+                ? appleTargets()
+                : bpTopTrackerTargets();
         }
 
         function scan(forceMissing = false) {
