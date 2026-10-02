@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MusicBrainz ToolBox
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.0.38
+// @version      1.0.39
 // @description  Combined MusicBrainz release-editor, recording, barcode, Spotify/Apple Music linking, search, cover-art, Disc ID, and duplicate-edit tools.
 // @author       karpuzikov
 // @license      MIT
@@ -293,7 +293,7 @@
 
         if (!/(^|\.)musicbrainz\.org$/i.test(location.hostname)) return;
 
-        const CURRENT_VERSION = '1.0.38';
+        const CURRENT_VERSION = '1.0.39';
         const CHECK_KEY = 'mb-toolbox-self-update-check-v1';
         const CHECK_INTERVAL = 10 * 60 * 1000;
         const META_API =
@@ -7833,46 +7833,25 @@
             return current.length === rows.length && rows.every((row, index) => row === current[index]);
         }
     
-        function unlinkRecordingAssociationOnly(track) {
-            // Explicit ToolBox unlink is allowed to release the recording lock.
+        function switchRecordingToAddNew(track) {
+            // Explicit ToolBox replacement is allowed to release recording locks.
             track?.__mbToolBoxRecordingLock?.dispose?.();
             track?.__mbToolBoxExactIsrcGuard?.dispose?.();
 
             /*
-             * Do not call track.recording(null): that goes through MusicBrainz's
-             * Track#setRecordingValue machinery, which also maintains comparison
-             * state used by Tracklist fields. "Remove all links" must change only
-             * the recording association.
-             *
-             * Write directly to the dedicated recordingValue observable instead.
-             * No title, artist-credit, length, formatted-length, number, position,
-             * or other Tracklist observable is read or written here.
+             * Use MusicBrainz's native state transition. Track.hasNewRecording(true)
+             * invokes the release editor's own hasNewRecordingChanged() handler,
+             * which clears the existing recording association through
+             * Track#setRecordingValue and leaves the track explicitly marked as
+             * "Add a new recording".
              */
-            if (typeof track?.recordingValue !== 'function') {
-                throw new Error('MusicBrainz recording association model is unavailable.');
+            if (typeof track?.hasNewRecording !== 'function') {
+                throw new Error(
+                    'MusicBrainz Add a new recording state is unavailable.'
+                );
             }
 
-            const Recording = PAGE_WINDOW.MB?.entity?.Recording;
-            if (typeof Recording !== 'function') {
-                throw new Error('MusicBrainz Recording entity constructor is unavailable.');
-            }
-
-            const emptyRecording = new Recording({name: ''});
-
-            track.recordingValue(emptyRecording);
-
-            // Keep this as an unlinked track, not "Add a new recording".
-            if (typeof track.hasNewRecording === 'function') {
-                track.hasNewRecording(false);
-            }
-
-            // Prevent MusicBrainz's recording-association watcher from restoring
-            // the just-removed recording on a later metadata change. This is
-            // recording-association state only; Tracklist values are untouched.
-            if (track.recording) {
-                track.recording.saved = emptyRecording;
-                track.recording.savedEditData = null;
-            }
+            track.hasNewRecording(true);
         }
 
         async function removeAllLinks(panel) {
@@ -7900,22 +7879,24 @@
                     .filter(row => Boolean(recordingIdFromCell(row.querySelectorAll('td.name')[1])));
 
                 status.textContent = visibleLinked.length
-                    ? `Error: MusicBrainz shows ${visibleLinked.length} linked recording(s), but the recording model returned none. No links were changed.`
-                    : 'No recording links to remove.';
+                    ? `Error: MusicBrainz shows ${visibleLinked.length} linked recording(s), but the recording model returned none. No recordings were changed.`
+                    : 'No linked recordings to switch to Add a new recording.';
                 return;
             }
 
-            if (!confirm(`Remove all ${linked.length} recording links from this release?`)) return;
+            if (!confirm(`Switch all ${linked.length} linked recordings to Add a new recording?`)) return;
 
-            let removed = 0;
+            let switched = 0;
             for (const track of linked) {
-                unlinkRecordingAssociationOnly(track);
+                switchRecordingToAddNew(track);
 
                 if (
                     typeof track?.hasExistingRecording === 'function' &&
-                    !track.hasExistingRecording()
+                    !track.hasExistingRecording() &&
+                    typeof track?.hasNewRecording === 'function' &&
+                    track.hasNewRecording()
                 ) {
-                    removed++;
+                    switched++;
                 }
             }
 
@@ -7924,16 +7905,16 @@
             toggle.hidden = true;
             toggle.textContent = 'Show results';
 
-            if (removed !== linked.length) {
+            if (switched !== linked.length) {
                 status.textContent =
-                    `Removed ${removed}/${linked.length} recording links. No Tracklist fields were touched.`;
+                    `Switched ${switched}/${linked.length} tracks to Add a new recording.`;
                 return;
             }
 
             needsAttribution = true;
             appendNoteIfPossible();
             status.textContent =
-                `Removed all ${linked.length} recording links. Tracklist data was not touched.`;
+                `Switched all ${linked.length} linked tracks to Add a new recording.`;
             updateDuplicateHighlights();
         }
 
