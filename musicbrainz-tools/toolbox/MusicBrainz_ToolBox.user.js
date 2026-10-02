@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MusicBrainz ToolBox
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.0.21
+// @version      1.0.22
 // @description  Combined MusicBrainz release-editor, recording, barcode, Spotify/Apple Music/BPTopTracker linking, search, cover-art, Disc ID, and duplicate-edit tools.
 // @author       karpuzikov
 // @license      MIT
@@ -11,8 +11,8 @@
 // @match        https://music.apple.com/*
 // @match        https://www.bptoptracker.com/*
 // @match        https://bptoptracker.com/*
-// @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/toolbox/MusicBrainz_ToolBox.user.js?v=1.0.21
-// @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/toolbox/MusicBrainz_ToolBox.user.js?v=1.0.21
+// @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/toolbox/MusicBrainz_ToolBox.user.js
+// @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/toolbox/MusicBrainz_ToolBox.user.js
 // @supportURL   https://github.com/karpuzikov/userscripts
 // @grant        GM_getValue
 // @grant        GM_setValue
