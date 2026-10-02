@@ -40,21 +40,27 @@ This is a blocking rule. A userscript update is not considered published until e
 
 This gate exists specifically to prevent a same-version Tampermonkey **Reinstall** screen from ever being caused by a link supplied after publishing an update.
 
-- After publishing or modifying an already-installed userscript, the normal final response must **never contain a direct/raw `.user.js` URL**.
-- The required post-update GitHub link is the immutable **GitHub source/version page** for the exact script commit, for example:
-  `https://github.com/<owner>/<repo>/blob/<40-char-commit>/<path>/<script>.user.js`
-- Do not label that safe GitHub page as `Install` or `Update`; label it `GitHub version`, `GitHub source`, or equivalent.
-- A raw/direct `.user.js` installer URL is allowed only when one of these is true at the moment the link is sent:
+- After publishing or modifying an already-installed userscript, the normal final response must **never contain any URL that Tampermonkey can interpret as a userscript installer**.
+- The required safe post-update link is the immutable **GitHub commit page** for the exact script commit:
+  `https://github.com/<owner>/<repo>/commit/<40-char-commit>`
+- Never use a GitHub `blob/.../*.user.js` page as the supposedly safe post-update link. Tampermonkey can intercept GitHub userscript file pages and open/convert them as raw installers, producing a same-version **Reinstall** screen.
+- Never use any post-update URL that:
+  - contains `raw.githubusercontent.com`;
+  - contains `/raw/`;
+  - ends in `.user.js`;
+  - is a GitHub `blob` page whose path ends in `.user.js`.
+- Label the safe commit-page link `GitHub commit`, `GitHub version commit`, or equivalent. Do not label it `Install` or `Update`.
+- A direct userscript installer URL is allowed only when one of these is true at the moment the link is sent:
   1. the user explicitly wants a first install and the script is not installed; or
   2. the user's installed version is explicitly known to be lower than the verified target version.
-- If the installed version is equal to the target, unknown, may already have auto-updated, or cannot be re-verified, a raw/direct `.user.js` URL is forbidden.
-- A previous statement of the installed version is not enough if an update check or auto-update may have happened since then. When in doubt, use the safe GitHub source/version page.
+- If the installed version is equal to the target, unknown, may already have auto-updated, or cannot be re-verified, every installer-capable URL is forbidden.
+- A previous statement of the installed version is not enough if an update check or auto-update may have happened since then. When in doubt, use the GitHub commit page.
 - Never use wording such as `Download / Install`, `Update here`, or `Install latest` in a post-update reply for an already-installed script.
-- This gate overrides any preference to provide a "download link after every update": satisfy that preference with the immutable GitHub source/version page unless a raw installer link is explicitly safe under the conditions above.
+- This gate overrides any preference to provide a "download link after every update": satisfy that preference with the immutable GitHub commit page unless an installer URL is explicitly safe under the conditions above.
 - Before sending every post-update reply, perform this exact final check:
-  - Does the reply contain `raw.githubusercontent.com` or another direct `.user.js` installer URL?
-  - If yes, is the installed version explicitly known **right now** to be lower than the target?
-  - If no, remove the raw installer URL and replace it with the immutable GitHub source/version page.
+  - Does any link contain `raw.githubusercontent.com`, `/raw/`, `.user.js`, or a GitHub `blob` path ending in `.user.js`?
+  - If yes, is the installed version explicitly known **right now** to be lower than the target, or is this explicitly a first install?
+  - If no, remove that link and replace it with the immutable GitHub commit page.
 - Failure of this gate is a production-stop condition. Do not continue unrelated publishing until the delivery mistake is corrected.
 
 ### Tampermonkey UPDATE vs REINSTALL
