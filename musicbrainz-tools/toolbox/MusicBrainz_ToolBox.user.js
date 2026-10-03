@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MusicBrainz ToolBox
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.0.42
+// @version      1.0.43
 // @description  Combined MusicBrainz release-editor, recording, barcode, Spotify/Apple Music linking, search, cover-art, Disc ID, and duplicate-edit tools.
 // @author       karpuzikov
 // @license      MIT
@@ -9769,6 +9769,7 @@
                 if (host === 'music.youtube.com') return 'youtubemusic';
                 if (host === 'youtube.com' || host === 'www.youtube.com' || host === 'youtu.be') return 'youtube';
                 if (host === 'beatport.com' || host === 'www.beatport.com') return 'beatport';
+                if (host === 'mora.jp' || host.endsWith('.mora.jp')) return 'mora';
                 if (host === '7digital.com' || host.endsWith('.7digital.com')) return 'sevendigital';
                 if (host === 'audiomack.com' || host.endsWith('.audiomack.com')) return 'audiomack';
                 if (host.startsWith('music.amazon.')) return 'amazonmusic';
