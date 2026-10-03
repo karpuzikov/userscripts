@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         YYYY-MM-DD for All
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.0.2
+// @version      1.0.3
 // @description  Converts dates to YYYY-MM-DD on supported websites. Built to make adding more websites easy.
 // @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/browser-tools/yyyy-mm-dd-for-all/YYYY-MM-DD_for_All.user.js
 // @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/browser-tools/yyyy-mm-dd-for-all/YYYY-MM-DD_for_All.user.js
@@ -189,6 +189,11 @@
             name: 'Patreon',
             matches: () => /(^|\.)patreon\.com$/i.test(location.hostname),
             run(root) {
+                const publishedAt = document
+                    .querySelector('meta[property="article:published_time"]')
+                    ?.getAttribute('content');
+                const publishedISO = isoDateFromDateTime(publishedAt);
+
                 for (const element of queryWithin(root, '[datetime]')) {
                     const iso = isoDateFromDateTime(element.getAttribute('datetime'));
                     if (iso && element.textContent.trim() !== iso) {
@@ -196,10 +201,24 @@
                     }
                 }
 
+                const relativeTimestampPattern =
+                    /^(?:just now|a minute ago|an hour ago|yesterday|\d+\s+(?:minute|minutes|hour|hours|day|days)\s+ago)$/i;
+
                 const processTextNode = node => {
                     if (node.nodeType !== Node.TEXT_NODE) return;
                     if (node.parentElement?.closest('script, style, textarea, input, select, option')) return;
                     if (node.parentElement?.closest('[datetime]')) return;
+
+                    const text = node.nodeValue.trim();
+
+                    if (
+                        publishedISO &&
+                        relativeTimestampPattern.test(text) &&
+                        node.parentElement?.closest('[class*="timestampRow"]')
+                    ) {
+                        node.nodeValue = publishedISO;
+                        return;
+                    }
 
                     const replacement = replaceMonthDateText(node.nodeValue);
                     if (replacement !== node.nodeValue) node.nodeValue = replacement;
