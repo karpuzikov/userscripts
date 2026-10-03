@@ -1,8 +1,10 @@
 // ==UserScript==
 // @name         YYYY-MM-DD for All
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.0.1
+// @version      1.0.2
 // @description  Converts dates to YYYY-MM-DD on supported websites. Built to make adding more websites easy.
+// @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/browser-tools/yyyy-mm-dd-for-all/YYYY-MM-DD_for_All.user.js
+// @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/browser-tools/yyyy-mm-dd-for-all/YYYY-MM-DD_for_All.user.js
 // @match        https://www.cdjapan.co.jp/*
 // @match        http://www.cdjapan.co.jp/*
 // @match        https://www.iafd.com/title.rme/*
