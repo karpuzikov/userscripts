@@ -1,13 +1,14 @@
 // ==UserScript==
 // @name         YYYY-MM-DD for All
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.0.0
+// @version      1.0.1
 // @description  Converts dates to YYYY-MM-DD on supported websites. Built to make adding more websites easy.
 // @match        https://www.cdjapan.co.jp/*
 // @match        http://www.cdjapan.co.jp/*
 // @match        https://www.iafd.com/title.rme/*
 // @match        https://www.setlist.fm/*
 // @match        https://www.blu-ray.com/*
+// @match        https://www.patreon.com/*
 // @grant        none
 // @run-at       document-idle
 // ==/UserScript==
@@ -68,6 +69,22 @@
         if (root instanceof Element && root.matches(selector)) elements.push(root);
         if (root.querySelectorAll) elements.push(...root.querySelectorAll(selector));
         return elements;
+    }
+
+    function isoDateFromDateTime(value) {
+        if (!value) return null;
+
+        const dateOnly = value.trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        if (dateOnly) return dateOnly[0];
+
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return null;
+
+        return [
+            String(date.getFullYear()).padStart(4, '0'),
+            String(date.getMonth() + 1).padStart(2, '0'),
+            String(date.getDate()).padStart(2, '0')
+        ].join('-');
     }
 
     const adapters = [
@@ -165,6 +182,38 @@
                 while ((node = walker.nextNode())) nodes.push(node);
                 nodes.forEach(processTextNode);
             }
+        },
+        {
+            name: 'Patreon',
+            matches: () => /(^|\.)patreon\.com$/i.test(location.hostname),
+            run(root) {
+                for (const element of queryWithin(root, '[datetime]')) {
+                    const iso = isoDateFromDateTime(element.getAttribute('datetime'));
+                    if (iso && element.textContent.trim() !== iso) {
+                        element.textContent = iso;
+                    }
+                }
+
+                const processTextNode = node => {
+                    if (node.nodeType !== Node.TEXT_NODE) return;
+                    if (node.parentElement?.closest('script, style, textarea, input, select, option')) return;
+                    if (node.parentElement?.closest('[datetime]')) return;
+
+                    const replacement = replaceMonthDateText(node.nodeValue);
+                    if (replacement !== node.nodeValue) node.nodeValue = replacement;
+                };
+
+                if (root.nodeType === Node.TEXT_NODE) {
+                    processTextNode(root);
+                    return;
+                }
+
+                const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+                const nodes = [];
+                let node;
+                while ((node = walker.nextNode())) nodes.push(node);
+                nodes.forEach(processTextNode);
+            }
         }
     ];
 
@@ -179,16 +228,26 @@
 
     const observer = new MutationObserver(mutations => {
         for (const mutation of mutations) {
-            for (const node of mutation.addedNodes) {
-                if (node.nodeType === Node.ELEMENT_NODE || node.nodeType === Node.TEXT_NODE) {
-                    run(node);
+            if (mutation.type === 'childList') {
+                for (const node of mutation.addedNodes) {
+                    if (node.nodeType === Node.ELEMENT_NODE || node.nodeType === Node.TEXT_NODE) {
+                        run(node);
+                    }
                 }
+                continue;
+            }
+
+            if (mutation.type === 'characterData' || mutation.type === 'attributes') {
+                run(mutation.target);
             }
         }
     });
 
     observer.observe(document.body, {
         childList: true,
-        subtree: true
+        subtree: true,
+        characterData: true,
+        attributes: true,
+        attributeFilter: ['datetime']
     });
 })();
