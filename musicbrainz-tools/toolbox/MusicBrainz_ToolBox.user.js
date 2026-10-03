@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MusicBrainz ToolBox
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.0.43
+// @version      1.0.44
 // @description  Combined MusicBrainz release-editor, recording, barcode, Spotify/Apple Music linking, search, cover-art, Disc ID, and duplicate-edit tools.
 // @author       karpuzikov
 // @license      MIT
@@ -9982,6 +9982,8 @@
                 for (const cell of cells) {
                     cell.textContent = '';
                     for (const relation of entity.relations || []) {
+                        if (relation?.ended) continue;
+
                         if (relation?.['target-type'] === 'url') {
                             // Intentionally do not deduplicate by provider or icon class:
                             // every attached URL relationship gets its own shortcut icon.
