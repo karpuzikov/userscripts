@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MusicBrainz ToolBox
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.0.40
+// @version      1.0.41
 // @description  Combined MusicBrainz release-editor, recording, barcode, Spotify/Apple Music linking, search, cover-art, Disc ID, and duplicate-edit tools.
 // @author       karpuzikov
 // @license      MIT
@@ -9841,6 +9841,8 @@
             const STYLE_ID = 'mbtb-relationship-shortcuts-style';
             const CELL_CLASS = 'mbtb-relationship-shortcuts';
             const HEAD_CLASS = 'mbtb-relationship-shortcuts-head';
+            const LABEL_COMMENT_CLASS = 'mbtb-label-disambiguation';
+            const LABEL_TOGGLE_CLASS = 'mbtb-label-disambiguation-toggle';
             const UUID = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}';
 
             function pageContext() {
@@ -9881,7 +9883,8 @@
                 const style = document.createElement('style');
                 style.id = STYLE_ID;
                 style.textContent = [
-                    'th.' + HEAD_CLASS + ', td.' + CELL_CLASS + ' { white-space: nowrap; }',
+                    'th.' + HEAD_CLASS + ' { white-space: nowrap; }',
+                    'td.' + CELL_CLASS + ' { white-space: normal; min-width: 20px; }',
                     'td.' + CELL_CLASS + ' a { display: inline-block; margin: 2px; vertical-align: middle; }',
                     'td.' + CELL_CLASS + ' span.favicon { display: inline-block; width: 16px; height: 16px; vertical-align: middle; }',
                     'td.' + CELL_CLASS + ' .mbtb-rel-ended { opacity: .28; }',
@@ -9892,6 +9895,12 @@
                     'border: 1px solid #999; border-radius: 3px; text-decoration: none;',
                     '}',
                     'td.' + CELL_CLASS + ' .mbtb-rel-mb img { width: 16px; height: 16px; display: block; border: 0; }',
+                    '.' + LABEL_TOGGLE_CLASS + ' {',
+                    'appearance: none; -webkit-appearance: none; background: none; border: 0;',
+                    'padding: 0 2px; margin: 0; color: inherit; font: inherit; cursor: pointer;',
+                    'text-decoration: underline; text-decoration-style: dotted;',
+                    '}',
+                    '.' + LABEL_TOGGLE_CLASS + ':hover { text-decoration-style: solid; }',
                 ].join('\n');
                 document.head.appendChild(style);
             }
@@ -9945,6 +9954,70 @@
                 if (host === 'archive.org' || host.endsWith('.archive.org')) return 'archive';
                 if (host === 'store.steampowered.com') return 'steam';
                 return '';
+            }
+
+            function collapseLabelDisambiguations() {
+                for (const labelLink of document.querySelectorAll('table.tbl a[href^="/label/"]')) {
+                    if (labelLink.dataset.mbtbLabelCommentHandled) continue;
+
+                    let comment = null;
+                    let node = labelLink.nextSibling;
+
+                    while (
+                        node &&
+                        node.nodeType === Node.TEXT_NODE &&
+                        !node.textContent.trim()
+                    ) {
+                        node = node.nextSibling;
+                    }
+
+                    if (
+                        node?.nodeType === Node.ELEMENT_NODE &&
+                        node.matches('.comment')
+                    ) {
+                        comment = node;
+                    } else if (node?.nodeType === Node.TEXT_NODE) {
+                        const match = node.data.match(/^\s*(\([^)]*\))/);
+                        if (match) {
+                            comment = document.createElement('span');
+                            comment.className = 'comment';
+                            comment.textContent = match[1];
+                            node.data = node.data.slice(match[0].length);
+                            node.parentNode.insertBefore(comment, node);
+                        }
+                    }
+
+                    labelLink.dataset.mbtbLabelCommentHandled = '1';
+                    if (!comment || !comment.textContent.trim()) continue;
+                    if (comment.classList.contains(LABEL_COMMENT_CLASS)) continue;
+
+                    comment.classList.add(LABEL_COMMENT_CLASS);
+                    const fullText = comment.textContent.trim();
+                    comment.hidden = true;
+
+                    const toggle = document.createElement('button');
+                    toggle.type = 'button';
+                    toggle.className = LABEL_TOGGLE_CLASS;
+                    toggle.textContent = '...';
+                    toggle.title = 'Show label disambiguation: ' + fullText;
+                    toggle.setAttribute('aria-label', toggle.title);
+                    toggle.setAttribute('aria-expanded', 'false');
+
+                    toggle.addEventListener('click', event => {
+                        event.preventDefault();
+                        event.stopPropagation();
+
+                        const expanded = comment.hidden;
+                        comment.hidden = !expanded;
+                        toggle.setAttribute('aria-expanded', String(expanded));
+                        toggle.title =
+                            (expanded ? 'Hide' : 'Show') +
+                            ' label disambiguation: ' + fullText;
+                        toggle.setAttribute('aria-label', toggle.title);
+                    });
+
+                    comment.parentNode.insertBefore(toggle, comment);
+                }
             }
 
             function entityFromRow(row, childType) {
@@ -10095,6 +10168,7 @@
                 if (!context) return;
 
                 installStyle();
+                collapseLabelDisambiguations();
                 const cellsByMbid = prepareTables(context.childType);
                 if (!cellsByMbid.size) return;
 
