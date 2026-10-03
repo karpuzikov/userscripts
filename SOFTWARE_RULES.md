@@ -72,6 +72,13 @@ This gate exists specifically to prevent a same-version Tampermonkey **Reinstall
   - If not, remove that installer link and tell the user to use Tampermonkey's native update check.
 - Failure of this gate is a production-stop condition. Do not continue unrelated publishing until the delivery mistake is corrected.
 
+### Tampermonkey-native updates only
+
+- Userscripts must rely on Tampermonkey's native update mechanism through `@updateURL` and `@downloadURL`.
+- Do not add custom in-page update checkers, update popups, update banners, version polling, GitHub API update checks, or custom Update buttons unless the user explicitly requests that exact behavior.
+- Do not maintain a separate hard-coded current-version constant for update detection.
+- When an installed userscript needs updating, increase `@version` and let Tampermonkey handle update detection and installation.
+
 ### Tampermonkey UPDATE vs REINSTALL
 
 - A direct `.user.js` install URL is **not** an update button. If its `@version` equals the installed version, Tampermonkey correctly shows **Reinstall**, which can reset script settings.
