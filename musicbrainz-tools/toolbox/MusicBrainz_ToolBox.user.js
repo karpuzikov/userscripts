@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MusicBrainz ToolBox
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.0.45
+// @version      1.0.46
 // @description  Combined MusicBrainz release-editor, recording, barcode, Spotify/Apple Music linking, search, cover-art, Disc ID, and duplicate-edit tools.
 // @author       karpuzikov
 // @license      MIT
@@ -9695,7 +9695,7 @@
                     };
                 }
 
-                match = location.pathname.match(new RegExp('^/artist/(' + UUID + ')/(releases|works)/?
+                match = location.pathname.match(new RegExp('^/artist/(' + UUID + ')/(releases|works)/?$','i'));
                 if (match) {
                     return {
                         parentType: 'artist',
