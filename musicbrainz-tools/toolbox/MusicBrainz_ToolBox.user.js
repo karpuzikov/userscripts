@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MusicBrainz ToolBox
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.0.44
+// @version      1.0.45
 // @description  Combined MusicBrainz release-editor, recording, barcode, Spotify/Apple Music linking, search, cover-art, Disc ID, and duplicate-edit tools.
 // @author       karpuzikov
 // @license      MIT
@@ -9695,7 +9695,366 @@
                     };
                 }
 
-                match = location.pathname.match(new RegExp('^/artist/(' + UUID + ')/(releases|recordings|works)/?$','i'));
+                match = location.pathname.match(new RegExp('^/artist/(' + UUID + ')/(releases|works)/?
+                if (match) {
+                    return {
+                        parentType: 'artist',
+                        parentMbid: match[1],
+                        childType: match[2].replace(/s$/, ''),
+                    };
+                }
+
+                return null;
+            }
+
+            function installStyle() {
+                if (document.getElementById(STYLE_ID)) return;
+                const style = document.createElement('style');
+                style.id = STYLE_ID;
+                style.textContent = [
+                    'th.' + HEAD_CLASS + ' { white-space: nowrap; }',
+                    'td.' + CELL_CLASS + ' { white-space: normal; min-width: 20px; }',
+                    'td.' + CELL_CLASS + ' a { display: inline-block; margin: 2px; vertical-align: middle; }',
+                    'td.' + CELL_CLASS + ' span.favicon { display: inline-block; width: 16px; height: 16px; vertical-align: middle; }',
+                    'td.' + CELL_CLASS + ' .mbtb-rel-ended { opacity: .28; }',
+                    'td.' + CELL_CLASS + ' .mbtb-rel-generic {',
+                    'display: inline-flex; align-items: center; justify-content: center;',
+                    'width: 16px; height: 16px; box-sizing: border-box;',
+                    'font-size: 12px; line-height: 16px; font-weight: 700;',
+                    'border: 1px solid #999; border-radius: 3px; text-decoration: none;',
+                    '}',
+                    'td.' + CELL_CLASS + ' .mbtb-rel-mb img { width: 16px; height: 16px; display: block; border: 0; }',
+                    '.' + LABEL_TOGGLE_CLASS + ' {',
+                    'appearance: none; -webkit-appearance: none; background: none; border: 0;',
+                    'padding: 0 2px; margin: 0; color: inherit; font: inherit; cursor: pointer;',
+                    'text-decoration: underline; text-decoration-style: dotted;',
+                    '}',
+                    '.' + LABEL_TOGGLE_CLASS + ':hover { text-decoration-style: solid; }',
+                ].join('\n');
+                document.head.appendChild(style);
+            }
+
+            function relationIconClass(relation, targetUrl) {
+                const type = String(relation?.type || '').toLowerCase();
+
+                if (type === 'official homepage' || type === 'discography entry') return 'home';
+                if (type === 'allmusic') return 'allmusic';
+                if (type === 'amazon asin') return 'amazon';
+                if (type === 'discogs') return 'discogs';
+                if (type === 'imdb') return 'imdb';
+                if (type === 'lyrics') return 'lyrics';
+                if (type === 'secondhandsongs') return 'secondhandsongs';
+                if (type === 'vgmdb') return 'vgmdb';
+                if (type === 'wikidata') return 'wikidata';
+                if (type === 'wikipedia') return 'wikipedia';
+
+                let url;
+                try {
+                    url = new URL(targetUrl);
+                } catch {
+                    return '';
+                }
+
+                const host = url.hostname.toLowerCase();
+                const path = url.pathname.toLowerCase();
+
+                if (host === 'open.spotify.com') return 'spotify';
+                if (host === 'music.apple.com') return 'applemusic';
+                if (host === 'itunes.apple.com') return 'itunes';
+                if (host === 'www.deezer.com' || host === 'deezer.com') return 'deezer';
+                if (host === 'tidal.com' || host.endsWith('.tidal.com')) return 'tidal';
+                if (host === 'soundcloud.com' || host.endsWith('.soundcloud.com')) return 'soundcloud';
+                if (host === 'bandcamp.com' || host.endsWith('.bandcamp.com')) return 'bandcamp';
+                if (host === 'www.qobuz.com' || host === 'qobuz.com' || host.endsWith('.qobuz.com')) return 'qobuz';
+                if (host === 'music.youtube.com') return 'youtubemusic';
+                if (host === 'youtube.com' || host === 'www.youtube.com' || host === 'youtu.be') return 'youtube';
+                if (host === 'beatport.com' || host === 'www.beatport.com') return 'beatport';
+                if (host === 'mora.jp' || host.endsWith('.mora.jp')) return 'mora';
+                if (host === '7digital.com' || host.endsWith('.7digital.com')) return 'sevendigital';
+                if (host === 'audiomack.com' || host.endsWith('.audiomack.com')) return 'audiomack';
+                if (host.startsWith('music.amazon.')) return 'amazonmusic';
+                if (host.includes('amazon.') && path.includes('/dp/')) return 'amazon';
+                if (host === 'discogs.com' || host.endsWith('.discogs.com')) return 'discogs';
+                if (host === 'allmusic.com' || host.endsWith('.allmusic.com')) return 'allmusic';
+                if (host === 'genius.com' || host.endsWith('.genius.com')) return 'genius';
+                if (host === 'www.wikidata.org' || host === 'wikidata.org') return 'wikidata';
+                if (host.endsWith('wikipedia.org')) return 'wikipedia';
+                if (host === 'rateyourmusic.com' || host.endsWith('.rateyourmusic.com')) return 'rateyourmusic';
+                if (host === 'www.worldcat.org' || host === 'worldcat.org') return 'worldcat';
+                if (host === 'archive.org' || host.endsWith('.archive.org')) return 'archive';
+                if (host === 'store.steampowered.com') return 'steam';
+                return '';
+            }
+
+            function collapseLabelDisambiguations() {
+                for (const labelLink of document.querySelectorAll('table.tbl a[href^="/label/"]')) {
+                    if (labelLink.dataset.mbtbLabelCommentHandled) continue;
+
+                    let comment = null;
+                    let node = labelLink.nextSibling;
+
+                    while (
+                        node &&
+                        node.nodeType === Node.TEXT_NODE &&
+                        !node.textContent.trim()
+                    ) {
+                        node = node.nextSibling;
+                    }
+
+                    if (
+                        node?.nodeType === Node.ELEMENT_NODE &&
+                        node.matches('.comment')
+                    ) {
+                        comment = node;
+                    } else if (node?.nodeType === Node.TEXT_NODE) {
+                        const match = node.data.match(/^\s*(\([^)]*\))/);
+                        if (match) {
+                            comment = document.createElement('span');
+                            comment.className = 'comment';
+                            comment.textContent = match[1];
+                            node.data = node.data.slice(match[0].length);
+                            node.parentNode.insertBefore(comment, node);
+                        }
+                    }
+
+                    labelLink.dataset.mbtbLabelCommentHandled = '1';
+                    if (!comment || !comment.textContent.trim()) continue;
+                    if (comment.classList.contains(LABEL_COMMENT_CLASS)) continue;
+
+                    comment.classList.add(LABEL_COMMENT_CLASS);
+                    const fullText = comment.textContent.trim();
+                    comment.hidden = true;
+
+                    const toggle = document.createElement('button');
+                    toggle.type = 'button';
+                    toggle.className = LABEL_TOGGLE_CLASS;
+                    toggle.textContent = '...';
+                    toggle.title = 'Show label disambiguation: ' + fullText;
+                    toggle.setAttribute('aria-label', toggle.title);
+                    toggle.setAttribute('aria-expanded', 'false');
+
+                    toggle.addEventListener('click', event => {
+                        event.preventDefault();
+                        event.stopPropagation();
+
+                        const expanded = comment.hidden;
+                        comment.hidden = !expanded;
+                        toggle.setAttribute('aria-expanded', String(expanded));
+                        toggle.title =
+                            (expanded ? 'Hide' : 'Show') +
+                            ' label disambiguation: ' + fullText;
+                        toggle.setAttribute('aria-label', toggle.title);
+                    });
+
+                    comment.parentNode.insertBefore(toggle, comment);
+                }
+            }
+
+            function entityFromRow(row, childType) {
+                const re = new RegExp('^/' + childType + '/(' + UUID + ')(?:[/?#]|$)', 'i');
+                const cells = [...row.children];
+
+                for (let index = 0; index < cells.length; index++) {
+                    for (const link of cells[index].querySelectorAll('a[href]')) {
+                        let pathname;
+                        try {
+                            pathname = new URL(link.href, location.href).pathname;
+                        } catch {
+                            continue;
+                        }
+                        const match = pathname.match(re);
+                        if (match) {
+                            return {mbid: match[1].toLowerCase(), index};
+                        }
+                    }
+                }
+
+                return null;
+            }
+
+            function prepareTables(childType) {
+                const cellsByMbid = new Map();
+
+                for (const table of document.querySelectorAll('table.tbl')) {
+                    const rows = [...table.querySelectorAll('tr')];
+                    const firstData = rows
+                        .map(row => ({row, entity: entityFromRow(row, childType)}))
+                        .find(item => item.entity);
+
+                    if (!firstData) continue;
+                    const entityIndex = firstData.entity.index;
+
+                    const header =
+                        table.querySelector('thead tr:last-child') ||
+                        rows.find(row => row.querySelectorAll(':scope > th').length > entityIndex);
+                    const headerCell = header?.children?.[entityIndex];
+                    if (headerCell && !header.querySelector('.' + HEAD_CLASS)) {
+                        const th = document.createElement('th');
+                        th.className = HEAD_CLASS;
+                        th.textContent = 'Relationships';
+                        headerCell.insertAdjacentElement('afterend', th);
+                    }
+
+                    for (const row of rows) {
+                        if (row === header) continue;
+
+                        if (row.classList.contains('subh')) {
+                            const spanning = row.querySelector(':scope > th[colspan], :scope > td[colspan]');
+                            if (spanning && !row.dataset.mbtbRelationshipColspanAdjusted) {
+                                spanning.colSpan += 1;
+                                row.dataset.mbtbRelationshipColspanAdjusted = '1';
+                            }
+                            continue;
+                        }
+
+                        const tdCells = [...row.querySelectorAll(':scope > td')];
+                        if (!tdCells.length || tdCells.length <= entityIndex) continue;
+                        if (row.querySelector(':scope > td.' + CELL_CLASS)) continue;
+
+                        const entity = entityFromRow(row, childType);
+                        const td = document.createElement('td');
+                        td.className = CELL_CLASS;
+                        tdCells[entityIndex].insertAdjacentElement('afterend', td);
+
+                        if (!entity) continue;
+                        if (!cellsByMbid.has(entity.mbid)) cellsByMbid.set(entity.mbid, []);
+                        cellsByMbid.get(entity.mbid).push(td);
+                    }
+                }
+
+                return cellsByMbid;
+            }
+
+            function addUrlRelationship(cell, relation) {
+                const targetUrl = relation?.url?.resource;
+                if (!targetUrl) return;
+
+                const link = document.createElement('a');
+                link.href = targetUrl;
+                link.title =
+                    String(relation.type || 'URL relationship') +
+                    (relation.ended ? ' (ended)' : '') +
+                    ': ' + targetUrl;
+                link.setAttribute('aria-label', link.title);
+
+                const iconClass = relationIconClass(relation, targetUrl);
+                if (iconClass) {
+                    const icon = document.createElement('span');
+                    icon.className =
+                        'favicon ' + iconClass + '-favicon' +
+                        (relation.ended ? ' mbtb-rel-ended' : '');
+                    link.appendChild(icon);
+                } else {
+                    link.className = 'mbtb-rel-generic' + (relation.ended ? ' mbtb-rel-ended' : '');
+                    link.textContent = '↗';
+                }
+
+                cell.appendChild(link);
+            }
+
+            function addMusicBrainzRelationship(cell, relation) {
+                const targetType = String(relation?.['target-type'] || '');
+                const normalizedType = targetType.replace('_', '-');
+                const allowed =
+                    (targetType === 'release_group' && relation.type === 'single from') ||
+                    (targetType === 'release' && relation.type === 'remaster');
+                if (!allowed) return;
+
+                const target = relation[targetType];
+                if (!target?.id) return;
+
+                const link = document.createElement('a');
+                link.className = 'mbtb-rel-mb' + (relation.ended ? ' mbtb-rel-ended' : '');
+                link.href = '/' + normalizedType + '/' + target.id;
+                link.title =
+                    String(relation.type || 'MusicBrainz relationship') +
+                    (relation.ended ? ' (ended)' : '');
+                link.setAttribute('aria-label', link.title);
+
+                const image = document.createElement('img');
+                image.src = 'https://musicbrainz.org/favicon.ico';
+                image.alt = '';
+                link.appendChild(image);
+                cell.appendChild(link);
+            }
+
+            function renderEntity(entity, cells) {
+                for (const cell of cells) {
+                    cell.textContent = '';
+                    for (const relation of entity.relations || []) {
+                        if (relation?.ended) continue;
+
+                        if (relation?.['target-type'] === 'url') {
+                            // Intentionally do not deduplicate by provider or icon class:
+                            // every attached URL relationship gets its own shortcut icon.
+                            addUrlRelationship(cell, relation);
+                        } else {
+                            addMusicBrainzRelationship(cell, relation);
+                        }
+                    }
+                }
+            }
+
+            async function init() {
+                const context = pageContext();
+                if (!context) return;
+
+                installStyle();
+                collapseLabelDisambiguations();
+                const cellsByMbid = prepareTables(context.childType);
+                if (!cellsByMbid.size) return;
+
+                const includes = {
+                    'release-group': ['release-group-rels', 'url-rels'],
+                    release: ['release-rels', 'url-rels', 'discids'],
+                    recording: ['work-rels', 'url-rels'],
+                    work: ['url-rels'],
+                }[context.childType] || ['url-rels'];
+
+                const page = Math.max(1, Number(new URL(location.href).searchParams.get('page')) || 1);
+                const api = new URL('/ws/2/' + context.childType, location.origin);
+                api.searchParams.set(context.parentType, context.parentMbid);
+                api.searchParams.set('inc', includes.join(' '));
+                api.searchParams.set('limit', '100');
+                api.searchParams.set('offset', String((page - 1) * 100));
+                api.searchParams.set('fmt', 'json');
+
+                try {
+                    const response = await __mbToolBoxFetch(api.toString(), {
+                        headers: {Accept: 'application/json'},
+                    });
+                    if (!response.ok) {
+                        throw new Error('HTTP ' + response.status);
+                    }
+
+                    const data = await response.json();
+                    const listKey = {
+                        'release-group': 'release-groups',
+                        release: 'releases',
+                        recording: 'recordings',
+                        work: 'works',
+                    }[context.childType];
+
+                    for (const entity of data[listKey] || []) {
+                        const cells = cellsByMbid.get(String(entity.id || '').toLowerCase());
+                        if (cells?.length) renderEntity(entity, cells);
+                    }
+                } catch (error) {
+                    console.error('[MusicBrainz ToolBox] Relationship shortcuts failed:', error);
+                }
+            }
+
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', init, {once: true});
+            } else {
+                init();
+            }
+        })();
+    }
+
+
+})();
+,'i'));
                 if (match) {
                     return {
                         parentType: 'artist',
