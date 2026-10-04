@@ -7,19 +7,22 @@ When implementation behavior conflicts with this file, this file wins.
 
 ## 1. Core objective
 
-Build the most complete practical discography while minimizing redundant audio files.
+Build the most complete practical discography while minimizing unnecessary retained tracks.
 
-Priority order:
+Current priority order:
 
-1. Preserve ideally every unique song/recording/version that is available.
+1. Preserve every wanted unique song/recording/version.
 2. Keep every album represented.
-3. Save Remixes / Save Live recordings are early inclusion switches. Unchecked Remix/Live tracks are eliminated before fingerprint analysis. The only Save-Remixes exception is a remix with an explicit featured-artist credit.
-4. Prefer CD / physical-media sources over equivalent WEB sources.
-5. Prefer the existing processed copy when source class and included audio are otherwise equivalent.
-6. Then minimize duplicated included tracks, total included audio files, and retained release count.
-7. Never automatically discard material when the audio match is uncertain.
-
-The analyzer must optimize the collection as a whole, not judge each release independently.
+3. Apply Save Remixes / Save Live at the first classification stage. Unchecked material leaves the analysis pipeline immediately. The sole Save-Remixes exception is a remix with an explicit featured-artist credit.
+4. Explicit supersedes the corresponding Clean track before fingerprint analysis.
+5. Stated Version families are unique. Radio Edit, Extended Mix/Version, Acoustic, Instrumental, A Cappella, language versions and comparable explicit versions are not cross-compared as duplicates of other stated versions.
+6. Prefer CD/physical over equivalent WEB.
+7. For CD alternatives, hey-bro-check-log is the rip-quality authority. 80 is the acceptable-score threshold; a better comparable log is preferred for otherwise equivalent CD choices.
+8. Minimize total retained track count. Every track physically carried by a retained release counts, including Remix/Live tracks excluded from analysis.
+9. When all earlier rules tie for interchangeable releases, any measurable better DR/mastering score wins.
+10. If mastering also ties, prefer the already processed Existing copy over Recycle/update.
+11. Compilations are below regular Album/EP/Single releases and are retained only for wanted song/version coverage unavailable on regular releases.
+12. Use manual acoustic review only for rare ambiguous cases: strong same-audio evidence with different titles, or a narrow near-threshold same-title match.
 
 ## 2. Albums and editions
 
@@ -120,81 +123,65 @@ The analyzer provides two persistent affirmative checkboxes:
 
 Both are unchecked by default. Checked means the category participates normally in release comparison and selection. Unchecked means the category is skipped completely by comparison, coverage, counting, optimization, source/log tie-breaks, and clean/explicit tie-breaks. These options never create duplicate identity; track identity still requires a high-confidence audio match.
 
-## 5. Explicit vs clean - active absolute final tie-break
+## 5. Explicit vs clean - active absolute preference
 
-Explicit/clean metadata is intentionally neutral during duplicate identity, wanted-coverage construction, album representation, source selection, Existing-vs-Recycle precedence, exact global file minimization, and CD rip-log scoring.
+Explicit > Clean.
 
-Detection currently recognizes:
-- `ITUNESADVISORY=0` as Clean;
-- `ITUNESADVISORY=1` as Explicit;
-- compatible explicit/advisory tags and clear `Clean` / `Explicit` title markers as secondary evidence.
+If an Explicit counterpart for the same normalized title/version/artist identity exists, the corresponding Clean track is excluded before fingerprint analysis.
 
-Only at the absolute final selection stage, when Clean and Explicit releases are otherwise proven exact equivalents with the same source class, included track structure/order, and exact audio-group multiset, retain Explicit and remove the Clean duplicate.
-
-If the censored/edited audio is materially different, the acoustic matcher keeps it as a distinct recording/version. Explicit metadata never creates duplicate identity.
+- The Clean file does not need to fingerprint-match the Explicit file.
+- The Clean track creates no coverage obligation when its Explicit counterpart exists.
+- If only Clean exists, keep it normally.
+- Explicit/Clean wording itself does not create a separate Version family.
 
 ## 6. Unique recording/version definition
 
-Track duplicate identity requires a high-confidence acoustic match.
+Acoustic fingerprinting is the duplicate authority for tracks that are eligible to be compared.
 
-Primary identity signal:
-1. Chromaprint fingerprint similarity calculated from the decoded audio itself.
+- External database recording identifiers are not read or used by the analyzer.
+- Reported duration is diagnostic only and never proves identity.
+- Candidate discovery uses acoustic fingerprint evidence plus same-base-title routing.
+- Every automatic duplicate merge must pass the acoustic matcher.
+- Alignment may compensate for leading/trailing silence or padding.
+- Substantial unmatched non-silent content means a distinct recording/version.
+- A stated semantic Version is a unique song/version and different Version families do not enter cross-version duplicate comparison.
+- Examples include Radio Edit/Version, Extended Mix/Version, Acoustic, Instrumental, A Cappella, language versions and comparable explicit version descriptors.
 
-Rules:
-
-- acoustic fingerprint is the final duplicate authority;
-- metadata never creates a duplicate match by itself;
-- ISRC does not create, accept, reject, or merge duplicate identity;
-- reported/tagged/file duration does not create, accept, reject, or merge duplicate identity;
-- candidate discovery uses fingerprint-token overlap, shared MusicBrainz Recording ID as a discovery hint only, and same-base-title routing to decide which pairs deserve the expensive acoustic comparison;
-- every final duplicate still has to pass the acoustic matcher;
-- definitive near-perfect acoustic identity may override conflicting metadata identifiers;
-- for non-definitive acoustic matches, strong contradictory evidence such as different recording MBIDs or incompatible semantic version/language descriptors may conservatively veto the merge;
-- uncertain acoustic matches remain distinct and are retained;
-- fingerprint alignment may compensate for leading/trailing silence or padding;
-- substantial unmatched non-silent fingerprint content means a distinct version;
-- release-level coverage is computed from these audio-derived recording groups, not filename/title/ISRC similarity.
-
-Decoded PCM hash is not the primary detector because mastering/remastering can change PCM while the underlying recording remains equivalent for collection coverage.
-
-Chromaprint matching has strict and mastering/pressing-tolerant acoustic confidence paths. The tolerant path still requires strong full-track acoustic evidence; it exists so different pressings/masterings of the same recording are not automatically retained as different songs.
-
-Different performances/versions remain distinct whenever their acoustic content is materially different, including live, acoustic, radio edit, extended, instrumental, a cappella, remix/dub, demo, alternate mix, language performances, and similar variants.
-
-Titles and metadata explain why tracks differ; they do not overrule proven acoustic identity.
+Rare manual review:
+- strong acoustic match + different base titles -> manual review;
+- narrow near-threshold same-title match -> manual review;
+- unchecked review means keep them separate; checked Same recording merges them.
 
 ## 7. Source preference
 
-When the same included recording/version exists in multiple sources, preference is:
+For equivalent wanted content:
 
-1. CD rip with valid LOG + CUE
-2. other verified lossless physical-media source
-3. WEB lossless
+1. CD/physical beats WEB.
+2. For CD alternatives, hey-bro-check-log is the rip-quality authority.
+3. Comparable score 80 is the acceptable threshold.
+4. A below-80 CD choice loses to a compliant at/above-80 alternative when both preserve the required coverage.
+5. Between otherwise equivalent CD rips, prefer the better comparable log.
+6. No external rip-database confidence is used.
 
-CD detection rule:
-- if a release folder contains at least one `.cue` file AND at least one `.log` file other than `audiochecker.log`, treat that release as CD;
-- `audiochecker.log` by itself does NOT make a release CD.
+CD detection:
+- CUE + real rip LOG is CD evidence;
+- a real EAC/XLD rip LOG can also establish a track-based CD rip without CUE;
+- audiochecker.log alone does not make a release CD;
+- explicit medium metadata may also establish CD.
 
-A WEB copy can be removed when the same included recording is already preserved from a preferred CD source.
-
-Do not replace a unique WEB recording merely because another release is on CD if the actual recording/version is different.
-
+Source preference never removes a unique wanted recording/version.
 
 ## Existing discography precedence
 
-The existing ALAC discography is already processed material and is preferred over an equivalent recycle/update copy when included content/version and source class are equal.
+Existing is a late tie-break, not a hard quality floor.
 
-A recycle release should replace an existing release only when it is objectively better by the project rules, for example:
-
-- it preserves included unique material the existing release does not;
-- it is CD/physical while the existing equivalent is WEB.
-
-For equivalent WEB vs WEB content, keep the existing ALAC release and move/skip the recycle copy.
-
-For equivalent CD vs WEB content, keep the CD release regardless of whether it is in Existing or Recycle.
-
-Release-level equivalence is based on audio-derived track groups and direct Chromaprint comparison. A shared MBID or same-base-title may route tracks into acoustic comparison, but MBIDs, ISRCs, normalized titles, filenames, and duration never create a match. ISRC and duration are explanatory metadata only; strong non-definitive metadata conflicts may still conservatively veto an otherwise borderline acoustic merge.
-
+For otherwise interchangeable choices:
+- source class decides first;
+- CD-log quality decides next where applicable;
+- lower total retained track count decides before Existing precedence;
+- DR/mastering is the last objective quality attempt;
+- any measurable better DR score may replace Existing;
+- only when all of those tie does Existing beat Recycle/update.
 
 ### Optional existing-discography mode
 
@@ -259,7 +246,7 @@ Pre-optimization dominance is deliberately conservative.
 
 For related album releases:
 - collapse pairwise only when both releases have exactly equivalent included acoustic coverage;
-- among exact-coverage equivalents, prefer stronger source class, then the Existing processed copy when source ties, then fewer retained physical files, then deterministic release order;
+- among exact-coverage equivalents, prefer stronger source class, then the Existing processed copy when source ties, then fewer retained tracks, then deterministic release order;
 - do not let a strict album superset eliminate a smaller edition pairwise;
 - extra groups on a larger edition may already be supplied more efficiently elsewhere, so superset/subset decisions belong to the global optimizer;
 - Explicit/Clean remains neutral here.
@@ -268,82 +255,59 @@ Dominated exact-equivalent releases are removed from the active optimizer pool, 
 
 ## 9. Optimization model
 
-Think of each release as a set of acoustically resolved recording groups plus album-family obligations.
+Hard requirements:
+- every active wanted recording/version is covered;
+- every active album family remains represented;
+- ignored releases cannot provide coverage;
+- ignored tracks and step-1 excluded Remix/Live/Clean material create no coverage obligation;
+- compilations may provide only wanted groups unavailable on regular releases.
 
-Required coverage:
+Quality/provider floor:
+- do not drop below required source class;
+- CD-log acceptability is part of provider quality;
+- Existing status is not a hard floor.
 
-- every active wanted recording/version must be covered at least once;
-- every active album family must have at least one retained album edition;
-- manually ignored releases are excluded from the active provider set until restored and Re-Analyzed;
-- unchecked Remix/Live categories and manually skipped tracks do not create coverage obligations.
+Global cost order after requirements/quality are satisfied:
+1. avoid selected CD releases with comparable rip-log score below 80 when compliant alternatives exist;
+2. minimize total retained track count, counting every track carried by every retained release;
+3. minimize retained release count;
+4. minimize Recycle/update release count, so Existing wins an otherwise complete tie;
+5. stable release-ID ordering.
 
-### Exact global optimizer - v0.19.0
+CUE image layout receives no special one-file optimization bonus. Compare image and track-based CD rips by normal source/log/content rules and total logical track count.
 
-The old greedy/local-swap result is now used only as a conservative rule-respecting seed.
-
-The final collection is solved with an exact branch-and-bound set-cover search split into independent connected components. This applies the Coverage Atlas global-optimization idea without replacing Duplicate Edition Analyzer's own fingerprint identity, Release Map, Personal Picks, or Apply workflow.
-
-The seed establishes a minimum quality floor for each active recording group and album family:
-- do not drop below the selected source-medium class;
-- when source class ties, preserve Existing-discography precedence.
-
-Inside those quality constraints, the exact solver minimizes globally in this order:
-
-1. total retained physical audio-file count;
-2. total retained counted-track count;
-3. retained release count;
-4. Recycle/update release count;
-5. stable release-ID order for deterministic results.
-
-CUE/image releases count their shared physical image file once for file-cost purposes while their logical tracks still count separately for recording coverage.
-
-After exact global minimization:
-- source/Existing safeguards run again defensively;
-- redundant-selection pruning runs again;
-- exact-equivalent CD rips may be replaced by the better hey-bro-check-log result;
-- Explicit may replace Clean only as the absolute final exact-equivalent tie-break.
-
-The exact optimizer is also used after Release Map Ignore/Restore changes. Re-Analyze reuses the already generated fingerprints and recording groups; it does not rescan/re-fingerprint the collection.
-
-When detailed Logging is enabled, the JSONL receives an `optimizer` record containing component count, exact-search state count, coverage requirements, seed/final release counts, and seed/final physical-file counts.
+After the exact solve, better equivalent CD rip logs and then DR/mastering may replace the selected carrier when the earlier rules permit it.
 
 ## 10. Decision states
 
-The analyzer must never silently delete files.
+Final filesystem-plan states:
+- KEEP
+- REDUNDANT
+- REPLACE
+- NEW
 
-Use:
+Manual acoustic REVIEW is a temporary analysis-stage state, not a final release outcome.
 
-- KEEP - required by current rules.
-- REDUNDANT - all useful content is preserved elsewhere by a preferred solution.
-- REPLACE - another source should replace the currently retained copy.
-- NEW - candidate adds material not currently represented.
+Only rare ambiguous pairs enter REVIEW:
+- strong acoustic match but different base titles;
+- narrow near-threshold same-title acoustic match.
 
-There is no normal manual REVIEW state for duplicate identity. The software must perform the track-by-track audio comparison itself. If equivalence cannot be established with enough confidence, treat the tracks as different and keep both. A grouped pre-analysis track-pattern review is allowed only to decide which descriptor families count as included coverage; it must never create, block, or override an audio duplicate match.
-
-Every REDUNDANT/REPLACE decision must explain what retained release/track covers it.
+Unchecked review means treat the pair as different. Checked Same recording merges it.
+Every REDUNDANT/REPLACE result must explain which retained release/track covers it.
 
 ## 11. Confidence
 
-Automatic duplicate identity is allowed only from high-confidence acoustic evidence.
+Automatic duplicate identity requires high-confidence acoustic evidence.
 
-High-confidence behavior:
-- Chromaprint/acoustic comparison must pass the active strict or mastering-tolerant audio thresholds;
+- same-title eligible tracks can merge only after passing active acoustic thresholds;
 - alignment may compensate for silence/padding;
-- substantial unmatched non-silent fingerprint content means a different edit/version;
-- near-perfect definitive acoustic identity may override conflicting MusicBrainz Recording IDs or other metadata disagreement.
+- substantial unmatched non-silent content blocks a merge;
+- different stated Version families are unique and are filtered before cross-version matching;
+- different-title strong matches go to manual review instead of auto-merge;
+- narrow near-threshold same-title matches go to manual review instead of silent rejection;
+- everything outside automatic acceptance and the narrow review window remains separate.
 
-Metadata behavior:
-- MBID and same-base-title may route a pair into acoustic comparison;
-- ISRC is diagnostic/explanatory metadata only;
-- duration is diagnostic/explanatory metadata only;
-- metadata never creates a duplicate match;
-- for non-definitive acoustic matches, strong semantic version/language or recording-ID conflicts may conservatively veto the merge.
-
-When acoustic confidence is insufficient:
-- do not ask for track-by-track duplicate review;
-- keep the tracks as separate recording groups;
-- preserve both so unique material cannot be lost;
-- record the evidence in optional diagnostics.
+External database recording identifiers are not part of this analyzer.
 
 ## 12. Title normalization for comparison
 
@@ -383,7 +347,7 @@ If the same `Honeyflow` exists on a single, prefer keeping:
 - the Limited Edition album
 - the single containing `Honeyflow`
 
-and remove the Japanese album edition, because the album remains represented and all unique songs remain covered with fewer duplicated files.
+and remove the Japanese album edition, because the album remains represented and all unique songs remain covered with fewer retained tracks.
 
 
 ### Release container and move integrity\n\n- Release folders may be nested under organizational folders such as `Albums`, `Other`, `Singles`, or per-title grouping folders. Discovery must recurse through those containers and identify the actual release folders. Multi-disc subfolders such as `CD1`, `CD 2`, `Disc 1`, etc. belong to one parent release and must not be treated as separate releases.
@@ -675,7 +639,7 @@ Do not flatten release folders into the duplicate root. After successful moves, 
 
 - When `Save Remixes` is unchecked, every remix is completely invisible to release selection and track counting. There are no featured-artist exceptions.
 - When `Save Live recordings` is unchecked, live-performance material is completely invisible to release selection and track counting. Treat explicit `Live`, `Session`/`Sessions`, and `Unplugged` labels as live-performance material.
-- Excluded tracks must not affect included track count, release-type heuristics, edition/superset comparison, minimum-file optimization, source/existing tie-breaks, CD-rip-log exact-equivalence checks, or clean/explicit exact-equivalence checks.
+- Excluded tracks must not affect included track count, release-type heuristics, edition/superset comparison, minimum-track optimization, source/existing tie-breaks, CD-rip-log exact-equivalence checks, or clean/explicit exact-equivalence checks.
 - Excluded tracks may remain physically in a retained mixed release; they simply cannot help or hurt that release during selection.
 
 ### Direct checkbox inclusion rule
@@ -686,7 +650,7 @@ Do not flatten release folders into the duplicate root. After successful moves, 
 - A skipped track contributes nothing to release coverage, counts, edition comparison, optimization, CD-log quality comparison, existing-vs-recycle precedence, or clean/explicit tie-breaks.
 - Skipped tracks may physically remain inside a mixed release that is retained for other included tracks.
 
-### Exact global minimum-file rule
+### Exact global minimum-track rule
 
 - v0.19.0 replaces the old local minimum-track swap stage with an exact component-decomposed global set-cover solver.
 - Preserve every active recording group and at least one active album per album family.
@@ -747,20 +711,12 @@ Do not flatten release folders into the duplicate root. After successful moves, 
 
 - Support lossless CD rips stored as one audio image plus CUE, including FLAC, APE, WavPack and WAV images.
 - Detect image mode only when multiple `TRACK ... AUDIO` entries in a CUE reference the same physical audio file. A normal split-file CUE must remain a split-file release.
-- Treat each CUE track as a virtual track using `INDEX 01` boundaries, with CUE title/performer/ISRC metadata when available.
 - Fingerprint the actual CUE audio segment, not the whole image file, so image rips can match split-track rips track-by-track.
 - Temporary extracted segments are working files only and must be deleted after fingerprinting; they are never part of the collection.
 - The physical CD image, CUE, LOG and companion files remain one indivisible release for move/rollback purposes. Never move or delete individual tracks from a CUE image.
 - CD image tracks participate in the same Save Remixes, Save Live recordings, Personal Picks, collection-wide minimum-track, source-preference, and CD-quality rules as ordinary tracks.
 
-### CUETools verification rule
 
-- Reuse the user's CUETools installation when available; otherwise the dependency may be installed through winget package `gchudov.CUETools`.
-- For any album family containing a CD image rip, verify all CUE-based candidates in that family with `CUETools.ARCUE.exe` so image and split rips receive the same verification opportunity.
-- AccurateRip/CTDB results are never duplicate evidence. They may influence selection only after strict exact-equivalent CD audio content is already proven by the analyzer.
-- Positive CUETools verification is stronger quality evidence than EAC/XLD log-settings score for exact-equivalent CD rips.
-- Missing database entries, no match, verification errors, or unavailable CUETools are neutral and must never penalize a rip.
-- Do not automate `CUETools.exe /convert` for temporary per-track analyzer extraction; its profile command line is interactive/non-terminating. Use temporary FFmpeg segment extraction from CUE boundaries and delete every temporary file after fingerprinting.
 
 ### Mandatory software-development rule
 
@@ -792,7 +748,7 @@ Do not flatten release folders into the duplicate root. After successful moves, 
 - During the live post-analysis Decision Map, every release must expose the other releases that share its included audio groups, and those release nodes must be directly navigable.
 - A retained release may be manually excluded from the current plan. This is a reversible planning constraint only until Apply; it must not move/delete files immediately.
 - Manual exclusion must re-run only collection optimization against the already-computed fingerprint groups. Do not rescan folders, re-probe files, regenerate Chromaprint fingerprints, or repeat pairwise audio comparison.
-- Re-optimization must apply the same album/source/existing/minimum-file rules to the remaining eligible releases and automatically select alternate carriers where available.
+- Re-optimization must apply the same album/source/existing/minimum-track rules to the remaining eligible releases and automatically select alternate carriers where available.
 - The selected release must expose its full track list. If a manually excluded release contains an included recording group with no non-blocked carrier anywhere else in the analyzed collection, highlight that track clearly in red as unique/unavailable elsewhere.
 - Applying a plan that would lose such manually orphaned included audio requires an explicit second confirmation that identifies the affected recordings. Never hide or silently accept this loss.
 - Manual exclusions may be undone before Apply. Saved Decision Map snapshots may be reopened read-only when the in-memory analysis objects are no longer available.
@@ -802,14 +758,12 @@ Do not flatten release folders into the duplicate root. After successful moves, 
 - The selected release path must be selectable/copyable and have an Open folder action.
 - The Release Map must be a normal resizable/maximizable top-level window without transient/modal grab behavior so Windows window managers such as FancyZones can position it.
 - A live Release Map must expose obvious Apply plan, Analyze again, and Close actions. Do not show disabled/confusing text such as "Re-optimization available only immediately after Analyze"; when editing context is unavailable, simply omit edit controls and present the saved map read-only.
-- Unique tracks responsible for retaining a release must be visually highlighted. When same/similar titled tracks remain separate groups, expose the reason using available concrete evidence: artist/featured credit, ISRC, duration difference, or explicit Chromaprint mismatch.
 - Optimizer/source factors are secondary detail and must be hidden behind an expandable More details control by default.
 
 ### Persistent manual track skip
 
 - In the live Release Map the user may select a track and choose Skip track. This is a preference to exclude that proven recording group from coverage/optimization, not a duplicate-identity assertion.
 - Save track-skip preferences under the Duplicate Edition Analyzer program state folder, never in the shared Karpuzikov Tools root.
-- Persist exact fingerprint hashes for the currently proven audio group and available MBID/ISRC/base-title identity evidence. On later analyses, apply saved skips only after fingerprints/groups are built, then exclude the matched group from optimization.
 - Skipping a track must immediately re-run only collection optimization; do not rescan/re-probe/re-fingerprint audio.
 - The user must be able to Restore track, which removes the saved preference and recomputes the plan.
 - Manual track skips must remain visibly distinct from Save Remixes / Save Live / unusual-pattern exclusions.
@@ -933,45 +887,16 @@ This taxonomy is a standing rule for all future Duplicate Edition Analyzer work.
 - Ignore/Restore/Re-Analyze remain planning operations. No files are moved until Apply.
 
 
-## Dynamic-range/mastering-quality rule - v0.21.0
+## Dynamic-range/mastering-quality rule - current
 
-Dynamic range is a mastering-quality preference only. It is not duplicate evidence.
+Dynamic range is mastering-quality preference only, never duplicate evidence.
 
-Rules:
-
-- acoustic fingerprint remains the duplicate/recording-identity authority;
-- never merge or discard a materially different edit/version because of DR/loudness measurements;
-- only compare dynamic-range/mastering metrics when releases are already interchangeable by active coverage, album, and source rules;
-- use the bundled FFmpeg/FFprobe runtime so the standalone EXE needs no new external dependency;
-- measure per track:
-  - integrated loudness (LUFS);
-  - loudness range (LRA);
-  - true peak;
-  - RMS/crest-factor style dynamic contrast;
-  - a deterministic derived mastering-dynamics score;
-- cache measurements under the Duplicate Edition Analyzer program data directory and reuse them on Re-Analyze;
-- aggregate release-level quality from comparable included tracks using robust statistics, not a single unusually quiet/loud track;
-- prefer a measurably more dynamic / less compressed mastering only when the difference clears a conservative threshold;
-- differences inside the threshold are a tie and fall through to the existing later tie-breaks;
-- dynamic range must never override:
-  1. wanted unique recording/version coverage;
-  2. required album representation;
-  3. a materially different acoustic version;
-  4. a clearly superior source class;
-- hey-bro-check-log remains a rip-integrity measure, not a mastering-dynamics measure;
-- show track/release DR metrics and the decision reason in Release Map details;
-- include the metrics, threshold result, and chosen winner in optional JSONL diagnostics.
-
-Tie-break position for otherwise interchangeable candidates:
-
-1. preserve wanted coverage and album obligations;
-2. source class / physical-vs-WEB rules;
-3. verified rip integrity where applicable;
-4. dynamic-range/mastering quality when materially different;
-5. Existing-copy precedence when mastering quality ties;
-6. physical-file/count minimization where still equivalent;
-7. Explicit-over-Clean remains the absolute final exact-equivalent advisory tie-break.
-
+- Measure integrated LUFS, LRA, true peak, RMS/crest-style contrast and a derived dynamics score with bundled FFmpeg.
+- Cache measurements.
+- Compare mastering only after coverage, source, CD-log quality and total-track-count rules tie.
+- Any measurable higher dynamics score wins; there is no material-difference threshold.
+- If DR also ties, Existing beats Recycle/update.
+- DR never causes different stated Versions to merge.
 
 ## Planned Live / remix phrase review cleanup - v0.21.0
 
@@ -1065,7 +990,6 @@ Eliminated remix/live tracks must not participate in any later analytical stage.
 
 - fingerprinted;
 - added to fingerprint-token indexes;
-- added to same-title or MBID candidate indexes;
 - acoustically compared;
 - placed into recording groups;
 - used for dynamic-range/mastering analysis;
@@ -1089,7 +1013,22 @@ Featured-remix exception:
 
 - Early Remix/Live elimination is implemented in the executable pipeline.
 - Eliminated tracks are not fingerprinted, indexed, acoustically compared, grouped, dynamically analyzed, or optimized.
-- Completely eliminated releases skip CD-log and CUETools quality analysis and remain only for final filesystem actions.
 - A remix with an explicit `feat.`, `ft.`, or `featuring` credit in title/filename/artist metadata is the sole Save-Remixes exception.
 - A featured remix that is also Live still obeys `Save Live recordings`.
 - Detailed comparison logs record eligible-track count, early-eliminated count, and featured-remix exception count.
+
+
+## v0.22.0 authoritative corrections
+
+This section supersedes older historical wording elsewhere in this file.
+
+- External database recording IDs are not read or used.
+- No external rip-database confidence/verifier is used.
+- Version = unique song/version; different stated Version families are not cross-compared.
+- Different-title strong acoustic matches and narrow near-threshold same-title matches go to rare manual review.
+- Explicit > Clean before fingerprinting.
+- Compilations are lower than regular Album/EP/Single and survive only for wanted groups unavailable on regular releases.
+- CD rip log threshold is 80, with hey-bro-check-log as the authority.
+- Optimize total retained track count, not physical file count; CUE images receive no one-file discount.
+- DR has no material threshold: when earlier rules tie, any measurable better DR score wins.
+- Existing is only the later tie when source/log/track-count/DR all tie.
