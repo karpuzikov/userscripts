@@ -13,7 +13,7 @@ Priority order:
 
 1. Preserve ideally every unique song/recording/version that is available.
 2. Keep every album represented.
-3. Save Remixes / Save Live recordings are direct inclusion switches: checked categories participate normally; unchecked categories are skipped except for explicit Personal Picks.
+3. Save Remixes / Save Live recordings are early inclusion switches. Unchecked Remix/Live tracks are eliminated before fingerprint analysis. The only Save-Remixes exception is a remix with an explicit featured-artist credit.
 4. Prefer CD / physical-media sources over equivalent WEB sources.
 5. Prefer the existing processed copy when source class and included audio are otherwise equivalent.
 6. Then minimize duplicated included tracks, total included audio files, and retained release count.
@@ -705,12 +705,11 @@ Do not flatten release folders into the duplicate root. After successful moves, 
 
 ### Personal Picks rule
 
-- `Personal Picks` are persistent user preference exceptions to `Save Remixes` and `Save Live recordings`.
-- A matching Personal Pick is included even when its remix/live category is globally unchecked.
+- Personal Picks are persistent labels/preferences used when their category is enabled.
+- Personal Picks do not override an unchecked `Save Remixes` or `Save Live recordings` switch.
+- The only exception to early remix elimination is a remix with an explicit featured-artist credit.
 - Personal Picks never create duplicate identity. Duplicate identity remains acoustic-fingerprint based.
-- A Personal Pick preserves the recording/version, not a particular release folder. The global optimizer still chooses the smallest rule-compliant retained release set that covers it.
 - Phrase rules match normalized track title/filename text case- and punctuation-insensitively; exact-title rules require normalized full-title equality.
-- Personal Picks do not override unrelated unusual-pattern exclusions for ordinary non-remix/non-live material.
 
 ### Personal Picks phrase detector rule
 
@@ -722,12 +721,11 @@ Do not flatten release folders into the duplicate root. After successful moves, 
 
 ### Automatic Personal Picks review rule
 
-- Pressing Analyze must automatically detect live/remix phrase families after metadata scanning and before fingerprint optimization.
-- Only review categories currently disabled by `Save Remixes` / `Save Live recordings`; globally enabled categories need no exception review.
-- Show phrase, category, count and examples, with an `Add to keep list` action for each phrase.
-- Existing Personal Picks must be marked as already in the keep list.
-- Added phrases persist immediately and participate in the same analysis run.
-- The review changes preference inclusion only; it never creates duplicate identity.
+- The Live/remix phrase review is shown only when `Save Remixes` is enabled.
+- It surfaces only unusual/ambiguous phrase families; ordinary Remix/Mix/Dub forms remain hidden.
+- Existing Personal Picks are marked as already selected.
+- Personal Picks do not resurrect categories disabled by the global Save switches.
+- The review never creates duplicate identity.
 
 ### Per-program persistent-data rule
 
@@ -987,7 +985,7 @@ Rules:
 - a phrase being a Personal Pick does not make it review-worthy;
 - existing Personal Picks remain active without forcing their ordinary phrase family into the review;
 - only genuinely unusual/unknown/ambiguous phrases should be displayed;
-- normal Remix/Live classification continues to be controlled by `Save Remixes`, `Save Live recordings`, and Personal Picks;
+- normal Remix/Live classification is controlled by `Save Remixes` and `Save Live recordings`; Personal Picks do not override disabled categories;
 - this review must never create duplicate identity.
 
 Examples that must no longer appear:
@@ -1085,3 +1083,13 @@ Featured-remix exception:
 - such tracks are not early-discarded when `Save Remixes` is OFF;
 - they are fingerprinted, compared, grouped, coverage-counted, dynamically analyzed when otherwise eligible, and optimized like normal wanted audio;
 - the exception does not apply to ordinary remix-artist naming such as `Artist Remix` or `Artist Mix`.
+
+
+### v0.21.1 implementation note
+
+- Early Remix/Live elimination is implemented in the executable pipeline.
+- Eliminated tracks are not fingerprinted, indexed, acoustically compared, grouped, dynamically analyzed, or optimized.
+- Completely eliminated releases skip CD-log and CUETools quality analysis and remain only for final filesystem actions.
+- A remix with an explicit `feat.`, `ft.`, or `featuring` credit in title/filename/artist metadata is the sole Save-Remixes exception.
+- A featured remix that is also Live still obeys `Save Live recordings`.
+- Detailed comparison logs record eligible-track count, early-eliminated count, and featured-remix exception count.
