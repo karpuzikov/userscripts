@@ -193,7 +193,7 @@ For equivalent WEB vs WEB content, keep the existing ALAC release and move/skip 
 
 For equivalent CD vs WEB content, keep the CD release regardless of whether it is in Existing or Recycle.
 
-Release-level equivalence is based on audio-derived track groups and direct Chromaprint comparison. MBIDs, ISRCs, normalized titles, and filenames are not fallback identity tests that can create a match; they may only provide candidate hints or conservative post-audio conflict checks.
+Release-level equivalence is based on audio-derived track groups and direct Chromaprint comparison. A shared MBID or same-base-title may route tracks into acoustic comparison, but MBIDs, ISRCs, normalized titles, filenames, and duration never create a match. ISRC and duration are explanatory metadata only; strong non-definitive metadata conflicts may still conservatively veto an otherwise borderline acoustic merge.
 
 
 ### Optional existing-discography mode
@@ -259,7 +259,7 @@ Pre-optimization dominance is deliberately conservative.
 
 For related album releases:
 - collapse pairwise only when both releases have exactly equivalent included acoustic coverage;
-- among exact-coverage equivalents, prefer stronger source class, then fewer retained physical files, then Existing when otherwise tied, then deterministic release order;
+- among exact-coverage equivalents, prefer stronger source class, then the Existing processed copy when source ties, then fewer retained physical files, then deterministic release order;
 - do not let a strict album superset eliminate a smaller edition pairwise;
 - extra groups on a larger edition may already be supplied more efficiently elsewhere, so superset/subset decisions belong to the global optimizer;
 - Explicit/Clean remains neutral here.
