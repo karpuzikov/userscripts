@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MusicBrainz ToolBox
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.0.47
+// @version      1.0.48
 // @description  Combined MusicBrainz release-editor, recording, barcode, Spotify/Apple Music linking, search, cover-art, Disc ID, and duplicate-edit tools.
 // @author       karpuzikov
 // @license      MIT
