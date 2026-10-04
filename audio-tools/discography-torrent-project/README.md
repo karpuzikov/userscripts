@@ -4,7 +4,7 @@ Complete project source and workflow assets for the discography torrent automati
 
 ## Current tools
 
-- `tools/Duplicate Edition Analyzer v0.19.0.pyw` - Applies the combined Coverage Atlas + Duplicate Edition Analyzer knowledge to DEA without changing its fingerprint-authority identity model or Release Map workflow. The previous greedy/local collection minimization is now followed by an exact component-decomposed global coverage solver that preserves every active recording and album family, preserves the established source/Existing quality floor, and globally minimizes retained physical files, counted tracks, and releases. Detailed Logging now records exact-optimizer statistics. Existing v0.18.2 WebEngine serialization and plain 💎 styling remain intact. Under construction ⚠️
+- `tools/Duplicate Edition Analyzer v0.19.1.pyw` - Fixes FFmpeg/FFprobe dependency setup. After the required WinGet attempt, the analyzer now discovers binaries directly inside WinGet package storage even when the current process PATH/WinGet Links were not refreshed. If WinGet still cannot provide usable binaries, it downloads the official Gyan FFmpeg release essentials ZIP into `Documents\\Karpuzikov Tools\\Duplicate Edition Analyzer\\dependencies\\FFmpeg` and uses that isolated app-owned copy. v0.19.0 exact global optimization remains intact. Under construction ⚠️
 - `tools/AudioChecker Automation v0.1.pyw` - AudioChecker batch automation.
 - `tools/ALAC Conversion Automation v0.2.pyw` - lossless -> ALAC conversion. Under construction ⚠️
 - `tools/CUE Corrector - MusicBrainz DiscID 1.3.1.pyw` - MusicBrainz DiscID/CUE workflow.
