@@ -4594,7 +4594,7 @@ def prefer_dynamic_mastering_exact_equivalents(
     releases: List[Release],
     selected: Set[int],
 ) -> Set[int]:
-    """Prefer materially more dynamic mastering only after identity/source/rip rules."""
+    """Prefer any measurably more dynamic mastering after source/log/track-count rules tie."""
     selected = set(selected)
     changed = True
     while changed:
@@ -4770,11 +4770,7 @@ def greedy_cover(target: Set[int], releases: List[Release], selected: Set[int]) 
 
 
 def _explicit_rank(rel: Release) -> int:
-    """Keep advisory state neutral during normal optimization.
-
-    Explicit preference is intentionally applied only by the final
-    exact-equivalent clean/explicit release pass.
-    """
+    """Legacy neutral rank; Explicit>Clean is enforced before fingerprinting."""
     return 1
 
 
@@ -4987,116 +4983,6 @@ def _folder_related_releases(a: Release, b: Release) -> bool:
         return _related_album_releases(a, b)
     return True
 
-def enforce_existing_precedence(releases: List[Release], selected: Set[int]) -> Set[int]:
-    """Hard final safeguard for existing-vs-recycle duplicates.
-
-    If an existing release structurally covers a recycle release and is not worse
-    on source quality, the existing processed release must win. This is
-    deliberately independent of embedded album tags, inferred release type and
-    fingerprint grouping.
-    """
-    selected = set(selected)
-    existing_rels = [r for r in releases if r.root_kind == "existing" and not r.excluded_only]
-    recycle_rels = [r for r in releases if r.root_kind == "recycle" and not r.excluded_only]
-
-    for er in existing_rels:
-        for rr in recycle_rels:
-            if not _folder_related_releases(er, rr):
-                continue
-
-            er_covers_rr = _release_covers(er, rr)
-            if not er_covers_rr:
-                continue
-
-            rr_covers_er = _release_covers(rr, er)
-            er_quality = (_explicit_rank(er), source_rank(er), 1)
-            rr_quality = (_explicit_rank(rr), source_rank(rr), 0)
-
-            if rr_covers_er:
-                # Same included content: source decides; existing wins ties here. Advisory preference is deferred.
-                if er_quality >= rr_quality:
-                    selected.add(er.rid)
-                    selected.discard(rr.rid)
-                else:
-                    selected.add(rr.rid)
-                    selected.discard(er.rid)
-            else:
-                # Existing is a included-content superset. If its source is not worse,
-                # the recycle subset can never be the better choice.
-                if (_explicit_rank(er), source_rank(er)) >= (_explicit_rank(rr), source_rank(rr)):
-                    selected.add(er.rid)
-                    selected.discard(rr.rid)
-
-    return selected
-
-
-def stabilize_equivalent_sources(releases: List[Release], selected: Set[int]) -> Set[int]:
-    """Enforce source/current precedence for equivalent album content.
-
-    This pass is deliberately release-level so a borderline fingerprint merge
-    cannot make a WEB duplicate replace an existing CD or an already-processed
-    existing WEB copy.
-    """
-    selected = set(selected)
-    by_id = {r.rid: r for r in releases}
-
-    changed = True
-    while changed:
-        changed = False
-
-        # Selected recycle release vs unselected existing equivalent/superset:
-        # existing wins when source is better, or when source ties.
-        for rr in [r for r in releases if r.root_kind == "recycle" and r.rid in selected]:
-            candidates = [
-                e for e in releases
-                if e.root_kind == "existing" and e.rid not in selected
-                and _related_album_releases(e, rr)
-                and _release_covers(e, rr)
-                and (_explicit_rank(e), source_rank(e)) >= (_explicit_rank(rr), source_rank(rr))
-            ]
-            if candidates:
-                best = max(
-                    candidates,
-                    key=lambda e: (
-                        _explicit_rank(e),
-                        source_rank(e),
-                        -e.retained_audio_file_count,
-                    ),
-                )
-                selected.discard(rr.rid)
-                selected.add(best.rid)
-                changed = True
-                break
-        if changed:
-            continue
-
-        # The reverse is allowed only when recycle is objectively better on
-        # source quality and covers the existing release's included content.
-        for er in [r for r in releases if r.root_kind == "existing" and r.rid in selected]:
-            candidates = [
-                r for r in releases
-                if r.root_kind == "recycle" and r.rid not in selected
-                and _related_album_releases(er, r)
-                and _release_covers(r, er)
-                and (_explicit_rank(r), source_rank(r)) > (_explicit_rank(er), source_rank(er))
-            ]
-            if candidates:
-                best = max(
-                    candidates,
-                    key=lambda r: (
-                        _explicit_rank(r),
-                        source_rank(r),
-                        -r.track_count,
-                    ),
-                )
-                selected.discard(er.rid)
-                selected.add(best.rid)
-                changed = True
-                break
-
-    return selected
-
-
 def _semantically_covered_by_selected(rel: Release, selected_rels: List[Release]) -> bool:
     # Historical name kept for compatibility. Coverage is audio-only.
     if not rel.groups and not rel.included_track_count:
@@ -5207,110 +5093,6 @@ def prune_redundant_selected(releases: List[Release], selected: Set[int]) -> Set
             break
 
     return selected
-
-
-def _release_advisory_identity(rel: Release) -> str:
-    """Normalize only clean/explicit packaging words for same-release checks."""
-    value = ascii_punctuation(rel.title or "")
-    value = re.sub(
-        r"[\[(]\s*(?:(?:clean|explicit)(?:\s+(?:version|edition))?|"
-        r"(?:album|main|original)\s+version\s+(?:clean|explicit))\s*[\])]",
-        " ",
-        value,
-        flags=re.I,
-    )
-    value = re.sub(
-        r"\s*(?:-|:)\s*(?:(?:clean|explicit)(?:\s+(?:version|edition))?|"
-        r"(?:album|main|original)\s+version\s+(?:clean|explicit))\s*$",
-        " ",
-        value,
-        flags=re.I,
-    )
-    return compact_title(normalize_space(value))
-
-
-def _exact_clean_explicit_equivalent(a: Release, b: Release) -> bool:
-    """True only when clean/explicit copies are otherwise the same release.
-
-    This is deliberately stricter than normal release coverage. The final
-    advisory preference must never replace a genuinely different clean edit,
-    bonus-track edition, ordering, source class, or incomplete release.
-    """
-    if {a.explicit, b.explicit} != {"clean", "explicit"}:
-        return False
-    if a.release_type != b.release_type:
-        return False
-    if source_rank(a) != source_rank(b):
-        return False
-    if a.included_track_count != b.included_track_count:
-        return False
-    if _release_advisory_identity(a) != _release_advisory_identity(b):
-        return False
-
-    seq_a = _included_group_sequence(a)
-    seq_b = _included_group_sequence(b)
-    if not seq_a or seq_a != seq_b:
-        return False
-    if _dynamic_scores_materially_different(a, b):
-        return False
-
-    # Exact multiset equality protects repeated tracks and ensures neither
-    # release has extra/missing included audio despite sequence normalization.
-    return _included_group_counter(a) == _included_group_counter(b)
-
-
-def prefer_explicit_exact_equivalents(releases: List[Release], selected: Set[int]) -> Set[int]:
-    """Absolute final tie-break: explicit beats clean only for exact equivalents."""
-    selected = set(selected)
-
-    # Repeat because a swap can expose another duplicate clean copy.
-    changed = True
-    while changed:
-        changed = False
-        selected_clean = [
-            r for r in releases
-            if r.rid in selected and r.explicit == "clean" and not r.excluded_only
-        ]
-
-        for clean in selected_clean:
-            explicit_candidates = [
-                r for r in releases
-                if r.explicit == "explicit"
-                and not r.excluded_only
-                and _exact_clean_explicit_equivalent(clean, r)
-            ]
-            if not explicit_candidates:
-                continue
-
-            # At this point content and source class are identical by rule.
-            # Prefer an already-processed explicit copy if available, then use
-            # deterministic path/rid ordering.
-            explicit = max(
-                explicit_candidates,
-                key=lambda r: (
-                    1 if r.root_kind == "existing" else 0,
-                    -r.rid,
-                ),
-            )
-
-            selected.discard(clean.rid)
-            selected.add(explicit.rid)
-            changed = True
-            break
-
-    # If both exact copies somehow survived earlier passes, remove the clean one.
-    selected_rels = [r for r in releases if r.rid in selected]
-    for clean in [r for r in selected_rels if r.explicit == "clean"]:
-        if any(
-            explicit.rid in selected
-            and explicit.explicit == "explicit"
-            and _exact_clean_explicit_equivalent(clean, explicit)
-            for explicit in releases
-        ):
-            selected.discard(clean.rid)
-
-    return selected
-
 
 
 def _optimizer_quality_floor(rel: Release) -> Tuple[int, int]:
@@ -6232,7 +6014,7 @@ def build_release_decisions(
                             "elsewhere in the retained set."
                         )
                     else:
-                        reason = "Add: selected by the global minimum-file coverage solution."
+                        reason = "Add: selected by the global minimum-track coverage solution."
         else:
             covered = (bool(rel.groups) and rel.groups <= selected_groups) or (not rel.groups and rel.excluded_only)
             if covered:
@@ -10646,7 +10428,7 @@ function personalPicksModal(raw){
   const data=typeof raw==="string"?JSON.parse(raw):raw;
   localPicks=(data.rules||[]).map(function(x){return {mode:x.mode==="exact"?"exact":"contains",value:String(x.value||"")};});
   openModal("picks","Personal Picks",
-    "Exceptions to unchecked Save Remixes / Save Live recordings. Matches participate normally; they do not force a release to stay.",
+    "Saved phrase/title preferences for enabled categories. Global Save Remixes / Save Live switches are never overridden.",
     '<div class="picksEntry"><input class="pathInput" id="pickInput" placeholder="Phrase or exact track title">'
       +'<button class="btn" id="addPhrase">Add phrase</button><button class="btn" id="addExact">Add exact title</button></div>'
       +'<div class="picksList" id="pickRows"></div>',
