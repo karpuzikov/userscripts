@@ -87,6 +87,7 @@ jobs:
           $fpcalc = Get-ChildItem -LiteralPath $fpDir -Recurse -Filter "fpcalc.exe" | Select-Object -First 1
           if (-not $fpcalc) { throw "fpcalc.exe not found." }
           "DEA_FPCALC=$($fpcalc.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "DEA_CHROMAPRINT_DIR=$($fpcalc.Directory.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
           $cueZip = Join-Path $deps "cuetools.zip"
           Invoke-WebRequest -UseBasicParsing "https://github.com/gchudov/cuetools.net/releases/download/v2.2.6/CUETools_2.2.6.zip" -OutFile $cueZip
@@ -116,7 +117,7 @@ jobs:
             "--collect-all", "heybrochecklog",
             "--add-binary", "$env:DEA_FFMPEG;bundled/ffmpeg",
             "--add-binary", "$env:DEA_FFPROBE;bundled/ffmpeg",
-            "--add-binary", "$env:DEA_FPCALC;bundled/chromaprint",
+            "--add-data", "$env:DEA_CHROMAPRINT_DIR;bundled/chromaprint",
             "--add-data", "$env:DEA_CUETOOLS_DIR;bundled/cuetools",
             "$env:DEA_SOURCE"
           )
