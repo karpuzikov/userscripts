@@ -4,7 +4,7 @@ Complete project source and workflow assets for the discography torrent automati
 
 ## Current tools
 
-- `tools/Duplicate Edition Analyzer v0.18.2.pyw` - Fixes the WebEngine completion crash `Object of type WindowsPath is not JSON serializable`. Filesystem paths returned by Apply are converted to strings at the source, and both Release Map and main-window QWebChannel JSON boundaries now safely serialize `Path`/`WindowsPath` values (plus sets) instead of crashing. Also applies the pending Gem UI change: 💎 is rendered with no red background/bubble. v0.18.1 ignored-release inspection/restoration remains intact. Under construction ⚠️
+- `tools/Duplicate Edition Analyzer v0.19.0.pyw` - Applies the combined Coverage Atlas + Duplicate Edition Analyzer knowledge to DEA without changing its fingerprint-authority identity model or Release Map workflow. The previous greedy/local collection minimization is now followed by an exact component-decomposed global coverage solver that preserves every active recording and album family, preserves the established source/Existing quality floor, and globally minimizes retained physical files, counted tracks, and releases. Detailed Logging now records exact-optimizer statistics. Existing v0.18.2 WebEngine serialization and plain 💎 styling remain intact. Under construction ⚠️
 - `tools/AudioChecker Automation v0.1.pyw` - AudioChecker batch automation.
 - `tools/ALAC Conversion Automation v0.2.pyw` - lossless -> ALAC conversion. Under construction ⚠️
 - `tools/CUE Corrector - MusicBrainz DiscID 1.3.1.pyw` - MusicBrainz DiscID/CUE workflow.
