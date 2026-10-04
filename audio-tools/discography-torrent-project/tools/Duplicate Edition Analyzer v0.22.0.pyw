@@ -4332,27 +4332,26 @@ def cd_rip_log_quality_text(rel: Release) -> str:
     )
 
 
-def cd_rip_quality_key(rel: Release) -> Optional[Tuple[int, int, int, int, float, int]]:
-    """Combined positive CUETools verification and EAC/XLD log quality.
-
-    CUETools/AccurateRip/CTDB verification is stronger positive evidence than
-    log settings. Missing database entries or unverified output are neutral.
-    """
-    cue_key = cuetools_cd_quality_key(rel)
+def cd_rip_quality_key(rel: Release) -> Optional[Tuple[int, int, float, int]]:
+    """hey-bro-check-log quality only. AccurateRip/CTDB is not used."""
     log_key = cd_rip_log_quality_key(rel)
-    if cue_key is None and log_key is None:
+    if log_key is None:
         return None
-
-    cue_confidence, cue_matches = cue_key or (0, 0)
-    log_min, log_avg, log_flagged = log_key or (0, 0.0, 0)
+    log_min, log_avg, log_flagged = log_key
     return (
-        1 if cue_key is not None else 0,
-        cue_confidence,
-        cue_matches,
-        1 if log_key is not None else 0,
-        log_avg if log_key is not None else 0.0,
-        log_flagged if log_key is not None else 0,
+        1 if log_min >= CD_RIP_LOG_ACCEPTABLE_MIN else 0,
+        int(log_min),
+        float(log_avg),
+        int(log_flagged),
     )
+
+
+def cd_rip_quality_class(rel: Release) -> int:
+    """0=no comparable log, 1=below 80, 2=80 or higher."""
+    key = cd_rip_quality_key(rel)
+    if key is None:
+        return 0
+    return 2 if key[0] else 1
 
 
 def _same_release_exact_cd_content(a: Release, b: Release) -> bool:
@@ -4659,7 +4658,7 @@ def _dynamic_scores_materially_different(a: Release, b: Release) -> bool:
         return False
     sa = float(release_dynamic_summary(a)["score"])
     sb = float(release_dynamic_summary(b)["score"])
-    return abs(sa - sb) >= DYNAMIC_RANGE_MATERIAL_DELTA
+    return abs(sa - sb) > DYNAMIC_RANGE_EPSILON
 
 
 def _same_release_exact_mastering_content(a: Release, b: Release) -> bool:
@@ -4696,15 +4695,15 @@ def _rip_integrity_not_worse(candidate: Release, current: Release) -> bool:
 
 
 def equivalent_release_preference_key(rel: Release):
-    rip = cd_rip_quality_key(rel) or (0, 0, 0, 0, 0.0, 0)
+    rip = cd_rip_quality_key(rel) or (0, 0, 0.0, 0)
     dynamic = release_dynamic_summary(rel).get("score")
     dynamic_value = float(dynamic) if dynamic is not None else -1000000.0
     return (
         source_rank(rel),
         rip,
+        -rel.track_count,
         dynamic_value,
         1 if rel.root_kind == "existing" else 0,
-        -rel.retained_audio_file_count,
         -rel.rid,
     )
 
@@ -4734,7 +4733,7 @@ def prefer_dynamic_mastering_exact_equivalents(
                     continue
                 candidate_score = float(release_dynamic_summary(candidate)["score"])
                 current_score = float(current_summary["score"])
-                if candidate_score >= current_score + DYNAMIC_RANGE_MATERIAL_DELTA:
+                if candidate_score > current_score + DYNAMIC_RANGE_EPSILON:
                     better.append(candidate)
             if not better:
                 continue
@@ -4768,7 +4767,7 @@ def _append_dynamic_range_log(
                     {
                         "record_type": "dynamic_range",
                         "generated": datetime.now().isoformat(timespec="seconds"),
-                        "material_delta": DYNAMIC_RANGE_MATERIAL_DELTA,
+                        "better_score_rule": "any measurable positive difference",
                         "tracks_measured": sum(1 for t in tracks if t.dynamic_score is not None),
                         "releases": [
                             {
@@ -4842,11 +4841,11 @@ def analyze_dynamic_range_mastering(
 
 
 def quality_key(rel: Release) -> Tuple[int, int, int]:
-    # Advisory state stays neutral here; explicit wins only at the absolute
-    # final stage when two releases are proven otherwise identical.
-    explicit_score = 1
-    existing_score = 1 if rel.root_kind == "existing" else 0
-    return source_rank(rel), explicit_score, existing_score
+    return (
+        source_rank(rel),
+        cd_rip_quality_class(rel),
+        1 if rel.root_kind == "existing" else 0,
+    )
 
 
 def greedy_cover(target: Set[int], releases: List[Release], selected: Set[int]) -> Tuple[Set[int], Set[int]]:
@@ -4900,29 +4899,27 @@ def _explicit_rank(rel: Release) -> int:
 
 
 def _core_album_preference(combo: Tuple[Release, ...], core_groups: Set[int]) -> Tuple[int, int, int]:
-    """Score equivalent album core content without rewarding duplicates.
-
-    Priority for equivalent included content: source medium, then an
-    already-processed existing release. Advisory state is deferred to the final exact-equivalence pass.
-    """
-    explicit_total = 0
+    """Aggregate core quality: source, CD-log class, Existing."""
     source_total = 0
+    log_total = 0
     existing_total = 0
-    if core_groups:
-        for gid in core_groups:
-            carriers = [r for r in combo if gid in r.groups]
-            if not carriers:
-                continue
-            best = max(carriers, key=lambda r: (_explicit_rank(r), source_rank(r), 1 if r.root_kind == "existing" else 0))
-            explicit_total += _explicit_rank(best)
-            source_total += source_rank(best)
-            existing_total += 1 if best.root_kind == "existing" else 0
-    else:
-        best = max(combo, key=lambda r: (_explicit_rank(r), source_rank(r), 1 if r.root_kind == "existing" else 0))
-        explicit_total = _explicit_rank(best)
-        source_total = source_rank(best)
-        existing_total = 1 if best.root_kind == "existing" else 0
-    return explicit_total, source_total, existing_total
+    groups = core_groups or set().union(*(r.groups for r in combo))
+    for gid in groups:
+        carriers = [r for r in combo if gid in r.groups]
+        if not carriers:
+            continue
+        best = max(
+            carriers,
+            key=lambda r: (
+                source_rank(r),
+                cd_rip_quality_class(r),
+                1 if r.root_kind == "existing" else 0,
+            ),
+        )
+        source_total += source_rank(best)
+        log_total += cd_rip_quality_class(best)
+        existing_total += 1 if best.root_kind == "existing" else 0
+    return log_total, source_total, existing_total
 
 
 def _included_group_sequence(rel: Release) -> List[int]:
@@ -6301,7 +6298,7 @@ def _preferred_existing_cover_for_recycle(rel: Release, releases: List[Release])
         ):
             er_dynamic = float(release_dynamic_summary(er)["score"])
             rel_dynamic = float(release_dynamic_summary(rel)["score"])
-            if rel_dynamic >= er_dynamic + DYNAMIC_RANGE_MATERIAL_DELTA:
+            if rel_dynamic > er_dynamic + DYNAMIC_RANGE_EPSILON:
                 continue
 
         candidates.append(er)
