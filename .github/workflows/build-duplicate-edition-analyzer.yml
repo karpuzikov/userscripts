@@ -143,20 +143,10 @@ jobs:
           "$hash  $env:DEA_EXE" | Set-Content -LiteralPath $shaFile -Encoding ascii
           "DEA_SHA_FILE=$shaFile" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
-      - name: Upload workflow artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: Duplicate-Edition-Analyzer-\${{ env.DEA_VERSION }}
-          path: |
-            \${{ env.DEA_BUILT_EXE }}
-            \${{ env.DEA_SHA_FILE }}
-          if-no-files-found: error
-          retention-days: 30
-
       - name: Publish GitHub release
         shell: pwsh
         env:
-          GH_TOKEN: \${{ github.token }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           $tag = "duplicate-edition-analyzer-v$env:DEA_VERSION"
           $title = "Duplicate Edition Analyzer $env:DEA_VERSION"
