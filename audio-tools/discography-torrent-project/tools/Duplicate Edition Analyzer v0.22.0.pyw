@@ -4011,7 +4011,7 @@ def merge_equivalent_tracks(
             add_review(a, b, review_reason, sim)
         elif audio_matched:
             final_matched = True
-        elif _manual_review_audio_candidate(sim):
+        elif base_a and base_a == base_b and _manual_review_audio_candidate(sim):
             review_reason = "uncertain_audio"
             add_review(a, b, review_reason, sim)
 
@@ -4198,6 +4198,65 @@ def merge_equivalent_tracks(
                 pass
 
     return groups, notes, reviews
+
+def apply_manual_review_merges(
+    tracks: List[Track],
+    groups: Dict[int, List[int]],
+    reviews: List[Dict[str, object]],
+    accepted_keys: Set[str],
+) -> Dict[int, List[int]]:
+    """Apply only user-confirmed ambiguous acoustic pairs and rebuild groups."""
+    uf = UnionFind(len(tracks))
+    active_indices: Set[int] = set()
+
+    for ids in groups.values():
+        clean_ids = [
+            int(i) for i in ids
+            if 0 <= int(i) < len(tracks)
+            and not tracks[int(i)].exclude_from_coverage
+        ]
+        if not clean_ids:
+            continue
+        active_indices.update(clean_ids)
+        root = clean_ids[0]
+        for other in clean_ids[1:]:
+            uf.union(root, other)
+
+    for row in reviews:
+        key = str(row.get("key", ""))
+        if key not in accepted_keys:
+            continue
+        try:
+            a = int(row.get("track_a_index"))
+            b = int(row.get("track_b_index"))
+        except (TypeError, ValueError):
+            continue
+        if not (0 <= a < len(tracks) and 0 <= b < len(tracks)):
+            continue
+        if tracks[a].exclude_from_coverage or tracks[b].exclude_from_coverage:
+            continue
+        active_indices.add(a)
+        active_indices.add(b)
+        uf.union(a, b)
+
+    # Active singleton tracks must remain represented too.
+    for i, track in enumerate(tracks):
+        if not track.exclude_from_coverage and track.group_id >= 0:
+            active_indices.add(i)
+
+    roots: Dict[int, List[int]] = defaultdict(list)
+    for i in sorted(active_indices):
+        roots[uf.find(i)].append(i)
+
+    rebuilt: Dict[int, List[int]] = {}
+    for gid, root in enumerate(sorted(roots)):
+        ids = roots[root]
+        rebuilt[gid] = ids
+        for i in ids:
+            tracks[i].group_id = gid
+
+    return rebuilt
+
 
 def release_explicit_state(rel: Release) -> str:
     states = {t.explicit for t in rel.tracks}
@@ -4664,6 +4723,8 @@ def _dynamic_scores_materially_different(a: Release, b: Release) -> bool:
 def _same_release_exact_mastering_content(a: Release, b: Release) -> bool:
     if source_rank(a) != source_rank(b):
         return False
+    if a.track_count != b.track_count:
+        return False
     if a.release_type != b.release_type:
         return False
     if a.included_track_count != b.included_track_count:
@@ -4742,7 +4803,7 @@ def prefer_dynamic_mastering_exact_equivalents(
                 key=lambda rel: (
                     float(release_dynamic_summary(rel)["score"]),
                     1 if rel.root_kind == "existing" else 0,
-                    -rel.retained_audio_file_count,
+                    -rel.track_count,
                     -rel.rid,
                 ),
             )
@@ -5986,7 +6047,7 @@ def analyze_prepared(
     excluded_pattern_keys: Optional[Set[str]] = None,
     comparison_log_path: Optional[Path] = None,
     personal_keep_rules: Optional[List[Dict[str, str]]] = None,
-) -> Tuple[List[Release], List[Track], Dict[int, List[int]], Set[int], List[Tuple[int, int, str]], List[str]]:
+) -> Tuple[List[Release], List[Track], Dict[int, List[int]], Set[int], List[Dict[str, object]], List[str]]:
     errors: List[str] = []
     if tracks:
         packed_errors = tracks[0].tags.pop("__ANALYZER_PREPARE_ERRORS__", "")
@@ -6056,6 +6117,12 @@ def analyze_prepared(
         comparison_log_path,
     )
     errors.extend(merge_notes)
+
+    # Rare ambiguous acoustic cases stop the pipeline here. No DR/mastering or
+    # collection optimization runs until the user resolves these pairs.
+    if reviews:
+        progress_cb("Manual acoustic review required...", len(reviews), len(reviews))
+        return releases, tracks, groups, set(), reviews, errors
 
     compilation_removed = apply_compilation_policy(releases)
     if compilation_removed:
