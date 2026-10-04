@@ -10916,6 +10916,53 @@ function patternReview(data){
     closeModal();bridge.submitPatternReview(JSON.stringify(out));
   };
 }
+function manualReview(data){
+  let rows="";
+  (data.candidates||[]).forEach(function(p,i){
+    const reason=p.reason==="different_titles_same_audio"
+      ?"Strong acoustic match, but the titles are different."
+      :"Very close same-title acoustic result, but below automatic acceptance.";
+    const metrics=(p.score!==undefined)
+      ?("score "+esc(p.score)+" | overlap "+esc(Math.round((p.overlap||0)*100))+"% | good "+esc(Math.round((p.good||0)*100))+"%")
+      :"";
+    rows+='<div class="reviewRow"><div class="reviewTop">'
+      +'<input class="reviewCheck manualSame" type="checkbox" data-i="'+i+'">'
+      +'<div class="reviewTitle">Same recording</div>'
+      +'<div class="reviewMeta">'+esc(reason)+'</div></div>'
+      +'<div class="reviewDetails"><b>A:</b> '+esc(p.title_a||"")+(p.artist_a?' - '+esc(p.artist_a):"")
+      +'<br><b>B:</b> '+esc(p.title_b||"")+(p.artist_b?' - '+esc(p.artist_b):"")
+      +(metrics?'<br>'+metrics:"")+'</div>'
+      +'<div class="reviewTop" style="margin-top:6px">'
+      +'<button class="btn manualOpenA" data-i="'+i+'">Open A</button>'
+      +'<button class="btn manualOpenB" data-i="'+i+'">Open B</button></div></div>';
+  });
+  openModal("manual","Manual acoustic review",
+    "These are rare ambiguous cases only. Check Same recording only when both files are the same recording/version. Unchecked pairs stay separate and both remain eligible.",
+    rows||'<div class="empty">No ambiguous pairs</div>',
+    '<button class="btn" id="manualNone">Mark all different</button>'
+      +'<div class="modalSpacer"></div><button class="btn" id="manualCancel">Cancel</button>'
+      +'<button class="btn primary" id="manualContinue">Continue</button>');
+  document.querySelectorAll(".manualOpenA").forEach(function(btn){
+    btn.onclick=function(){const p=data.candidates[Number(btn.dataset.i)];bridge.openPath(p.path_a||"");};
+  });
+  document.querySelectorAll(".manualOpenB").forEach(function(btn){
+    btn.onclick=function(){const p=data.candidates[Number(btn.dataset.i)];bridge.openPath(p.path_b||"");};
+  });
+  document.getElementById("manualNone").onclick=function(){
+    document.querySelectorAll(".manualSame").forEach(function(x){x.checked=false;});
+  };
+  document.getElementById("manualCancel").onclick=function(){closeModal();bridge.cancelReview();};
+  document.getElementById("manualContinue").onclick=function(){
+    const accepted=[];
+    document.querySelectorAll(".manualSame").forEach(function(cb){
+      if(cb.checked){
+        const p=data.candidates[Number(cb.dataset.i)];
+        accepted.push(p.key);
+      }
+    });
+    closeModal();bridge.submitManualReview(JSON.stringify(accepted));
+  };
+}
 function renderPickRows(){
   const host=document.getElementById("pickRows");
   if(!host)return;
@@ -10992,6 +11039,7 @@ function handleEvent(raw){
   if(e.type==="error"||e.type==="info"){messageModal(e.title||"Duplicate / Edition Analyzer",e.message||"");return;}
   if(e.type==="phraseReview"){phraseReview(e);return;}
   if(e.type==="patternReview"){patternReview(e);return;}
+  if(e.type==="manualReview"){manualReview(e);return;}
   if(e.type==="done"){doneModal(e);return;}
 }
 function syncPaths(){
@@ -11513,6 +11561,7 @@ def _qt_main_app() -> int:
                 assert isinstance(recycle, Path)
                 logging_enabled = bool(ctx.get("logging_enabled"))
                 comparison_log_path = _new_comparison_log_path(recycle) if logging_enabled else None
+                ctx["comparison_log_path"] = comparison_log_path
                 result = analyze_prepared(
                     ctx["releases"],
                     ctx["tracks"],
@@ -11531,12 +11580,36 @@ def _qt_main_app() -> int:
         def _analysis_done(self, ctx: Dict[str, object], result) -> None:
             self.running = False
             self.run_started_epoch_ms = 0
+
+            releases, tracks, groups, selected, reviews, notes = result
+
+            if reviews:
+                self.review_pending = True
+                self.progress_pct = 100.0
+                self.progress_count = f"{len(reviews):,} case(s)"
+                self.status = "Manual acoustic review"
+                ctx["manual_review_state"] = {
+                    "releases": releases,
+                    "tracks": tracks,
+                    "groups": groups,
+                    "reviews": reviews,
+                    "notes": notes,
+                }
+                self._append_activity(
+                    f"Manual acoustic review required: {len(reviews)} rare case(s)"
+                )
+                self._emit_state()
+                self._event({
+                    "type": "manualReview",
+                    "candidates": reviews,
+                })
+                return
+
             self.review_pending = False
             self.progress_pct = 100.0
             self.progress_count = "100%"
             self._append_activity("Analysis complete")
 
-            releases, tracks, groups, selected, reviews, notes = result
             comparison_log = next(
                 (
                     n.split("COMPARISON LOG:", 1)[1].strip()
@@ -11612,6 +11685,134 @@ def _qt_main_app() -> int:
             self._pending_analysis = None
             self._emit_state()
             self._launch_release_map()
+
+        @Slot(str)
+        def submitManualReview(self, raw: str):
+            ctx = self._pending_analysis
+            if not ctx:
+                return
+            state = ctx.get("manual_review_state")
+            if not isinstance(state, dict):
+                self._error("Manual acoustic review state is no longer available.")
+                return
+            try:
+                incoming = json.loads(raw or "[]")
+            except Exception:
+                incoming = []
+            accepted = {
+                str(value)
+                for value in incoming
+                if str(value).strip()
+            } if isinstance(incoming, list) else set()
+
+            self.review_pending = False
+            self.status = "Applying manual acoustic review"
+            self.progress_pct = 0.0
+            self.progress_count = ""
+            self._last_progress_stage = ""
+            self._append_activity(
+                f"Manual review complete: {len(accepted)} pair(s) confirmed same recording"
+            )
+            self._set_running(True)
+            threading.Thread(
+                target=self._manual_review_worker,
+                args=(ctx, accepted),
+                daemon=True,
+            ).start()
+
+        def _manual_review_worker(
+            self,
+            ctx: Dict[str, object],
+            accepted_keys: Set[str],
+        ) -> None:
+            try:
+                state = ctx.get("manual_review_state")
+                if not isinstance(state, dict):
+                    raise RuntimeError("Manual review state is missing.")
+
+                releases = state.get("releases")
+                tracks = state.get("tracks")
+                groups = state.get("groups")
+                reviews = state.get("reviews")
+                notes = list(state.get("notes", []) or [])
+                if not isinstance(releases, list) or not isinstance(tracks, list) or not isinstance(groups, dict) or not isinstance(reviews, list):
+                    raise RuntimeError("Manual review state is invalid.")
+
+                progress_total = max(1, len(reviews))
+                self._progress("Applying manual acoustic decisions...", 0, progress_total)
+                groups = apply_manual_review_merges(
+                    tracks,
+                    groups,
+                    reviews,
+                    accepted_keys,
+                )
+                self._progress(
+                    "Applying manual acoustic decisions...",
+                    progress_total,
+                    progress_total,
+                )
+
+                compilation_removed = apply_compilation_policy(releases)
+                if compilation_removed:
+                    notes.append(
+                        f"Compilation policy removed {compilation_removed} non-unique compilation track(s) from coverage."
+                    )
+
+                self._progress("Applying saved track skips...", 0, 1)
+                apply_persistent_track_skips(tracks)
+                self._progress("Applying saved track skips...", 1, 1)
+
+                comparison_log_path = ctx.get("comparison_log_path")
+                if not isinstance(comparison_log_path, Path):
+                    comparison_log_path = None
+
+                if comparison_log_path is not None:
+                    try:
+                        with comparison_log_path.open("a", encoding="utf-8", newline="\n") as handle:
+                            handle.write(
+                                json.dumps(
+                                    {
+                                        "record_type": "manual_review",
+                                        "generated": datetime.now().isoformat(timespec="seconds"),
+                                        "cases": len(reviews),
+                                        "accepted_same_recording": sorted(accepted_keys),
+                                        "rejected_as_different": sorted(
+                                            str(row.get("key", ""))
+                                            for row in reviews
+                                            if str(row.get("key", "")) not in accepted_keys
+                                        ),
+                                    },
+                                    ensure_ascii=False,
+                                )
+                                + "\n"
+                            )
+                    except Exception as exc:
+                        notes.append(f"Manual review log write error: {exc}")
+
+                analyze_dynamic_range_mastering(
+                    releases,
+                    self._progress,
+                    notes,
+                    comparison_log_path,
+                )
+
+                self._progress("Optimizing release set...", 0, 1)
+                selected = optimize_collection(
+                    releases,
+                    groups,
+                    progress_cb=self._progress,
+                    comparison_log_path=comparison_log_path,
+                )
+                self._progress("Optimizing release set...", 1, 1)
+                self._progress("Building automatic action plan...", 1, 1)
+
+                ctx.pop("manual_review_state", None)
+                self._analysis_done(
+                    ctx,
+                    (releases, tracks, groups, selected, [], notes),
+                )
+            except Exception as exc:
+                self._error(str(exc))
 
         def _update_live_release_map_session(
             self,
