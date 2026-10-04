@@ -4118,15 +4118,15 @@ def find_dominated_releases(releases: List[Release]) -> Set[int]:
         a_pref = (
             _explicit_rank(a),
             source_rank(a),
-            -a.retained_audio_file_count,
             1 if a.root_kind == "existing" else 0,
+            -a.retained_audio_file_count,
             -a.rid,
         )
         b_pref = (
             _explicit_rank(b),
             source_rank(b),
-            -b.retained_audio_file_count,
             1 if b.root_kind == "existing" else 0,
+            -b.retained_audio_file_count,
             -b.rid,
         )
         if a_pref > b_pref:
