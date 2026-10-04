@@ -75,6 +75,7 @@ SELF_UPDATE_TAG_PREFIX = "duplicate-edition-analyzer-v"
 SELF_UPDATE_API = f"https://api.github.com/repos/{GITHUB_REPOSITORY}/releases?per_page=30"
 SELF_UPDATE_CHECK_TIMEOUT = 1.5
 SELF_UPDATE_DOWNLOAD_TIMEOUT = 120
+STANDALONE_BUNDLE_REVISION = 1
 
 # hey-bro-check-log by ligh7s, Apache-2.0:
 # https://github.com/ligh7s/hey-bro-check-log
