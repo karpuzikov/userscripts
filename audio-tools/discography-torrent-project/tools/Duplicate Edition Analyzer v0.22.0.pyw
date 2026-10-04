@@ -639,10 +639,18 @@ COMPARE_PENDING_BATCHES_PER_WORKER = 3
 
 # Dynamic-range/mastering comparison is a quality tie-break only. It never
 # creates duplicate identity; recording identity remains fingerprint authority.
+CD_RIP_LOG_ACCEPTABLE_MIN = 80
+
 DYNAMIC_RANGE_CACHE_VERSION = 1
-DYNAMIC_RANGE_MATERIAL_DELTA = 1.5
+DYNAMIC_RANGE_EPSILON = 1e-6
 DYNAMIC_RANGE_MIN_COVERAGE = 0.80
 DYNAMIC_RANGE_WORKERS = 4
+
+MANUAL_REVIEW_SCORE_MAX = 9.0
+MANUAL_REVIEW_GOOD_MIN = 0.72
+MANUAL_REVIEW_OVERLAP_MIN = 0.85
+MANUAL_REVIEW_MEDIAN_MAX = 8.0
+MANUAL_REVIEW_P90_MAX = 16
 
 
 def _new_comparison_log_path(recycle: Path) -> Path:
@@ -1513,41 +1521,66 @@ def _definitive_acoustic_identity(
     )
 
 
-def _metadata_match_conflict(
-    a: Track,
-    b: Track,
-    definitive_audio: bool = False,
-) -> str:
-    """Return a conservative metadata veto for a non-definitive audio match.
+def _semantic_version_conflict(a: Track, b: Track) -> bool:
+    """Different stated version families are unique and never auto-merged."""
+    va = _descriptor_family_set(_semantic_version_descriptors(a.display_title))
+    vb = _descriptor_family_set(_semantic_version_descriptors(b.display_title))
+    if not va and not vb:
+        return False
+    return va != vb
 
-    ISRC and duration are diagnostic metadata only and never decide identity.
-    Definitive acoustic evidence wins over conflicting database metadata.
-    """
-    if definitive_audio:
-        return ""
 
-    mbid_a = _normalized_identifier(a.mbid)
-    mbid_b = _normalized_identifier(b.mbid)
-    same_mbid = bool(mbid_a and mbid_b and mbid_a == mbid_b)
+def _manual_review_audio_candidate(
+    sim: Optional[Tuple[float, float, float, int, float, float, int]]
+) -> bool:
+    """Narrow near-match window for rare human review."""
+    if not sim:
+        return False
+    score, good, overlap, _shift, _excellent, median, p90 = sim
+    return bool(
+        overlap >= MANUAL_REVIEW_OVERLAP_MIN
+        and score <= MANUAL_REVIEW_SCORE_MAX
+        and good >= MANUAL_REVIEW_GOOD_MIN
+        and median <= MANUAL_REVIEW_MEDIAN_MAX
+        and p90 <= MANUAL_REVIEW_P90_MAX
+    )
 
-    if same_mbid:
-        return ""
 
-    if mbid_a and mbid_b and mbid_a != mbid_b:
-        return f"different MusicBrainz recording MBIDs ({a.mbid} vs {b.mbid})"
-
-    semantic_a = _semantic_version_descriptors(a.display_title)
-    semantic_b = _semantic_version_descriptors(b.display_title)
-    if semantic_a and semantic_b:
-        semantic_families_a = _descriptor_family_set(semantic_a)
-        semantic_families_b = _descriptor_family_set(semantic_b)
-        if semantic_families_a != semantic_families_b:
-            return (
-                "conflicting semantic version descriptors "
-                f"({sorted(semantic_a)} vs {sorted(semantic_b)})"
-            )
-
-    return ""
+def _review_pair_payload(
+    a: int,
+    b: int,
+    tracks: List[Track],
+    reason: str,
+    sim: Optional[Tuple[float, float, float, int, float, float, int]],
+) -> Dict[str, object]:
+    first = tracks[a]
+    second = tracks[b]
+    row: Dict[str, object] = {
+        "key": f"{min(a,b)}:{max(a,b)}",
+        "track_a_index": a,
+        "track_b_index": b,
+        "reason": reason,
+        "title_a": first.display_title,
+        "title_b": second.display_title,
+        "artist_a": first.artist,
+        "artist_b": second.artist,
+        "path_a": str(first.path),
+        "path_b": str(second.path),
+        "release_id_a": first.release_id,
+        "release_id_b": second.release_id,
+    }
+    if sim:
+        score, good, overlap, shift, excellent, median, p90 = sim
+        row.update({
+            "score": round(score, 4),
+            "good": round(good, 4),
+            "overlap": round(overlap, 4),
+            "shift": int(shift),
+            "excellent": round(excellent, 4),
+            "median": round(median, 4),
+            "p90": int(p90),
+        })
+    return row
 
 
 FEATURE_CREDIT_RE = re.compile(
@@ -2513,8 +2546,6 @@ class Track:
     album: str = ""
     duration: float = 0.0
     tags: Dict[str, str] = field(default_factory=dict)
-    mbid: str = ""
-    isrc: str = ""
     fingerprint: Tuple[int, ...] = field(default_factory=tuple)
     fingerprint_duration: float = 0.0
     explicit: str = "unknown"
@@ -2547,7 +2578,6 @@ class Track:
     cue_title: str = ""
     cue_performer: str = ""
     cue_album: str = ""
-    cue_isrc: str = ""
 
     @property
     def display_title(self) -> str:
@@ -2683,7 +2713,6 @@ def probe_track(ffprobe: str, track: Track) -> None:
         track.title = track.cue_title or f"Track {track.cue_track_number:02d}"
         track.artist = track.cue_performer or tag_lookup(track.tags, "artist")
         track.album = track.cue_album or tag_lookup(track.tags, "album")
-        track.isrc = track.cue_isrc or tag_lookup(track.tags, "isrc")
         if track.cue_track_number:
             track.tags["TRACKNUMBER"] = str(track.cue_track_number)
     else:
@@ -2691,9 +2720,7 @@ def probe_track(ffprobe: str, track: Track) -> None:
         track.title = tag_lookup(track.tags, "title") or strip_track_number(track.path.stem)
         track.artist = tag_lookup(track.tags, "artist")
         track.album = tag_lookup(track.tags, "album")
-        track.isrc = tag_lookup(track.tags, "isrc")
 
-    track.mbid = tag_lookup(track.tags, "musicbrainztrackid", "musicbrainzrecordingid", "musicbrainz track id")
     track.explicit = explicit_state(track.tags, track.title, track.path.name, track.album)
 
     audio_stream = next(
@@ -3463,7 +3490,6 @@ def discover_releases(root: Path, root_kind: str, start_id: int) -> List[Release
                     cue_title=str(spec.get("title") or ""),
                     cue_performer=str(spec.get("performer") or spec.get("album_performer") or ""),
                     cue_album=str(spec.get("album") or title),
-                    cue_isrc=str(spec.get("isrc") or ""),
                 )
             )
             track_index += 1
@@ -3596,8 +3622,6 @@ def _comparison_track_log_data(track: Track) -> Dict[str, object]:
         "album": track.album,
         "duration_seconds": round(track.duration, 6),
         "fingerprint_duration_seconds": round(track.fingerprint_duration, 6),
-        "mbid": track.mbid,
-        "isrc": track.isrc,
         "identity_title": identity_title(track.display_title),
         "base_title_identity": _base_title_identity(track.display_title),
         "content_qualifiers": sorted(content_qualifiers(track.display_title)),
@@ -3690,20 +3714,6 @@ def merge_equivalent_tracks(
         elif shared >= FP_CANDIDATE_WEAK_SHARED_TOKENS:
             candidate_reasons[pair].add("fingerprint_tokens_weak")
 
-    # A shared MusicBrainz Recording ID is only a discovery hint; audio still
-    # has to pass. ISRC is intentionally not used even for candidate discovery.
-    mbid_index: Dict[str, List[int]] = defaultdict(list)
-    for i, track in enumerate(tracks):
-        if track.exclude_from_coverage or not track.fingerprint:
-            continue
-        mbid = _normalized_identifier(track.mbid)
-        if mbid:
-            mbid_index[mbid].append(i)
-
-    for ids in mbid_index.values():
-        for a, b in itertools.combinations(sorted(set(ids)), 2):
-            candidate_reasons[(a, b)].add("same_mbid")
-
     # Same-base-title tracks always receive the full acoustic test regardless
     # of their reported/tagged/file duration.
     title_index: Dict[str, List[int]] = defaultdict(list)
@@ -3759,10 +3769,8 @@ def merge_equivalent_tracks(
                         "strong_shared_token_min": FP_CANDIDATE_STRONG_SHARED_TOKENS,
                         "weak_shared_token_min": FP_CANDIDATE_WEAK_SHARED_TOKENS,
                         "fallbacks": [
-                            "same_mbid (candidate hint only)",
                             "same_base_title",
                         ],
-                        "isrc_used_for_identity": False,
                         "duration_used_for_identity": False,
                     },
                     "strict": {
@@ -3784,10 +3792,10 @@ def merge_equivalent_tracks(
                         "aligned_fingerprint_coverage_min": 0.94,
                         "rule": "below 94% acoustic coverage, unmatched fingerprint content must be silence",
                     },
-                    "metadata_safety_gate": [
-                        "definitive acoustic identity overrides metadata disagreement",
-                        "different recording MBIDs for non-definitive audio matches",
-                        "semantic version descriptor conflict for non-definitive audio matches",
+                    "manual_review_policy": [
+                        "different titles with an acoustic match require review",
+                        "narrow near-threshold acoustic matches require review",
+                        "different semantic version families are unique and skipped before merge",
                     ],
                 },
             }
@@ -5810,10 +5818,6 @@ def format_track(t: Track) -> str:
         s = int(round(t.duration)) % 60
         dur = f"{m}:{s:02d}"
     bits = [t.display_title, dur]
-    if t.mbid:
-        bits.append(f"MBID={t.mbid}")
-    if t.isrc:
-        bits.append(f"ISRC={t.isrc}")
     if t.explicit != "unknown":
         bits.append(t.explicit)
     if t.virtual_from_cue:
@@ -6543,19 +6547,9 @@ def _manual_skip_rule_matches_track(rule: Dict[str, object], track: Track) -> bo
     if fp_hash and fp_hash in fingerprint_hashes:
         return True
 
-    mbid = _normalized_identifier(track.mbid)
-    mbids = {_normalized_identifier(str(x)) for x in rule.get("mbids", []) if str(x)}
-    if mbid and mbid in mbids:
-        return True
-
-    isrc = _normalized_identifier(track.isrc)
-    isrcs = {_normalized_identifier(str(x)) for x in rule.get("isrcs", []) if str(x)}
     base = _base_title_identity(track.display_title)
     bases = {str(x) for x in rule.get("base_titles", []) if str(x)}
-    if isrc and isrc in isrcs and base and base in bases:
-        return True
-
-    return False
+    return bool(base and base in bases)
 
 
 def apply_persistent_track_skips(tracks: List[Track]) -> int:
@@ -6609,19 +6603,13 @@ def add_persistent_track_skip(track: Track, tracks: List[Track]) -> str:
     fingerprint_hashes = sorted({
         value for value in (_track_fingerprint_hash(member) for member in members) if value
     })
-    mbids = sorted({
-        _normalized_identifier(member.mbid) for member in members if _normalized_identifier(member.mbid)
-    })
-    isrcs = sorted({
-        _normalized_identifier(member.isrc) for member in members if _normalized_identifier(member.isrc)
-    })
     base_titles = sorted({
         _base_title_identity(member.display_title)
         for member in members
         if _base_title_identity(member.display_title)
     })
 
-    identity_payload = "|".join(fingerprint_hashes + mbids + isrcs + base_titles)
+    identity_payload = "|".join(fingerprint_hashes + base_titles)
     if not identity_payload:
         identity_payload = (
             f"{_base_title_identity(track.display_title)}|"
@@ -6638,8 +6626,6 @@ def add_persistent_track_skip(track: Track, tracks: List[Track]) -> str:
                 "label": track.display_title,
                 "created": datetime.now().isoformat(timespec="seconds"),
                 "fingerprint_hashes": fingerprint_hashes,
-                "mbids": mbids,
-                "isrcs": isrcs,
                 "base_titles": base_titles,
             }
         )
@@ -6742,7 +6728,7 @@ def _track_distinction_summary(
     if not audio_match:
         return (
             f"Different acoustic recording from '{other.display_title}' on {other_name}; "
-            "Chromaprint did not meet the duplicate threshold. ISRC and duration are diagnostic only."
+            "Chromaprint did not meet the duplicate threshold. Duration is diagnostic only."
         )
 
     return ""
