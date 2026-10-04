@@ -242,36 +242,29 @@ Rules:
 
 ### Final existing-vs-recycle safeguard
 
-The final action plan must independently enforce existing-vs-recycle precedence and must not rely only on optimizer/group IDs.
+The final action plan independently enforces Existing-vs-Recycle precedence after global optimization.
 
-Before a recycle release can be kept over an existing release:
+For related releases whose included acoustic groups are covered equivalently:
+- source medium decides first;
+- CD/physical beats equivalent WEB;
+- when source class ties, the already-processed Existing copy beats Recycle/update;
+- a Recycle release may replace Existing only when it is objectively better by active source/coverage rules;
+- Explicit/Clean advisory state is neutral here and is deferred to the absolute final exact-equivalent tie-break.
 
-- compare release-container context;
-- compare normalized track filenames directly;
-- ignore ignored remix tracks;
-- if the existing release covers all included recycle tracks and is equal or better on explicit/source quality, force:
-  - existing -> KEEP;
-  - recycle -> SKIP.
-
-This final safeguard must run even if fingerprint grouping or the global optimizer reached a different intermediate selection.
+This safeguard runs even if the intermediate optimizer chose differently.
 
 ### Pre-optimization dominance
 
-Resolve obvious same-album duplicates before running the global set-cover optimizer.
+Pre-optimization dominance is deliberately conservative.
 
 For related album releases:
+- collapse pairwise only when both releases have exactly equivalent included acoustic coverage;
+- among exact-coverage equivalents, prefer stronger source class, then fewer retained physical files, then Existing when otherwise tied, then deterministic release order;
+- do not let a strict album superset eliminate a smaller edition pairwise;
+- extra groups on a larger edition may already be supplied more efficiently elsewhere, so superset/subset decisions belong to the global optimizer;
+- Explicit/Clean remains neutral here.
 
-- if both releases cover the same included non-remix content, choose by:
-  1. explicit over clean;
-  2. CD/physical over WEB;
-  3. existing ALAC over recycle when otherwise tied;
-- if one release is a included-content superset of the other, the superset makes the subset redundant when its explicit/source class is not worse;
-- remix tracks are ignored when determining this coverage;
-- dominated releases are excluded from the optimizer's included-group universe so stricter fingerprint grouping cannot force an inferior duplicate back into the retained set.
-
-Examples:
-- existing WEB Omens vs identical recycle WEB Omens -> keep existing, skip recycle;
-- existing CD Want Deluxe vs recycle WEB WANT subset -> keep existing CD, skip recycle WEB.
+Dominated exact-equivalent releases are removed from the active optimizer pool, but unique/superset editions remain available to the exact global solver.
 
 ## 9. Optimization model
 
@@ -331,22 +324,26 @@ Every REDUNDANT/REPLACE decision must explain what retained release/track covers
 
 ## 11. Confidence
 
-Automatic decisions are allowed only for high-confidence equivalence.
+Automatic duplicate identity is allowed only from high-confidence acoustic evidence.
 
-Examples of high confidence:
+High-confidence behavior:
+- Chromaprint/acoustic comparison must pass the active strict or mastering-tolerant audio thresholds;
+- alignment may compensate for silence/padding;
+- substantial unmatched non-silent fingerprint content means a different edit/version;
+- near-perfect definitive acoustic identity may override conflicting MusicBrainz Recording IDs or other metadata disagreement.
 
-- same AcoustID/Chromaprint match with compatible duration and no conflicting version markers;
-- same MusicBrainz recording ID plus compatible duration/version metadata;
-- identical decoded PCM hash can confirm identical audio, but must not be required for duplicate coverage.
+Metadata behavior:
+- MBID and same-base-title may route a pair into acoustic comparison;
+- ISRC is diagnostic/explanatory metadata only;
+- duration is diagnostic/explanatory metadata only;
+- metadata never creates a duplicate match;
+- for non-definitive acoustic matches, strong semantic version/language or recording-ID conflicts may conservatively veto the merge.
 
-When confidence is insufficient:
-
-- do not ask the user to review duplicate identity track-by-track; a single grouped pattern-family included-content review is allowed before fingerprint comparison;
-- treat the tracks as distinct;
-- keep both so unique material cannot be lost;
-- record the uncertainty only in optional diagnostics.
-
-Strong Chromaprint evidence remains the primary signal, but it no longer overrides strong contradictory recording/version metadata. Material duration differences, clearly incompatible fingerprints, or a metadata safety veto keep tracks separate.
+When acoustic confidence is insufficient:
+- do not ask for track-by-track duplicate review;
+- keep the tracks as separate recording groups;
+- preserve both so unique material cannot be lost;
+- record the evidence in optional diagnostics.
 
 ## 12. Title normalization for comparison
 
@@ -440,7 +437,7 @@ For this dataset:
 - compare recycle WEB releases against existing ALAC and against each other;
 - eliminate complete subsets when recordings are equivalent;
 - keep releases that contribute unique included non-remix songs/versions;
-- prefer explicit over clean;
+- apply Explicit-over-Clean only as the absolute final exact-equivalent tie-break;
 - keep all albums represented;
 - minimize duplicated audio files across album editions/singles/EPs.
 
@@ -582,35 +579,24 @@ Where a label officially ends in `Records`, keep `Records` except for the explic
 
 Multiple-label formatting is not fully standardized yet; keep the source labels rather than inventing a destructive normalization.
 
-## CD rip log quality hierarchy - future implementation
+## CD rip log quality hierarchy - implemented
 
-This is for comparing otherwise identical CD rips and selecting the best rip based on the ripping log.
+Duplicate Edition Analyzer uses `ligh7s/hey-bro-check-log` v1.3.2 (Apache-2.0) as an automatically managed runtime dependency for supported EAC/XLD rip logs.
 
-Use `doujincafe/hbcl` as the scoring basis. H.B.C.L. is a CD rip log analyzer/scorer and starts from a 100-point score with deductions.
+Rules:
+- ignore `audiochecker.log` for rip-quality scoring;
+- rip-log score is never duplicate evidence;
+- compare log quality only after two CD releases are proven exact-equivalent in release/content/source structure;
+- require all relevant rip logs for a release to be recognized before assigning a comparable quality key;
+- unsupported or unrecognized logs remain neutral;
+- multi-disc comparison uses worst-disc score first, then average score, then flagged status;
+- a higher-scoring exact-equivalent CD rip may replace an Existing lower-scoring rip;
+- when log quality ties or is unavailable, Existing-copy precedence remains;
+- Explicit/Clean remains the absolute final tie-break after CD rip-log quality.
 
-Hierarchy:
-
-1. `100% - Log + CUE`
-2. `100% - Log`
-3. `Log with non-audio deductions`
-4. `Log with audio deductions`
-5. `FLAC` / lossless source without a qualifying rip log
-
-Meaning of `100%`: the log completes the H.B.C.L.-style check with a full 100 score.
-
-Implementation goal for later:
-- first establish that two releases are the same CD rip/content candidate;
-- score every qualifying rip log;
-- prefer the highest-scoring log;
-- if scores tie, prefer the rip with CUE;
-- distinguish non-audio deductions from audio-affecting deductions when ranking sub-100 logs;
-- only fall back to unlogged lossless when no better logged rip exists.
-
-Do not implement this hierarchy as filename guessing. Parse/score the actual log contents.
-
+Do not rank CD rips by filenames or guessed ripper text; parse and score the actual log contents.
 
 - `Original Mix` is an original-version label and must NOT be classified as a remix merely because it contains the word `Mix`.
-
 
 ### Album-edition clustering
 
@@ -700,13 +686,16 @@ Do not flatten release folders into the duplicate root. After successful moves, 
 - A skipped track contributes nothing to release coverage, counts, edition comparison, optimization, CD-log quality comparison, existing-vs-recycle precedence, or clean/explicit tie-breaks.
 - Skipped tracks may physically remain inside a mixed release that is retained for other included tracks.
 
-### Collection-wide minimum-track rule
+### Exact global minimum-file rule
 
-- The optimization target is the minimum total number of included tracks across the retained collection after unique recording/version coverage and source-quality requirements are satisfied.
-- Never let a larger album edition eliminate a smaller related edition merely because the larger edition is a pairwise superset.
-- An extra track on a larger edition adds no selection value when the same high-confidence recording group is already retained on another release.
-- After assembling the retained collection, test smaller related album editions as replacements. Accept a replacement only when its source class is not worse, every included recording group remains covered globally, and total included track count strictly decreases.
-- Re-run redundancy pruning after such swaps.
+- v0.19.0 replaces the old local minimum-track swap stage with an exact component-decomposed global set-cover solver.
+- Preserve every active recording group and at least one active album per album family.
+- Preserve the source-medium + Existing quality floor established by the conservative rule-respecting seed.
+- Inside those constraints minimize, in order: physical retained audio files, counted tracks, retained releases, Recycle releases, stable release-ID order.
+- Never let a larger album edition win merely because it is a pairwise superset when its extra groups are already covered more efficiently elsewhere.
+- CUE/image logical tracks count individually for coverage while their shared physical image counts once for physical-file cost.
+- Re-Analyze after Ignore/Restore reruns this exact collection optimization using already-computed fingerprints; it does not re-fingerprint audio.
+- Run redundancy pruning and exact-equivalent quality tie-breaks after the exact solve.
 
 ### Tempo/effect remix rule
 
@@ -718,8 +707,8 @@ Do not flatten release folders into the duplicate root. After successful moves, 
 
 - `Personal Picks` are persistent user preference exceptions to `Save Remixes` and `Save Live recordings`.
 - A matching Personal Pick is included even when its remix/live category is globally unchecked.
-- Personal Picks never create duplicate identity. Audio identity remains Chromaprint + duration with existing safety gates.
-- A Personal Pick preserves the recording/version, not a particular release folder. The global optimizer must still choose the minimum-track retained release set that covers it.
+- Personal Picks never create duplicate identity. Duplicate identity remains acoustic-fingerprint based.
+- A Personal Pick preserves the recording/version, not a particular release folder. The global optimizer still chooses the smallest rule-compliant retained release set that covers it.
 - Phrase rules match normalized track title/filename text case- and punctuation-insensitively; exact-title rules require normalized full-title equality.
 - Personal Picks do not override unrelated unusual-pattern exclusions for ordinary non-remix/non-live material.
 
