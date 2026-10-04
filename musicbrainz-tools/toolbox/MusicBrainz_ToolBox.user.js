@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MusicBrainz ToolBox
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.0.47
+// @version      1.0.48
 // @description  Combined MusicBrainz release-editor, recording, barcode, Spotify/Apple Music linking, search, cover-art, Disc ID, and duplicate-edit tools.
 // @author       karpuzikov
 // @license      MIT
@@ -26,6 +26,12 @@
 
 (() => {
     'use strict';
+
+    const __mbToolBoxMusicBrainzIconSvg =
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 25 28" aria-hidden="true">' +
+        '<polygon fill="#ba478f" points="12 0 0 7 0 21 12 28 12 0"/>' +
+        '<polygon fill="#eb743b" points="13 0 25 7 25 21 13 28 13 0"/>' +
+        '</svg>';
 
     function __mbToolBoxPattern(pattern) {
         const value = location.href;
@@ -8407,7 +8413,7 @@
                     key: 'mb:' + release.id,
                     mbid: release.id,
                     href: 'https://musicbrainz.org/release/' + release.id,
-                    image: 'https://musicbrainz.org/favicon.ico',
+                    svg: __mbToolBoxMusicBrainzIconSvg,
                     alt: 'MusicBrainz',
                     title: release.disambiguation
                         ? `Open MusicBrainz release: ${release.title || release.id} (${release.disambiguation})`
@@ -8952,7 +8958,7 @@
                     key: 'mb:' + release.id,
                     mbid: release.id,
                     href: 'https://musicbrainz.org/release/' + release.id,
-                    image: 'https://musicbrainz.org/favicon.ico',
+                    svg: __mbToolBoxMusicBrainzIconSvg,
                     alt: 'MusicBrainz',
                     title: release.disambiguation
                         ? `Open MusicBrainz release: ${release.title || release.id} (${release.disambiguation})`
@@ -9496,12 +9502,12 @@
         }
 
         function makeMusicBrainzImage() {
-            const image = document.createElement('img');
-            image.src = 'https://musicbrainz.org/favicon.ico';
-            image.alt = 'MusicBrainz';
-            image.width = 18;
-            image.height = 18;
-            return image;
+            const holder = document.createElement('span');
+            holder.innerHTML = __mbToolBoxMusicBrainzIconSvg;
+            const icon = holder.firstElementChild;
+            icon.setAttribute('role', 'img');
+            icon.setAttribute('aria-label', 'MusicBrainz');
+            return icon;
         }
 
         function createIndicator(info, releases) {
