@@ -4864,19 +4864,17 @@ def greedy_cover(target: Set[int], releases: List[Release], selected: Set[int]) 
             new = r.groups & missing
             if not new:
                 continue
-            # Skipped tracks never create coverage, but they remain physically
-            # inside a retained release folder. Price the whole retained audio
-            # payload so equal useful coverage prefers fewer files on disk.
-            cost_per = max(1, r.retained_audio_file_count) / len(new)
-            q, ex, existing = quality_key(r)
+            # Price every carried track, including early-eliminated extras.
+            # Lower total track number is preferred once source/log quality is valid.
+            cost_per = max(1, r.track_count) / len(new)
+            source_q, log_class, existing = quality_key(r)
             key = (
+                -source_q,
+                -log_class,
                 cost_per,
                 -len(new),
-                -ex,
-                -q,
                 0 if r.root_kind == "existing" else 1,
-                r.retained_audio_file_count,
-                r.counted_track_count,
+                r.track_count,
                 r.title.lower(),
             )
             if best_key is None or key < best_key:
@@ -5018,15 +5016,14 @@ def choose_album_families(releases: List[Release]) -> Set[int]:
             new_ids = ({r.rid for r in combo} | extra) - selected
             new_rels = [by_id[x] for x in new_ids]
 
-            core_explicit, core_source, core_existing = _core_album_preference(combo, core_groups)
-            total_retained_audio_files = sum(r.retained_audio_file_count for r in new_rels)
+            core_log, core_source, _core_existing = _core_album_preference(combo, core_groups)
+            total_tracks = sum(r.track_count for r in new_rels)
             total_releases = len(new_rels)
             recycle_count = sum(r.root_kind == "recycle" for r in new_rels)
             score = (
-                -core_explicit,
                 -core_source,
-                -core_existing,
-                total_retained_audio_files,
+                -core_log,
+                total_tracks,
                 total_releases,
                 recycle_count,
             )
@@ -5038,11 +5035,11 @@ def choose_album_families(releases: List[Release]) -> Set[int]:
             chosen = min(
                 candidates,
                 key=lambda r: (
-                    -_explicit_rank(r),
                     -source_rank(r),
+                    -cd_rip_quality_class(r),
+                    r.track_count,
                     0 if r.root_kind == "existing" else 1,
-                    r.retained_audio_file_count,
-                    r.counted_track_count,
+                    r.rid,
                 ),
             )
             selected.add(chosen.rid)
@@ -5207,7 +5204,7 @@ def stabilize_equivalent_sources(releases: List[Release], selected: Set[int]) ->
                     key=lambda r: (
                         _explicit_rank(r),
                         source_rank(r),
-                        -r.retained_audio_file_count,
+                        -r.track_count,
                     ),
                 )
                 selected.discard(er.rid)
@@ -5384,11 +5381,11 @@ def prune_redundant_selected(releases: List[Release], selected: Set[int]) -> Set
             if any(have[gid] < count for gid, count in need.items()):
                 continue
 
-            rel_pref = (source_rank(rel), 1 if rel.root_kind == "existing" else 0)
+            rel_pref = (source_rank(rel), cd_rip_quality_class(rel))
             source_safe = True
             for gid in need:
                 if not any(
-                    (source_rank(other), 1 if other.root_kind == "existing" else 0) >= rel_pref
+                    (source_rank(other), cd_rip_quality_class(other)) >= rel_pref
                     for other in carriers.get(gid, [])
                 ):
                     source_safe = False
@@ -5508,18 +5505,22 @@ def prefer_explicit_exact_equivalents(releases: List[Release], selected: Set[int
 
 
 def _optimizer_quality_floor(rel: Release) -> Tuple[int, int]:
-    """Source/existing quality floor used by the exact collection solver."""
-    return (source_rank(rel), 1 if rel.root_kind == "existing" else 0)
+    """Source + CD-log threshold floor. Existing is only a late tie-break."""
+    return (source_rank(rel), cd_rip_quality_class(rel))
 
 
 def _optimizer_cost(by_id: Dict[int, Release], selected: Set[int]) -> Tuple[object, ...]:
-    """Deterministic DEA objective after coverage/source requirements are fixed."""
+    """Deterministic objective after coverage/source/log requirements are fixed."""
     rels = [by_id[rid] for rid in selected]
+    below_threshold_cd = sum(
+        1 for rel in rels
+        if source_rank(rel) >= 2 and cd_rip_quality_class(rel) == 1
+    )
     return (
-        sum(r.retained_audio_file_count for r in rels),
-        sum(r.counted_track_count for r in rels),
+        below_threshold_cd,
+        sum(rel.track_count for rel in rels),
         len(rels),
-        sum(1 for r in rels if r.root_kind == "recycle"),
+        sum(1 for rel in rels if rel.root_kind == "recycle"),
         tuple(sorted(selected)),
     )
 
@@ -5573,20 +5574,24 @@ def _exact_component_cover(
     def partial_key(selected: Set[int]) -> Tuple[int, int, int, int]:
         rels = [by_id[rid] for rid in selected]
         return (
-            sum(r.retained_audio_file_count for r in rels),
-            sum(r.counted_track_count for r in rels),
+            sum(
+                1 for rel in rels
+                if source_rank(rel) >= 2 and cd_rip_quality_class(rel) == 1
+            ),
+            sum(rel.track_count for rel in rels),
             len(rels),
-            sum(1 for r in rels if r.root_kind == "recycle"),
+            sum(1 for rel in rels if rel.root_kind == "recycle"),
         )
 
     def branch_key(rid: int, unsatisfied: frozenset) -> Tuple[object, ...]:
         rel = by_id[rid]
         newly = len(release_requirements.get(rid, set()) & set(unsatisfied))
         return (
-            rel.retained_audio_file_count,
-            rel.counted_track_count,
+            1 if source_rank(rel) >= 2 and cd_rip_quality_class(rel) == 1 else 0,
+            rel.track_count,
             -newly,
             -source_rank(rel),
+            -cd_rip_quality_class(rel),
             0 if rel.root_kind == "existing" else 1,
             rel.rid,
         )
@@ -5863,17 +5868,15 @@ def optimize_collection(
                 chosen = min(
                     containing,
                     key=lambda r: (
-                        r.retained_audio_file_count,
                         -source_rank(r),
+                        -cd_rip_quality_class(r),
+                        r.track_count,
                         0 if r.root_kind == "existing" else 1,
-                        r.counted_track_count,
                         r.rid,
                     ),
                 )
                 selected.add(chosen.rid)
 
-    selected = stabilize_equivalent_sources(active, selected)
-    selected = enforce_existing_precedence(active, selected)
     selected = prune_redundant_selected(active, selected)
 
     selected, optimizer_stats = exact_global_collection_minimize(
@@ -5882,8 +5885,6 @@ def optimize_collection(
         progress_cb,
     )
 
-    selected = stabilize_equivalent_sources(active, selected)
-    selected = enforce_existing_precedence(active, selected)
     selected = prune_redundant_selected(active, selected)
 
     selected = prefer_better_cd_rips(active, selected)
@@ -5897,8 +5898,8 @@ def optimize_collection(
             "dominated_releases": len(dominated),
             "active_releases": len(active),
             "final_releases": len(selected),
-            "final_files": sum(
-                r.retained_audio_file_count
+            "final_tracks": sum(
+                r.track_count
                 for r in active
                 if r.rid in selected
             ),
