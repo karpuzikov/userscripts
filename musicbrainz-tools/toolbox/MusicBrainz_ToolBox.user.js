@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MusicBrainz ToolBox
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.0.51
+// @version      1.0.52
 // @description  Combined MusicBrainz release-editor, recording, barcode, Spotify/Apple Music linking, search, cover-art, Disc ID, and duplicate-edit tools.
 // @author       karpuzikov
 // @license      MIT
@@ -212,6 +212,18 @@
         };
     }
 
+
+    function __mbToolBoxHarmonyReleaseUrl(providerUrl, musicBrainzId = '') {
+        const base =
+            'https://harmony.pulsewidth.org.uk/release?url=' +
+            encodeURIComponent(String(providerUrl || '')) +
+            '&gtin=&region=&deezer=&spotify=&tidal=&qobuz=';
+
+        return musicBrainzId
+            ? base + '&musicbrainz=' +
+                encodeURIComponent(String(musicBrainzId))
+            : base;
+    }
 
     function __mbToolBoxComparableBarcode(value) {
         const digits = String(value || '').replace(/\D/g, '');
@@ -9231,9 +9243,13 @@
                             (unlinked ? 'mb-unlinked:' : 'mb:') +
                             release.id,
                         mbid: release.id,
-                        href:
-                            'https://musicbrainz.org/release/' +
-                            release.id,
+                        href: unlinked
+                            ? __mbToolBoxHarmonyReleaseUrl(
+                                info.harmonyResource,
+                                release.id
+                            )
+                            : 'https://musicbrainz.org/release/' +
+                                release.id,
                         svg: __mbToolBoxMusicBrainzIconSvg,
                         alt: 'MusicBrainz',
                         brokenLink: unlinked,
@@ -9915,8 +9931,12 @@
                 link.dataset.mbtbKey = encodeURIComponent(info.key);
                 link.target = '_blank';
                 link.rel = 'noopener noreferrer';
-                link.href =
-                    'https://musicbrainz.org/release/' + release.id;
+                link.href = unlinked
+                    ? __mbToolBoxHarmonyReleaseUrl(
+                        info.harmonyUrl,
+                        release.id
+                    )
+                    : 'https://musicbrainz.org/release/' + release.id;
 
                 const releaseLabel = release.disambiguation
                     ? (release.title || release.id) +
