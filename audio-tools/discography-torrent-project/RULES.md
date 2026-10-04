@@ -1029,3 +1029,19 @@ Behavior:
 - if the target no longer exists, fail gracefully and keep the displayed path unchanged.
 
 This is a global DEA UI rule, not a one-screen exception.
+
+
+## Planned Live / remix phrase review behavior - v0.21.0
+
+The Live / remix phrase review is an exception-review UI, not a catalog of normal remix names.
+
+- Do not show this stage unless Save Remixes is checked.
+- Standard remix/mix phrases must not appear in the review.
+- Examples that should be suppressed include:
+  - <artist> Remix;
+  - <artist> Mix;
+  - Hybrid Mix;
+  - other conventional Remix / Mix suffixes that are already confidently classified by the normal remix detector.
+- Show only unusual, ambiguous, or otherwise unrecognized live/remix phrases where a human preservation choice is useful.
+- Existing Personal Picks remain checked when the stage is shown.
+- The phrase-review stage must not change duplicate identity; it only controls preservation/exclusion policy for remix/live families.
