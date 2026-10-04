@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MusicBrainz ToolBox
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.0.50
+// @version      1.0.51
 // @description  Combined MusicBrainz release-editor, recording, barcode, Spotify/Apple Music linking, search, cover-art, Disc ID, and duplicate-edit tools.
 // @author       karpuzikov
 // @license      MIT
@@ -9181,11 +9181,15 @@
                 }
                 .${LINK_CLASS} .mb-toolbox-broken-chain-badge {
                     position: absolute;
-                    right: -7px;
-                    bottom: -6px;
+                    right: 0;
+                    bottom: 0;
                     z-index: 2;
-                    font-size: 13px;
-                    line-height: 1;
+                    width: 10px;
+                    height: 10px;
+                    overflow: visible;
+                    font-size: 9px;
+                    line-height: 10px;
+                    text-align: center;
                     pointer-events: none;
                     filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .9));
                 }
@@ -9851,11 +9855,15 @@
                 '}',
                 '.' + INDICATOR_CLASS + ' .mb-toolbox-broken-chain-badge {',
                 'position: absolute !important;',
-                'right: -6px !important;',
-                'bottom: -5px !important;',
+                'right: 0 !important;',
+                'bottom: 0 !important;',
                 'z-index: 2 !important;',
-                'font-size: 10px !important;',
-                'line-height: 1 !important;',
+                'width: 8px !important;',
+                'height: 8px !important;',
+                'overflow: visible !important;',
+                'font-size: 7px !important;',
+                'line-height: 8px !important;',
+                'text-align: center !important;',
                 'pointer-events: none !important;',
                 'filter: drop-shadow(0 1px 1px rgba(0,0,0,.9));',
                 '}',
