@@ -935,7 +935,7 @@ This taxonomy is a standing rule for all future Duplicate Edition Analyzer work.
 - Ignore/Restore/Re-Analyze remain planning operations. No files are moved until Apply.
 
 
-## Planned dynamic-range/mastering-quality rule - v0.21.0
+## Dynamic-range/mastering-quality rule - v0.21.0
 
 Dynamic range is a mastering-quality preference only. It is not duplicate evidence.
 
@@ -964,7 +964,7 @@ Rules:
 - show track/release DR metrics and the decision reason in Release Map details;
 - include the metrics, threshold result, and chosen winner in optional JSONL diagnostics.
 
-Planned tie-break position for otherwise interchangeable candidates:
+Tie-break position for otherwise interchangeable candidates:
 
 1. preserve wanted coverage and album obligations;
 2. source class / physical-vs-WEB rules;
@@ -1031,7 +1031,7 @@ Behavior:
 This is a global DEA UI rule, not a one-screen exception.
 
 
-## Planned Live / remix phrase review behavior - v0.21.0
+## Live / remix phrase review behavior - v0.21.0
 
 The Live / remix phrase review is an exception-review UI, not a catalog of normal remix names.
 
@@ -1045,3 +1045,13 @@ The Live / remix phrase review is an exception-review UI, not a catalog of norma
 - Show only unusual, ambiguous, or otherwise unrecognized live/remix phrases where a human preservation choice is useful.
 - Existing Personal Picks remain checked when the stage is shown.
 - The phrase-review stage must not change duplicate identity; it only controls preservation/exclusion policy for remix/live families.
+
+
+## Fingerprint comparison execution - v0.21.0
+
+- Candidate identity rules and acoustic thresholds are unchanged.
+- Expensive full fingerprint comparisons run in small bounded process batches instead of giant ordered chunks.
+- Identical fingerprint vectors are accepted directly as definitive acoustic identity.
+- Once two tracks are already in the same validated acoustic Union-Find component, another candidate comparison between them is skipped because it cannot alter the final grouping.
+- These execution shortcuts must not weaken the existing metadata safety gate or introduce metadata-based duplicate identity.
+- Progress must update continuously and expose comparisons/sec and ETA for long runs.
