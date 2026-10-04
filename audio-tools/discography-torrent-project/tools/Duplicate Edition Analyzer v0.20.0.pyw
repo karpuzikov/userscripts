@@ -10927,6 +10927,33 @@ def _standalone_self_test() -> None:
     if not callable(score_log):
         raise RuntimeError("Standalone dependency self-test failed: hey-bro-check-log")
 
+    checks = [
+        ([ffmpeg, "-version"], "ffmpeg"),
+        ([ffprobe, "-version"], "ffprobe"),
+        ([fpcalc, "-version"], "fpcalc"),
+        ([arcue], "CUETools.ARCUE"),
+    ]
+    for command, label in checks:
+        try:
+            cp = run_hidden(
+                command,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                errors="replace",
+                check=False,
+                timeout=20,
+            )
+        except Exception as exc:
+            raise RuntimeError(
+                f"Standalone dependency self-test could not start {label}: {exc}"
+            ) from exc
+        if label != "CUETools.ARCUE" and cp.returncode != 0:
+            raise RuntimeError(
+                f"Standalone dependency self-test failed to run {label}: "
+                + (cp.stderr.strip() or cp.stdout.strip() or f"exit {cp.returncode}")
+            )
+
 
 def main():
     if len(sys.argv) >= 2 and sys.argv[1] == "--self-test":
