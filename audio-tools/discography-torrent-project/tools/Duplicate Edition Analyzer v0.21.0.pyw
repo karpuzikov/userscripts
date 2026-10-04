@@ -6025,7 +6025,7 @@ def report_text(existing: Optional[Path], recycle: Path, releases: List[Release]
 
     lines.append("IMPORTANT")
     lines.append("This is a proposal only. No files were changed, moved, or deleted.")
-    lines.append("Chromaprint fingerprint similarity plus duration is the duplicate-identity signal. CUE-image tracks are fingerprinted as their CUE time segments. Titles, filenames, MBIDs and ISRCs are not used to prove duplicates.")
+    lines.append("Chromaprint acoustic fingerprint evidence is the duplicate-identity authority. Duration, titles, filenames, MBIDs and ISRCs do not decide identity. CUE-image tracks are fingerprinted as their CUE time segments.")
     lines.append("Filename/title similarity does not participate in duplicate identity.")
     return "\n".join(lines) + "\n"
 
@@ -6077,14 +6077,28 @@ def _preferred_existing_cover_for_recycle(rel: Release, releases: List[Release])
             if er_quality is not None and rel_quality is not None and rel_quality > er_quality:
                 continue
 
+        # Dynamics sits after source/rip integrity and before Existing-copy
+        # preference. A materially more dynamic exact-equivalent recycle
+        # mastering therefore must not be suppressed by this final safeguard.
+        if (
+            _same_release_exact_mastering_content(er, rel)
+            and _dynamic_scores_comparable(er, rel)
+            and _rip_integrity_not_worse(rel, er)
+        ):
+            er_dynamic = float(release_dynamic_summary(er)["score"])
+            rel_dynamic = float(release_dynamic_summary(rel)["score"])
+            if rel_dynamic >= er_dynamic + DYNAMIC_RANGE_MATERIAL_DELTA:
+                continue
+
         candidates.append(er)
     if not candidates:
         return None
     return max(
         candidates,
         key=lambda er: (
-            _explicit_rank(er),
             source_rank(er),
+            cd_rip_quality_key(er) or (0, 0, 0, 0, 0.0, 0),
+            float(release_dynamic_summary(er).get("score") or -1000000.0),
             er.included_track_count,
         ),
     )
@@ -6208,7 +6222,7 @@ def build_release_decisions(
                     related_release_ids=[existing_cover.rid],
                     decision_factors=[
                         "Existing processed copy has equivalent fingerprint-group coverage.",
-                        "Existing copy is not worse under source / explicit / CD-rip-quality preference rules.",
+                        "Existing copy is not worse under source / CD-rip-quality / mastering-dynamics preference rules.",
                     ],
                 )
             )
@@ -11572,6 +11586,43 @@ def _standalone_self_test() -> None:
                 f"Standalone dependency self-test failed to run {label}: "
                 + (cp.stderr.strip() or cp.stdout.strip() or f"exit {cp.returncode}")
             )
+
+
+    # v0.21.0 feature smoke test: prove the bundled FFmpeg build can execute the
+    # exact EBU R128 + astats filter chain used for mastering comparison.
+    with tempfile.TemporaryDirectory(prefix="dea-self-test-") as tmp_name:
+        tone = Path(tmp_name) / "tone.wav"
+        cp = run_hidden(
+            [
+                ffmpeg,
+                "-hide_banner", "-loglevel", "error", "-y",
+                "-f", "lavfi", "-i", "sine=frequency=1000:duration=1.5",
+                "-c:a", "pcm_s16le",
+                str(tone),
+            ],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            errors="replace",
+            check=False,
+            timeout=30,
+        )
+        if cp.returncode != 0 or not tone.is_file():
+            raise RuntimeError("Standalone dynamics self-test could not create test audio.")
+        metrics = _measure_track_dynamic_range(
+            ffmpeg,
+            Track(release_id=-1, path=tone, index=1),
+        )
+        if metrics.get("lufs") is None or metrics.get("score") is None:
+            raise RuntimeError("Standalone dynamics self-test returned incomplete metrics.")
+
+    # Keep the phrase-review contract executable, not only documented.
+    if _is_unusual_live_remix_phrase("BT Remix"):
+        raise RuntimeError("Phrase review self-test failed: ordinary Remix was not suppressed.")
+    if _is_unusual_live_remix_phrase("Hybrid Mix"):
+        raise RuntimeError("Phrase review self-test failed: ordinary Mix was not suppressed.")
+    if not _is_unusual_live_remix_phrase("Live at Wembley"):
+        raise RuntimeError("Phrase review self-test failed: unusual live phrase was not surfaced.")
 
 
 def main():
