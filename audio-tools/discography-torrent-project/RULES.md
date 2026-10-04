@@ -1059,7 +1059,9 @@ The Live / remix phrase review is an exception-review UI, not a catalog of norma
 
 ## Early remix/live elimination rule
 
-When `Save Remixes` is OFF, tracks classified as remixes are eliminated at the first classification stage. When `Save Live recordings` is OFF, tracks classified as live recordings are eliminated at the first classification stage.
+When `Save Remixes` is OFF, tracks classified as remixes are eliminated at the first classification stage, **except when the remix has a featured artist credit**. A featured-remix track remains in the normal analysis pipeline and is treated as wanted audio.
+
+When `Save Live recordings` is OFF, tracks classified as live recordings are eliminated at the first classification stage.
 
 Eliminated remix/live tracks must not participate in any later analytical stage. In particular they must not be:
 
@@ -1077,3 +1079,9 @@ Eliminated remix/live tracks must not participate in any later analytical stage.
 The analyzer keeps only the filesystem/release bookkeeping needed so those excluded files or releases can be moved at the final Apply stage.
 
 If the corresponding Save option is ON, those tracks remain in the normal analysis pipeline.
+
+Featured-remix exception:
+- applies only to remixes with a genuine featured-artist credit;
+- such tracks are not early-discarded when `Save Remixes` is OFF;
+- they are fingerprinted, compared, grouped, coverage-counted, dynamically analyzed when otherwise eligible, and optimized like normal wanted audio;
+- the exception does not apply to ordinary remix-artist naming such as `Artist Remix` or `Artist Mix`.
