@@ -4,7 +4,7 @@ Complete project source and workflow assets for the discography torrent automati
 
 ## Current tools
 
-- `tools/Duplicate Edition Analyzer v0.19.1.pyw` - Fixes FFmpeg/FFprobe dependency setup. After the required WinGet attempt, the analyzer now discovers binaries directly inside WinGet package storage even when the current process PATH/WinGet Links were not refreshed. If WinGet still cannot provide usable binaries, it downloads the official Gyan FFmpeg release essentials ZIP into `Documents\\Karpuzikov Tools\\Duplicate Edition Analyzer\\dependencies\\FFmpeg` and uses that isolated app-owned copy. v0.19.0 exact global optimization remains intact. Under construction ⚠️
+- `tools/Duplicate Edition Analyzer v0.20.0.pyw` - Standalone Windows release: one self-contained EXE bundles Python, PySide6/Qt WebEngine, FFmpeg/FFprobe, Chromaprint/fpcalc, hey-bro-check-log, and CUETools/ARCUE. Runtime dependency installation is not required. On normal startup the packaged app performs a short GitHub release-channel update check; offline/check failures fall through to the bundled known-working runtime. Newer verified releases are downloaded with a SHA-256 sidecar and installed/restarted automatically. [Download standalone EXE](https://github.com/karpuzikov/userscripts/releases/download/duplicate-edition-analyzer-v0.20.0/Duplicate.Edition.Analyzer.0.20.0.exe). v0.19.0 exact global optimization remains intact. Under construction ⚠️
 - `tools/AudioChecker Automation v0.1.pyw` - AudioChecker batch automation.
 - `tools/ALAC Conversion Automation v0.2.pyw` - lossless -> ALAC conversion. Under construction ⚠️
 - `tools/CUE Corrector - MusicBrainz DiscID 1.3.1.pyw` - MusicBrainz DiscID/CUE workflow.
