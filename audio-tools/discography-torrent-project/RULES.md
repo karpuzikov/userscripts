@@ -1,6 +1,6 @@
 # Discography Torrent Project - Rules
 
-Last updated: 2026-09-30
+Last updated: 2026-10-04
 
 This file is the canonical rulebook for the Discography Builder and Duplicate / Edition Analyzer.
 When implementation behavior conflicts with this file, this file wins.
@@ -120,46 +120,48 @@ The analyzer provides two persistent affirmative checkboxes:
 
 Both are unchecked by default. Checked means the category participates normally in release comparison and selection. Unchecked means the category is skipped completely by comparison, coverage, counting, optimization, source/log tie-breaks, and clean/explicit tie-breaks. These options never create duplicate identity; track identity still requires a high-confidence audio match.
 
-## 5. Explicit vs clean - future implementation
+## 5. Explicit vs clean - active absolute final tie-break
 
-Explicit/clean preference is a future rule, not an active analyzer criterion yet.
+Explicit/clean metadata is intentionally neutral during duplicate identity, wanted-coverage construction, album representation, source selection, Existing-vs-Recycle precedence, exact global file minimization, and CD rip-log scoring.
 
-Current behavior:
-- do not detect or rank releases by explicit/clean status;
-- do not let explicit/clean metadata influence KEEP/SKIP/REPLACE decisions;
-- compare using included content, source medium, existing-vs-recycle precedence, and duplication minimization.
+Detection currently recognizes:
+- `ITUNESADVISORY=0` as Clean;
+- `ITUNESADVISORY=1` as Explicit;
+- compatible explicit/advisory tags and clear `Clean` / `Explicit` title markers as secondary evidence.
 
-Future behavior, once a reliable detector exists:
-- explicit/clean state may be used as a preference only after reliable detection is implemented;
-- genuinely different censored/edited recordings remain distinct when the audio analysis shows they are different.
+Only at the absolute final selection stage, when Clean and Explicit releases are otherwise proven exact equivalents with the same source class, included track structure/order, and exact audio-group multiset, retain Explicit and remove the Clean duplicate.
+
+If the censored/edited audio is materially different, the acoustic matcher keeps it as a distinct recording/version. Explicit metadata never creates duplicate identity.
 
 ## 6. Unique recording/version definition
 
-Track duplicate identity requires a high-confidence audio match.
+Track duplicate identity requires a high-confidence acoustic match.
 
 Primary identity signal:
 1. Chromaprint fingerprint similarity calculated from the decoded audio itself.
 
 Rules:
 
-- metadata never creates a duplicate match by itself; audio must pass first;
-- candidate discovery may use fingerprint-token overlap, exact MBID/ISRC indexes, or same-base-title + close-duration hints only to decide which pairs deserve the expensive audio comparison;
-- strong contradictory metadata may veto an otherwise-valid audio match when it indicates a distinct recording/version;
-- veto signals include different non-empty MusicBrainz recording MBIDs, conflicting semantic version/language descriptors, different featured/credited performers together with different ISRCs, different title/version descriptors together with different ISRCs, or different ISRCs plus different base titles;
-- a shared recording MBID remains strong identity evidence; a shared ISRC with the same credited performers may tolerate harmless packaging/edition suffixes;
-- use strict fingerprint thresholds; uncertain audio remains distinct and is retained;
+- acoustic fingerprint is the final duplicate authority;
+- metadata never creates a duplicate match by itself;
+- ISRC does not create, accept, reject, or merge duplicate identity;
+- reported/tagged/file duration does not create, accept, reject, or merge duplicate identity;
+- candidate discovery uses fingerprint-token overlap, shared MusicBrainz Recording ID as a discovery hint only, and same-base-title routing to decide which pairs deserve the expensive acoustic comparison;
+- every final duplicate still has to pass the acoustic matcher;
+- definitive near-perfect acoustic identity may override conflicting metadata identifiers;
+- for non-definitive acoustic matches, strong contradictory evidence such as different recording MBIDs or incompatible semantic version/language descriptors may conservatively veto the merge;
+- uncertain acoustic matches remain distinct and are retained;
 - fingerprint alignment may compensate for leading/trailing silence or padding;
-- if durations differ substantially, the unmatched fingerprint region must behave like silence/padding before the tracks may be merged;
-- substantial unmatched non-silent audio means a distinct version;
-- release-level coverage is computed from these audio-derived track groups, not filename/title similarity.
+- substantial unmatched non-silent fingerprint content means a distinct version;
+- release-level coverage is computed from these audio-derived recording groups, not filename/title/ISRC similarity.
 
-Decoded PCM hash is not the primary detector because mastering/remastering can change PCM while the underlying recording remains equivalent for coverage.
+Decoded PCM hash is not the primary detector because mastering/remastering can change PCM while the underlying recording remains equivalent for collection coverage.
 
-- Chromaprint matching has two audio-only confidence tiers: a strict match, plus a mastering/pressing-tolerant match that requires near-identical duration and strong full-track fingerprint similarity. This exists specifically so different CD pressings/masterings of the same recording are not retained as separate recordings merely because their fingerprints are not bit-identical.
+Chromaprint matching has strict and mastering/pressing-tolerant acoustic confidence paths. The tolerant path still requires strong full-track acoustic evidence; it exists so different pressings/masterings of the same recording are not automatically retained as different songs.
 
-Different performances/versions should remain distinct when their audio is materially different, including live, acoustic, radio edit, extended, instrumental, a cappella, remix/dub, demo, alternate mix, language performances, and similar variants.
+Different performances/versions remain distinct whenever their acoustic content is materially different, including live, acoustic, radio edit, extended, instrumental, a cappella, remix/dub, demo, alternate mix, language performances, and similar variants.
 
-Titles never create duplicate identity, but clear version/language/featured-credit conflicts may act as a conservative safety veto after the audio has already matched.
+Titles and metadata explain why tracks differ; they do not overrule proven acoustic identity.
 
 ## 7. Source preference
 
@@ -273,22 +275,44 @@ Examples:
 
 ## 9. Optimization model
 
-Think of each release as a set of recordings.
+Think of each release as a set of acoustically resolved recording groups plus album-family obligations.
 
 Required coverage:
 
-- every unique recording/version should ideally be covered at least once;
-- every album must have at least one retained edition.
+- every active wanted recording/version must be covered at least once;
+- every active album family must have at least one retained album edition;
+- manually ignored releases are excluded from the active provider set until restored and Re-Analyzed;
+- unchecked Remix/Live categories and manually skipped tracks do not create coverage obligations.
 
-Optimization target:
+### Exact global optimizer - v0.19.0
 
-1. maximize unique recording/version coverage;
-2. minimize total retained audio-file count;
-3. among equivalent solutions, minimize number of retained releases;
-4. among equivalent sources, prefer explicit;
-5. among equivalent sources, prefer CD + LOG/CUE over WEB.
+The old greedy/local-swap result is now used only as a conservative rule-respecting seed.
 
-This is effectively a constrained set-cover problem with mandatory album coverage and source-quality tie-breakers.
+The final collection is solved with an exact branch-and-bound set-cover search split into independent connected components. This applies the Coverage Atlas global-optimization idea without replacing Duplicate Edition Analyzer's own fingerprint identity, Release Map, Personal Picks, or Apply workflow.
+
+The seed establishes a minimum quality floor for each active recording group and album family:
+- do not drop below the selected source-medium class;
+- when source class ties, preserve Existing-discography precedence.
+
+Inside those quality constraints, the exact solver minimizes globally in this order:
+
+1. total retained physical audio-file count;
+2. total retained counted-track count;
+3. retained release count;
+4. Recycle/update release count;
+5. stable release-ID order for deterministic results.
+
+CUE/image releases count their shared physical image file once for file-cost purposes while their logical tracks still count separately for recording coverage.
+
+After exact global minimization:
+- source/Existing safeguards run again defensively;
+- redundant-selection pruning runs again;
+- exact-equivalent CD rips may be replaced by the better hey-bro-check-log result;
+- Explicit may replace Clean only as the absolute final exact-equivalent tie-break.
+
+The exact optimizer is also used after Release Map Ignore/Restore changes. Re-Analyze reuses the already generated fingerprints and recording groups; it does not rescan/re-fingerprint the collection.
+
+When detailed Logging is enabled, the JSONL receives an `optimizer` record containing component count, exact-search state count, coverage requirements, seed/final release counts, and seed/final physical-file counts.
 
 ## 10. Decision states
 
