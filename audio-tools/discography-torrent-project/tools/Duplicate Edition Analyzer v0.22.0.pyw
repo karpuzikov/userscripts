@@ -616,7 +616,7 @@ FP_MIN_OVERLAP = 0.85
 
 # Secondary audio-only acceptance for the same recording from a different
 # mastering/pressing. Identity is based on Chromaprint evidence only; tagged/file
-# duration and identifiers such as ISRC are not identity authority.
+# duration and external database identifiers are not identity authority.
 FP_MASTERING_SCORE = 7.5
 FP_MASTERING_GOOD_FRACTION = 0.80
 FP_MASTERING_MEDIAN_MAX = 7.0
@@ -1505,7 +1505,7 @@ def _definitive_acoustic_identity(
 ) -> bool:
     """True only for effectively carbon-copy Chromaprint evidence.
 
-    This deliberately ignores ISRC, MusicBrainz IDs and duration.
+    This uses acoustic evidence only and deliberately ignores duration and external database identifiers.
     """
     if not sim:
         return False
@@ -3219,7 +3219,6 @@ def _parse_cue_tracks(cue_path: Path, audio_files: List[Path]) -> List[Dict[str,
     track_re = re.compile(r'^\s*TRACK\s+(\d+)\s+AUDIO\s*$', re.I)
     title_re = re.compile(r'^\s*TITLE\s+(.+?)\s*$', re.I)
     performer_re = re.compile(r'^\s*PERFORMER\s+(.+?)\s*$', re.I)
-    isrc_re = re.compile(r'^\s*ISRC\s+([^\s]+)\s*$', re.I)
     index_re = re.compile(r'^\s*INDEX\s+01\s+(\d+:\d+:\d+)\s*$', re.I)
 
     for raw_line in text.splitlines():
@@ -3246,7 +3245,6 @@ def _parse_cue_tracks(cue_path: Path, audio_files: List[Path]) -> List[Dict[str,
                 "performer": "",
                 "album": global_title,
                 "album_performer": global_performer,
-                "isrc": "",
                 "start": None,
                 "end": 0.0,
             }
@@ -3272,11 +3270,6 @@ def _parse_cue_tracks(cue_path: Path, audio_files: List[Path]) -> List[Dict[str,
             continue
 
         if current is None:
-            continue
-
-        match = isrc_re.match(line)
-        if match:
-            current["isrc"] = match.group(1).strip()
             continue
 
         match = index_re.match(line)
@@ -4111,6 +4104,9 @@ def finalize_release_metadata(releases: List[Release]) -> None:
         if rel.has_cue and rel.has_rip_log:
             rel.source_medium = "CD"
             rel.source_quality = max(rel.source_quality, 100)
+        elif rel.has_rip_log:
+            rel.source_medium = "CD"
+            rel.source_quality = max(rel.source_quality, 95)
         elif "cd" in medium_norm and "digital" not in medium_norm:
             rel.source_medium = medium_tag or "CD"
             rel.source_quality = max(rel.source_quality, 95)
@@ -5147,79 +5143,6 @@ def _selected_album_cluster_map(releases: List[Release]) -> Dict[int, int]:
     return result
 
 
-def minimize_collection_file_count(releases: List[Release], selected: Set[int]) -> Set[int]:
-    """Reduce retained physical audio-file count using whole-collection coverage.
-
-    Coverage still uses only counted recording groups. Cost uses every physical
-    audio file that remains because release folders are retained as whole units.
-    A swap is allowed only when source class is not worse, every counted group
-    remains covered, and retained physical audio-file count strictly decreases.
-
-    Existing-vs-recycle, CD-log and clean/explicit rules still apply afterward.
-    """
-    selected = set(selected)
-    by_id = {r.rid: r for r in releases}
-    required_groups: Set[int] = set()
-    for rel in releases:
-        if not rel.excluded_only:
-            required_groups |= rel.groups
-
-    def covered(ids: Set[int]) -> Set[int]:
-        result: Set[int] = set()
-        for rid in ids:
-            result |= by_id[rid].groups
-        return result
-
-    changed = True
-    while changed:
-        changed = False
-        best_swap = None
-        best_key = None
-
-        selected_albums = [
-            by_id[rid] for rid in selected
-            if by_id[rid].release_type == "album" and not by_id[rid].excluded_only
-        ]
-        unselected_albums = [
-            r for r in releases
-            if r.rid not in selected
-            and r.release_type == "album"
-            and not r.excluded_only
-        ]
-
-        for current in selected_albums:
-            for candidate in unselected_albums:
-                if not _related_album_releases(current, candidate):
-                    continue
-                if source_rank(candidate) < source_rank(current):
-                    continue
-                if candidate.retained_audio_file_count >= current.retained_audio_file_count:
-                    continue
-
-                trial = (selected - {current.rid}) | {candidate.rid}
-                if not required_groups <= covered(trial):
-                    continue
-
-                saved_files = current.retained_audio_file_count - candidate.retained_audio_file_count
-                key = (
-                    -saved_files,
-                    -source_rank(candidate),
-                    0 if candidate.root_kind == "existing" else 1,
-                    candidate.retained_audio_file_count,
-                    candidate.rid,
-                )
-                if best_key is None or key < best_key:
-                    best_key = key
-                    best_swap = (current, candidate)
-
-        if best_swap is not None:
-            current, candidate = best_swap
-            selected.discard(current.rid)
-            selected.add(candidate.rid)
-            changed = True
-
-    return selected
-
 
 def prune_redundant_selected(releases: List[Release], selected: Set[int]) -> Set[int]:
     """Final exact redundancy pass after the optimizer."""
@@ -5234,7 +5157,7 @@ def prune_redundant_selected(releases: List[Release], selected: Set[int]) -> Set
             (by_id[rid] for rid in selected),
             key=lambda r: (
                 0 if r.release_type != "album" else 1,
-                -r.retained_audio_file_count,
+                -r.track_count,
                 r.rid,
             ),
         )
@@ -5620,12 +5543,12 @@ def exact_global_collection_minimize(
             "album_families": 0,
             "seed_releases": len(seed_selected),
             "selected_releases": 0,
-            "seed_files": sum(
-                by_id[rid].retained_audio_file_count
+            "seed_tracks": sum(
+                by_id[rid].track_count
                 for rid in seed_selected
                 if rid in by_id
             ),
-            "selected_files": 0,
+            "selected_tracks": 0,
         }
         return set(), stats
 
@@ -5686,13 +5609,13 @@ def exact_global_collection_minimize(
         "album_families": len(album_clusters),
         "seed_releases": len(seed_selected),
         "selected_releases": len(selected),
-        "seed_files": sum(
-            by_id[rid].retained_audio_file_count
+        "seed_tracks": sum(
+            by_id[rid].track_count
             for rid in seed_selected
             if rid in by_id
         ),
-        "selected_files": sum(
-            by_id[rid].retained_audio_file_count
+        "selected_tracks": sum(
+            by_id[rid].track_count
             for rid in selected
             if rid in by_id
         ),
@@ -5775,7 +5698,6 @@ def optimize_collection(
 
     selected = prefer_better_cd_rips(active, selected)
     selected = prefer_dynamic_mastering_exact_equivalents(active, selected)
-    selected = prefer_explicit_exact_equivalents(active, selected)
 
     selected -= blocked
     optimizer_stats.update(
@@ -5794,10 +5716,6 @@ def optimize_collection(
     _append_optimizer_log(comparison_log_path, optimizer_stats)
     return selected
 
-def review_candidates(tracks: List[Track]) -> List[Tuple[int, int, str]]:
-    # v0.4+: no manual track-by-track review. Uncertain matches remain separate
-    # recording groups and are therefore retained automatically.
-    return []
 
 def format_track(t: Track) -> str:
     dur = "?:??"
@@ -6017,23 +5935,25 @@ def report_text(existing: Optional[Path], recycle: Path, releases: List[Release]
     lines.append(f"Recycle/update: {recycle}")
     lines.append("")
     lines.append("RULE PRIORITY")
-    lines.append("1. Preserve ideally every unique recording/version.")
-    lines.append("2. Keep every album represented.")
-    lines.append("3. Apply Save Remixes / Save Live recordings before fingerprint analysis. Unchecked Remix/Live material is eliminated immediately; the only Save-Remixes exception is a remix with an explicit featured-artist credit.")
-    lines.append("4. Prefer CD/physical source over equivalent WEB content.")
-    lines.append("5. Among otherwise exact-identical CD rips, prefer the higher hey-bro-check-log EAC/XLD score.")
-    lines.append("6. Prefer the existing processed copy when content/source/log quality are equivalent.")
-    lines.append("7. Then minimize total included track count across the whole retained collection; edition bonus tracks add no value when already covered elsewhere.")
-    lines.append("8. Clean/explicit is neutral during optimization; ITUNESADVISORY 1 beats 0 only as the absolute final tie-break for otherwise exact-equivalent releases.")
-    lines.append("9. Uncertain audio matches stay separate and are retained automatically.")
+    lines.append("1. Preserve every wanted unique song/version and keep every album represented.")
+    lines.append("2. Remix/Live exclusions happen at step 1; the only Save-Remixes exception is a remix with an explicit featured artist.")
+    lines.append("3. Explicit supersedes the corresponding Clean track before fingerprint analysis.")
+    lines.append("4. Stated Versions such as Radio Edit, Extended Mix, Acoustic, Instrumental, etc. are unique and are not compared across version families.")
+    lines.append("5. Prefer CD/physical source over equivalent WEB content.")
+    lines.append("6. For CD alternatives, hey-bro-check-log is the rip-quality authority; 80 is the acceptable threshold.")
+    lines.append("7. Minimize total carried track count across the retained collection, including excluded extras inside a kept release.")
+    lines.append("8. When all earlier rules tie, any measurable better DR/mastering score wins.")
+    lines.append("9. If DR also ties, prefer the Existing processed copy.")
+    lines.append("10. Compilations are below regular Album/EP/Single releases and are retained only for wanted material unavailable on regular releases.")
+    lines.append("11. Rare different-title acoustic matches and narrow near-threshold cases require manual review.")
     lines.append("")
     lines.append("SUMMARY")
     lines.append(f"Releases scanned: {len(releases)}")
     lines.append(f"Audio files scanned: {len(tracks)}")
     lines.append(f"High-confidence recording groups: {len(groups)}")
     lines.append(f"Proposed retained releases: {len(selected)}")
-    lines.append(f"Proposed retained physical audio files: {sum(by_id[x].retained_audio_file_count for x in selected)}")
-    lines.append(f"Counted tracks in retained releases: {sum(by_id[x].counted_track_count for x in selected)}")
+    lines.append(f"Total tracks inside retained releases: {sum(by_id[x].track_count for x in selected)}")
+    lines.append(f"Wanted/counting tracks in retained releases: {sum(by_id[x].counted_track_count for x in selected)}")
     lines.append(f"Skipped remix/live/pattern tracks inside retained releases: {sum(by_id[x].ignored_track_count for x in selected)}")
     personal_kept = [t for t in tracks if t.personal_keep_rule and not t.exclude_from_coverage]
     lines.append(f"Personal-pick track matches included: {len(personal_kept)}")
@@ -6049,7 +5969,7 @@ def report_text(existing: Optional[Path], recycle: Path, releases: List[Release]
                 reason = "Selected because it contributes material not already covered by the existing discography and/or is part of the minimum-duplication solution."
             else:
                 status = "KEEP"
-                reason = "Selected by album-coverage / minimum-file optimization."
+                reason = "Selected by album-coverage / minimum-track optimization."
         else:
             if rel.groups <= selected_groups:
                 status = "REDUNDANT"
@@ -6096,7 +6016,7 @@ def report_text(existing: Optional[Path], recycle: Path, releases: List[Release]
 
     lines.append("AUTOMATIC MATCHING POLICY")
     lines.append("=========================")
-    lines.append("Strong audio matches are grouped automatically. Uncertain matches remain separate and are retained automatically; no track-by-track user review is required.")
+    lines.append("Clear same-title acoustic matches are grouped automatically. Different-title acoustic matches and narrow near-threshold same-title cases are held for rare manual review. Different stated version families are unique and are not cross-compared.")
     lines.append("")
 
     lines.append("HIGH-CONFIDENCE DUPLICATE GROUPS")
@@ -6126,7 +6046,7 @@ def report_text(existing: Optional[Path], recycle: Path, releases: List[Release]
 
     lines.append("IMPORTANT")
     lines.append("This is a proposal only. No files were changed, moved, or deleted.")
-    lines.append("Chromaprint acoustic fingerprint evidence is the duplicate-identity authority. Duration, titles, filenames, MBIDs and ISRCs do not decide identity. CUE-image tracks are fingerprinted as their CUE time segments.")
+    lines.append("Chromaprint acoustic fingerprint evidence is the duplicate-identity authority. External database identifiers are not read or used by the analyzer. CUE-image tracks are fingerprinted as their CUE time segments.")
     lines.append("Filename/title similarity does not participate in duplicate identity.")
     return "\n".join(lines) + "\n"
 
@@ -6149,60 +6069,6 @@ def _selected_group_union(releases: List[Release], selected: Set[int], exclude: 
             out |= r.groups
     return out
 
-
-def _preferred_existing_cover_for_recycle(rel: Release, releases: List[Release]) -> Optional[Release]:
-    """Return an existing release that makes this recycle release redundant.
-
-    This is a final action-layer safeguard based on audio fingerprint coverage
-    and source preference. Folder/file names are not duplicate evidence.
-    """
-    if rel.root_kind != "recycle" or rel.excluded_only:
-        return None
-    candidates: List[Release] = []
-    for er in releases:
-        if er.root_kind != "existing" or er.excluded_only:
-            continue
-        if er.release_type == "album" and rel.release_type == "album" and not _related_album_releases(er, rel):
-            continue
-        if not _release_covers(er, rel):
-            continue
-        if (_explicit_rank(er), source_rank(er)) < (_explicit_rank(rel), source_rank(rel)):
-            continue
-
-        # When the two are strict exact-equivalent CD rips and both logs were
-        # fully scored, a better recycle rip is allowed to replace an older
-        # existing copy.
-        if _same_release_exact_cd_content(er, rel):
-            er_quality = cd_rip_quality_key(er)
-            rel_quality = cd_rip_quality_key(rel)
-            if er_quality is not None and rel_quality is not None and rel_quality > er_quality:
-                continue
-
-        # Dynamics sits after source/rip integrity and before Existing-copy
-        # preference. A materially more dynamic exact-equivalent recycle
-        # mastering therefore must not be suppressed by this final safeguard.
-        if (
-            _same_release_exact_mastering_content(er, rel)
-            and _dynamic_scores_comparable(er, rel)
-            and _rip_integrity_not_worse(rel, er)
-        ):
-            er_dynamic = float(release_dynamic_summary(er)["score"])
-            rel_dynamic = float(release_dynamic_summary(rel)["score"])
-            if rel_dynamic > er_dynamic + DYNAMIC_RANGE_EPSILON:
-                continue
-
-        candidates.append(er)
-    if not candidates:
-        return None
-    return max(
-        candidates,
-        key=lambda er: (
-            source_rank(er),
-            cd_rip_quality_key(er) or (0, 0, 0, 0, 0.0, 0),
-            float(release_dynamic_summary(er).get("score") or -1000000.0),
-            er.included_track_count,
-        ),
-    )
 
 
 def build_release_decisions(
@@ -6310,25 +6176,6 @@ def build_release_decisions(
             )
             continue
 
-        # Final hard safeguard: if an existing processed release covers this
-        # recycle copy by audio groups and is not worse in source quality, it wins.
-        existing_cover = _preferred_existing_cover_for_recycle(rel, releases)
-        if existing_cover is not None:
-            decisions.append(
-                ReleaseDecision(
-                    release_id=rel.rid,
-                    action="SKIP",
-                    reason=f"Covered by preferred existing release: {existing_cover.path.name}",
-                    essential_tracks=[],
-                    related_release_ids=[existing_cover.rid],
-                    decision_factors=[
-                        "Existing processed copy has equivalent fingerprint-group coverage.",
-                        "Existing copy is not worse under source / CD-rip-quality / mastering-dynamics preference rules.",
-                    ],
-                )
-            )
-            continue
-
         other_selected_groups = _selected_group_union(releases, selected, exclude=rel.rid)
         essential_groups = rel.groups - other_selected_groups if rel.rid in selected else set()
 
@@ -6347,9 +6194,9 @@ def build_release_decisions(
                 if essential_tracks:
                     reason = f"Keep: {len(essential_tracks)} recording(s) are not covered by any other retained release."
                 elif rel.release_type == "album":
-                    reason = "Keep: required album representation in the minimum-file solution."
+                    reason = "Keep: required album representation in the minimum-track solution."
                 else:
-                    reason = "Keep: selected by the automatic minimum-file coverage solution."
+                    reason = "Keep: selected by the automatic minimum-track coverage solution."
             else:
                 replaced = [
                     r for r in releases
