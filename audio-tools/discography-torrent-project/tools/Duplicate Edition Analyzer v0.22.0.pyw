@@ -3652,15 +3652,17 @@ def merge_equivalent_tracks(
     tracks: List[Track],
     progress_cb=None,
     comparison_log_path: Optional[Path] = None,
-) -> Tuple[Dict[int, List[int]], List[str]]:
-    """Group recordings from audio fingerprints with a conservative metadata veto.
+) -> Tuple[Dict[int, List[int]], List[str], List[Dict[str, object]]]:
+    """Group clear acoustic matches and collect only rare ambiguous pairs for review.
 
-    Candidate discovery is fingerprint-first: strong/weak token overlap plus
-    same-base-title acoustic comparison. ISRC and duration do not create, accept,
-    reject, or merge a duplicate candidate.
+    Stated semantic versions are unique and do not enter cross-version matching.
+    Different-title acoustic matches and narrow near-threshold matches are held
+    for manual review instead of being silently merged or silently discarded.
     """
     uf = UnionFind(len(tracks))
     notes: List[str] = []
+    reviews: List[Dict[str, object]] = []
+    review_keys: Set[str] = set()
 
     # Early-eliminated Remix/Live/pattern tracks are intentionally absent from
     # every acoustic candidate route. Keep global indices so reporting and
@@ -3707,8 +3709,12 @@ def merge_equivalent_tracks(
 
     candidate_reasons: Dict[Tuple[int, int], Set[str]] = defaultdict(set)
 
-    # Primary fingerprint-token routes. Duration is deliberately not consulted.
+    # Primary fingerprint-token routes. Different stated versions are unique
+    # and never enter the expensive cross-version matcher.
     for pair, shared in pair_counts.items():
+        a, b = pair
+        if _semantic_version_conflict(tracks[a], tracks[b]):
+            continue
         if shared >= FP_CANDIDATE_STRONG_SHARED_TOKENS:
             candidate_reasons[pair].add("fingerprint_tokens_strong")
         elif shared >= FP_CANDIDATE_WEAK_SHARED_TOKENS:
@@ -3726,6 +3732,8 @@ def merge_equivalent_tracks(
 
     for ids in title_index.values():
         for a, b in itertools.combinations(sorted(set(ids)), 2):
+            if _semantic_version_conflict(tracks[a], tracks[b]):
+                continue
             candidate_reasons[(a, b)].add("same_base_title")
 
     candidate_pairs = sorted(candidate_reasons)
@@ -3811,7 +3819,7 @@ def merge_equivalent_tracks(
         audio_matched: bool,
         final_matched: bool,
         sim,
-        metadata_conflict: str,
+        review_reason: str,
     ) -> None:
         nonlocal processed_pair_count
         pair = (a, b)
@@ -3834,15 +3842,16 @@ def merge_equivalent_tracks(
             sim,
         )
         details["audio_match"] = bool(audio_matched)
-        details["metadata_conflict"] = metadata_conflict
+        details["manual_review_reason"] = review_reason
         details["final_match"] = bool(final_matched)
 
         if final_matched:
             log_counts["matched"] += 1
             for route in details.get("accepted_by", []):
                 log_counts[f"matched_{route}"] += 1
-        elif audio_matched and metadata_conflict:
-            log_counts["rejected_metadata_conflict"] += 1
+        elif review_reason:
+            log_counts["manual_review"] += 1
+            log_counts[f"manual_review_{review_reason}"] += 1
         else:
             log_counts["rejected_audio"] += 1
             if not details.get("similarity_available"):
@@ -3864,11 +3873,11 @@ def merge_equivalent_tracks(
             "track_a": _comparison_track_log_data(first),
             "track_b": _comparison_track_log_data(second),
             "audio_decision": "MATCH" if audio_matched else "REJECT",
-            "metadata_safety": {
-                "blocked": bool(metadata_conflict),
-                "reason": metadata_conflict,
+            "manual_review": {
+                "required": bool(review_reason),
+                "reason": review_reason,
             },
-            "decision": "MATCH" if final_matched else "REJECT",
+            "decision": "MATCH" if final_matched else "REVIEW" if review_reason else "REJECT",
             "details": details,
         }
         try:
@@ -3900,15 +3909,32 @@ def merge_equivalent_tracks(
         except Exception as exc:
             notes.append(f"Comparison log write error: {exc}")
 
+    def add_review(a: int, b: int, reason: str, sim) -> None:
+        row = _review_pair_payload(a, b, tracks, reason, sim)
+        key = str(row["key"])
+        if key in review_keys:
+            return
+        review_keys.add(key)
+        reviews.append(row)
+
     def handle_result(done: int, a: int, b: int, audio_matched: bool, sim) -> None:
-        definitive_audio = bool(audio_matched and _definitive_acoustic_identity(sim))
-        metadata_conflict = (
-            _metadata_match_conflict(tracks[a], tracks[b], definitive_audio)
-            if audio_matched
-            else ""
-        )
-        final_matched = bool(audio_matched and not metadata_conflict)
-        log_comparison(done, a, b, audio_matched, final_matched, sim, metadata_conflict)
+        base_a = _base_title_identity(tracks[a].display_title)
+        base_b = _base_title_identity(tracks[b].display_title)
+        different_titles = bool(base_a and base_b and base_a != base_b)
+
+        review_reason = ""
+        final_matched = False
+
+        if audio_matched and different_titles:
+            review_reason = "different_titles_same_audio"
+            add_review(a, b, review_reason, sim)
+        elif audio_matched:
+            final_matched = True
+        elif _manual_review_audio_candidate(sim):
+            review_reason = "uncertain_audio"
+            add_review(a, b, review_reason, sim)
+
+        log_comparison(done, a, b, audio_matched, final_matched, sim, review_reason)
 
         if final_matched:
             uf.union(a, b)
@@ -3919,15 +3945,11 @@ def merge_equivalent_tracks(
                     f"score={score:.2f}, good={good:.0%}, excellent={excellent:.0%}, "
                     f"overlap={overlap:.0%}, median={median:.1f}, p90={p90}, shift={shift}"
                 )
-        elif audio_matched and metadata_conflict:
-            if sim:
-                score, good, overlap, shift, excellent, median, p90 = sim
-                notes.append(
-                    f"AUDIO MATCH BLOCKED: {tracks[a].path.name} <-> {tracks[b].path.name}; "
-                    f"reason={metadata_conflict}; score={score:.2f}, good={good:.0%}, "
-                    f"excellent={excellent:.0%}, overlap={overlap:.0%}, "
-                    f"median={median:.1f}, p90={p90}, shift={shift}"
-                )
+        elif review_reason:
+            notes.append(
+                f"MANUAL REVIEW: {tracks[a].path.name} <-> {tracks[b].path.name}; "
+                f"reason={review_reason}"
+            )
 
     if total_candidates:
         workers = min(total_candidates, _compare_workers())
@@ -4081,6 +4103,7 @@ def merge_equivalent_tracks(
                 "prefilter_rejected_pairs": prefilter_rejected,
                 "comparisons_logged": processed_pair_count,
                 "recording_groups": len(groups),
+                "manual_review_pairs": len(reviews),
                 "counts": dict(sorted(log_counts.items())),
             }
             log_handle.write(json.dumps(summary, ensure_ascii=False) + "\n")
@@ -4093,7 +4116,7 @@ def merge_equivalent_tracks(
             except Exception:
                 pass
 
-    return groups, notes
+    return groups, notes, reviews
 
 def release_explicit_state(rel: Release) -> str:
     states = {t.explicit for t in rel.tracks}
