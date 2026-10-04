@@ -2002,7 +2002,26 @@ def album_family(title: str) -> str:
 
 
 def infer_release_type(title: str, folder_name: str, track_count: int, tags: Dict[str, str]) -> Tuple[str, str]:
-    raw = tag_lookup(tags, "releasetype", "musicbrainzalbumtype", "albumtype", "primaryreleasetype").lower()
+    raw = tag_lookup(
+        tags,
+        "releasetype",
+        "musicbrainzalbumtype",
+        "albumtype",
+        "primaryreleasetype",
+        "secondaryreleasetype",
+    ).lower()
+    compilation_tag = tag_lookup(tags, "compilation", "itunescompilation").strip().lower()
+    album_artist = normalize_space(tag_lookup(tags, "albumartist", "album artist"))
+    name_text = normalize_title(f"{title} {folder_name}")
+
+    if (
+        "compilation" in raw
+        or compilation_tag in {"1", "yes", "true", "compilation"}
+        or normalize_title(album_artist) in {"various artists", "various", "va"}
+        or re.search(r"\b(?:compilation|greatest hits|best of|anthology|collection)\b", name_text, re.I)
+    ):
+        return "compilation", "tag/name"
+
     if raw:
         if "album" in raw:
             return "album", "tag"
@@ -2939,6 +2958,68 @@ def title_for_match(text: str) -> str:
     text = strip_featured_credit_for_match(text)
     text = strip_advisory_version_for_match(text)
     return text
+
+
+def _advisory_track_policy_key(track: Track) -> Tuple[str, Tuple[str, ...]]:
+    title = strip_advisory_version_for_match(
+        ascii_punctuation(strip_track_number(track.display_title))
+    )
+    title_key = re.sub(r"[^a-z0-9]+", "", normalize_title(title))
+    artists = tuple(sorted(_artist_signature(track.artist)))
+    return title_key, artists
+
+
+def apply_explicit_over_clean_policy(releases: List[Release]) -> int:
+    """Explicit always supersedes the corresponding Clean track.
+
+    Clean/Explicit is a preference policy, not acoustic identity. A clean track
+    loses its coverage obligation when an explicit counterpart with the same
+    title/version/artist identity exists anywhere in the active collection.
+    """
+    tracks = [track for rel in releases for track in rel.tracks]
+    explicit_keys = {
+        _advisory_track_policy_key(track)
+        for track in tracks
+        if not track.exclude_from_coverage
+        and track.explicit == "explicit"
+        and _advisory_track_policy_key(track)[0]
+    }
+
+    removed = 0
+    for track in tracks:
+        if track.exclude_from_coverage or track.explicit != "clean":
+            continue
+        key = _advisory_track_policy_key(track)
+        if key[0] and key in explicit_keys:
+            track.exclude_from_coverage = True
+            track.excluded_by_pattern = "Explicit>Clean"
+            removed += 1
+    return removed
+
+
+def apply_compilation_policy(releases: List[Release]) -> int:
+    """Compilations may provide only groups unavailable on regular releases."""
+    regular_groups: Set[int] = set()
+    for rel in releases:
+        if rel.release_type == "compilation":
+            continue
+        regular_groups |= rel.groups
+
+    removed = 0
+    for rel in releases:
+        if rel.release_type != "compilation":
+            continue
+        for track in rel.tracks:
+            if (
+                not track.exclude_from_coverage
+                and track.group_id >= 0
+                and track.group_id in regular_groups
+            ):
+                track.exclude_from_coverage = True
+                track.base_excluded_from_coverage = True
+                track.excluded_by_pattern = "Compilation duplicate"
+                removed += 1
+    return removed
 
 
 def identity_title(text: str) -> str:
@@ -5922,6 +6003,11 @@ def analyze_prepared(
     progress_cb("Classifying wanted audio...", 0, max(1, len(tracks)))
     configure_exclusions(releases, exclude_remixes, exclude_live, personal_keep_rules)
     apply_pattern_exclusions(releases, set(excluded_pattern_keys or set()))
+    explicit_clean_removed = apply_explicit_over_clean_policy(releases)
+    if explicit_clean_removed:
+        errors.append(
+            f"Explicit>Clean policy removed {explicit_clean_removed} clean track(s) from coverage."
+        )
     for index, track in enumerate(tracks, 1):
         track.base_excluded_from_coverage = bool(track.exclude_from_coverage)
         track.manual_skip_rule = ""
@@ -5966,12 +6052,19 @@ def analyze_prepared(
         else:
             progress_cb(label, 1, 1)
 
-    groups, merge_notes = merge_equivalent_tracks(
+    groups, merge_notes, reviews = merge_equivalent_tracks(
         tracks,
         progress_cb,
         comparison_log_path,
     )
     errors.extend(merge_notes)
+
+    compilation_removed = apply_compilation_policy(releases)
+    if compilation_removed:
+        errors.append(
+            f"Compilation policy removed {compilation_removed} non-unique compilation track(s) from coverage."
+        )
+
     progress_cb("Applying saved track skips...", 0, 1)
     apply_persistent_track_skips(tracks)
     progress_cb("Applying saved track skips...", 1, 1)
@@ -5993,7 +6086,6 @@ def analyze_prepared(
         comparison_log_path=comparison_log_path,
     )
     progress_cb("Optimizing release set...", 1, 1)
-    reviews = review_candidates(tracks)
     progress_cb("Building automatic action plan...", 1, 1)
     return releases, tracks, groups, selected, reviews, errors
 
