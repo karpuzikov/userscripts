@@ -5250,7 +5250,7 @@ def exact_global_collection_minimize(
     early Remix/Live policy, and Apply workflow. This solver only replaces the old
     greedy/local collection minimization stage.
 
-    The rule-respecting heuristic seed establishes a source/existing quality
+    The rule-respecting heuristic seed establishes a source/CD-log quality
     floor for every currently covered recording and album family. The exact
     search may then choose any globally smaller release combination that keeps
     every active recording group, keeps every active album family represented,
@@ -6680,8 +6680,7 @@ def build_decision_snapshot(
                 "source": _release_source_description(rel),
                 "included_tracks": rel.counted_track_count,
                 "ignored_tracks": rel.ignored_track_count,
-                "physical_tracks": rel.track_count,
-                "retained_audio_files": rel.retained_audio_file_count,
+                "total_tracks": rel.track_count,
                 "recording_groups": len(rel.groups),
                 "decision_factors": list(decision.decision_factors),
                 "essential_tracks": list(decision.essential_tracks),
@@ -11600,6 +11599,105 @@ def _standalone_self_test() -> None:
         raise RuntimeError("Early exclusion self-test failed: live track survived.")
     if not featured_live_remix.exclude_from_coverage:
         raise RuntimeError("Early exclusion self-test failed: featured remix incorrectly bypassed Save Live.")
+
+
+    # v0.22.0: Explicit supersedes the corresponding Clean track before audio
+    # comparison, even when the clean file would otherwise fingerprint differently.
+    advisory_release = Release(
+        rid=-101,
+        root_kind="recycle",
+        path=Path("advisory"),
+        title="Advisory",
+    )
+    clean_track = Track(
+        release_id=-101,
+        path=Path("Song (Clean).flac"),
+        index=1,
+        title="Song (Clean)",
+        artist="Artist",
+        explicit="clean",
+    )
+    explicit_track = Track(
+        release_id=-101,
+        path=Path("Song (Explicit).flac"),
+        index=2,
+        title="Song (Explicit)",
+        artist="Artist",
+        explicit="explicit",
+    )
+    advisory_release.tracks = [clean_track, explicit_track]
+    if apply_explicit_over_clean_policy([advisory_release]) != 1 or not clean_track.exclude_from_coverage:
+        raise RuntimeError("Explicit>Clean self-test failed.")
+
+    # Version families are unique and do not enter cross-version duplicate matching.
+    radio = Track(
+        release_id=-102,
+        path=Path("Song (Radio Edit).flac"),
+        index=1,
+        title="Song (Radio Edit)",
+    )
+    extended = Track(
+        release_id=-102,
+        path=Path("Song (Extended Mix).flac"),
+        index=2,
+        title="Song (Extended Mix)",
+    )
+    if not _semantic_version_conflict(radio, extended):
+        raise RuntimeError("Version uniqueness self-test failed.")
+
+    # Near-threshold same-title audio is eligible for rare manual review.
+    if not _manual_review_audio_candidate((8.5, 0.75, 0.90, 0, 0.60, 7.0, 15)):
+        raise RuntimeError("Manual acoustic review threshold self-test failed.")
+
+    # Compilation duplicates lose coverage when a regular release carries the
+    # same proven group, while genuinely unique compilation material remains.
+    regular = Release(
+        rid=-103,
+        root_kind="recycle",
+        path=Path("regular"),
+        title="Regular",
+        release_type="album",
+    )
+    reg_track = Track(release_id=-103, path=Path("A.flac"), index=1, title="A", group_id=10)
+    regular.tracks = [reg_track]
+    compilation = Release(
+        rid=-104,
+        root_kind="recycle",
+        path=Path("compilation"),
+        title="Compilation",
+        release_type="compilation",
+    )
+    comp_dup = Track(release_id=-104, path=Path("A2.flac"), index=1, title="A", group_id=10)
+    comp_unique = Track(release_id=-104, path=Path("Unique.flac"), index=2, title="Unique", group_id=11)
+    compilation.tracks = [comp_dup, comp_unique]
+    if apply_compilation_policy([regular, compilation]) != 1:
+        raise RuntimeError("Compilation policy self-test failed to remove regular duplicate.")
+    if not comp_dup.exclude_from_coverage or comp_unique.exclude_from_coverage:
+        raise RuntimeError("Compilation unique-track self-test failed.")
+
+    # hey-bro-check-log threshold is 80; no external rip database participates.
+    bad_log = Release(
+        rid=-105,
+        root_kind="recycle",
+        path=Path("bad-log"),
+        title="Bad Log",
+        source_medium="CD",
+        has_rip_log=True,
+        rip_log_paths=[Path("bad.log")],
+        rip_log_scores=[79],
+    )
+    good_log = Release(
+        rid=-106,
+        root_kind="recycle",
+        path=Path("good-log"),
+        title="Good Log",
+        source_medium="CD",
+        has_rip_log=True,
+        rip_log_paths=[Path("good.log")],
+        rip_log_scores=[100],
+    )
+    if cd_rip_quality_class(bad_log) != 1 or cd_rip_quality_class(good_log) != 2:
+        raise RuntimeError("CD rip log threshold self-test failed.")
 
 
 def main():
