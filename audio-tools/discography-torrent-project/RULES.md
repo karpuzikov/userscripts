@@ -1013,3 +1013,19 @@ Examples that must no longer appear:
 - Brothers In Rhythm Mix
 
 The intended review contents are only patterns that cannot already be confidently categorized by the normal Remix/Live/version classifier.
+
+
+## UI filesystem-path rule - planned for v0.21.0
+
+Any local filesystem path shown in the Duplicate Edition Analyzer UI must have a folder/open-location icon immediately before it.
+
+Behavior:
+
+- directory path -> open that directory in Windows Explorer;
+- file path -> open Explorer with that file selected when possible;
+- the icon belongs directly before the path it controls;
+- apply the rule everywhere a path is visible, including main UI, Release Map, review screens, diagnostics, errors, logs, planned actions/results, dependency/status views, and future UI;
+- do not require copying the path or navigating manually;
+- if the target no longer exists, fail gracefully and keep the displayed path unchanged.
+
+This is a global DEA UI rule, not a one-screen exception.
