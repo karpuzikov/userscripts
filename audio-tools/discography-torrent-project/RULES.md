@@ -933,3 +933,43 @@ This taxonomy is a standing rule for all future Duplicate Edition Analyzer work.
 - Re-Analyze result details must repeat the track-by-track replacement sourcing for ignored releases, not only the release-level added/removed list.
 - An ignored release must always expose an obvious `Restore release` control. Restoring changes the planning constraint and requires Re-Analyze; it does not require a new full audio scan.
 - Ignore/Restore/Re-Analyze remain planning operations. No files are moved until Apply.
+
+
+## Planned dynamic-range/mastering-quality rule - v0.21.0
+
+Dynamic range is a mastering-quality preference only. It is not duplicate evidence.
+
+Rules:
+
+- acoustic fingerprint remains the duplicate/recording-identity authority;
+- never merge or discard a materially different edit/version because of DR/loudness measurements;
+- only compare dynamic-range/mastering metrics when releases are already interchangeable by active coverage, album, and source rules;
+- use the bundled FFmpeg/FFprobe runtime so the standalone EXE needs no new external dependency;
+- measure per track:
+  - integrated loudness (LUFS);
+  - loudness range (LRA);
+  - true peak;
+  - RMS/crest-factor style dynamic contrast;
+  - a deterministic derived mastering-dynamics score;
+- cache measurements under the Duplicate Edition Analyzer program data directory and reuse them on Re-Analyze;
+- aggregate release-level quality from comparable included tracks using robust statistics, not a single unusually quiet/loud track;
+- prefer a measurably more dynamic / less compressed mastering only when the difference clears a conservative threshold;
+- differences inside the threshold are a tie and fall through to the existing later tie-breaks;
+- dynamic range must never override:
+  1. wanted unique recording/version coverage;
+  2. required album representation;
+  3. a materially different acoustic version;
+  4. a clearly superior source class;
+- hey-bro-check-log remains a rip-integrity measure, not a mastering-dynamics measure;
+- show track/release DR metrics and the decision reason in Release Map details;
+- include the metrics, threshold result, and chosen winner in optional JSONL diagnostics.
+
+Planned tie-break position for otherwise interchangeable candidates:
+
+1. preserve wanted coverage and album obligations;
+2. source class / physical-vs-WEB rules;
+3. verified rip integrity where applicable;
+4. dynamic-range/mastering quality when materially different;
+5. Existing-copy precedence when mastering quality ties;
+6. physical-file/count minimization where still equivalent;
+7. Explicit-over-Clean remains the absolute final exact-equivalent advisory tie-break.
