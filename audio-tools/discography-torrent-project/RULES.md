@@ -195,63 +195,15 @@ The Existing discography folder is optional.
 
 ## 8. Existing discography vs recycle/update
 
-The existing ALAC discography is the current collection.
+Existing and Recycle are analyzed together when Existing is supplied.
 
-The recycle/update folder contains candidates to add or use as replacements.
-
-The analyzer must compare both together.
-
-For each recycle release/track, determine whether it:
-
-- adds unique material;
-- duplicates material already in the discography;
-- can replace an inferior source;
-- makes another recycle release redundant;
-- changes which album edition is optimal.
-
-Do not assume the existing discography is already optimal.
-
-
-
-### Release-level audio matching
-
-Release folders and filenames are containers/labels only. They must not establish track identity.
-
-Rules:
-
-- release discovery is recursive through organizational folders such as `Albums`, `Other`, `Singles`, and per-title grouping folders;
-- internal `CD1` / `CD2` / `Disc 1` subfolders remain one release;
-- sibling folders with the same release base plus `CD 1`, `CD 2`, etc. are also one logical multi-disc release and must be kept/moved together;
-- included track coverage is compared using audio-derived fingerprint groups;
-- a release covers another only when every included target track has a high-confidence audio match;
-- folder names, file names, title text, barcode text in folder names, MBIDs, ISRCs, and metadata typo tolerance must never create a duplicate result; strong contradictory recording/version metadata may conservatively block an audio merge;
-- uncertain audio remains distinct and therefore keeps the material.
-
-### Final existing-vs-recycle safeguard
-
-The final action plan independently enforces Existing-vs-Recycle precedence after global optimization.
-
-For related releases whose included acoustic groups are covered equivalently:
-- source medium decides first;
-- CD/physical beats equivalent WEB;
-- when source class ties, the already-processed Existing copy beats Recycle/update;
-- a Recycle release may replace Existing only when it is objectively better by active source/coverage rules;
-- Explicit/Clean advisory state is neutral here and is deferred to the absolute final exact-equivalent tie-break.
-
-This safeguard runs even if the intermediate optimizer chose differently.
-
-### Pre-optimization dominance
-
-Pre-optimization dominance is deliberately conservative.
-
-For related album releases:
-- collapse pairwise only when both releases have exactly equivalent included acoustic coverage;
-- among exact-coverage equivalents, prefer stronger source class, then the Existing processed copy when source ties, then fewer retained tracks, then deterministic release order;
-- do not let a strict album superset eliminate a smaller edition pairwise;
-- extra groups on a larger edition may already be supplied more efficiently elsewhere, so superset/subset decisions belong to the global optimizer;
-- Explicit/Clean remains neutral here.
-
-Dominated exact-equivalent releases are removed from the active optimizer pool, but unique/superset editions remain available to the exact global solver.
+- Existing is not presumed optimal.
+- Recycle may add unique material, replace inferior equivalent material, or become redundant.
+- Release/container names never prove duplicate identity.
+- Included coverage is based on confirmed acoustic recording groups.
+- Existing preference is applied only after source, CD-log quality, total track count and DR/mastering are tied.
+- Multi-disc folders belonging to one release remain one logical release.
+- Remix-only/Live-only releases eliminated at step 1 never participate in later comparison or optimization; they remain only for final Apply bookkeeping.
 
 ## 9. Optimization model
 
@@ -390,23 +342,14 @@ Safety rules:
 
 ## 15. Current 3OH!3-specific test case
 
-The current test dataset consists of:
+The historical 3OH!3 dataset remains a regression dataset, but current v0.22.0 rules apply:
 
-- existing ALAC discography;
-- recycle/update folder containing WEB FLAC releases;
-- no CD rips in recycle for this test.
-
-For this dataset:
-
-- compare recycle WEB releases against existing ALAC and against each other;
-- eliminate complete subsets when recordings are equivalent;
-- keep releases that contribute unique included non-remix songs/versions;
-- apply Explicit-over-Clean only as the absolute final exact-equivalent tie-break;
+- preserve unique wanted non-remix songs/versions;
+- remove unchecked Remix/Live material at step 1;
+- Explicit supersedes corresponding Clean before fingerprinting;
 - keep all albums represented;
-- minimize duplicated audio files across album editions/singles/EPs.
-
-This dataset is the first validation case for the Duplicate / Edition Analyzer.
-
+- CD/WEB, CD-log threshold/quality, total retained track count, DR/mastering, then Existing precedence apply in that order;
+- rare ambiguous acoustic cases use manual review.
 
 ## Persistent user data
 
@@ -652,14 +595,13 @@ Do not flatten release folders into the duplicate root. After successful moves, 
 
 ### Exact global minimum-track rule
 
-- v0.19.0 replaces the old local minimum-track swap stage with an exact component-decomposed global set-cover solver.
-- Preserve every active recording group and at least one active album per album family.
-- Preserve the source-medium + Existing quality floor established by the conservative rule-respecting seed.
-- Inside those constraints minimize, in order: physical retained audio files, counted tracks, retained releases, Recycle releases, stable release-ID order.
-- Never let a larger album edition win merely because it is a pairwise superset when its extra groups are already covered more efficiently elsewhere.
-- CUE/image logical tracks count individually for coverage while their shared physical image counts once for physical-file cost.
-- Re-Analyze after Ignore/Restore reruns this exact collection optimization using already-computed fingerprints; it does not re-fingerprint audio.
-- Run redundancy pruning and exact-equivalent quality tie-breaks after the exact solve.
+- Preserve all active wanted groups and album obligations first.
+- Preserve source class and CD-log quality requirements.
+- Minimize total retained track count, counting excluded extras carried inside kept releases.
+- Then minimize retained release count.
+- Then minimize Recycle/update release count; Existing therefore wins only a complete later tie.
+- CUE image layout receives no special physical-file discount.
+- Re-Analyze after Ignore/Restore reuses existing fingerprints/groups.
 
 ### Tempo/effect remix rule
 
