@@ -4476,9 +4476,10 @@ def _exact_component_cover(
 
         part = partial_key(selected)
         prior = memo.get(unsatisfied)
-        if prior is not None and prior <= part:
+        if prior is not None and prior < part:
             return
-        memo[unsatisfied] = part
+        if prior is None or part < prior:
+            memo[unsatisfied] = part
 
         if best_cost is not None:
             best_prefix = tuple(best_cost[:4])
