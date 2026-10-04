@@ -1055,3 +1055,25 @@ The Live / remix phrase review is an exception-review UI, not a catalog of norma
 - Once two tracks are already in the same validated acoustic Union-Find component, another candidate comparison between them is skipped because it cannot alter the final grouping.
 - These execution shortcuts must not weaken the existing metadata safety gate or introduce metadata-based duplicate identity.
 - Progress must update continuously and expose comparisons/sec and ETA for long runs.
+
+
+## Early remix/live elimination rule
+
+When `Save Remixes` is OFF, tracks classified as remixes are eliminated at the first classification stage. When `Save Live recordings` is OFF, tracks classified as live recordings are eliminated at the first classification stage.
+
+Eliminated remix/live tracks must not participate in any later analytical stage. In particular they must not be:
+
+- fingerprinted;
+- added to fingerprint-token indexes;
+- added to same-title or MBID candidate indexes;
+- acoustically compared;
+- placed into recording groups;
+- used for dynamic-range/mastering analysis;
+- used for coverage calculations;
+- used by the global optimizer;
+- used for release-quality tie-breaks;
+- used to influence keep/remove decisions for wanted audio.
+
+The analyzer keeps only the filesystem/release bookkeeping needed so those excluded files or releases can be moved at the final Apply stage.
+
+If the corresponding Save option is ON, those tracks remain in the normal analysis pipeline.
