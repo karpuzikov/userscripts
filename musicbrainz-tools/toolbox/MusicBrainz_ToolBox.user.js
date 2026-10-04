@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MusicBrainz ToolBox
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.0.49
+// @version      1.0.50
 // @description  Combined MusicBrainz release-editor, recording, barcode, Spotify/Apple Music linking, search, cover-art, Disc ID, and duplicate-edit tools.
 // @author       karpuzikov
 // @license      MIT
@@ -8366,13 +8366,7 @@
             const item = cache[albumId];
             if (!item?.checkedAt || !Array.isArray(item.releases)) return null;
 
-            const hasUnlinked = item.releases.some(
-                release => release?.linkState === 'unlinked'
-            );
-            const ttl =
-                item.releases.length && !hasUnlinked
-                    ? FOUND_TTL
-                    : MISSING_TTL;
+            const ttl = item.releases.length ? FOUND_TTL : MISSING_TTL;
             if (Date.now() - item.checkedAt > ttl) return null;
 
             return item.releases;
@@ -8591,29 +8585,16 @@
             row.classList.add(TITLE_ROW_CLASS);
 
             const desired = currentReleases.length
-                ? currentReleases.map(release => {
-                    const unlinked =
-                        release.linkState === 'unlinked';
-                    const releaseLabel = release.disambiguation
-                        ? `${release.title || release.id} (${release.disambiguation})`
-                        : (release.title || release.id);
-
-                    return {
-                        key:
-                            (unlinked ? 'mb-unlinked:' : 'mb:') +
-                            release.id,
-                        mbid: release.id,
-                        href:
-                            'https://musicbrainz.org/release/' +
-                            release.id,
-                        svg: __mbToolBoxMusicBrainzIconSvg,
-                        alt: 'MusicBrainz',
-                        brokenLink: unlinked,
-                        title: unlinked
-                            ? `MusicBrainz release found by barcode ${release.barcode || ''}, but this Apple Music release is not linked: ${releaseLabel}`
-                            : `Open MusicBrainz release: ${releaseLabel}`,
-                    };
-                })
+                ? currentReleases.map(release => ({
+                    key: 'mb:' + release.id,
+                    mbid: release.id,
+                    href: 'https://musicbrainz.org/release/' + release.id,
+                    svg: __mbToolBoxMusicBrainzIconSvg,
+                    alt: 'MusicBrainz',
+                    title: release.disambiguation
+                        ? `Open MusicBrainz release: ${release.title || release.id} (${release.disambiguation})`
+                        : `Open MusicBrainz release: ${release.title || release.id}`,
+                }))
                 : [{
                     key: 'harmony',
                     mbid: '',
@@ -8640,11 +8621,7 @@
                 }
 
                 const link = document.createElement('a');
-                link.className =
-                    LINK_CLASS +
-                    (item.brokenLink
-                        ? ' mb-toolbox-provider-link-missing'
-                        : '');
+                link.className = LINK_CLASS;
                 link.dataset.linkKey = item.key;
                 if (item.mbid) link.dataset.mbid = item.mbid;
                 link.href = item.href;
@@ -8658,14 +8635,6 @@
                     icon.setAttribute('aria-hidden', 'true');
                     icon.innerHTML = item.svg;
                     link.appendChild(icon.firstElementChild);
-                    if (item.brokenLink) {
-                        const badge = document.createElement('span');
-                        badge.className =
-                            'mb-toolbox-broken-chain-badge';
-                        badge.textContent = '⛓️‍💥';
-                        badge.setAttribute('aria-hidden', 'true');
-                        link.appendChild(badge);
-                    }
                 } else {
                     const image = document.createElement('img');
                     image.src = item.image;
@@ -8908,7 +8877,13 @@
             const item = cache[albumKey];
             if (!item?.checkedAt || !Array.isArray(item.releases)) return null;
 
-            const ttl = item.releases.length ? FOUND_TTL : MISSING_TTL;
+            const hasUnlinked = item.releases.some(
+                release => release?.linkState === 'unlinked'
+            );
+            const ttl =
+                item.releases.length && !hasUnlinked
+                    ? FOUND_TTL
+                    : MISSING_TTL;
             if (Date.now() - item.checkedAt > ttl) return null;
 
             return item.releases;
@@ -9240,16 +9215,29 @@
             title.classList.add(TITLE_ROW_CLASS);
 
             const desired = currentReleases.length
-                ? currentReleases.map(release => ({
-                    key: 'mb:' + release.id,
-                    mbid: release.id,
-                    href: 'https://musicbrainz.org/release/' + release.id,
-                    svg: __mbToolBoxMusicBrainzIconSvg,
-                    alt: 'MusicBrainz',
-                    title: release.disambiguation
-                        ? `Open MusicBrainz release: ${release.title || release.id} (${release.disambiguation})`
-                        : `Open MusicBrainz release: ${release.title || release.id}`,
-                }))
+                ? currentReleases.map(release => {
+                    const unlinked =
+                        release.linkState === 'unlinked';
+                    const releaseLabel = release.disambiguation
+                        ? `${release.title || release.id} (${release.disambiguation})`
+                        : (release.title || release.id);
+
+                    return {
+                        key:
+                            (unlinked ? 'mb-unlinked:' : 'mb:') +
+                            release.id,
+                        mbid: release.id,
+                        href:
+                            'https://musicbrainz.org/release/' +
+                            release.id,
+                        svg: __mbToolBoxMusicBrainzIconSvg,
+                        alt: 'MusicBrainz',
+                        brokenLink: unlinked,
+                        title: unlinked
+                            ? `MusicBrainz release found by barcode ${release.barcode || ''}, but this Apple Music release is not linked: ${releaseLabel}`
+                            : `Open MusicBrainz release: ${releaseLabel}`,
+                    };
+                })
                 : [{
                     key: 'harmony',
                     mbid: '',
@@ -9276,7 +9264,11 @@
                 }
 
                 const link = document.createElement('a');
-                link.className = LINK_CLASS;
+                link.className =
+                    LINK_CLASS +
+                    (item.brokenLink
+                        ? ' mb-toolbox-provider-link-missing'
+                        : '');
                 link.dataset.linkKey = item.key;
                 if (item.mbid) link.dataset.mbid = item.mbid;
                 link.href = item.href;
@@ -9290,6 +9282,14 @@
                     icon.setAttribute('aria-hidden', 'true');
                     icon.innerHTML = item.svg;
                     link.appendChild(icon.firstElementChild);
+                    if (item.brokenLink) {
+                        const badge = document.createElement('span');
+                        badge.className =
+                            'mb-toolbox-broken-chain-badge';
+                        badge.textContent = '⛓️‍💥';
+                        badge.setAttribute('aria-hidden', 'true');
+                        link.appendChild(badge);
+                    }
                 } else {
                     const image = document.createElement('img');
                     image.src = item.image;
