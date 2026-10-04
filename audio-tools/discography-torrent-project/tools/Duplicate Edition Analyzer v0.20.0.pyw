@@ -75,7 +75,7 @@ SELF_UPDATE_TAG_PREFIX = "duplicate-edition-analyzer-v"
 SELF_UPDATE_API = f"https://api.github.com/repos/{GITHUB_REPOSITORY}/releases?per_page=30"
 SELF_UPDATE_CHECK_TIMEOUT = 1.5
 SELF_UPDATE_DOWNLOAD_TIMEOUT = 120
-STANDALONE_BUNDLE_REVISION = 3
+STANDALONE_BUNDLE_REVISION = 4
 
 # hey-bro-check-log by ligh7s, Apache-2.0:
 # https://github.com/ligh7s/hey-bro-check-log
@@ -171,13 +171,15 @@ def _find_self_update() -> Optional[Dict[str, str]]:
 
         exe_name = f"Duplicate Edition Analyzer {version}.exe"
         sha_name = exe_name + ".sha256"
+        github_exe_name = exe_name.replace(" ", ".")
+        github_sha_name = sha_name.replace(" ", ".")
         assets = {
             str(asset.get("name", "")): str(asset.get("browser_download_url", ""))
             for asset in (release.get("assets") or [])
             if isinstance(asset, dict)
         }
-        exe_url = assets.get(exe_name, "")
-        sha_url = assets.get(sha_name, "")
+        exe_url = assets.get(exe_name, "") or assets.get(github_exe_name, "")
+        sha_url = assets.get(sha_name, "") or assets.get(github_sha_name, "")
         if not exe_url or not sha_url:
             continue
         candidates.append(
