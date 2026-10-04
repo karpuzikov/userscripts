@@ -973,3 +973,43 @@ Planned tie-break position for otherwise interchangeable candidates:
 5. Existing-copy precedence when mastering quality ties;
 6. physical-file/count minimization where still equivalent;
 7. Explicit-over-Clean remains the absolute final exact-equivalent advisory tie-break.
+
+
+## Planned Live / remix phrase review cleanup - v0.21.0
+
+The phrase-review stage exists only to surface unusual or ambiguous descriptor families that the normal classifier does not already understand.
+
+Rules:
+
+- do not show ordinary remix/mix families in the review;
+- standard credited forms such as `<name> Remix`, `<name> Mix`, `<name> Vocal Mix`, `<name> Club Mix`, `<name> Radio Mix`, `<name> Extended Mix`, and other normal producer/remixer-named mix variants are auto-classified and hidden;
+- a phrase being frequent does not make it review-worthy;
+- a phrase being a Personal Pick does not make it review-worthy;
+- existing Personal Picks remain active without forcing their ordinary phrase family into the review;
+- only genuinely unusual/unknown/ambiguous phrases should be displayed;
+- normal Remix/Live classification continues to be controlled by `Save Remixes`, `Save Live recordings`, and Personal Picks;
+- this review must never create duplicate identity.
+
+Examples that must no longer appear:
+- Hybrid Mix
+- Armin van Buuren Remix
+- BT Remix
+- Libra Mix
+- Maor Levi Remix
+- Mark Norman Remix
+- Sean Tyas Remix
+- Sultan & Ned Shepard Remix
+- Junkie XL Vocal Mix
+- Adam K & Soha Remix
+- Cedric Gervais Remix
+- Digital Stories Remix
+- Dylan Rhymes Push Up Mix
+- Ferry Corsten Mix
+- Funkagenda Mix
+- Josh Gabriel Remix
+- Sander Kleinenberg's Convertible Mix
+- ALPHA 9 Remix
+- Andy Duguid Remix
+- Brothers In Rhythm Mix
+
+The intended review contents are only patterns that cannot already be confidently categorized by the normal Remix/Live/version classifier.
