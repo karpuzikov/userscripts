@@ -1740,7 +1740,8 @@ def detect_personal_pick_phrases_from_tracks(
         if not (track_is_remix or track_is_live):
             continue
 
-        # During Analyze we only need exceptions for categories that are globally skipped.
+        # The review is shown only for enabled remix analysis and only surfaces
+        # unusual phrase families; it no longer resurrects globally disabled audio.
         if track_is_remix and not track_is_live and not include_remixes:
             continue
         if track_is_live and not track_is_remix and not include_live:
@@ -5541,7 +5542,7 @@ def exact_global_collection_minimize(
     """Coverage Atlas-style exact global minimization for DEA.
 
     DEA keeps its own fingerprint identity, album rules, source precedence,
-    Personal Picks, and Apply workflow. This solver only replaces the old
+    early Remix/Live policy, and Apply workflow. This solver only replaces the old
     greedy/local collection minimization stage.
 
     The rule-respecting heuristic seed establishes a source/existing quality
@@ -6419,7 +6420,7 @@ def build_release_decisions(
                 if t.personal_keep_rule and not t.exclude_from_coverage
             ]
             if personal_matches:
-                factors.append(f"Personal Picks restored {len(personal_matches)} track(s) that global remix/live options would otherwise skip.")
+                factors.append(f"Personal Picks matched {len(personal_matches)} currently included track(s).")
 
             new_groups_for_factor = rel.groups - existing_groups
             if rel.root_kind == "recycle" and new_groups_for_factor:
