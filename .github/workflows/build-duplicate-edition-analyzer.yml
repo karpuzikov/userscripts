@@ -88,17 +88,6 @@ jobs:
           "DEA_FPCALC=$($fpcalc.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           "DEA_CHROMAPRINT_DIR=$($fpcalc.Directory.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
-          $cueZip = Join-Path $deps "cuetools.zip"
-          Invoke-WebRequest -UseBasicParsing "https://github.com/gchudov/cuetools.net/releases/download/v2.2.6/CUETools_2.2.6.zip" -OutFile $cueZip
-          $cueHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $cueZip).Hash.ToLowerInvariant()
-          if ($cueHash -ne "103b209502935c911f2162a5babfb21550476413aee13d88187e39783a2a2e32") {
-            throw "CUETools checksum mismatch: $cueHash"
-          }
-          $cueDir = Join-Path $deps "cuetools"
-          Expand-Archive -LiteralPath $cueZip -DestinationPath $cueDir -Force
-          $arcue = Get-ChildItem -LiteralPath $cueDir -Recurse -Filter "CUETools.ARCUE.exe" | Select-Object -First 1
-          if (-not $arcue) { throw "CUETools.ARCUE.exe not found." }
-          "DEA_CUETOOLS_DIR=$($arcue.Directory.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
       - name: Build single-file standalone EXE
         shell: pwsh
@@ -117,7 +106,6 @@ jobs:
             "--add-binary", "$env:DEA_FFMPEG;bundled/ffmpeg",
             "--add-binary", "$env:DEA_FFPROBE;bundled/ffmpeg",
             "--add-data", "$env:DEA_CHROMAPRINT_DIR;bundled/chromaprint",
-            "--add-data", "$env:DEA_CUETOOLS_DIR;bundled/cuetools",
             "$env:DEA_SOURCE"
           )
           & python @args
@@ -154,7 +142,7 @@ jobs:
           Under construction ⚠️
 
           Self-contained Windows build. Python, PySide6/Qt WebEngine, FFmpeg/FFprobe,
-          Chromaprint/fpcalc, hey-bro-check-log, and CUETools/ARCUE are bundled.
+          Chromaprint/fpcalc and hey-bro-check-log are bundled.
           No dependency installation is required to start the application.
           "@
 
