@@ -69,7 +69,6 @@ HEYBROCHECKLOG_COMMIT = "d3192ad2764f2682cffce4db2abc419f8ac68c69"
 HEYBROCHECKLOG_SOURCE = f"https://github.com/ligh7s/hey-bro-check-log/archive/{HEYBROCHECKLOG_COMMIT}.zip"
 FFMPEG_PACKAGE_ID = "Gyan.FFmpeg"
 FFMPEG_DIRECT_URL = "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip"
-CUETOOLS_PACKAGE_ID = "gchudov.CUETools"
 
 GITHUB_REPOSITORY = "karpuzikov/userscripts"
 SELF_UPDATE_TAG_PREFIX = "duplicate-edition-analyzer-v"
@@ -2302,175 +2301,6 @@ def ensure_ffmpeg() -> Tuple[str, str]:
         ) from direct_exc
 
 
-def locate_cuetools_arcue() -> Optional[str]:
-    """Find CUETools' console AccurateRip/CTDB verifier."""
-    bundled_root = _bundled_path("cuetools")
-    if bundled_root.is_dir():
-        try:
-            bundled = next(bundled_root.rglob("CUETools.ARCUE.exe"), None)
-            if bundled:
-                return str(bundled)
-        except OSError:
-            pass
-
-    for name in ("CUETools.ARCUE", "CUETools.ARCUE.exe", "ArCueDotNet", "ArCueDotNet.exe"):
-        found = locate_executable(name)
-        if found:
-            return found
-
-    main = locate_executable("CUETools")
-    if main:
-        sibling = Path(main).with_name("CUETools.ARCUE.exe")
-        if sibling.exists():
-            return str(sibling)
-
-    roots: List[Path] = []
-    for env_name in ("ProgramFiles", "ProgramFiles(x86)", "LOCALAPPDATA"):
-        value = os.environ.get(env_name)
-        if value:
-            roots.append(Path(value))
-
-    local = os.environ.get("LOCALAPPDATA")
-    if local:
-        packages = Path(local) / "Microsoft" / "WinGet" / "Packages"
-        if packages.is_dir():
-            try:
-                for folder in packages.glob("gchudov.CUETools_*"):
-                    candidate = next(folder.rglob("CUETools.ARCUE.exe"), None)
-                    if candidate:
-                        return str(candidate)
-            except OSError:
-                pass
-
-    for root in roots:
-        for relative in (
-            Path("CUETools") / "CUETools.ARCUE.exe",
-            Path("Programs") / "CUETools" / "CUETools.ARCUE.exe",
-        ):
-            candidate = root / relative
-            if candidate.exists():
-                return str(candidate)
-    return None
-
-
-def ensure_cuetools_arcue() -> Optional[str]:
-    """Use bundled CUETools in standalone mode; source mode may use WinGet."""
-    arc = locate_cuetools_arcue()
-    if _is_frozen_build():
-        return arc
-    bootstrap_winget()
-    _winget_install_or_update(CUETOOLS_PACKAGE_ID, installed=bool(arc))
-    return locate_cuetools_arcue()
-
-
-def _cuetools_verify_output(arcue: str, cue_path: Path) -> Tuple[bool, int, int, str]:
-    """Return positive verification, best confidence, match-line count and raw output."""
-    cp = run_hidden(
-        [arcue, "-v", str(cue_path)],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True,
-        errors="replace",
-        check=False,
-        timeout=180,
-    )
-    output = normalize_space((cp.stdout or "") + "\n" + (cp.stderr or ""))
-    matches = len(re.findall(r"\bAccurately ripped\b", output, re.I))
-    confidences = [
-        int(value)
-        for value in re.findall(
-            r"\((\d+)(?:\+\d+)?/\d+\)\s+Accurately ripped",
-            output,
-            re.I,
-        )
-    ]
-    best_confidence = max(confidences, default=(1 if matches else 0))
-    return bool(matches), best_confidence, matches, output
-
-
-def verify_cuetools_image_families(
-    releases: List["Release"],
-    progress_cb,
-    errors: List[str],
-) -> None:
-    """Verify CUE-based rips with CUETools when an image rip is in the family.
-
-    CUETools verification is positive quality evidence only. Database absence,
-    no-match output, or CUETools failure remains neutral and never marks a rip bad.
-    """
-    image_families = {r.family for r in releases if r.has_cd_image and r.family}
-    if not image_families:
-        return
-
-    jobs = [
-        (rel, cue)
-        for rel in releases
-        if rel.has_cue and rel.family in image_families
-        for cue in rel.cue_paths
-    ]
-    if not jobs:
-        return
-
-    arcue = ensure_cuetools_arcue()
-    if not arcue:
-        errors.append("CUETools.ARCUE.exe was not found; CD-image verification skipped.")
-        return
-
-    progress_cb("Verifying CD image families with CUETools...", 0, len(jobs))
-    for index, (rel, cue) in enumerate(jobs, 1):
-        rel.cuetools_checked_cues += 1
-        try:
-            verified, confidence, match_lines, output = _cuetools_verify_output(arcue, cue)
-            rel.cuetools_match_lines += match_lines
-            if verified:
-                rel.cuetools_verified_cues += 1
-                if rel.cuetools_min_confidence <= 0:
-                    rel.cuetools_min_confidence = confidence
-                else:
-                    rel.cuetools_min_confidence = min(rel.cuetools_min_confidence, confidence)
-                rel.cuetools_notes.append(
-                    f"{cue.name}: verified, confidence {confidence}, {match_lines} match line(s)"
-                )
-            else:
-                rel.cuetools_notes.append(f"{cue.name}: no positive AccurateRip/CTDB match")
-                if output:
-                    errors.append(f"CUETools verification neutral: {cue}: no positive match")
-        except Exception as exc:
-            rel.cuetools_notes.append(f"{cue.name}: verification failed: {exc}")
-            errors.append(f"CUETools verification error: {cue}: {exc}")
-
-        progress_cb("Verifying CD image families with CUETools...", index, len(jobs))
-
-
-def cuetools_cd_quality_key(rel: "Release") -> Optional[Tuple[int, int]]:
-    """Positive CUETools verification evidence; unavailable/no-match stays neutral."""
-    if not rel.cue_paths:
-        return None
-    if rel.cuetools_checked_cues != len(rel.cue_paths):
-        return None
-    if rel.cuetools_verified_cues != len(rel.cue_paths):
-        return None
-    if rel.cuetools_verified_cues <= 0:
-        return None
-    return rel.cuetools_min_confidence, rel.cuetools_match_lines
-
-
-def cuetools_cd_quality_text(rel: "Release") -> str:
-    key = cuetools_cd_quality_key(rel)
-    if key is None:
-        if rel.cuetools_checked_cues:
-            return (
-                f"neutral ({rel.cuetools_verified_cues}/{rel.cuetools_checked_cues} "
-                "CUE file(s) positively verified)"
-            )
-        return "not checked"
-    confidence, matches = key
-    return (
-        f"verified ({rel.cuetools_verified_cues}/{rel.cuetools_checked_cues} CUE file(s), "
-        f"min confidence {confidence}, {matches} AccurateRip/CTDB match line(s))"
-    )
-
-
 def ensure_heybrochecklog():
     """Return the pinned log scorer, stored under this program's dependencies folder."""
     _migrate_legacy_app_data()
@@ -2629,11 +2459,6 @@ class Release:
     has_cd_image: bool = False
     cd_image_track_count: int = 0
     cue_paths: List[Path] = field(default_factory=list)
-    cuetools_checked_cues: int = 0
-    cuetools_verified_cues: int = 0
-    cuetools_min_confidence: int = 0
-    cuetools_match_lines: int = 0
-    cuetools_notes: List[str] = field(default_factory=list)
 
     @property
     def source_paths(self) -> List[Path]:
@@ -4392,7 +4217,7 @@ def cd_rip_log_quality_text(rel: Release) -> str:
 
 
 def cd_rip_quality_key(rel: Release) -> Optional[Tuple[int, int, float, int]]:
-    """hey-bro-check-log quality only. AccurateRip/CTDB is not used."""
+    """hey-bro-check-log quality only.  is not used."""
     log_key = cd_rip_log_quality_key(rel)
     if log_key is None:
         return None
@@ -6028,7 +5853,7 @@ def prepare_analysis(
     finalize_release_metadata(releases)
 
     # Remix/Live classification happens in analyze_prepared(), after the
-    # optional phrase-review UI. CD log/CUETools work is deliberately deferred
+    # optional phrase-review UI. CD log/ work is deliberately deferred
     # until then so completely eliminated releases take no further part.
     #
     # Store probe failures for the continuation stage.
@@ -6085,7 +5910,6 @@ def analyze_prepared(
     # for the final Apply/move stage. They do not receive quality analysis.
     active_releases = [rel for rel in releases if not rel.excluded_only]
     score_cd_rip_logs(active_releases, progress_cb, errors)
-    verify_cuetools_image_families(active_releases, progress_cb, errors)
 
     fpcalc = ensure_fpcalc() if use_fingerprint else None
     if use_fingerprint and fpcalc:
@@ -6265,8 +6089,6 @@ def report_text(existing: Optional[Path], recycle: Path, releases: List[Release]
             lines.append(
                 f"  CD image: {len(image_files)} image file(s), {rel.cd_image_track_count} CUE track(s)"
             )
-        if rel.has_cue and any(r.has_cd_image and r.family == rel.family for r in releases):
-            lines.append(f"  CUETools verification: {cuetools_cd_quality_text(rel)}")
         if rel.rip_log_paths:
             lines.append(f"  CD rip log quality: {cd_rip_log_quality_text(rel)}")
         lines.append(f"  Reason: {reason}")
@@ -7031,8 +6853,6 @@ def build_decision_snapshot(
         }
 
         quality_bits: List[str] = []
-        if rel.has_cue:
-            quality_bits.append(f"CUETools: {cuetools_cd_quality_text(rel)}")
         if rel.rip_log_paths:
             quality_bits.append(f"Rip log: {cd_rip_log_quality_text(rel)}")
         dynamic_summary = release_dynamic_summary(rel)
@@ -12009,12 +11829,10 @@ def _standalone_self_test() -> None:
     ffmpeg, ffprobe = ensure_ffmpeg()
     fpcalc = ensure_fpcalc()
     score_log = ensure_heybrochecklog()
-    arcue = ensure_cuetools_arcue()
     required = {
         "ffmpeg": ffmpeg,
         "ffprobe": ffprobe,
         "fpcalc": fpcalc,
-        "CUETools.ARCUE": arcue or "",
     }
     missing = [name for name, value in required.items() if not value or not Path(value).is_file()]
     if missing:
@@ -12026,7 +11844,6 @@ def _standalone_self_test() -> None:
         ([ffmpeg, "-version"], "ffmpeg"),
         ([ffprobe, "-version"], "ffprobe"),
         ([fpcalc, "-version"], "fpcalc"),
-        ([arcue], "CUETools.ARCUE"),
     ]
     for command, label in checks:
         try:
@@ -12043,7 +11860,7 @@ def _standalone_self_test() -> None:
             raise RuntimeError(
                 f"Standalone dependency self-test could not start {label}: {exc}"
             ) from exc
-        if label != "CUETools.ARCUE" and cp.returncode != 0:
+        if cp.returncode != 0:
             raise RuntimeError(
                 f"Standalone dependency self-test failed to run {label}: "
                 + (cp.stderr.strip() or cp.stdout.strip() or f"exit {cp.returncode}")
