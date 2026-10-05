@@ -282,11 +282,11 @@ std::vector<CueEntry> ParseCue(const fs::path& cue) {
     while(std::getline(in,line)){
         line=Trim(line);
         std::wsmatch m;
-        if(std::regex_match(line,m,std::wregex(LR"(^FILE\s+"([^"]+)".*$)",std::regex::icase))){currentFile=m[1].str();}
+        if(std::regex_match(line,m,std::wregex(LR"cue(^FILE\s+"([^"]+)".*$)cue",std::regex::icase))){currentFile=m[1].str();}
         else if(std::regex_match(line,m,std::wregex(LR"(^TRACK\s+(\d+)\s+AUDIO.*$)",std::regex::icase))){
             CueEntry e;e.no=std::stoi(m[1].str());e.file=cue.parent_path()/currentFile;entries.push_back(e);current=&entries.back();
-        } else if(current&&std::regex_match(line,m,std::wregex(LR"(^TITLE\s+"(.*)"$)",std::regex::icase)))current->title=m[1].str();
-        else if(current&&std::regex_match(line,m,std::wregex(LR"(^PERFORMER\s+"(.*)"$)",std::regex::icase)))current->performer=m[1].str();
+        } else if(current&&std::regex_match(line,m,std::wregex(LR"cue(^TITLE\s+"(.*)"$)cue",std::regex::icase)))current->title=m[1].str();
+        else if(current&&std::regex_match(line,m,std::wregex(LR"cue(^PERFORMER\s+"(.*)"$)cue",std::regex::icase)))current->performer=m[1].str();
         else if(current&&std::regex_match(line,m,std::wregex(LR"(^INDEX\s+01\s+(\d+:\d+:\d+).*$)",std::regex::icase)))current->start=CueTime(m[1].str());
     }
     if(entries.size()>1){
