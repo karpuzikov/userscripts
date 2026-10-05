@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MusicBrainz ToolBox
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.0.52
+// @version      1.0.53
 // @description  Combined MusicBrainz release-editor, recording, barcode, Spotify/Apple Music linking, search, cover-art, Disc ID, and duplicate-edit tools.
 // @author       karpuzikov
 // @license      MIT
@@ -4422,7 +4422,7 @@
     // Barcode vs Linked Releases Checker
     // Source merged from: musicbrainz-tools/barcode-linked-release-checker/MusicBrainz_Barcode_Linked_Release_Checker.user.js
     // ============================================================================
-    if (__mbToolBoxShouldRun(["https://musicbrainz.org/release-group/*","https://beta.musicbrainz.org/release-group/*","https://musicbrainz.org/release/*/edit","https://beta.musicbrainz.org/release/*/edit"], ["https://musicbrainz.org/release-group/*/*","https://beta.musicbrainz.org/release-group/*/*"])) {
+    if (__mbToolBoxShouldRun(["https://musicbrainz.org/release-group/*","https://beta.musicbrainz.org/release-group/*","https://musicbrainz.org/release/*/edit*","https://beta.musicbrainz.org/release/*/edit*"], ["https://musicbrainz.org/release-group/*/*","https://beta.musicbrainz.org/release-group/*/*"])) {
     (() => {
         'use strict';
     
