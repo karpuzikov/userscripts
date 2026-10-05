@@ -3629,9 +3629,13 @@ def merge_equivalent_tracks(
     notes: List[str] = []
     reviews: List[Dict[str, object]] = []
 
-    analysis_indices = [
+    eligible_indices = [
         i for i, track in enumerate(tracks)
-        if not track.exclude_from_coverage and track.fingerprint
+        if not track.exclude_from_coverage
+    ]
+    analysis_indices = [
+        i for i in eligible_indices
+        if tracks[i].fingerprint
     ]
     analysis_index_set = set(analysis_indices)
     tokens: List[Set[int]] = [
@@ -3974,14 +3978,15 @@ def merge_equivalent_tracks(
                 "version": APP_VERSION,
                 "generated": datetime.now().isoformat(timespec="seconds"),
                 "tracks_total": len(tracks),
-                "tracks_eligible_for_analysis": len(analysis_indices),
-                "tracks_eliminated_before_comparison": len(tracks) - len(analysis_indices),
+                "tracks_eligible_for_analysis": len(eligible_indices),
+                "tracks_with_fingerprints": indexed,
+                "tracks_without_fingerprints": len(eligible_indices) - indexed,
+                "tracks_eliminated_before_comparison": len(tracks) - len(eligible_indices),
                 "track_elimination_reasons": dict(sorted(eliminated.items())),
                 "featured_remix_exceptions": sum(
                     1 for track in tracks
                     if track.remix_feature_exception and not track.exclude_from_coverage
                 ),
-                "tracks_with_fingerprints": indexed,
                 "possible_pairs": total_possible,
                 "candidate_pairs": routed_candidate_count,
                 "shadow_validation_pairs": len(shadow_pairs),
@@ -4273,7 +4278,9 @@ def merge_equivalent_tracks(
         progress_cb("Comparing audio...", 1, 1)
 
     roots: Dict[int, List[int]] = {}
-    for i in analysis_indices:
+    # Wanted tracks without a usable fingerprint remain conservative singleton
+    # groups. A fingerprint failure must never make wanted material disappear.
+    for i in eligible_indices:
         roots.setdefault(uf.find(i), []).append(i)
     remap = {root: gid for gid, root in enumerate(sorted(roots))}
     groups: Dict[int, List[int]] = {}
