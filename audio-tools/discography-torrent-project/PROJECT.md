@@ -255,7 +255,7 @@ run this logic automatically at the final torrent preparation stage and prepare/
 
 ## Duplicate / Edition Analyzer UX\n\n- Startup failures are never silent: the analyzer shows the exception when possible and writes `Documents\\Karpuzikov Tools\\Duplicate Edition Analyzer - Crash.log`.\n\n- Release discovery is recursive: organizational folders such as Albums/Other/Singles and per-single grouping folders are traversed, while CD1/CD2/Disc subfolders remain grouped as one release.
 
-- Remix exclusion exception: remixes with newly added featured performers remain included. The baseline is derived from non-remix/non-live versions of the same base song + primary artist, so the normal song vocalist does not accidentally rescue every remix. If no matching non-remix base is present, an explicitly featured remix is kept conservatively.\n\n- Analyzer UI uses a unified dark theme by default, including dark Windows title bars when supported.
+- Remix exclusion exception: remixes with newly added featured performers remain included. The baseline is derived from non-remix/non-live versions of the same base song + primary artist, so the normal song vocalist does not accidentally rescue every remix. If no matching non-remix base is present, an artist-tag/filename-prefix feature is not enough; only feature wording explicitly attached to the remix/version itself can preserve the remix.\n\n- Analyzer UI uses a unified dark theme by default, including dark Windows title bars when supported.
 
 - Release discovery is recursive through organizational folders. Internal CD1/CD2 folders and sibling `... CD 1` / `... CD 2` folders are treated as one logical release and kept/moved together.
 
