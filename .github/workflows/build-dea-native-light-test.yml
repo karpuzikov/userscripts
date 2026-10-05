@@ -1,0 +1,87 @@
+name: Build DEA Native Light Test
+
+on:
+  push:
+    branches:
+      - dea-native-light-test
+    paths:
+      - "audio-tools/discography-torrent-project/native-light/**"
+      - ".github/workflows/build-dea-native-light-test.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: dea-native-light-test
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout test branch
+        uses: actions/checkout@v4
+
+      - name: Configure MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Build native single EXE
+        shell: cmd
+        run: |
+          cd /d "%GITHUB_WORKSPACE%\audio-tools\discography-torrent-project\native-light"
+          if not exist dist mkdir dist
+          cl /nologo /utf-8 /std:c++20 /O2 /GL /MT /EHsc /W4 /DUNICODE /D_UNICODE /DWIN32_LEAN_AND_MEAN ^
+            main.cpp dea_engine.cpp dea_ui.cpp ^
+            /Fe:dist\Duplicate.Edition.Analyzer.Native.Test.0.1.0.exe ^
+            /link /LTCG /SUBSYSTEM:WINDOWS /OPT:REF /OPT:ICF ^
+            comctl32.lib shell32.lib shlwapi.lib ole32.lib comdlg32.lib dwmapi.lib winhttp.lib bcrypt.lib uxtheme.lib
+
+      - name: Native rule regression self-test
+        shell: cmd
+        run: |
+          "audio-tools\discography-torrent-project\native-light\dist\Duplicate.Edition.Analyzer.Native.Test.0.1.0.exe" --self-test
+
+      - name: Size report
+        shell: pwsh
+        run: |
+          $exe = "audio-tools/discography-torrent-project/native-light/dist/Duplicate.Edition.Analyzer.Native.Test.0.1.0.exe"
+          $size = (Get-Item $exe).Length
+          "Native EXE bytes: $size"
+          if ($size -gt 15000000) {
+            throw "Native UI test exceeded the 15 MB executable-size gate."
+          }
+
+      - name: SHA-256
+        shell: pwsh
+        run: |
+          $dir = "audio-tools/discography-torrent-project/native-light/dist"
+          $exe = Join-Path $dir "Duplicate.Edition.Analyzer.Native.Test.0.1.0.exe"
+          $hash = (Get-FileHash $exe -Algorithm SHA256).Hash.ToLower()
+          "$hash  Duplicate.Edition.Analyzer.Native.Test.0.1.0.exe" | Set-Content -Encoding ascii (Join-Path $dir "Duplicate.Edition.Analyzer.Native.Test.0.1.0.exe.sha256")
+
+      - name: Upload test artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Duplicate.Edition.Analyzer.Native.Test.0.1.0
+          path: |
+            audio-tools/discography-torrent-project/native-light/dist/Duplicate.Edition.Analyzer.Native.Test.0.1.0.exe
+            audio-tools/discography-torrent-project/native-light/dist/Duplicate.Edition.Analyzer.Native.Test.0.1.0.exe.sha256
+
+      - name: Publish branch-only prerelease
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = "dea-native-light-test-v0.1.0"
+          gh release delete $tag --yes --cleanup-tag 2>$null
+          $dir = "audio-tools/discography-torrent-project/native-light/dist"
+          gh release create $tag `
+            (Join-Path $dir "Duplicate.Edition.Analyzer.Native.Test.0.1.0.exe") `
+            (Join-Path $dir "Duplicate.Edition.Analyzer.Native.Test.0.1.0.exe.sha256") `
+            --target "${{ github.sha }}" `
+            --title "Duplicate Edition Analyzer Native Test 0.1.0" `
+            --notes "Native Win32 test branch. No Qt, Chromium, PySide6, or Python runtime. Under construction." `
+            --prerelease
