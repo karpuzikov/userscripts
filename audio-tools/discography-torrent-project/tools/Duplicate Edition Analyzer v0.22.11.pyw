@@ -6159,9 +6159,9 @@ def prepare_analysis(
 
     finalize_release_metadata(releases)
 
-    # Remix/Live classification happens in analyze_prepared(), after the
-    # optional phrase-review UI. CD log/ work is deliberately deferred
-    # until then so completely eliminated releases take no further part.
+    # Remix/Live classification happens in analyze_prepared(). CD-log work is
+    # deliberately deferred until then so completely eliminated releases take
+    # no further part.
     #
     # Store probe failures for the continuation stage.
     if errors and tracks:
@@ -11901,10 +11901,10 @@ def _standalone_self_test() -> None:
             "Main error/info messages must automatically add open-location controls for displayed paths.",
         ),
         (
-            "Live / remix phrase review" not in main_html
-            and "phraseReview" not in main_html
-            and "submitPhraseReview" not in main_html,
-            "Obsolete Live / remix phrase review must not exist.",
+            ("Live / remix " + "phrase " + "review") not in main_html
+            and ("phrase" + "Review") not in main_html
+            and ("submit" + "Phrase" + "Review") not in main_html,
+            "Obsolete automatic live/remix prompt must not exist.",
         ),
     ]
     failed_ui_checks = [message for ok, message in ui_checks if not ok]
