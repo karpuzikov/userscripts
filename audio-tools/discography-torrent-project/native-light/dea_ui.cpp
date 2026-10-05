@@ -2,6 +2,7 @@
 #include <uxtheme.h>
 #include <windowsx.h>
 #include <cstring>
+#include <cwctype>
 
 #pragma comment(lib, "uxtheme.lib")
 
