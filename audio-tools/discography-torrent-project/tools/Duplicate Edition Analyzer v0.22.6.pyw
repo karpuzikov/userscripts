@@ -9074,6 +9074,50 @@ def _qt_release_map_process(session_path: Path, result_path: Path) -> int:
                 "result": self.result,
             }
 
+        def _refresh_pending_state(self) -> None:
+            has_pending = bool(self.pending_track_indices or self.pending_release_ids)
+            self.dirty = has_pending
+            self.apply_enabled = bool(self.editable and not has_pending)
+            self.apply_highlighted = False
+            if not has_pending:
+                self.pending_causes.clear()
+                self.result = {
+                    "show": False,
+                    "causes": [],
+                    "added": [],
+                    "removed": [],
+                    "replacementSources": [],
+                }
+            self._sync_ui_root()
+
+        def _patch_cached_track_state(self, track_index: int) -> None:
+            if not self._ui_state or not isinstance(self.tracks, list):
+                return
+            track = self.tracks[track_index]
+            pending = track_index in self.pending_track_indices
+            for node in self._ui_state.get("nodes", []) or []:
+                for row in node.get("tracks", []) or []:
+                    if int(row.get("index", -1)) != int(track_index):
+                        continue
+                    row["manualSkip"] = bool(track.manual_skip_rule)
+                    row["pendingIgnore"] = bool(pending and track.manual_skip_rule)
+                    row["pendingRestore"] = bool(pending and not track.manual_skip_rule)
+                    return
+
+        def _patch_cached_release_state(self, release_id: int) -> None:
+            if not self._ui_state:
+                return
+            blocked = release_id in self.blocked_release_ids
+            pending = release_id in self.pending_release_ids
+            for node in self._ui_state.get("nodes", []) or []:
+                if int(node.get("id", -1)) != int(release_id):
+                    continue
+                node["releaseBlocked"] = bool(blocked)
+                node["pendingReleaseChange"] = bool(pending)
+                node["pendingReleaseIgnore"] = bool(pending and blocked)
+                node["pendingReleaseRestore"] = bool(pending and not blocked)
+                return
+
         def _mark_dirty(self, cause: str) -> None:
             self.dirty = True
             self.apply_enabled = False
@@ -9108,7 +9152,8 @@ def _qt_release_map_process(session_path: Path, result_path: Path) -> int:
             else:
                 self.pending_track_indices.add(track_index)
 
-            self._sync_ui_root()
+            self._refresh_pending_state()
+            self._patch_cached_track_state(track_index)
             payload = {
                 "kind": "trackToggle",
                 "trackIndex": int(track_index),
@@ -9147,6 +9192,8 @@ def _qt_release_map_process(session_path: Path, result_path: Path) -> int:
             else:
                 self.pending_release_ids.add(release_id)
 
+            self._refresh_pending_state()
+            self._patch_cached_release_state(release_id)
             blocked = release_id in self.blocked_release_ids
             payload = {
                 "kind": "releaseToggle",
