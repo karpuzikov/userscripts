@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         SimpCity - Original Media Link Parser
 // @namespace    https://simpcity.cr/
-// @version      1.0.0
+// @version      1.0.1
 // @description  Parse an entire SimpCity thread and list original/direct image and video URLs.
 // @author       karpuzikov
 // @match        https://simpcity.cr/threads/*
@@ -11,6 +11,11 @@
 // @connect      goonbox.cr
 // @connect      turbo.cr
 // @connect      pixeldrain.com
+// @connect      cyberdrop.cr
+// @connect      api.cyberdrop.cr
+// @connect      bunkr.cr
+// @connect      apidl.bunkr.ru
+// @connect      get.bunkrr.su
 // @run-at       document-idle
 // ==/UserScript==
 
@@ -252,6 +257,27 @@
                     }
                 }
 
+                if (host === 'cyberdrop.cr' || host.endsWith('.cyberdrop.cr')) {
+                    const file = path.match(/^\/[ef]\/([^/?#]+)/i);
+                    if (file) {
+                        queueTask({ type: 'cyberdrop-file', url: href, id: file[1] });
+                        continue;
+                    }
+                }
+
+                if (host === 'bunkr.cr' || host.endsWith('.bunkr.cr')) {
+                    const album = path.match(/^\/a\/([^/?#]+)/i);
+                    const file = path.match(/^\/[fvid]\/([^/?#]+)/i);
+                    if (album) {
+                        queueTask({ type: 'bunkr-album', url: href, id: album[1] });
+                        continue;
+                    }
+                    if (file) {
+                        queueTask({ type: 'bunkr-media', url: href });
+                        continue;
+                    }
+                }
+
                 if (DIRECT_IMAGE_EXT.test(href)) {
                     addImage(href);
                     if (nestedImg) handledImages.add(nestedImg);
@@ -277,6 +303,29 @@
                     const u = new URL(src);
                     if ((u.hostname === 'turbo.cr' || u.hostname.endsWith('.turbo.cr')) && /\/(?:embed|v|d)\//i.test(u.pathname)) {
                         queueTask({ type: 'turbo', url: src });
+                        continue;
+                    }
+                    if ((u.hostname === 'cyberdrop.cr' || u.hostname.endsWith('.cyberdrop.cr'))) {
+                        const file = u.pathname.match(/^\/[ef]\/([^/?#]+)/i);
+                        if (file) queueTask({ type: 'cyberdrop-file', url: src, id: file[1] });
+                    }
+                } catch {}
+            }
+
+            for (const unfurl of root.querySelectorAll('[data-url]')) {
+                const href = normalizeUrl(unfurl.getAttribute('data-url'), pageUrl);
+                if (!href) continue;
+                try {
+                    const u = new URL(href);
+                    const host = u.hostname.toLowerCase();
+                    if (host === 'bunkr.cr' || host.endsWith('.bunkr.cr')) {
+                        const album = u.pathname.match(/^\/a\/([^/?#]+)/i);
+                        const file = u.pathname.match(/^\/[fvid]\/([^/?#]+)/i);
+                        if (album) queueTask({ type: 'bunkr-album', url: href, id: album[1] });
+                        else if (file) queueTask({ type: 'bunkr-media', url: href });
+                    } else if (host === 'cyberdrop.cr' || host.endsWith('.cyberdrop.cr')) {
+                        const file = u.pathname.match(/^\/[ef]\/([^/?#]+)/i);
+                        if (file) queueTask({ type: 'cyberdrop-file', url: href, id: file[1] });
                     }
                 } catch {}
             }
@@ -324,6 +373,7 @@
                 headers: options.headers || {},
                 timeout: options.timeout || 20000,
                 responseType: options.responseType || 'text',
+                data: options.data,
                 onload: response => resolve(response),
                 onerror: error => reject(new Error(error?.error || 'Network error')),
                 ontimeout: () => reject(new Error('Request timed out')),
@@ -331,8 +381,8 @@
         });
     }
 
-    async function gmJson(url, headers = {}) {
-        const response = await gmRequest({ url, headers });
+    async function gmJson(url, headers = {}, options = {}) {
+        const response = await gmRequest({ url, headers, ...options });
         if (response.status < 200 || response.status >= 300) throw new Error(`HTTP ${response.status}`);
         try { return JSON.parse(response.responseText); }
         catch { throw new Error('Invalid JSON response'); }
@@ -509,6 +559,137 @@
         }
     }
 
+    function decodeBase64Bytes(value) {
+        try {
+            return Uint8Array.from(atob(String(value || '')), c => c.charCodeAt(0));
+        } catch {
+            return null;
+        }
+    }
+
+    function decryptBunkrUrl(data) {
+        const raw = data?.url;
+        if (typeof raw !== 'string' || !raw) return null;
+        if (!data?.encrypted) return raw;
+
+        const timestamp = Number(data?.timestamp);
+        if (!Number.isFinite(timestamp)) return null;
+        const key = new TextEncoder().encode(`SECRET_KEY_${Math.floor(timestamp / 3600)}`);
+        const encrypted = decodeBase64Bytes(raw);
+        if (!encrypted || !key.length) return null;
+
+        const decoded = new Uint8Array(encrypted.length);
+        for (let i = 0; i < encrypted.length; i++) decoded[i] = encrypted[i] ^ key[i % key.length];
+        try {
+            return new TextDecoder().decode(decoded);
+        } catch {
+            return null;
+        }
+    }
+
+    async function resolveCyberdrop(task) {
+        const id = task.id || (() => {
+            try { return new URL(task.url).pathname.match(/^\/[ef]\/([^/?#]+)/i)?.[1] || null; }
+            catch { return null; }
+        })();
+
+        if (!id) {
+            addUnresolved(task.url, 'Could not read CyberDrop file ID');
+            return;
+        }
+
+        try {
+            const info = await gmJson(`https://api.cyberdrop.cr/api/file/info/${encodeURIComponent(id)}`, { 'Accept': 'application/json' });
+            const authUrl = normalizeUrl(info?.auth_url) || `https://api.cyberdrop.cr/api/file/auth/${encodeURIComponent(id)}`;
+            const auth = await gmJson(authUrl, { 'Accept': 'application/json' });
+            const direct = auth?.url || auth?.data?.url;
+            if (typeof direct !== 'string' || !/^https?:\/\//i.test(direct)) throw new Error('No authorized URL returned');
+
+            const mime = info?.mime_type || info?.mime || info?.type || '';
+            const name = info?.name || info?.filename || info?.file_name || '';
+            if (!addMediaByMime(direct, mime, name)) {
+                addVideo(direct);
+            }
+        } catch (error) {
+            addUnresolved(task.url, `CyberDrop direct URL failed: ${error.message}`);
+        }
+    }
+
+    async function resolveBunkrFileId(dataId, sourceUrl, name = '') {
+        const id = String(dataId || '').trim();
+        if (!/^\d+$/.test(id)) {
+            addUnresolved(sourceUrl, 'Could not read Bunkr file ID');
+            return false;
+        }
+
+        try {
+            const referer = `https://get.bunkrr.su/file/${id}`;
+            const data = await gmJson('https://apidl.bunkr.ru/api/_001_v2', {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'Referer': referer,
+                'Origin': 'https://get.bunkrr.su',
+            }, {
+                method: 'POST',
+                data: JSON.stringify({ id: Number(id) }),
+            });
+
+            const direct = decryptBunkrUrl(data);
+            if (!direct || !/^https?:\/\//i.test(direct)) throw new Error('No direct URL returned');
+            if (!addMediaByMime(direct, data?.mime_type || data?.mime || '', name || data?.name || data?.filename || '')) {
+                addUnresolved(sourceUrl, 'Bunkr returned an unsupported media type');
+                return false;
+            }
+            return true;
+        } catch (error) {
+            addUnresolved(sourceUrl, `Bunkr direct URL failed: ${error.message}`);
+            return false;
+        }
+    }
+
+    async function resolveBunkrAlbum(task) {
+        try {
+            const albumUrl = task.url.includes('?') ? `${task.url}&advanced=1` : `${task.url}?advanced=1`;
+            const response = await gmRequest({
+                url: albumUrl,
+                headers: { 'Accept': 'text/html,application/xhtml+xml' },
+            });
+            if (response.status < 200 || response.status >= 300) throw new Error(`HTTP ${response.status}`);
+
+            const page = response.responseText || '';
+            const block = page.match(/window\.albumFiles\s*=\s*\[([\s\S]*?)<\/script>/i)?.[1] || '';
+            const entries = [...block.matchAll(/\bid\s*:\s*(\d+)[\s\S]*?\boriginal\s*:\s*(['"])(.*?)\2/gi)]
+                .map(m => ({ id: m[1], name: decodeHtml(m[3].replace(/\\'/g, "'").replace(/\\\"/g, '"')) }));
+
+            let ids = entries;
+            if (!ids.length) {
+                ids = [...block.matchAll(/\bid\s*:\s*(\d+)/gi)].map(m => ({ id: m[1], name: '' }));
+            }
+            if (!ids.length) throw new Error('No files found in album data');
+
+            await runPool(ids, item => resolveBunkrFileId(item.id, task.url, item.name), Math.min(REQUEST_CONCURRENCY, 6));
+        } catch (error) {
+            addUnresolved(task.url, `Bunkr album failed: ${error.message}`);
+        }
+    }
+
+    async function resolveBunkrMedia(task) {
+        try {
+            const response = await gmRequest({
+                url: task.url,
+                headers: { 'Accept': 'text/html,application/xhtml+xml' },
+            });
+            if (response.status < 200 || response.status >= 300) throw new Error(`HTTP ${response.status}`);
+            const page = response.responseText || '';
+            const dataId = page.match(/data-file-id=["'](\d+)["']/i)?.[1];
+            const name = decodeHtml(page.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i)?.[1]?.replace(/<[^>]+>/g, '') || '');
+            if (!dataId) throw new Error('No file ID found');
+            await resolveBunkrFileId(dataId, task.url, name);
+        } catch (error) {
+            addUnresolved(task.url, `Bunkr media page failed: ${error.message}`);
+        }
+    }
+
     async function runPool(items, worker, concurrency = REQUEST_CONCURRENCY) {
         let index = 0;
         const runners = Array.from({ length: Math.min(concurrency, items.length) }, async () => {
@@ -527,6 +708,9 @@
         if (task.type === 'turbo') return resolveTurbo(task);
         if (task.type === 'pixeldrain-file') return resolvePixeldrainFile(task);
         if (task.type === 'pixeldrain-list') return resolvePixeldrainList(task);
+        if (task.type === 'cyberdrop-file') return resolveCyberdrop(task);
+        if (task.type === 'bunkr-album') return resolveBunkrAlbum(task);
+        if (task.type === 'bunkr-media') return resolveBunkrMedia(task);
     }
 
     function resetState() {
