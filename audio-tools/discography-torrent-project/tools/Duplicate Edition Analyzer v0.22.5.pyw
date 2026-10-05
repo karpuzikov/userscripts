@@ -2076,19 +2076,22 @@ def configure_exclusions(
     # Establish the ordinary song feature set from non-remix/non-live versions
     # anywhere in the analyzed collection. This prevents "BT feat. Singer" from
     # making every remix of that already-featured song survive Save Remixes OFF.
-    base_features: Dict[str, Set[str]] = defaultdict(set)
+    base_features: Dict[Tuple[str, str], Set[str]] = defaultdict(set)
     for track in tracks:
         if track.is_remix or track.is_live:
             continue
         base_key = _base_title_identity(track.display_title)
+        artist_key = _primary_artist_key(track)
         if base_key:
-            base_features[base_key] |= featured_artists(track)
+            base_features[(base_key, artist_key)] |= featured_artists(track)
 
-    # Pass 2: apply the early elimination policy.
+    # Pass 2: apply the early elimination policy. Key the baseline by song +
+    # primary artist so unrelated same-title songs cannot contaminate each other.
     for track in tracks:
         base_key = _base_title_identity(track.display_title)
+        artist_key = _primary_artist_key(track)
         features = featured_artists(track)
-        ordinary_features = base_features.get(base_key, set())
+        ordinary_features = base_features.get((base_key, artist_key), set())
         added_features = features - ordinary_features
 
         track.remix_feature_exception = bool(
