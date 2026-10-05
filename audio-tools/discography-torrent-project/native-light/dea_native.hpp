@@ -147,6 +147,7 @@ struct AnalysisOptions {
     bool saveLive{false};
     bool logging{false};
     std::set<std::wstring> keptPatterns;
+    std::vector<PersonalPick> personalPicks;
     std::set<int> blockedReleaseIds;
 };
 
