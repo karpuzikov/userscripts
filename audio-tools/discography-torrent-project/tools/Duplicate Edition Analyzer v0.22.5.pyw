@@ -1305,10 +1305,28 @@ def _remix_credit_key_from_explicit_descriptor(text: str) -> str:
     if match:
         key = re.sub(r"[^a-z0-9]+", "", normalize_title(match.group(1)))
         return key if _valid_remix_credit_key(key) else ""
+
     if _is_named_person_mix_descriptor(value):
-        prefix = re.sub(r"\s+mix(?:\s*#?\d+)?(?:\s+by\s+.+)?\s*$", "", value, flags=re.I)
-        key = re.sub(r"[^a-z0-9]+", "", normalize_title(prefix))
+        prefix = re.sub(
+            r"\s+mix(?:\s*#?\d+)?(?:\s+by\s+.+)?\s*$",
+            "",
+            value,
+            flags=re.I,
+        ).strip()
+
+        # Remove functional/style qualifiers immediately before "Mix" so the
+        # stable remixer credit survives: "B.B.E. Club Mix" -> "B.B.E.",
+        # "Junkie XL Vocal Mix" -> "Junkie XL", etc.
+        words = re.findall(r"[A-Za-z0-9]+(?:['.-][A-Za-z0-9]+)*", prefix)
+        while words:
+            token = words[-1].lower().strip(".'-")
+            if token in GENERIC_MIX_WORDS or token in {"classic", "7", "12"}:
+                words.pop()
+                continue
+            break
+        key = re.sub(r"[^a-z0-9]+", "", normalize_title(" ".join(words)))
         return key if _valid_remix_credit_key(key) else ""
+
     return ""
 
 
@@ -12240,7 +12258,14 @@ def _standalone_self_test() -> None:
     mantronik_dub = Track(-106, Path("Love Peace Grease (Mantronik Electrohippy Dub).flac"), 3, title="Love, Peace And Grease (Mantronik Electrohippy Dub)", artist="BT")
     mantronik_formula = Track(-106, Path("Love Peace Grease (Mantronik Electrohippy Formula).flac"), 4, title="Love, Peace And Grease (Mantronik Electrohippy Formula)", artist="BT")
     simon_hale = Track(-106, Path("Flaming June (Simon Hale's Orchestrata).flac"), 5, title="Flaming June (Simon Hale's Orchestrata)", artist="BT")
-    contextual_release.tracks = [mood_remix, mood_radio, mantronik_dub, mantronik_formula, simon_hale]
+    bbe_club = Track(-106, Path("Flaming June (B.B.E. Club Mix 1).flac"), 6, title="Flaming June (B.B.E. Club Mix 1)", artist="BT")
+    bbe_radio = Track(-106, Path("Flaming June (B.B.E. Radio Edit).flac"), 7, title="Flaming June (B.B.E. Radio Edit)", artist="BT")
+    contextual_release.tracks = [
+        mood_remix, mood_radio,
+        mantronik_dub, mantronik_formula,
+        simon_hale,
+        bbe_club, bbe_radio,
+    ]
     configure_exclusions(
         [contextual_release],
         exclude_remixes=True,
@@ -12250,6 +12275,7 @@ def _standalone_self_test() -> None:
         (mood_radio, "Mood II Swing Radio Edit"),
         (mantronik_formula, "Mantronik Electrohippy Formula"),
         (simon_hale, "Simon Hale's Orchestrata"),
+        (bbe_radio, "B.B.E. Radio Edit"),
     ):
         if not candidate.is_remix or not candidate.exclude_from_coverage:
             raise RuntimeError(f"Contextual remix self-test failed: {label}")
