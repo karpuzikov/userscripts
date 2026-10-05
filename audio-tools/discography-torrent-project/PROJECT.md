@@ -255,7 +255,7 @@ run this logic automatically at the final torrent preparation stage and prepare/
 
 ## Duplicate / Edition Analyzer UX\n\n- Startup failures are never silent: the analyzer shows the exception when possible and writes `Documents\\Karpuzikov Tools\\Duplicate Edition Analyzer - Crash.log`.\n\n- Release discovery is recursive: organizational folders such as Albums/Other/Singles and per-single grouping folders are traversed, while CD1/CD2/Disc subfolders remain grouped as one release.
 
-- Remix exclusion exception: remixes with newly added featured performers remain included; if no matching non-remix base is present, an explicitly featured remix is kept conservatively.\n\n- Analyzer UI uses a unified dark theme by default, including dark Windows title bars when supported.
+- Remix exclusion exception: remixes with newly added featured performers remain included. The baseline is derived from non-remix/non-live versions of the same base song + primary artist, so the normal song vocalist does not accidentally rescue every remix. If no matching non-remix base is present, an explicitly featured remix is kept conservatively.\n\n- Analyzer UI uses a unified dark theme by default, including dark Windows title bars when supported.
 
 - Release discovery is recursive through organizational folders. Internal CD1/CD2 folders and sibling `... CD 1` / `... CD 2` folders are treated as one logical release and kept/moved together.
 
@@ -549,3 +549,6 @@ Before any program/script change in this project, apply the newest stored softwa
 
 
 - v0.22.4 semantic-version false-unique fix: the 2026-10-05 0.22.3 comparison log showed 168 byte-identical Chromaprint pairs blocked by semantic wording and thousands of same-base-title semantic skips. Correct candidate routing so exact identical fingerprints always bypass metadata, one labeled side vs one unlabeled side is never a hard conflict, and shared semantic/release family context remains acoustically comparable. Only two explicitly stated disjoint version families may be pre-skipped. Regression cases include `Four (Original Mix)` vs `Four` and `Tomahawk (Original Mix Edit)` vs `Tomahawk`.
+
+
+- v0.22.5 remix exclusion / edit-matching correction: the 2026-10-05 0.22.4 log showed 203 featured-remix exceptions, with 178 carrying only feature credits already present on normal versions of the same song. The exception now requires a feature added by the remix, keyed by base song + primary artist. Contextual Remix inheritance no longer depends on the release being titled "Remixes": sibling remixer evidence classifies child variants such as Mood II Swing Radio Edit and Mantronik Electrohippy Formula, while confident possessive remixer labels such as Simon Hale's Orchestrata are also recognized. The semantic prefilter now uses only strong structural families; weak named Edit/Mix labels are sent to Chromaprint. Regression coverage includes Godspeed Radio Edit vs BT Edit, Remember American Radio Edit vs Album Edit, and Remember Edit vs Single Mix.
