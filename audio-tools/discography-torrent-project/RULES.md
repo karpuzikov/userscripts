@@ -13,7 +13,7 @@ Current priority order:
 
 1. Preserve every wanted unique song/recording/version.
 2. Keep every album represented.
-3. Apply Save Remixes / Save Live at the first classification stage. Unchecked material leaves the analysis pipeline immediately. The sole Save-Remixes exception is a remix with an explicit featured-artist credit.
+3. Apply Save Remixes / Save Live at the first classification stage. Unchecked material leaves the analysis pipeline immediately. The sole Save-Remixes exception is a featured performer genuinely added by the remix; a vocalist already present on the normal version of the same song is not a remix exception.
 4. Explicit supersedes the corresponding Clean track before fingerprint analysis.
 5. Explicitly incompatible stated Version families are unique. A hard semantic skip is allowed only when both sides explicitly state disjoint version families (for example Radio Edit vs Extended Mix). An unlabeled title is not evidence of a base/different version and must remain eligible for acoustic comparison. Exact identical Chromaprint fingerprints always override semantic wording.
 6. Prefer CD/physical over equivalent WEB.
@@ -77,15 +77,17 @@ When several singles/EPs overlap:
 
 - `Save Remixes` is a direct inclusion switch. Checked: remixes participate normally. Unchecked: remixes are skipped completely by release comparison, coverage, counting, optimization, and tie-breaks.
 - `Save Live recordings` follows the same rule for live-performance material.
-- There are no featured-artist exceptions to an unchecked `Save Remixes` option.
+- The only exception to an unchecked `Save Remixes` option is a featured performer genuinely added by that remix. A feature already present on a normal non-remix version of the same song does not rescue the remix.
 
 Before fingerprint comparison, the analyzer may show only unusual/non-standard non-remix/non-live descriptor families that normal rules do not already classify. Examples include `The Matrix Mix`, `Tom Lord-Alge Mix`, and the grouped callout family (`Suggested Call Out Research Hook`, `Suggested Callout Hook`, etc.). Ordinary known patterns such as `Acoustic`, `Instrumental`, `Instrumental Excerpt`, language versions (`German Version`, `Japanese Version`, `Mandarin Version`, etc.), `Radio Edit`, any `Extended Mix` including named forms, `Original Mix`, any `VIP Mix` including named forms, `Clean Edition`, `Single Version`, and similar standard variants must not appear. Remix/live remain controlled only by `Save Remixes` and `Save Live recordings`. Pattern choices affect included coverage only and never duplicate identity.
 
 Rules:
 
-- only an explicit `Remix`, `Remixes`, `Remixed`, or `Dub` marker classifies a track as remix material;
-- the word `Mix` by itself is NOT a remix marker;
-- `Original Mix`, `Extended Mix`, `12" Mix`, `7" Mix`, and similar non-club mix labels are included versions, not remixes;
+- explicit `Remix`, `Remixes`, `Remixed`, `Rmx`, or `Dub` markers classify remix material;
+- a named/credited person, DJ, producer, or act `Mix` also classifies remix material;
+- a child variant such as `<Remixer> Radio Edit`, `<Remixer> Edit`, or another named variant inherits Remix status when a sibling of the same base song explicitly establishes that remixer credit;
+- the word `Mix` by itself is NOT enough;
+- functional/original labels such as `Original Mix`, ordinary `Extended Mix`, `12" Mix`, `7" Mix`, and similar non-credited version labels remain included versions unless remixer context proves otherwise;
 - `Club Mix` / `Club Mixes` are remix material;
 - `Instrumental` and `A Capella` / `Acapella` are included distinct versions, not remixes;
 - a release named `Remixes` does NOT automatically make every track inside it ignored; classify the tracks individually;
@@ -587,7 +589,7 @@ Do not flatten release folders into the duplicate root. After successful moves, 
 
 ### Absolute Save Remixes / Save Live rule
 
-- When `Save Remixes` is unchecked, every remix is completely invisible to release selection and track counting. There are no featured-artist exceptions.
+- When `Save Remixes` is unchecked, every remix is completely invisible to release selection and track counting except a remix that genuinely adds a featured performer not already credited on a normal version of the same song.
 - When `Save Live recordings` is unchecked, live-performance material is completely invisible to release selection and track counting. Treat explicit `Live`, `Session`/`Sessions`, and `Unplugged` labels as live-performance material.
 - Excluded tracks must not affect included track count, release-type heuristics, edition/superset comparison, minimum-track optimization, source/existing tie-breaks, CD-rip-log exact-equivalence checks, or clean/explicit exact-equivalence checks.
 - Excluded tracks may remain physically in a retained mixed release; they simply cannot help or hurt that release during selection.
@@ -620,7 +622,7 @@ Do not flatten release folders into the duplicate root. After successful moves, 
 
 - Personal Picks are persistent labels/preferences used when their category is enabled.
 - Personal Picks do not override an unchecked `Save Remixes` or `Save Live recordings` switch.
-- The only exception to early remix elimination is a remix with an explicit featured-artist credit.
+- The only exception to early remix elimination is a featured performer genuinely added by the remix. An ordinary song vocalist repeated in remix metadata is not an exception.
 - Personal Picks never create duplicate identity. Duplicate identity remains acoustic-fingerprint based.
 - Phrase rules match normalized track title/filename text case- and punctuation-insensitively; exact-title rules require normalized full-title equality.
 
@@ -933,7 +935,7 @@ The Live / remix phrase review is an exception-review UI, not a catalog of norma
 
 ## Early remix/live elimination rule
 
-When `Save Remixes` is OFF, tracks classified as remixes are eliminated at the first classification stage, **except when the remix has a featured artist credit**. A featured-remix track remains in the normal analysis pipeline and is treated as wanted audio.
+When `Save Remixes` is OFF, tracks classified as remixes are eliminated at the first classification stage, **except when the remix genuinely adds a featured performer not already present on a normal non-remix version of the same song**. Repeating the song's ordinary vocalist in title/filename/ARTIST metadata does not preserve the remix.
 
 When `Save Live recordings` is OFF, tracks classified as live recordings are eliminated at the first classification stage.
 
@@ -954,17 +956,19 @@ The analyzer keeps only the filesystem/release bookkeeping needed so those exclu
 If the corresponding Save option is ON, those tracks remain in the normal analysis pipeline.
 
 Featured-remix exception:
-- applies only to remixes with a genuine featured-artist credit;
+- applies only when the remix introduces at least one featured performer absent from the normal non-remix version of that same song/primary artist;
 - such tracks are not early-discarded when `Save Remixes` is OFF;
+- a featured vocalist already present on the normal song does not qualify;
+- if no normal counterpart exists in the analyzed collection, an explicit feat./ft./featuring credit remains a conservative exception;
 - they are fingerprinted, compared, grouped, coverage-counted, dynamically analyzed when otherwise eligible, and optimized like normal wanted audio;
-- the exception does not apply to ordinary remix-artist naming such as `Artist Remix` or `Artist Mix`.
+- the exception does not apply to ordinary remixer naming such as `Artist Remix` or `Artist Mix`.
 
 
 ### v0.21.1 implementation note
 
 - Early Remix/Live elimination is implemented in the executable pipeline.
 - Eliminated tracks are not fingerprinted, indexed, acoustically compared, grouped, dynamically analyzed, or optimized.
-- A remix with an explicit `feat.`, `ft.`, or `featuring` credit in title/filename/artist metadata is the sole Save-Remixes exception.
+- A remix with an explicit `feat.`, `ft.`, or `featuring` credit in title/filename/artist metadata is an exception only when that feature is new relative to the normal version of the same song/primary artist, or when no normal counterpart exists to disprove it.
 - A featured remix that is also Live still obeys `Save Live recordings`.
 - Detailed comparison logs record eligible-track count, early-eliminated count, and featured-remix exception count.
 
@@ -993,7 +997,7 @@ This section supersedes every older manual-acoustic-review rule.
 - Different title spelling, alternate title, typo, artist-credit difference, featured-credit difference, or release context must not downgrade an accepted acoustic match to REVIEW.
 - If the acoustic matcher does not accept a pair, keep both recordings separate automatically.
 - Near-threshold/ambiguous non-matches are preserved, not reviewed.
-- Stated semantic Version families remain unique and are filtered before cross-version duplicate comparison.
+- Only strong, explicitly incompatible semantic families may pre-block comparison. Weak/named Edit/Mix wording such as `BT Edit`, `Album Edit`, `Single Mix`, or `American Radio Edit` must remain acoustically comparable unless another strong family conflict exists.
 - The goal is zero manual duplicate-identity input while remaining conservative when audio evidence is insufficient.
 
 Regression case:
@@ -1031,3 +1035,20 @@ This section supersedes every older rule that treated one labeled side and one u
 - Exact identical Chromaprint fingerprints bypass semantic-version conflict completely and merge automatically.
 - If both sides explicitly state version families, a hard semantic skip is allowed only when their declared families are disjoint. Shared family/release context means audio gets the final say.
 - Explicitly incompatible examples such as `Radio Edit` vs `Extended Mix` remain safely separated before expensive comparison unless their fingerprints are literally identical.
+
+
+## v0.22.5 remix exclusion and weak-version-gate correction
+
+This section supersedes older featured-remix, contextual-remix, and generic Edit/Mix conflict wording.
+
+- The featured-remix exception is about a performer added by the remix, not the song's ordinary featured vocalist repeated in remix metadata.
+- Determine ordinary featured performers from non-remix/non-live versions of the same base song and primary artist across the analyzed collection.
+- If a remix carries only those ordinary feature credits, it is excluded when Save Remixes is OFF.
+- If the remix adds a new explicit featured performer, it remains the sole Save-Remixes exception.
+- If no normal counterpart exists, an explicit feat./ft./featuring credit is kept conservatively.
+- Parent-family Remix inheritance is release-title independent. Ordinary singles can establish it from sibling tracks.
+- Examples that must classify as Remix when sibling evidence exists include `Mood II Swing Radio Edit`, `Mantronik Electrohippy Formula`, `Dave Aude Radio Edit`, `Loverush UK! Radio Edit`, and comparable named child variants.
+- A confident non-primary two-word possessive remixer descriptor such as `Simon Hale's Orchestrata` is Remix even without a literal Mix/Remix word.
+- Weak labels such as `BT Edit`, `Album Edit`, `Single Mix`, and generic/named edits are not strong enough to veto acoustic comparison.
+- Regression pairs that must reach the acoustic matcher include `Godspeed (Radio Edit)` vs `Godspeed (BT Edit)`, `Remember (American Radio Edit)` vs `Remember (Album Edit)`, and `Remember (Edit)` vs `Remember (Single Mix)`.
+- Strong structural conflicts such as Radio vs Extended or Acoustic vs Instrumental remain eligible for semantic pre-blocking unless exact identical Chromaprint overrides the wording.
