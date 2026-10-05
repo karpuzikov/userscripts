@@ -401,32 +401,32 @@ static MapState* MapData(HWND h){return (MapState*)GetWindowLongPtrW(h,GWLP_USER
 static void PopulateMap(MapState*d){
     ListView_DeleteAllItems(d->releases);std::wstring q=Engine::Normalize(GetText(d->search));
     int row=0;
-    for(auto&r:d->main->result_.releases){
+    for(auto&r:d->main->Result().releases){
         if(!q.empty()&&Engine::Normalize(r.title).find(q)==std::wstring::npos)continue;
-        std::wstring st=StateText(r,d->main->result_.selectedReleases.count(r.id)>0);
+        std::wstring st=StateText(r,d->main->Result().selectedReleases.count(r.id)>0);
         LVITEMW it{LVIF_TEXT|LVIF_PARAM};it.iItem=row;it.lParam=r.id;it.pszText=(LPWSTR)r.title.c_str();ListView_InsertItem(d->releases,&it);
         ListView_SetItemText(d->releases,row,1,(LPWSTR)st.c_str());
         ListView_SetItemText(d->releases,row,2,(LPWSTR)std::to_wstring(r.groups.size()).c_str());
         ListView_SetItemText(d->releases,row,3,(LPWSTR)std::to_wstring(r.trackIndices.size()).c_str());++row;
     }
-    auto curR=d->main->result_.selectedReleases.size(),curT=CountSelectedTracks(d->main->result_);
-    PutText(d->initial,L"Initial: "+std::to_wstring(d->main->initialReleaseCount_)+L" releases / "+std::to_wstring(d->main->initialTrackCount_)+L" tracks");
-    PutText(d->result,L"Result: "+std::to_wstring(curR)+L" releases ("+std::to_wstring((int64_t)curR-(int64_t)d->main->initialReleaseCount_)+L") / "+std::to_wstring(curT)+L" tracks ("+std::to_wstring((int64_t)curT-(int64_t)d->main->initialTrackCount_)+L")"+(d->dirty?L" - pending Re-Analyze":L""));
+    auto curR=d->main->Result().selectedReleases.size(),curT=CountSelectedTracks(d->main->Result());
+    PutText(d->initial,L"Initial: "+std::to_wstring(d->main->InitialReleaseCount())+L" releases / "+std::to_wstring(d->main->InitialTrackCount())+L" tracks");
+    PutText(d->result,L"Result: "+std::to_wstring(curR)+L" releases ("+std::to_wstring((int64_t)curR-(int64_t)d->main->InitialReleaseCount())+L") / "+std::to_wstring(curT)+L" tracks ("+std::to_wstring((int64_t)curT-(int64_t)d->main->InitialTrackCount())+L")"+(d->dirty?L" - pending Re-Analyze":L""));
 }
 static void ShowReleaseDetails(MapState*d,int rid){
-    d->selectedRelease=rid;d->selectedTrack=-1;if(rid<0||rid>=(int)d->main->result_.releases.size())return;
-    auto&r=d->main->result_.releases[rid];PutText(d->path,r.path.wstring());ListView_DeleteAllItems(d->tracks);int row=0;
-    for(int ti:r.trackIndices){if(ti<0||ti>=(int)d->main->result_.tracks.size())continue;auto&t=d->main->result_.tracks[ti];
+    d->selectedRelease=rid;d->selectedTrack=-1;if(rid<0||rid>=(int)d->main->Result().releases.size())return;
+    auto&r=d->main->Result().releases[rid];PutText(d->path,r.path.wstring());ListView_DeleteAllItems(d->tracks);int row=0;
+    for(int ti:r.trackIndices){if(ti<0||ti>=(int)d->main->Result().tracks.size())continue;auto&t=d->main->Result().tracks[ti];
         std::wstring state=t.excluded?L"Skipped":t.manualSkip?L"Ignored by you":L"Included";
         LVITEMW it{LVIF_TEXT|LVIF_PARAM};it.iItem=row;it.lParam=ti;it.pszText=(LPWSTR)t.title.c_str();ListView_InsertItem(d->tracks,&it);ListView_SetItemText(d->tracks,row,1,(LPWSTR)state.c_str());ListView_SetItemText(d->tracks,row,2,(LPWSTR)std::to_wstring(t.groupId).c_str());++row;}
-    PutText(d->info,StateText(r,d->main->result_.selectedReleases.count(r.id)>0)+L"  |  "+std::to_wstring(r.groups.size())+L" unique wanted groups");
+    PutText(d->info,StateText(r,d->main->Result().selectedReleases.count(r.id)>0)+L"  |  "+std::to_wstring(r.groups.size())+L" unique wanted groups");
     PutText(GetDlgItem(d->hwnd,IDC_MAP_IGNORE_RELEASE),r.blocked?L"Restore release":L"Ignore release");
 }
 static void ReoptMap(MapState*d){
-    AnalysisOptions o;o.saveRemixes=d->main->settings_.saveRemixes;o.saveLive=d->main->settings_.saveLive;o.logging=d->main->settings_.logging;o.personalPicks=d->main->settings_.personalPicks;
-    for(auto&r:d->main->result_.releases)if(r.blocked)o.blockedReleaseIds.insert(r.id);
+    AnalysisOptions o;o.saveRemixes=d->main->CurrentSettings().saveRemixes;o.saveLive=d->main->CurrentSettings().saveLive;o.logging=d->main->CurrentSettings().logging;o.personalPicks=d->main->CurrentSettings().personalPicks;
+    for(auto&r:d->main->Result().releases)if(r.blocked)o.blockedReleaseIds.insert(r.id);
     std::wstring err;PutText(d->info,L"Re-Analyzing plan...");
-    d->main->engine_.Reoptimize(d->main->result_,o,nullptr,[&](const std::wstring&s){d->main->AppendActivity(s);},err);
+    d->main->Core().Reoptimize(d->main->Result(),o,nullptr,[&](const std::wstring&s){d->main->LogUi(s);},err);
     d->dirty=false;PopulateMap(d);if(d->selectedRelease>=0)ShowReleaseDetails(d,d->selectedRelease);
 }
 
@@ -446,7 +446,7 @@ LRESULT CALLBACK MainWindow::ReleaseMapProc(HWND h,UINT m,WPARAM w,LPARAM l){
         d->tracks=MakeCtrl(h,WC_LISTVIEWW,L"",LVS_REPORT|LVS_SINGLESEL|WS_TABSTOP,IDC_MAP_TRACKS);ListView_SetExtendedListViewStyle(d->tracks,LVS_EX_FULLROWSELECT|LVS_EX_DOUBLEBUFFER);
         for(auto [name,wid]:std::vector<std::pair<const wchar_t*,int>>{{L"Track",410},{L"State",120},{L"Group",70}}){LVCOLUMNW c{LVCF_TEXT|LVCF_WIDTH};c.pszText=(LPWSTR)name;c.cx=wid;ListView_InsertColumn(d->tracks,ListView_GetHeader(d->tracks)?Header_GetItemCount(ListView_GetHeader(d->tracks)):0,&c);}
         MakeCtrl(h,L"BUTTON",L"Ignore selected track",BS_PUSHBUTTON|WS_TABSTOP,IDC_MAP_IGNORE_TRACK);MakeCtrl(h,L"BUTTON",L"Re-Analyze",BS_PUSHBUTTON|WS_TABSTOP,IDC_MAP_REANALYZE);MakeCtrl(h,L"BUTTON",L"Apply file changes",BS_PUSHBUTTON|WS_TABSTOP,IDC_MAP_APPLY);MakeCtrl(h,L"BUTTON",L"Close",BS_PUSHBUTTON|WS_TABSTOP,IDC_MAP_CLOSE);
-        for(HWND c=GetWindow(h,GW_CHILD);c;c=GetWindow(c,GW_HWNDNEXT)){ThemeCtrl(c);SendMessage(c,WM_SETFONT,(WPARAM)d->main->font_,TRUE);}PopulateMap(d);return 0;}
+        for(HWND c=GetWindow(h,GW_CHILD);c;c=GetWindow(c,GW_HWNDNEXT)){ThemeCtrl(c);SendMessage(c,WM_SETFONT,(WPARAM)d->main->UiFont(),TRUE);}PopulateMap(d);return 0;}
     case WM_SIZE:{int W=LOWORD(l),H=HIWORD(l),p=12,top=78,right=480;
         MoveWindow(d->initial,p,10,360,22,TRUE);MoveWindow(d->result,p,34,520,22,TRUE);MoveWindow(d->search,W-300-p,20,300,30,TRUE);
         MoveWindow(d->releases,p,top,W-right-3*p,H-top-56,TRUE);
@@ -455,25 +455,25 @@ LRESULT CALLBACK MainWindow::ReleaseMapProc(HWND h,UINT m,WPARAM w,LPARAM l){
         MoveWindow(GetDlgItem(h,IDC_MAP_REANALYZE),p,H-44,100,32,TRUE);MoveWindow(GetDlgItem(h,IDC_MAP_APPLY),p+110,H-44,140,32,TRUE);MoveWindow(GetDlgItem(h,IDC_MAP_CLOSE),W-p-80,H-44,80,32,TRUE);return 0;}
     case WM_NOTIFY:{
         auto*hdr=(NMHDR*)l;if(hdr->idFrom==IDC_MAP_RELEASES&&hdr->code==LVN_ITEMCHANGED){auto*nm=(NMLISTVIEW*)l;if((nm->uNewState&LVIS_SELECTED)&&nm->iItem>=0){LVITEMW it{LVIF_PARAM};it.iItem=nm->iItem;ListView_GetItem(d->releases,&it);ShowReleaseDetails(d,(int)it.lParam);}}
-        if(hdr->idFrom==IDC_MAP_TRACKS&&hdr->code==LVN_ITEMCHANGED){auto*nm=(NMLISTVIEW*)l;if((nm->uNewState&LVIS_SELECTED)&&nm->iItem>=0){LVITEMW it{LVIF_PARAM};it.iItem=nm->iItem;ListView_GetItem(d->tracks,&it);d->selectedTrack=(int)it.lParam;auto&t=d->main->result_.tracks[d->selectedTrack];PutText(GetDlgItem(h,IDC_MAP_IGNORE_TRACK),t.manualSkip?L"Restore selected track":L"Ignore selected track");}}return 0;}
+        if(hdr->idFrom==IDC_MAP_TRACKS&&hdr->code==LVN_ITEMCHANGED){auto*nm=(NMLISTVIEW*)l;if((nm->uNewState&LVIS_SELECTED)&&nm->iItem>=0){LVITEMW it{LVIF_PARAM};it.iItem=nm->iItem;ListView_GetItem(d->tracks,&it);d->selectedTrack=(int)it.lParam;auto&t=d->main->Result().tracks[d->selectedTrack];PutText(GetDlgItem(h,IDC_MAP_IGNORE_TRACK),t.manualSkip?L"Restore selected track":L"Ignore selected track");}}return 0;}
     case WM_COMMAND:{
         int id=LOWORD(w);
         if(id==IDC_MAP_SEARCH&&HIWORD(w)==EN_CHANGE)PopulateMap(d);
-        else if(id==IDC_MAP_OPEN_PATH&&d->selectedRelease>=0){std::wstring e;auto&p=d->main->result_.releases[d->selectedRelease].path;if(!OpenPathLocation(p,e))MessageBoxW(h,L"The displayed release path could not be opened. It remains unchanged.",APP_NAME,MB_OK|MB_ICONWARNING);}
+        else if(id==IDC_MAP_OPEN_PATH&&d->selectedRelease>=0){std::wstring e;auto&p=d->main->Result().releases[d->selectedRelease].path;if(!OpenPathLocation(p,e))MessageBoxW(h,L"The displayed release path could not be opened. It remains unchanged.",APP_NAME,MB_OK|MB_ICONWARNING);}
         else if(id==IDC_MAP_COPY){OpenClipboard(h);EmptyClipboard();auto s=GetText(d->path);size_t bytes=(s.size()+1)*sizeof(wchar_t);HGLOBAL mem=GlobalAlloc(GMEM_MOVEABLE,bytes);memcpy(GlobalLock(mem),s.c_str(),bytes);GlobalUnlock(mem);SetClipboardData(CF_UNICODETEXT,mem);CloseClipboard();}
-        else if(id==IDC_MAP_IGNORE_RELEASE&&d->selectedRelease>=0){auto&r=d->main->result_.releases[d->selectedRelease];r.blocked=!r.blocked;r.manualRemoved=r.blocked;r.pendingIgnore=r.blocked;r.pendingRestore=!r.blocked;d->dirty=true;PopulateMap(d);ShowReleaseDetails(d,r.id);}
-        else if(id==IDC_MAP_IGNORE_TRACK&&d->selectedTrack>=0){auto&t=d->main->result_.tracks[d->selectedTrack];t.manualSkip=!t.manualSkip;d->dirty=true;ShowReleaseDetails(d,d->selectedRelease);PopulateMap(d);}
+        else if(id==IDC_MAP_IGNORE_RELEASE&&d->selectedRelease>=0){auto&r=d->main->Result().releases[d->selectedRelease];r.blocked=!r.blocked;r.manualRemoved=r.blocked;r.pendingIgnore=r.blocked;r.pendingRestore=!r.blocked;d->dirty=true;PopulateMap(d);ShowReleaseDetails(d,r.id);}
+        else if(id==IDC_MAP_IGNORE_TRACK&&d->selectedTrack>=0){auto&t=d->main->Result().tracks[d->selectedTrack];t.manualSkip=!t.manualSkip;d->dirty=true;ShowReleaseDetails(d,d->selectedRelease);PopulateMap(d);}
         else if(id==IDC_MAP_REANALYZE){ReoptMap(d);}
         else if(id==IDC_MAP_APPLY){
             if(d->dirty){MessageBoxW(h,L"Run Re-Analyze before applying file changes.",APP_NAME,MB_OK|MB_ICONINFORMATION);}
             else if(MessageBoxW(h,L"Apply file changes now?\n\nThis will move/remove files according to the current plan. Undo last run will remain available.",APP_NAME,MB_YESNO|MB_ICONWARNING)==IDYES){
-                std::wstring e;if(d->main->engine_.ApplyPlan(d->main->result_,d->main->settings_,[&](const std::wstring&s){d->main->AppendActivity(s);},e)){MessageBoxW(h,L"File changes applied. Undo last run is available from the main window.",APP_NAME,MB_OK|MB_ICONINFORMATION);d->main->UpdateButtons();}
+                std::wstring e;if(d->main->Core().ApplyPlan(d->main->Result(),d->main->CurrentSettings(),[&](const std::wstring&s){d->main->LogUi(s);},e)){MessageBoxW(h,L"File changes applied. Undo last run is available from the main window.",APP_NAME,MB_OK|MB_ICONINFORMATION);d->main->RefreshButtons();}
                 else MessageBoxW(h,L"Apply failed. No further file operations were performed after the error.",APP_NAME,MB_OK|MB_ICONERROR);
             }}
         else if(id==IDC_MAP_CLOSE)DestroyWindow(h);return 0;}
-    case WM_CTLCOLORSTATIC:{SetTextColor((HDC)w,C_TEXT);SetBkColor((HDC)w,C_PANEL);return(LRESULT)d->main->panelBrush_;}
-    case WM_CTLCOLOREDIT:{SetTextColor((HDC)w,C_TEXT);SetBkColor((HDC)w,C_FIELD);return(LRESULT)d->main->fieldBrush_;}
-    case WM_ERASEBKGND:{RECT r;GetClientRect(h,&r);FillRect((HDC)w,&r,d->main->panelBrush_);return 1;}
+    case WM_CTLCOLORSTATIC:{SetTextColor((HDC)w,C_TEXT);SetBkColor((HDC)w,C_PANEL);return(LRESULT)d->main->PanelBrush();}
+    case WM_CTLCOLOREDIT:{SetTextColor((HDC)w,C_TEXT);SetBkColor((HDC)w,C_FIELD);return(LRESULT)d->main->FieldBrush();}
+    case WM_ERASEBKGND:{RECT r;GetClientRect(h,&r);FillRect((HDC)w,&r,d->main->PanelBrush());return 1;}
     case WM_DESTROY:delete d;SetWindowLongPtrW(h,GWLP_USERDATA,0);return 0;
     }return DefWindowProcW(h,m,w,l);
 }
