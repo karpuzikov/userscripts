@@ -139,9 +139,8 @@ If an Explicit counterpart for the same normalized title/version/artist identity
 Acoustic fingerprinting is the duplicate authority for tracks that are eligible to be compared.
 
 - External database recording identifiers are not read or used by the analyzer.
-- Reported duration is diagnostic only and never proves identity.
+- Reported duration is routing/diagnostic only and never proves or disproves recording identity.
 - Candidate discovery is a bounded routing stage, not an identity rule: same-base-title and exact-fingerprint safety routes bypass duration; different-title fingerprint candidates use normalized/IDF-weighted token evidence and bounded duration neighborhoods.
-- Reported duration may reduce expensive candidate work but never proves or disproves recording identity.
 - Very common fingerprint tokens are down-weighted and are not allowed to create near-all-pairs candidate explosions.
 - A deterministic shadow-validation sample of rejected candidates must be acoustically checked; any sampled false negative is recovered and logged.
 - Every automatic duplicate merge must pass the acoustic matcher.
