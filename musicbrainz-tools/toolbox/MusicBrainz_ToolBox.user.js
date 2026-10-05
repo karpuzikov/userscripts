@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MusicBrainz ToolBox
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.0.54
+// @version      1.0.55
 // @description  Combined MusicBrainz release-editor, recording, barcode, Spotify/Apple Music linking, search, cover-art, Disc ID, and duplicate-edit tools.
 // @author       karpuzikov
 // @license      MIT
@@ -4906,23 +4906,59 @@
                 : lookupHarmonyByUrl(url);
         }
     
+        async function validateExactBarcodeLinks(links, barcode) {
+            const candidates = dedupeExternalLinks(links || []);
+            if (!candidates.length) return [];
+
+            const validated = await mapPool(candidates, 3, async link => {
+                const check = await lookupLinkedUrl(link.url);
+                if (!check?.gtin || !equalGtin(check.gtin, barcode)) {
+                    console.warn(
+                        '[MusicBrainz ToolBox] Rejected provider link from barcode lookup because the provider barcode does not exactly match:',
+                        {
+                            provider: providerLabel(link.url),
+                            requestedBarcode: barcode,
+                            returnedBarcode: check?.gtin || '',
+                            url: link.url,
+                        },
+                    );
+                    return null;
+                }
+                return link;
+            });
+
+            return validated.filter(Boolean);
+        }
+
         async function lookupByBarcode(barcode, appleSeedUrl) {
             const harmony = await lookupHarmonyByBarcode(barcode);
-            harmony.externalLinks = (harmony.externalLinks || [])
+            const harmonyCandidates = (harmony.externalLinks || [])
                 .filter(link => providerFamily(link.url) !== 'apple');
+            const harmonyLinks = await validateExactBarcodeLinks(
+                harmonyCandidates,
+                barcode
+            );
     
             const apple = await lookupAppleByBarcode(barcode, appleSeedUrl);
+            const appleLinks = (
+                apple.gtin &&
+                equalGtin(apple.gtin, barcode)
+            )
+                ? (apple.externalLinks || [])
+                : [];
     
             return {
-                found: Boolean(harmony.found || apple.found),
-                gtin: harmony.gtin || apple.gtin || '',
+                found: Boolean(harmonyLinks.length || appleLinks.length),
+                gtin: harmonyLinks.length
+                    ? barcode
+                    : (appleLinks.length ? apple.gtin : ''),
                 externalLinks: dedupeExternalLinks([
-                    ...(harmony.externalLinks || []),
-                    ...(apple.externalLinks || []),
+                    ...harmonyLinks,
+                    ...appleLinks,
                 ]),
                 providers: [...new Set([
-                    ...(harmony.providers || []),
-                    ...(apple.providers || []),
+                    ...harmonyLinks.map(link => providerLabel(link.url)),
+                    ...appleLinks.map(link => providerLabel(link.url)),
                 ])],
                 errors: [...(harmony.errors || []), ...(apple.errors || [])],
                 lookupUrl: [harmony.lookupUrl, apple.lookupUrl].filter(Boolean).join(' | '),
@@ -5040,7 +5076,27 @@
             try {
                 const response = await harmonyRequest(lookupUrl);
                 const parsed = parseHarmony(response.html, lookupUrl);
-                parsed.externalLinks = parsed.externalLinks.filter(link => providerFamily(link.url));
+
+                // A reverse lookup is usable only when Harmony itself confirms
+                // the requested barcode. Never accept "close", fallback, or
+                // otherwise mismatching results.
+                if (!parsed.gtin || !equalGtin(parsed.gtin, barcode)) {
+                    return {
+                        ...parsed,
+                        found: false,
+                        externalLinks: [],
+                        errors: [
+                            ...(parsed.errors || []),
+                            parsed.gtin
+                                ? `Harmony returned barcode ${parsed.gtin} for requested barcode ${barcode}`
+                                : `Harmony did not confirm requested barcode ${barcode}`,
+                        ],
+                    };
+                }
+
+                parsed.externalLinks = parsed.externalLinks.filter(
+                    link => providerFamily(link.url)
+                );
                 return parsed;
             } catch (error) {
                 return {
