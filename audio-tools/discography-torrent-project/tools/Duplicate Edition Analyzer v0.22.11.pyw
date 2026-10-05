@@ -9609,6 +9609,151 @@ class ToolTip:
             self.tip = None
 
 
+class PersonalPicksWindow(tk.Toplevel):
+    """Persistent user-selected phrase/title and unusual-pattern preferences."""
+
+    def __init__(self, master, rules: List[Dict[str, str]]):
+        super().__init__(master)
+        self.title(f"{APP_NAME} - Personal Picks")
+        self.geometry("760x500")
+        self.minsize(660, 430)
+        self.configure(background=DARK_BG)
+        _enable_dark_titlebar(self)
+        self.result: Optional[List[Dict[str, str]]] = None
+        self.rules: List[Dict[str, str]] = []
+        for item in rules:
+            if not isinstance(item, dict) or not str(item.get("value", "")).strip():
+                continue
+            mode = str(item.get("mode", "contains")).strip().lower()
+            rule = {"mode": mode, "value": str(item.get("value", ""))}
+            if mode == "pattern":
+                key = _personal_pattern_key(item)
+                if not key:
+                    continue
+                rule["key"] = key
+            elif mode not in {"contains", "exact"}:
+                continue
+            self.rules.append(rule)
+
+        outer = ttk.Frame(self)
+        outer.pack(fill="both", expand=True, padx=16, pady=14)
+
+        ttk.Label(outer, text="Personal Picks", font=("Segoe UI", 15, "bold")).pack(anchor="w")
+        ttk.Label(
+            outer,
+            text=(
+                "Saved user choices from phrase/title rules and Unusual track pattern review. "
+                "Pattern picks stay here until you remove them. Phrase rules ignore case and punctuation; "
+                "none of these rules creates duplicate identity or forces a specific release to stay."
+            ),
+            style="Help.TLabel",
+            wraplength=720,
+            justify="left",
+        ).pack(anchor="w", pady=(5, 10))
+
+        self.listbox = tk.Listbox(
+            outer,
+            background="#161616",
+            foreground=DARK_FG,
+            selectbackground=DARK_ACCENT,
+            selectforeground=DARK_FG,
+            relief="solid",
+            borderwidth=1,
+            font=("Segoe UI", 10),
+            activestyle="none",
+        )
+        self.listbox.pack(fill="both", expand=True)
+        self.listbox.bind("<Control-c>", self._copy_selected)
+        self.listbox.bind("<Control-C>", self._copy_selected)
+        self._refresh()
+
+        entry_row = ttk.Frame(outer)
+        entry_row.pack(fill="x", pady=(10, 0))
+        self.value_var = tk.StringVar()
+        entry = ttk.Entry(entry_row, textvariable=self.value_var)
+        entry.pack(side="left", fill="x", expand=True)
+        entry.bind("<Return>", lambda _e: self._add("contains"))
+        ttk.Button(entry_row, text="Add phrase", command=lambda: self._add("contains")).pack(side="left", padx=(8, 0))
+        ttk.Button(entry_row, text="Add exact title", command=lambda: self._add("exact")).pack(side="left", padx=(6, 0))
+
+        toolbar = ttk.Frame(outer)
+        toolbar.pack(fill="x", pady=(8, 0))
+        ttk.Button(toolbar, text="Remove selected", command=self._remove).pack(side="left")
+        ttk.Button(toolbar, text="Clear all", command=self._clear).pack(side="left", padx=(8, 0))
+        ttk.Button(toolbar, text="Copy all", command=self._copy_all).pack(side="left", padx=(8, 0))
+
+        footer = ttk.Frame(outer)
+        footer.pack(fill="x", pady=(12, 0))
+        ttk.Button(footer, text="Cancel", command=self._cancel).pack(side="right")
+        ttk.Button(footer, text="Save", command=self._accept).pack(side="right", padx=(0, 8))
+
+        self.protocol("WM_DELETE_WINDOW", self._cancel)
+        self.transient(master)
+        self.grab_set()
+        entry.focus_set()
+
+    def _refresh(self) -> None:
+        self.listbox.delete(0, "end")
+        for item in self.rules:
+            raw_mode = str(item.get("mode", "contains")).lower()
+            mode = "Pattern" if raw_mode == "pattern" else ("Exact title" if raw_mode == "exact" else "Phrase")
+            self.listbox.insert("end", f"{mode}: {item.get('value', '')}")
+
+    def _add(self, mode: str) -> None:
+        value = self.value_var.get().strip()
+        if not value:
+            return
+        normalized = _personal_pick_normalize(value)
+        if not normalized:
+            return
+        for item in self.rules:
+            if (
+                str(item.get("mode", "contains")).lower() == mode
+                and _personal_pick_normalize(str(item.get("value", ""))) == normalized
+            ):
+                self.value_var.set("")
+                return
+        self.rules.append({"mode": mode, "value": value})
+        self.value_var.set("")
+        self._refresh()
+        self.listbox.see("end")
+
+    def _copy_selected(self, _event=None):
+        indexes = list(self.listbox.curselection())
+        if not indexes:
+            return "break"
+        lines = [self.listbox.get(index) for index in indexes]
+        self.clipboard_clear()
+        self.clipboard_append("\n".join(lines))
+        self.update_idletasks()
+        return "break"
+
+    def _copy_all(self) -> None:
+        lines = [self.listbox.get(index) for index in range(self.listbox.size())]
+        self.clipboard_clear()
+        self.clipboard_append("\n".join(lines))
+        self.update_idletasks()
+
+    def _remove(self) -> None:
+        indexes = list(self.listbox.curselection())
+        for index in reversed(indexes):
+            if 0 <= index < len(self.rules):
+                del self.rules[index]
+        self._refresh()
+
+    def _clear(self) -> None:
+        self.rules.clear()
+        self._refresh()
+
+    def _accept(self) -> None:
+        self.result = [dict(item) for item in self.rules]
+        self.destroy()
+
+    def _cancel(self) -> None:
+        self.result = None
+        self.destroy()
+
+
 class PatternReviewWindow(tk.Toplevel):
     def __init__(self, master, patterns: List[Dict[str, object]], personal_rules: List[Dict[str, str]]):
         super().__init__(master)
