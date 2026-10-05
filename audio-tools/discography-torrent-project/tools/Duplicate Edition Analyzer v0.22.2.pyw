@@ -6178,7 +6178,7 @@ def report_text(existing: Optional[Path], recycle: Path, releases: List[Release]
 
     lines.append("AUTOMATIC MATCHING POLICY")
     lines.append("=========================")
-    lines.append("Clear same-title acoustic matches are grouped automatically. Different-title acoustic matches and narrow near-threshold same-title cases are held for rare manual review. Different stated version families are unique and are not cross-compared.")
+    lines.append("Accepted acoustic matches are grouped automatically regardless of naming differences. Rejected and near-threshold pairs remain separate automatically. Different stated version families are unique and are not cross-compared. Candidate routing uses duration only to avoid unnecessary expensive comparisons; duration is never recording identity evidence.")
     lines.append("")
 
     lines.append("HIGH-CONFIDENCE DUPLICATE GROUPS")
