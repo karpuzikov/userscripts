@@ -28,36 +28,26 @@ Current priority order:
 
 Every album must remain represented, but not every edition of an album must be kept.
 
-When multiple editions of the same album exist:
+Album-family selection order is absolute:
 
-- choose the edition or combination of releases that preserves all unique material with the fewest duplicated audio files;
-- a larger track count does not automatically make an edition preferable;
-- unique bonus tracks are a reason to keep an edition only when those tracks cannot be preserved more efficiently elsewhere;
-- remixes/live tracks do not automatically make one album edition superior;
-- standard/deluxe/limited/special/regional editions must be compared by actual recording coverage.
+1. Group editions of the same album by proven included-audio overlap/order.
+2. Count the distinct included wanted recording groups carried by each edition.
+3. At least one edition with the **highest unique wanted-track count** must represent that album family.
+4. If Edition A contains every wanted recording carried by Edition B plus at least one more, A is a strict superset and B is immediately dominated.
+5. A single, EP, compilation, or another album outside the family carrying the bonus track does **not** rescue the smaller album edition.
+6. After every album has its most-complete edition represented, minimize the **total retained track count** across the collection.
+7. If total retained track count ties, minimize the **total retained release count**.
+8. Source/rip quality, Existing/Recycle preference, and DR/mastering are later tie-breaks only.
 
-### Example
+"Most complete" means the greatest number of distinct currently included wanted recording groups, not the largest raw folder/file count. Tracks excluded by active Remix/Live/manual rules do not make an edition more complete.
 
-Edition A:
-- 10 common album tracks
-- bonus A
-- bonus B
+### Example - Let Go
 
-Edition B:
-- same 10 common album tracks
-- bonus C
+If `Let Go (Limited Edition)` contains every wanted track from `Let Go (Sketch Book)` plus `Get Over It` and `Why`, the Limited Edition represents the album and Sketch Book is dominated immediately.
 
-If A/B/C exist nowhere else, both editions may need to be kept.
+It does not matter that `Get Over It` or `Why` also exist on singles/EPs. Those outside releases may still be removed or retained by the later global optimizer, but they cannot make the less-complete Sketch Book edition represent `Let Go`.
 
-If bonus C also exists on a single, prefer:
-- Edition A
-- the single containing bonus C
-
-instead of:
-- Edition A
-- Edition B
-
-because this preserves the same unique material with fewer duplicated album tracks.
+If two maximum-completeness editions contain different wanted material but the same number of unique groups, either can satisfy the album-representation requirement; the global minimum-track/minimum-release solution then decides while still preserving every wanted group.
 
 ## 3. Singles and EPs
 
@@ -89,7 +79,7 @@ Rules:
 - the word `Mix` by itself is NOT enough;
 - functional/original labels such as `Original Mix`, ordinary `Extended Mix`, `12" Mix`, `7" Mix`, and similar non-credited version labels remain included versions unless remixer context proves otherwise;
 - `Club Mix` / `Club Mixes` are remix material;
-- `Instrumental` and `A Capella` / `Acapella` are included distinct versions, not remixes;
+- `Instrumental` and `A Capella` / `Acapella` are included distinct unique recording roots, not replaceable Versions and not remixes;
 - a release named `Remixes` does NOT automatically make every track inside it ignored; classify the tracks individually;
 - the presence of remix tracks does NOT make the entire release ignored;
 - compare the release again after removing only explicitly identified remix tracks from included coverage;
@@ -138,27 +128,42 @@ If an Explicit counterpart for the same normalized title/version/artist identity
 
 ## 6. Unique recording/version definition
 
-Acoustic fingerprinting is the duplicate authority for tracks that are eligible to be compared.
+A **Version** is a replaceable variation of the same underlying recording root. The word `Version`, `Edit`, or `Mix` by itself does not decide this.
 
-- External database recording identifiers are not read or used by the analyzer.
-- Reported duration is routing/diagnostic only and never proves or disproves recording identity.
-- Candidate discovery is a bounded routing stage, not an identity rule: same-base-title and exact-fingerprint safety routes bypass duration; different-title fingerprint candidates use normalized/IDF-weighted token evidence and bounded duration neighborhoods.
-- Very common fingerprint tokens are down-weighted and are not allowed to create near-all-pairs candidate explosions.
-- A deterministic shadow-validation sample of rejected candidates must be acoustically checked; any sampled false negative is recovered and logged.
-- Every automatic duplicate merge must pass the acoustic matcher.
+Examples:
+- `Girlfriend` and `Girlfriend (Radio Edit)` are eligible to be treated as the same replaceable recording family after acoustic comparison.
+- `Girlfriend (Extended Version)` is a **new unique recording root**, not a replaceable Version of the base recording.
+- `Girlfriend (Instrumental)` is a new unique recording root.
+- `Girlfriend (Acapella)` is a new unique recording root.
+- `Push` and `Push (Acoustic)` are separate unique recording roots.
+- `Girlfriend (MTV Unplugged)` is a separate unique Live recording root.
+- `Girlfriend (MTV Unplugged) [Edit]` is a Version of that Live recording root.
+- `Girlfriend (Dr. Luke Remix) [ft. Lil Mama]` is a separate unique Remix recording root.
+- `Girlfriend (Dr. Luke Remix) [ft. Lil Mama] (Extended Version)` is a Version of that Remix recording root.
+
+### Parent-root rule
+
+The unique parent recording category wins over a later edit/version suffix:
+
+- Remix + Radio/Edit/Extended -> still the same Remix root.
+- Live/Unplugged + Edit/Extended -> still the same Live root.
+- Acoustic + Edit/Extended -> still the same Acoustic root.
+- Instrumental/Acapella + Edit/Extended -> still that Instrumental/Acapella root.
+- Base recording + Extended -> Extended is its own unique root.
+
+### Acoustic identity
+
+Acoustic fingerprinting remains the duplicate authority for tracks that are eligible to be compared.
+
+- Exact identical Chromaprint fingerprints always override conflicting wording.
+- Radio/Edit/Main/Single/Album-style variants of the same base root may reach acoustic comparison and merge when accepted.
+- Base vs Extended, Instrumental, Acapella, Acoustic, Live/Unplugged, or Remix is semantically protected as different recording roots and is not merged merely because the audio overlaps.
+- Tracks inside the same unique parent root still use acoustic comparison to determine whether they are replaceable variants or genuinely different recordings.
+- External database recording identifiers are not required for duplicate identity.
+- Reported duration is routing/diagnostic only.
 - Alignment may compensate for leading/trailing silence or padding.
-- Substantial unmatched non-silent content means a distinct recording/version.
-- Semantic wording is a candidate-routing safety gate, not stronger identity evidence than exact audio.
-- If only one side states a Version label, compare acoustically: the unlabeled side may simply omit the same version wording.
-- If both sides share any stated family/context, compare acoustically.
-- Only two explicitly stated, disjoint Version families may be hard-skipped before full audio comparison (for example Radio Edit vs Extended Mix).
-- Exact identical Chromaprint fingerprints are always the same recording regardless of conflicting Version text.
-- Examples of Version families include Radio Edit/Version, Extended Mix/Version, Acoustic, Instrumental, A Cappella, language versions and comparable explicit version descriptors.
-
-Automatic acoustic decision policy:
-- accepted acoustic match -> merge automatically, even when titles or artist credits differ;
-- non-accepted / near-threshold match -> keep separate automatically;
-- no acoustic identity decision is delegated to the user.
+- Substantial unmatched non-silent content remains distinct.
+- No acoustic identity decision is delegated to the user.
 
 ## 7. Source preference
 
@@ -217,27 +222,28 @@ Existing and Recycle are analyzed together when Existing is supplied.
 ## 9. Optimization model
 
 Hard requirements:
-- every active wanted recording/version is covered;
-- every active album family remains represented;
-- ignored releases cannot provide coverage;
-- ignored tracks and step-1 excluded Remix/Live/Clean material create no coverage obligation;
-- compilations may provide only wanted groups unavailable on regular releases.
 
-Quality/provider floor:
-- do not drop below required source class;
-- CD-log acceptability is part of provider quality;
-- Existing status is not a hard floor.
+1. Preserve every active wanted recording root/group.
+2. Keep every active album family represented.
+3. The album representative must be one of the editions carrying the **maximum number of distinct included wanted groups** in that family.
+4. A strict same-album superset dominates its subset before global optimization.
+5. Ignored releases cannot provide coverage.
+6. Ignored tracks and step-1 excluded Remix/Live/Clean material create no coverage obligation.
 
-Global cost order after requirements/quality are satisfied:
-1. avoid selected CD releases with comparable rip-log score below 80 when compliant alternatives exist;
-2. minimize total retained track count, counting every track carried by every retained release;
-3. minimize retained release count;
-4. minimize Recycle/update release count, so Existing wins an otherwise complete tie;
-5. stable release-ID ordering.
+Global objective after those hard requirements:
 
-CUE image layout receives no special one-file optimization bonus. Compare image and track-based CD rips by normal source/log/content rules and total logical track count.
+1. Minimize **total retained track count**.
+2. Minimize **total retained release count**.
+3. Prefer better source/CD-rip quality when the first two totals tie.
+4. Prefer Existing over Recycle/update when otherwise tied.
+5. Use stable deterministic ordering.
+6. Use DR/mastering only for the final exact tie.
 
-After the exact solve, a better exact-equivalent CD rip log may replace the selected carrier. DR/mastering is then measured only for exact final ties that remain equal on every non-DR criterion.
+Singles/EPs/compilations may satisfy wanted recording coverage, but they can never substitute a smaller album edition for the album's maximum-completeness representative.
+
+CUE image layout receives no special one-file optimization bonus. Logical track count is what matters.
+
+After the exact solve, an exact-equivalent better CD rip may replace the chosen copy only when doing so does not violate the higher-priority album/track/release rules.
 
 ## 10. Decision states
 
@@ -799,16 +805,17 @@ Do not flatten release folders into the duplicate root. After successful moves, 
 
 ### Permanent track-family taxonomy
 
-This taxonomy is a standing rule for all future Duplicate Edition Analyzer work. These categories are mutually distinct and must never be collapsed into one generic "version" family.
+This taxonomy is a standing rule for all future Duplicate Edition Analyzer work.
 
-- **Version** means an alternate studio/release edit of the same underlying recording family, such as: Radio Edit, Radio Version, Extended Mix, Extended Version, Single Edit, Single Version, Main Version, Original/Main Mix, Album Version, Album Edit, or comparable non-remix/non-live edit/version wording.
-- **Remix** is a separate category. Remixes are **not Versions**, even when they are edits/extended forms of a remix. Examples include Producer/DJ Remix, Club Remix, Dub Remix, Remix Edit, Remix Radio Edit, Remix Extended, VIP Remix, **Chillout Mix**, and similar remix-family titles. `Chillout Mix` must always be classified as Remix, never Version.
-- **Live recording** is a separate category. Live recordings are **not Versions**, even when the title literally contains the word `Version`, for example `Live Version`. Concert/live/stage recordings belong to the Live category, not Versions.
-- Classification must follow semantic meaning, not the literal presence of words such as `Version`, `Edit`, or `Mix`.
-- **Parent-family precedence:** when an edit/version suffix describes a remix-family recording, the track remains a **Remix**. For example, `Gimme Gimme (Sebastien Radio Edit)` is a Remix: `Radio Edit` describes the radio-length edit of the Sebastien remix; it does not turn that remix into a Version. The same rule applies to `<Remixer> Radio Edit`, `<Remixer> Extended Mix`, `<Remixer> Radio Version`, `<Remixer> Extended Version`, and equivalent remix-edit wording.
-- Release Map alternative-family UI, connection logic, counts, and Gem calculations must respect these categories independently. Remixes and Live recordings must never increase the `Versions N` count.
-- For 💎 Gem logic, "has another Version" means another **Version-category** recording only. A Remix or Live recording of the same base song does not disqualify an otherwise unique track from 💎.
-
+- **Version** means a replaceable edit/variation of an already-defined recording root, such as Radio Edit/Version, Single Edit/Version, Album Edit/Version, Main Version, or a comparable short/edit form.
+- **Extended Version / Extended Mix of the base recording is a unique recording root**, not a replaceable Version of the base.
+- **Instrumental**, **Acapella/A Cappella**, and **Acoustic** are unique recording roots, not replaceable Versions of the base.
+- **Remix** is a unique recording root. A Radio/Edit/Extended form of that same Remix is a Version of the Remix root.
+- **Live/Unplugged** is a unique recording root. An Edit/Extended form of that same Live recording is a Version of the Live root.
+- Classification follows semantic parentage, not the literal presence of words such as `Version`, `Edit`, or `Mix`.
+- **Parent-root precedence:** Remix, Live/Unplugged, Acoustic, Instrumental, and Acapella identity is established before a later Edit/Radio/Extended suffix is interpreted.
+- Release Map alternative-family UI, connection logic, counts, and Gem calculations must respect unique roots independently.
+- For Gem logic, "has another Version" means another replaceable variation of the same recording root only. A different unique root does not disqualify it.
 
 ### Initial vs Result plan counters
 
