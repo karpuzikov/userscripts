@@ -1800,6 +1800,24 @@ def _normalize_feature_artist(text: str) -> str:
     return re.sub(r"[^a-z0-9$]+", "", text)
 
 
+def _featured_artists_from_text(text: str) -> Set[str]:
+    found: Set[str] = set()
+    normalized = ascii_punctuation(text or "")
+    for match in FEATURE_CREDIT_RE.finditer(normalized):
+        credit = match.group(1)
+        credit = re.split(
+            r"\b(?:remix(?:es|ed)?|dub|club\s+mix(?:es)?|live)\b",
+            credit,
+            maxsplit=1,
+            flags=re.I,
+        )[0]
+        for name in re.split(r"\s*(?:,|&|;|\band\b)\s*", credit, flags=re.I):
+            key = _normalize_feature_artist(name)
+            if key:
+                found.add(key)
+    return found
+
+
 def featured_artists(track: "Track") -> Set[str]:
     """Extract explicit featured artists from title, filename, and ARTIST metadata."""
     found: Set[str] = set()
@@ -1808,19 +1826,38 @@ def featured_artists(track: "Track") -> Set[str]:
         strip_track_number(track.path.stem),
         track.artist,
     ):
-        normalized = ascii_punctuation(text or "")
-        for match in FEATURE_CREDIT_RE.finditer(normalized):
-            credit = match.group(1)
-            credit = re.split(
-                r"\b(?:remix(?:es|ed)?|dub|club\s+mix(?:es)?|live)\b",
-                credit,
-                maxsplit=1,
-                flags=re.I,
-            )[0]
-            for name in re.split(r"\s*(?:,|&|;|\band\b)\s*", credit, flags=re.I):
-                key = _normalize_feature_artist(name)
-                if key:
-                    found.add(key)
+        found |= _featured_artists_from_text(text)
+    return found
+
+
+def remix_specific_featured_artists(track: "Track") -> Set[str]:
+    """Return features explicitly attached to the remix/version, not base artist credit.
+
+    A filename prefix such as "B-Tribe feat. Deborah Blando - Nanita (... Remix)"
+    is the song's artist credit and must not rescue the remix. Without a normal
+    counterpart, only a feature written in the title AFTER remix/mix/dub wording
+    is strong enough to count as remix-added.
+    """
+    sources = [track.display_title]
+    stem = strip_track_number(track.path.stem)
+    if " - " in stem:
+        sources.append(stem.split(" - ", 1)[1])
+    else:
+        sources.append(stem)
+
+    found: Set[str] = set()
+    remix_marker_re = re.compile(r"\b(?:remix(?:es|ed)?|rmx|dub|mix)\b", re.I)
+    feature_marker_re = re.compile(r"\b(?:feat(?:uring)?|ft)\.?\b", re.I)
+    for source in sources:
+        text = ascii_punctuation(source or "")
+        remix_match = remix_marker_re.search(text)
+        if not remix_match:
+            continue
+        for feature_match in feature_marker_re.finditer(text):
+            if feature_match.start() <= remix_match.start():
+                continue
+            tail = text[feature_match.start():]
+            found |= _featured_artists_from_text(tail)
     return found
 
 
@@ -2111,22 +2148,33 @@ def configure_exclusions(
     # anywhere in the analyzed collection. This prevents "BT feat. Singer" from
     # making every remix of that already-featured song survive Save Remixes OFF.
     base_features: Dict[Tuple[str, str], Set[str]] = defaultdict(set)
+    base_song_keys: Set[Tuple[str, str]] = set()
     for track in tracks:
         if track.is_remix or track.is_live:
             continue
         base_key = _base_title_identity(track.display_title)
         artist_key = _primary_artist_key(track)
         if base_key:
-            base_features[(base_key, artist_key)] |= featured_artists(track)
+            song_key = (base_key, artist_key)
+            base_song_keys.add(song_key)
+            base_features[song_key] |= featured_artists(track)
 
     # Pass 2: apply the early elimination policy. Key the baseline by song +
     # primary artist so unrelated same-title songs cannot contaminate each other.
     for track in tracks:
         base_key = _base_title_identity(track.display_title)
         artist_key = _primary_artist_key(track)
+        song_key = (base_key, artist_key)
         features = featured_artists(track)
-        ordinary_features = base_features.get((base_key, artist_key), set())
-        added_features = features - ordinary_features
+        ordinary_features = base_features.get(song_key, set())
+
+        if song_key in base_song_keys:
+            added_features = features - ordinary_features
+        else:
+            # No normal counterpart is available. Do not assume an ARTIST-tag or
+            # filename-prefix feature belongs to the remix. Preserve only a
+            # feature explicitly attached after Remix/Mix/Dub wording in title.
+            added_features = remix_specific_featured_artists(track)
 
         track.remix_feature_exception = bool(
             track.is_remix
@@ -12419,6 +12467,36 @@ def _standalone_self_test() -> None:
         raise RuntimeError("Remix-feature self-test failed: ordinary song vocalist rescued remix.")
     if added_feature_remix.exclude_from_coverage or not added_feature_remix.remix_feature_exception:
         raise RuntimeError("Remix-feature self-test failed: remix-added feature was not preserved.")
+
+    # v0.22.6: an artist-credit feature is not remix-added merely because the
+    # normal version is absent from the analyzed collection.
+    nanita_release = Release(
+        rid=-111,
+        root_kind="recycle",
+        path=Path("06. Remixes"),
+        title="06. Remixes",
+    )
+    nanita_dub = Track(
+        -111,
+        Path("B-Tribe feat. Deborah Blando - Nanita (A Spanish Lullaby) (BT's Quantum Rhythm Dub).flac"),
+        1,
+        title="Nanita (A Spanish Lullaby) (BT's Quantum Rhythm Dub)",
+        artist="B-Tribe feat. Deborah Blando",
+    )
+    nanita_remix = Track(
+        -111,
+        Path("B-Tribe feat. Deborah Blando - Nanita (A Spanish Lullaby) (BT's Voltaire Organica Remix).flac"),
+        2,
+        title="Nanita (A Spanish Lullaby) (BT's Voltaire Organica Remix)",
+        artist="B-Tribe feat. Deborah Blando",
+    )
+    nanita_release.tracks = [nanita_dub, nanita_remix]
+    configure_exclusions([nanita_release], exclude_remixes=True, exclude_live=False)
+    for candidate in (nanita_dub, nanita_remix):
+        if not candidate.is_remix or not candidate.exclude_from_coverage:
+            raise RuntimeError("Nanita remix-feature self-test failed: base artist feature rescued remix.")
+        if candidate.remix_feature_exception:
+            raise RuntimeError("Nanita remix-feature self-test failed: false remix feature exception.")
 
     # Named remixer variants inherit Remix status collection-wide, not only
     # when the explicit Remix and child edit happen to share one release.
