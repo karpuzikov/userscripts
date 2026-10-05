@@ -6126,7 +6126,7 @@ def report_text(existing: Optional[Path], recycle: Path, releases: List[Release]
     lines.append("1. Preserve every wanted unique song/version and keep every album represented.")
     lines.append("2. Remix/Live exclusions happen at step 1; the only Save-Remixes exception is a remix with an explicit featured artist.")
     lines.append("3. Explicit supersedes the corresponding Clean track before fingerprint analysis.")
-    lines.append("4. Stated Versions such as Radio Edit, Extended Mix, Acoustic, Instrumental, etc. are unique and are not compared across version families.")
+    lines.append("4. Only two explicitly stated, disjoint Version families are hard-skipped before audio comparison. Unlabeled titles remain acoustically comparable, and exact identical Chromaprint always overrides wording.")
     lines.append("5. Prefer CD/physical source over equivalent WEB content.")
     lines.append("6. For CD alternatives, hey-bro-check-log is the rip-quality authority; 80 is the acceptable threshold.")
     lines.append("7. Minimize total carried track count across the retained collection, including excluded extras inside a kept release.")
@@ -6204,7 +6204,7 @@ def report_text(existing: Optional[Path], recycle: Path, releases: List[Release]
 
     lines.append("AUTOMATIC MATCHING POLICY")
     lines.append("=========================")
-    lines.append("Accepted acoustic matches are grouped automatically regardless of naming differences. Rejected and near-threshold pairs remain separate automatically. Different stated version families are unique and are not cross-compared. Candidate routing uses duration only to avoid unnecessary expensive comparisons; duration is never recording identity evidence.")
+    lines.append("Accepted acoustic matches are grouped automatically regardless of naming differences. Unlabeled vs labeled same-base-title tracks remain acoustically comparable; only two explicitly stated disjoint Version families may be hard-skipped. Exact identical Chromaprint always overrides semantic wording. Candidate routing uses duration only to avoid unnecessary expensive comparisons; duration is never recording identity evidence.")
     lines.append("")
 
     lines.append("HIGH-CONFIDENCE DUPLICATE GROUPS")
@@ -12091,7 +12091,8 @@ def _standalone_self_test() -> None:
     if apply_explicit_over_clean_policy([advisory_release]) != 1 or not clean_track.exclude_from_coverage:
         raise RuntimeError("Explicit>Clean self-test failed.")
 
-    # Version families are unique and do not enter cross-version duplicate matching.
+    # Only explicitly stated disjoint Version families are hard-skipped; exact
+    # identical Chromaprint and unlabeled-vs-labeled cases remain comparable.
     radio = Track(
         release_id=-102,
         path=Path("Song (Radio Edit).flac"),
