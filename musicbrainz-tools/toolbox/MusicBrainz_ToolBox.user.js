@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MusicBrainz ToolBox
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.0.53
+// @version      1.0.54
 // @description  Combined MusicBrainz release-editor, recording, barcode, Spotify/Apple Music linking, search, cover-art, Disc ID, and duplicate-edit tools.
 // @author       karpuzikov
 // @license      MIT
@@ -4860,8 +4860,15 @@
                 try {
                     const json = await appleApiRequest(url.href, seed?.pageUrl || seedUrl);
                     const albums = (json.data || []).filter(item => item.type === 'albums');
-                    const album = albums.find(item => equalGtin(item.attributes?.upc, barcode)) || albums[0];
-                    if (!album) continue;
+                    const album = albums.find(
+                        item => equalGtin(item.attributes?.upc, barcode)
+                    );
+                    if (!album) {
+                        // Apple can return non-matching albums for filter[upc].
+                        // Never trust the first result unless its UPC exactly
+                        // matches the requested MusicBrainz barcode.
+                        continue;
+                    }
     
                     return {
                         found: true,
