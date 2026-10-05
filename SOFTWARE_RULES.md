@@ -2,11 +2,67 @@
 
 These rules apply to all current and future software maintained under the `karpuzikov` GitHub account. Repository-specific rules may add stricter requirements, but must not weaken these baseline requirements.
 
+## Universal compliance gate - release blocking
+
+This section is a meta-rule over **every rule in this file, every project-specific rule, and every permanent software rule the user adds later**.
+
+Unless a rule is explicitly labeled as optional/recommendation, it is a **release-blocking invariant**, not a suggestion.
+
+### Mandatory preflight
+
+Before creating, modifying, building, publishing, or handing off any software:
+
+1. Load/review the latest global rules in this file.
+2. Load/review the target project's own rules.
+3. Apply the newest explicit user instruction when it conflicts with an older rule.
+4. For any user-facing UI work, re-check the relevant current UXDT guideline pages before implementation.
+5. Identify all cross-cutting rules affected by the change, not only the feature explicitly requested.
+
+### Mandatory whole-product compliance audit
+
+Before an update is considered ready:
+
+- Audit the **entire affected product/UI**, including pre-existing controls and behavior touched by the same workflow.
+- Do not limit compliance checks to newly added lines, newly added controls, or the specific feature requested.
+- Existing software is **not grandfathered**. If an existing violation is visible while updating the product, fix it in the same update.
+- A violation of any mandatory rule is a **bug and release blocker**.
+- Do not publish/build/hand off the update until discovered blocking violations are corrected.
+- If a mandatory rule cannot literally be implemented because of platform limitations, implement the closest platform-native equivalent and explicitly document the limitation instead of silently skipping the rule.
+
+### Enforcement by construction
+
+Wherever practical, mandatory cross-cutting rules must be implemented through shared components/helpers so individual screens/features cannot silently omit them.
+
+Examples include:
+
+- filesystem-path display/open behavior;
+- theme, typography, spacing and status/progress patterns;
+- dependency/bootstrap behavior;
+- persistent-data location;
+- retry/network policy;
+- update/version behavior;
+- destructive-action confirmation/recovery;
+- accessibility and keyboard/focus behavior.
+
+When practical, add regression/static checks that fail validation when a mandatory invariant is bypassed.
+
+### Final release gate
+
+Immediately before publishing or handing off software, explicitly verify:
+
+- all applicable global rules pass;
+- all applicable project rules pass;
+- all applicable UXDT requirements pass;
+- existing affected UI/behavior was audited, not only new work;
+- no known mandatory-rule violation remains.
+
+If any item fails, the software remains **Under construction ⚠️** and the release/update is not considered complete.
+
 ## UXDT baseline - mandatory for all software
 
 The complete UXDT Guidelines tree at `https://www.uxdt.nic.in/guidelines/` is the mandatory UI/UX reference baseline for all current and future software maintained under the `karpuzikov` GitHub account, including every nested chapter and subpage. This is not limited to the "Understanding UX" section.
 
-When exact or current guidance matters, re-check the relevant UXDT subpage before implementation instead of relying on memory or a partial summary. Apply the guidance in a platform-appropriate way to desktop GUIs, browser userscripts, web apps, plugins, installers, console tools, and other user-facing software. Do not force web-only patterns onto native applications when the native platform has a clearer accessible equivalent.
+When exact or current guidance matters, re-check the relevant UXDT subpage before implementation instead of relying on memory or a partial summary. For every user-facing update, this re-check is mandatory before implementation and the applicable UXDT items must be re-audited before release. Apply the guidance in a platform-appropriate way to desktop GUIs, browser userscripts, web apps, plugins, installers, console tools, and other user-facing software. Do not force web-only patterns onto native applications when the native platform has a clearer accessible equivalent.
 
 Existing software is not considered UX-finished merely because it predates this rule. Any existing user-facing interface that is updated must be audited against the relevant UXDT guidance and improved where applicable before the update is considered ready for testing.
 
@@ -30,8 +86,37 @@ Existing software is not considered UX-finished merely because it predates this 
 - **Testing and iteration:** Test the interface against the relevant UXDT usability, accessibility, responsive, performance, and implementation checklists. For web UI, include keyboard-only use and zoom/reflow checks; for native UI, test the closest platform equivalents.
 - **Design-system discipline:** Reuse shared components/patterns within a project family instead of creating one-off UI behavior. New controls should match the established system unless a deliberate improvement is being rolled out consistently.
 - **No false compliance claims:** Do not label software "UXDT compliant" solely because this rule exists. Compliance/readiness must be based on an actual implementation review of the relevant interface.
+- **Release blocking:** Applicable UXDT findings are treated exactly like other mandatory software-rule findings. A known applicable usability/accessibility/learnability/efficiency/navigation/forms/visual-hierarchy/performance/design-system violation blocks completion until corrected or a genuine platform limitation is explicitly documented.
+- **Full-tree review:** Do not treat the linked Understanding UX page as the whole standard. The applicable review spans the complete current UXDT guideline tree, including design process, navigation/information architecture, task orientation, forms/data entry, writing/content quality, inclusivity/accessibility, technical considerations, performance, design-system guidance, implementation, UX audits, evaluation/feedback and the UX compliance checklist.
 
 ## Unified software design
+
+### Filesystem path controls - mandatory global invariant
+
+Whenever **any filesystem path** is displayed anywhere in any current or future software, place a folder/open-location control **immediately before the path**.
+
+This applies globally to every UI surface, including:
+
+- path input fields and selected-folder fields;
+- read-only path labels;
+- release/file details;
+- maps/graphs and detail panes;
+- settings;
+- logs and result views;
+- errors/warnings;
+- dependency/status views;
+- dialogs;
+- tooltips/popovers where a path is presented as an actionable location;
+- any future UI that exposes a local filesystem path.
+
+Required behavior:
+
+- If the path is a directory, the control opens that exact directory in the platform file manager.
+- If the path is a file, the control opens the containing directory with that exact file selected when the platform supports it; otherwise open the containing directory.
+- The open-location control must be visually adjacent to and clearly associated with the path.
+- Do not render a filesystem path as plain UI text through a one-off control when a shared path-display component/helper can be used.
+- Existing path displays are not grandfathered. Any software update must audit the affected product for path displays and add the control wherever it is missing.
+- Missing path controls are a release-blocking compliance failure.
 
 ### Dark-theme UI
 
