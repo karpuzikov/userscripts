@@ -12410,9 +12410,11 @@ def _standalone_self_test() -> None:
     if not ordinary_remix.exclude_from_coverage:
         raise RuntimeError("Early exclusion self-test failed: ordinary remix survived.")
     if not featured_title_remix.remix_feature_exception or featured_title_remix.exclude_from_coverage:
-        raise RuntimeError("Featured-remix self-test failed: title feature was not preserved.")
-    if not featured_artist_remix.remix_feature_exception or featured_artist_remix.exclude_from_coverage:
-        raise RuntimeError("Featured-remix self-test failed: ARTIST-tag feature was not preserved.")
+        raise RuntimeError("Featured-remix self-test failed: remix-specific title feature was not preserved.")
+    if featured_artist_remix.remix_feature_exception or not featured_artist_remix.exclude_from_coverage:
+        raise RuntimeError(
+            "Featured-remix self-test failed: ARTIST-tag-only feature without a normal counterpart rescued remix."
+        )
     if not live_track.exclude_from_coverage:
         raise RuntimeError("Early exclusion self-test failed: live track survived.")
     if not featured_live_remix.exclude_from_coverage:
