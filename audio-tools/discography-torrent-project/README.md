@@ -4,7 +4,7 @@ Complete project source and workflow assets for the discography torrent automati
 
 ## Current tools
 
-- `tools/Duplicate Edition Analyzer v0.22.10.pyw` - Fixes the Live / remix phrase review regression: the review now appears only for unusual exceptions from categories you chose not to save. `Save Remixes` ON suppresses Remix prompts, `Save Live recordings` ON suppresses Live prompts, and both ON skips the review completely. Keeps the 0.22.9 compliance/path/accessibility work and 0.22.8 album/version logic. [Download standalone EXE](https://github.com/karpuzikov/userscripts/releases/download/duplicate-edition-analyzer-v0.22.10/Duplicate.Edition.Analyzer.0.22.10.exe). Under construction ⚠️
+- `tools/Duplicate Edition Analyzer v0.22.11.pyw` - Removes the obsolete Live/Remix phrase review completely. DEA now has only one automatic naming-review stage: Unusual track pattern review, used exclusively for genuinely unknown version-like descriptors. Known Remix/Live/Radio/Extended/Acoustic/Instrumental/Acapella/tempo-effect forms are classified automatically. Keeps the 0.22.9 compliance/path/accessibility work and 0.22.8 album/version logic. [Download standalone EXE](https://github.com/karpuzikov/userscripts/releases/download/duplicate-edition-analyzer-v0.22.11/Duplicate.Edition.Analyzer.0.22.11.exe). Under construction ⚠️
 - `tools/AudioChecker Automation v0.1.pyw` - AudioChecker batch automation.
 - `tools/ALAC Conversion Automation v0.2.pyw` - lossless -> ALAC conversion. Under construction ⚠️
 - `tools/CUE Corrector - MusicBrainz DiscID 1.3.1.pyw` - MusicBrainz DiscID/CUE workflow.
