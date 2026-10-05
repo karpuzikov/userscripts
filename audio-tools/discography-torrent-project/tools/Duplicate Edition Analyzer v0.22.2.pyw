@@ -749,11 +749,6 @@ def clean_metadata_text(text: str) -> str:
             value = value[1:].lstrip()
         elif value.endswith('"'):
             value = value[:-1].rstrip()
-    if value.count("'") == 1:
-        if value.startswith("'"):
-            value = value[1:].lstrip()
-        elif value.endswith("'"):
-            value = value[:-1].rstrip()
     return value
 
 
@@ -3770,7 +3765,8 @@ def merge_equivalent_tracks(
 
     for pos, a in enumerate(ordered):
         da = float(tracks[a].duration or 0.0)
-        for b in ordered[pos + 1:]:
+        for next_pos in range(pos + 1, len(ordered)):
+            b = ordered[next_pos]
             db = float(tracks[b].duration or 0.0)
             delta = abs(db - da)
             if delta > FP_CANDIDATE_STRONG_DURATION_WINDOW:
