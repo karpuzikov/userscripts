@@ -12552,6 +12552,28 @@ def _standalone_self_test() -> None:
     if choose_album_families([sketch_book, limited_edition]) != {-121}:
         raise RuntimeError("Album completeness self-test failed: most-complete edition was not selected.")
 
+    # v0.22.8 optimizer priority: total tracks outrank release count, then
+    # release count decides only when total tracks tie.
+    ten_a = Release(-122, "existing", Path("ten-a"), "ten-a")
+    ten_b = Release(-123, "existing", Path("ten-b"), "ten-b")
+    eleven = Release(-124, "existing", Path("eleven"), "eleven")
+    ten_one = Release(-125, "existing", Path("ten-one"), "ten-one")
+    ten_a.tracks = [Track(-122, Path(f"a-{i}.flac"), i) for i in range(5)]
+    ten_b.tracks = [Track(-123, Path(f"b-{i}.flac"), i) for i in range(5)]
+    eleven.tracks = [Track(-124, Path(f"c-{i}.flac"), i) for i in range(11)]
+    ten_one.tracks = [Track(-125, Path(f"d-{i}.flac"), i) for i in range(10)]
+    cost_map = {r.rid: r for r in (ten_a, ten_b, eleven, ten_one)}
+    if not (
+        _optimizer_cost(cost_map, {-122, -123})
+        < _optimizer_cost(cost_map, {-124})
+    ):
+        raise RuntimeError("Optimizer priority self-test failed: fewer tracks did not win.")
+    if not (
+        _optimizer_cost(cost_map, {-125})
+        < _optimizer_cost(cost_map, {-122, -123})
+    ):
+        raise RuntimeError("Optimizer priority self-test failed: fewer releases did not win the track-count tie.")
+
     # v0.22.3 regression: Release Map distinction explanations must use the
     # current semantic-version guard and never call the removed metadata veto.
     if "_metadata_match_conflict" in _track_distinction_summary.__code__.co_names:
