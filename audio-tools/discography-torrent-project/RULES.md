@@ -635,21 +635,31 @@ Do not flatten release folders into the duplicate root. After successful moves, 
 - Personal Picks never create duplicate identity. Duplicate identity remains acoustic-fingerprint based.
 - Phrase rules match normalized track title/filename text case- and punctuation-insensitively; exact-title rules require normalized full-title equality. Pattern rules match the analyzer's canonical unusual-pattern key.
 
-### Personal Picks phrase detector rule
+### Automatic review model - current
 
-- Personal Picks must provide a `Detect phrases...` action that scans the currently selected Existing and New/update folders for live/remix phrases in audio filenames.
-- Detect parenthetical/bracket descriptors and named/trailing Mix descriptors; only show phrases classified as live or remix material.
-- Normalize punctuation/year suffixes and group recurring `Live From` / `Live At` venue phrases so equivalent year/location formatting does not create needless separate rules.
-- Show counts/examples and let the user add multiple detected phrases as persistent phrase rules.
-- Detection is only a convenience for creating preference rules; it never affects duplicate identity by itself.
+Duplicate Edition Analyzer has exactly one automatic naming-review stage: **Unusual track pattern review**.
 
-### Automatic Personal Picks review rule
+An **Unusual track pattern** is a title/filename descriptor that appears to describe a version/edition/performance form, but the analyzer cannot confidently classify it using its known semantic rules.
 
-- The Live/remix phrase review is shown only when `Save Remixes` is enabled.
-- It surfaces only unusual/ambiguous phrase families; ordinary Remix/Mix/Dub forms remain hidden.
-- Existing Personal Picks are marked as already selected.
-- Personal Picks do not resurrect categories disabled by the global Save switches.
-- The review never creates duplicate identity.
+Known descriptors are classified automatically and must **not** enter this review. Examples include:
+
+- Remix / named Mix / Dub / Redux;
+- Radio Edit / Radio Version / Single Edit / Album Edit / Main Version;
+- Extended Version / Extended Mix;
+- Live / Unplugged;
+- Acoustic;
+- Instrumental;
+- Acapella / A Cappella;
+- Sped Up / Slowed / Reverb;
+- ordinary `Artist - Title` or `Artist: Title` separators.
+
+Examples that may enter the review are genuinely unknown version-like descriptors such as `Suggested Callout`, `Special Performance 2007`, or another recurring descriptor shape whose meaning is not yet known.
+
+Rule:
+
+> Known meaning -> classify automatically. Unknown version-like descriptor -> Unusual track pattern review.
+
+There is **no automatic Live/Remix phrase review, phrase detector review, or category reconfirmation stage**. Save Remixes and Save Live recordings are the authoritative global category switches. Personal Picks remain the persistent home for explicit user choices and Unusual-pattern choices.
 
 ### Per-program persistent-data rule
 
@@ -661,11 +671,14 @@ Do not flatten release folders into the duplicate root. After successful moves, 
 - Preserve and migrate older shared-root/LocalAppData state automatically where practical instead of making the user recreate it.
 - System-wide dependencies installed by Windows/WinGet may remain in their normal system locations; any dependency files downloaded and owned by this program must live under its own `dependencies` folder.
 
-### Unusual-pattern artist-title separator rule
+### Unusual-track-pattern rule
 
-- Never treat an ordinary `Artist - Title` or `Artist: Title` separator as a version/pattern boundary just because the title happens to contain words such as `Club`, `Live`, `Edit`, or `Mix` internally.
-- A trailing separator segment may enter unusual-pattern review only when that segment itself has a clear descriptor shape, normally ending in `Mix`, `Remix`, `Version`, `Edit`, `Live`, `Session`, `Acoustic`, `Instrumental`, `Dub`, `Redux`, etc.
-- Clear song titles with no actual ETI/version descriptor must not appear in Unusual track pattern review.
+- An Unusual track pattern is **unknown version-like naming**, not a second Remix/Live review.
+- If the analyzer already understands the descriptor, classify it automatically and do not ask the user.
+- Only genuinely unknown/ambiguous descriptor shapes may enter **Unusual track pattern review**.
+- Never treat an ordinary `Artist - Title` or `Artist: Title` separator as a pattern boundary merely because the song title contains words such as `Club`, `Live`, `Edit`, or `Mix`.
+- A trailing separator segment may enter review only when it itself looks like a version/performance descriptor whose semantic meaning is not already known.
+- Clear song titles with no actual version/performance descriptor must never appear.
 
 ### CD image rip rule
 
@@ -861,46 +874,6 @@ Dynamic range is mastering-quality preference only, never duplicate evidence.
 - If DR also ties, use the stable deterministic fallback.
 - DR never causes different stated Versions to merge.
 
-## Planned Live / remix phrase review cleanup - v0.21.0
-
-The phrase-review stage exists only to surface unusual or ambiguous descriptor families that the normal classifier does not already understand.
-
-Rules:
-
-- do not show ordinary remix/mix families in the review;
-- standard credited forms such as `<name> Remix`, `<name> Mix`, `<name> Vocal Mix`, `<name> Club Mix`, `<name> Radio Mix`, `<name> Extended Mix`, and other normal producer/remixer-named mix variants are auto-classified and hidden;
-- a phrase being frequent does not make it review-worthy;
-- a phrase being a Personal Pick does not make it review-worthy;
-- existing Personal Picks remain active without forcing their ordinary phrase family into the review;
-- only genuinely unusual/unknown/ambiguous phrases should be displayed;
-- normal Remix/Live classification is controlled by `Save Remixes` and `Save Live recordings`; Personal Picks do not override disabled categories;
-- this review must never create duplicate identity.
-
-Examples that must no longer appear:
-- Hybrid Mix
-- Armin van Buuren Remix
-- BT Remix
-- Libra Mix
-- Maor Levi Remix
-- Mark Norman Remix
-- Sean Tyas Remix
-- Sultan & Ned Shepard Remix
-- Junkie XL Vocal Mix
-- Adam K & Soha Remix
-- Cedric Gervais Remix
-- Digital Stories Remix
-- Dylan Rhymes Push Up Mix
-- Ferry Corsten Mix
-- Funkagenda Mix
-- Josh Gabriel Remix
-- Sander Kleinenberg's Convertible Mix
-- ALPHA 9 Remix
-- Andy Duguid Remix
-- Brothers In Rhythm Mix
-
-The intended review contents are only patterns that cannot already be confidently categorized by the normal Remix/Live/version classifier.
-
-
 ## UI filesystem-path rule - mandatory and release-blocking
 
 The repository-wide filesystem-path invariant applies to Duplicate Edition Analyzer without exception.
@@ -918,20 +891,6 @@ Behavior:
 - existing controls are not grandfathered;
 - missing path controls are a release-blocking bug;
 - if the target no longer exists, fail gracefully and keep the displayed path unchanged.
-
-## Live / remix phrase review behavior - mandatory exception logic
-
-The Live / remix phrase review exists only to create exceptions to a category the user chose **not** to save. It must never re-ask about material already covered by an enabled Save option.
-
-- If `Save Remixes` is ON, Remix candidates must not appear in this review.
-- If `Save Live recordings` is ON, Live candidates must not appear in this review.
-- If both are ON, skip the Live / remix phrase review entirely.
-- If `Save Remixes` is OFF, only unusual/ambiguous Remix candidates may be offered as Personal Pick exceptions.
-- If `Save Live recordings` is OFF, only unusual/ambiguous Live candidates may be offered as Personal Pick exceptions.
-- Standard remix/mix phrases must not appear merely because they are ordinary recognized remixes.
-- Existing matching Personal Picks remain checked when the review is genuinely needed.
-- The phrase-review stage does not change duplicate identity; it only creates explicit preservation exceptions to otherwise-disabled Remix/Live categories.
-- Asking the user to reconfirm a category that is already enabled is a release-blocking regression.
 
 ## Fingerprint comparison execution - v0.21.0
 
