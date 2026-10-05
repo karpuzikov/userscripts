@@ -1,6 +1,6 @@
 # Discography Torrent Project - Rules
 
-Last updated: 2026-10-04
+Last updated: 2026-10-05
 
 This file is the canonical rulebook for the Discography Builder and Duplicate / Edition Analyzer.
 When implementation behavior conflicts with this file, this file wins.
@@ -19,8 +19,8 @@ Current priority order:
 6. Prefer CD/physical over equivalent WEB.
 7. For CD alternatives, hey-bro-check-log is the rip-quality authority. 80 is the acceptable-score threshold; a better comparable log is preferred for otherwise equivalent CD choices.
 8. Minimize total retained track count. Every track physically carried by a retained release counts, including Remix/Live tracks excluded from analysis.
-9. When all earlier rules tie for interchangeable releases, any measurable better DR/mastering score wins.
-10. If mastering also ties, prefer the already processed Existing copy over Recycle/update.
+9. Prefer the already processed Existing copy over Recycle/update when every earlier non-DR criterion is tied.
+10. DR/mastering is the final unresolved quality tie-break only: measure it only when every non-DR criterion is already equal, then any measurable better score wins.
 11. Compilations are below regular Album/EP/Single releases and are retained only for wanted song/version coverage unavailable on regular releases.
 12. Duplicate identity is fully automatic: accepted acoustic matches merge automatically regardless of title/artist naming differences; non-accepted matches stay separate automatically. No acoustic manual review.
 
@@ -140,7 +140,10 @@ Acoustic fingerprinting is the duplicate authority for tracks that are eligible 
 
 - External database recording identifiers are not read or used by the analyzer.
 - Reported duration is diagnostic only and never proves identity.
-- Candidate discovery uses acoustic fingerprint evidence plus same-base-title routing.
+- Candidate discovery is a bounded routing stage, not an identity rule: same-base-title and exact-fingerprint safety routes bypass duration; different-title fingerprint candidates use normalized/IDF-weighted token evidence and bounded duration neighborhoods.
+- Reported duration may reduce expensive candidate work but never proves or disproves recording identity.
+- Very common fingerprint tokens are down-weighted and are not allowed to create near-all-pairs candidate explosions.
+- A deterministic shadow-validation sample of rejected candidates must be acoustically checked; any sampled false negative is recovered and logged.
 - Every automatic duplicate merge must pass the acoustic matcher.
 - Alignment may compensate for leading/trailing silence or padding.
 - Substantial unmatched non-silent content means a distinct recording/version.
@@ -179,9 +182,9 @@ For otherwise interchangeable choices:
 - source class decides first;
 - CD-log quality decides next where applicable;
 - lower total retained track count decides before Existing precedence;
-- DR/mastering is the last objective quality attempt;
-- any measurable better DR score may replace Existing;
-- only when all of those tie does Existing beat Recycle/update.
+- the already processed Existing copy wins an otherwise complete non-DR tie;
+- DR/mastering is measured only if Existing/Recycle status and every other non-DR criterion are also tied;
+- DR therefore never causes a Recycle copy to replace an otherwise-equivalent Existing copy merely because its measured dynamics are higher.
 
 ### Optional existing-discography mode
 
@@ -201,7 +204,8 @@ Existing and Recycle are analyzed together when Existing is supplied.
 - Recycle may add unique material, replace inferior equivalent material, or become redundant.
 - Release/container names never prove duplicate identity.
 - Included coverage is based on confirmed acoustic recording groups.
-- Existing preference is applied only after source, CD-log quality, total track count and DR/mastering are tied.
+- Existing preference is applied after source, CD-log quality and total-track-count rules tie, and before DR/mastering.
+- DR/mastering is only consulted when the alternatives are still exactly tied after Existing/Recycle preference and every other non-DR rule.
 - Multi-disc folders belonging to one release remain one logical release.
 - Remix-only/Live-only releases eliminated at step 1 never participate in later comparison or optimization; they remain only for final Apply bookkeeping.
 
@@ -228,7 +232,7 @@ Global cost order after requirements/quality are satisfied:
 
 CUE image layout receives no special one-file optimization bonus. Compare image and track-based CD rips by normal source/log/content rules and total logical track count.
 
-After the exact solve, better equivalent CD rip logs and then DR/mastering may replace the selected carrier when the earlier rules permit it.
+After the exact solve, a better exact-equivalent CD rip log may replace the selected carrier. DR/mastering is then measured only for exact final ties that remain equal on every non-DR criterion.
 
 ## 10. Decision states
 
@@ -342,13 +346,13 @@ Safety rules:
 
 ## 15. Current 3OH!3-specific test case
 
-The historical 3OH!3 dataset remains a regression dataset, but current v0.22.0 rules apply:
+The historical 3OH!3 dataset remains a regression dataset, but current v0.22.2 rules apply:
 
 - preserve unique wanted non-remix songs/versions;
 - remove unchecked Remix/Live material at step 1;
 - Explicit supersedes corresponding Clean before fingerprinting;
 - keep all albums represented;
-- CD/WEB, CD-log threshold/quality, total retained track count, DR/mastering, then Existing precedence apply in that order;
+- CD/WEB, CD-log threshold/quality, total retained track count, then Existing precedence apply before any DR/mastering tie-break;
 - acoustic duplicate identity requires zero manual input: accepted matches merge automatically; all others remain separate.
 
 ## Persistent user data
@@ -835,9 +839,11 @@ Dynamic range is mastering-quality preference only, never duplicate evidence.
 
 - Measure integrated LUFS, LRA, true peak, RMS/crest-style contrast and a derived dynamics score with bundled FFmpeg.
 - Cache measurements.
-- Compare mastering only after coverage, source, CD-log quality and total-track-count rules tie.
-- Any measurable higher dynamics score wins; there is no material-difference threshold.
-- If DR also ties, Existing beats Recycle/update.
+- Do not measure DR merely because releases look like duplicate candidates.
+- First finish coverage, source, CD-log quality, total-track-count/release-count, Existing/Recycle, Explicit/Clean and every other non-DR decision.
+- Measure DR only for exact interchangeable releases that remain unresolved after all of those rules tie.
+- Any measurable higher dynamics score wins inside that final tie; there is no material-difference threshold.
+- If DR also ties, use the stable deterministic fallback.
 - DR never causes different stated Versions to merge.
 
 ## Planned Live / remix phrase review cleanup - v0.21.0
@@ -991,3 +997,22 @@ Regression case:
 - `Voigt Kampff Test - BT & Nick Phoenix` vs `Voigt Kamff Test - BT`;
 - score about 0.1152, overlap 100%, good 100%, definitive acoustic identity true;
 - required result: automatic MATCH and no user prompt.
+
+
+## v0.22.2 candidate-routing, DR and logging corrections
+
+This section supersedes older candidate-routing, DR-order and detailed-log wording.
+
+- Expensive acoustic comparison must no longer approach all-pairs behavior merely because common Chromaprint tokens collide.
+- Same-base-title pairs and identical fingerprint vectors remain safety routes and are acoustically resolved regardless of reported duration.
+- Different-title candidates are routed with bounded duration neighborhoods plus normalized fingerprint-token containment; duration remains routing-only and never becomes identity evidence.
+- Token evidence is weighted by rarity. Very common tokens are suppressed from far-distance candidate expansion.
+- High-confidence candidates are processed before weak candidates so validated Union-Find components can eliminate redundant later work transitively.
+- A deterministic shadow-validation sample is run against router rejects. A sampled acoustic false negative is recovered into the recording group and explicitly logged.
+- Semantic Version detection includes named `... Mode` descriptors such as `Lunar Mode` and explicit release-level families such as `Extended Versions`.
+- Common mojibake and harmless unmatched tag-edge quotation garbage are normalized before semantic routing; normalization must not strip legitimate leading/trailing apostrophes.
+- Wanted tracks whose fingerprint generation fails remain conservative singleton recording groups; a fingerprint failure must never erase wanted coverage.
+- Comparison logging uses normalized per-track catalog records plus compact pair references. Full pair details are kept for matches, content-gate cases, near-threshold cases, shadow recoveries and a deterministic reject sample; ordinary rejects are aggregated into funnel/route/duration counters.
+- DR/mastering runs only after the normal optimizer and all non-DR preference passes. Only exact interchangeable releases that remain fully tied are measured.
+- Existing/Recycle status is part of the pre-DR tie signature. DR cannot override Existing with an otherwise-equivalent Recycle copy.
+- Re-Analyze uses the same final-tie-only DR rule without rescanning/re-fingerprinting unchanged audio.
