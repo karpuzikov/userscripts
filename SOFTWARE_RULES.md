@@ -1,6 +1,35 @@
 # Software Rules
 
-These rules apply to all current and future software in this repository.
+These rules apply to all current and future software maintained under the `karpuzikov` GitHub account. Repository-specific rules may add stricter requirements, but must not weaken these baseline requirements.
+
+## UXDT baseline - mandatory for all software
+
+The complete UXDT Guidelines tree at `https://www.uxdt.nic.in/guidelines/` is the mandatory UI/UX reference baseline for all current and future software maintained under the `karpuzikov` GitHub account, including every nested chapter and subpage. This is not limited to the "Understanding UX" section.
+
+When exact or current guidance matters, re-check the relevant UXDT subpage before implementation instead of relying on memory or a partial summary. Apply the guidance in a platform-appropriate way to desktop GUIs, browser userscripts, web apps, plugins, installers, console tools, and other user-facing software. Do not force web-only patterns onto native applications when the native platform has a clearer accessible equivalent.
+
+Existing software is not considered UX-finished merely because it predates this rule. Any existing user-facing interface that is updated must be audited against the relevant UXDT guidance and improved where applicable before the update is considered ready for testing.
+
+### Mandatory UX outcomes
+
+- **User-centered task flow:** Organize the interface around the user's actual task, minimize unnecessary steps, surface primary actions clearly, and keep secondary/advanced actions subordinate.
+- **Learnability and clarity:** A first-time user must understand the purpose, current state, available actions, and expected result without prior chat context or external documentation.
+- **Consistency:** Reuse established terminology, layout, control behavior, spacing, typography, iconography, status patterns, and interaction conventions across related tools.
+- **Accessibility:** Support keyboard operation where the platform permits it, logical focus order, visible focus states, descriptive control names, sufficient contrast, scalable/readable text, and assistive-technology semantics where available.
+- **Color independence:** Never rely on color alone to communicate state, success, warning, error, selection, or required action. Pair color with text, shape, iconography, or another perceivable cue.
+- **Readable visual hierarchy:** Use clear headings, grouping, alignment, whitespace, and typographic hierarchy. Avoid visual clutter and decorative elements that compete with the primary task.
+- **Forms and data entry:** Use explicit labels, sensible defaults, constrained inputs where useful, validation close to the affected field, and actionable error messages that explain how to correct the problem.
+- **Error prevention and recovery:** Prevent destructive or invalid actions when practical, confirm genuinely destructive operations, explain consequences before execution, preserve user work where possible, and provide recovery/undo when feasible.
+- **System feedback:** Every interaction must provide timely visible feedback. Long-running operations must show the current stage and activity/progress instead of appearing frozen.
+- **User control:** Do not unexpectedly navigate, submit, delete, overwrite, move, or modify data. Make state-changing actions explicit and reversible where practical.
+- **Responsive/adaptive layout:** Web and resizable interfaces must remain usable across supported viewport/window sizes, text scaling, and zoom. Avoid clipped controls, hidden critical actions, or layouts that require unnecessary horizontal scrolling.
+- **Touch and pointer usability:** Where touch use is plausible, controls must have adequate target size and spacing. Pointer-only interactions must not be the sole path to essential functionality when keyboard or native alternatives are available.
+- **Performance:** Keep startup, interaction, rendering, and long-running workflows efficient; avoid blocking the UI thread when practical; lazy-load or defer non-critical work where appropriate; and provide progress for unavoidable waits.
+- **Content and language:** Use concise, precise, user-facing language. Prefer descriptive action labels over generic labels such as `OK`, `Apply`, or `Process` when the action is not otherwise obvious.
+- **Navigation and orientation:** Users must always be able to understand where they are, what scope they are operating on, and how to return or cancel without losing work.
+- **Testing and iteration:** Test the interface against the relevant UXDT usability, accessibility, responsive, performance, and implementation checklists. For web UI, include keyboard-only use and zoom/reflow checks; for native UI, test the closest platform equivalents.
+- **Design-system discipline:** Reuse shared components/patterns within a project family instead of creating one-off UI behavior. New controls should match the established system unless a deliberate improvement is being rolled out consistently.
+- **No false compliance claims:** Do not label software "UXDT compliant" solely because this rule exists. Compliance/readiness must be based on an actual implementation review of the relevant interface.
 
 ## Unified software design
 
