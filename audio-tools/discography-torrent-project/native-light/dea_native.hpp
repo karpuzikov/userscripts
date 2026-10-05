@@ -19,6 +19,7 @@
 #include <future>
 #include <iomanip>
 #include <map>
+#include <memory>
 #include <mutex>
 #include <numeric>
 #include <optional>
@@ -28,6 +29,7 @@
 #include <sstream>
 #include <string>
 #include <thread>
+#include <tuple>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
