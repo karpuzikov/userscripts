@@ -919,21 +919,19 @@ Behavior:
 - missing path controls are a release-blocking bug;
 - if the target no longer exists, fail gracefully and keep the displayed path unchanged.
 
-## Live / remix phrase review behavior - v0.21.0
+## Live / remix phrase review behavior - mandatory exception logic
 
-The Live / remix phrase review is an exception-review UI, not a catalog of normal remix names.
+The Live / remix phrase review exists only to create exceptions to a category the user chose **not** to save. It must never re-ask about material already covered by an enabled Save option.
 
-- Do not show this stage unless Save Remixes is checked.
-- Standard remix/mix phrases must not appear in the review.
-- Examples that should be suppressed include:
-  - <artist> Remix;
-  - <artist> Mix;
-  - Hybrid Mix;
-  - other conventional Remix / Mix suffixes that are already confidently classified by the normal remix detector.
-- Show only unusual, ambiguous, or otherwise unrecognized live/remix phrases where a human preservation choice is useful.
-- Existing Personal Picks remain checked when the stage is shown.
-- The phrase-review stage must not change duplicate identity; it only controls preservation/exclusion policy for remix/live families.
-
+- If `Save Remixes` is ON, Remix candidates must not appear in this review.
+- If `Save Live recordings` is ON, Live candidates must not appear in this review.
+- If both are ON, skip the Live / remix phrase review entirely.
+- If `Save Remixes` is OFF, only unusual/ambiguous Remix candidates may be offered as Personal Pick exceptions.
+- If `Save Live recordings` is OFF, only unusual/ambiguous Live candidates may be offered as Personal Pick exceptions.
+- Standard remix/mix phrases must not appear merely because they are ordinary recognized remixes.
+- Existing matching Personal Picks remain checked when the review is genuinely needed.
+- The phrase-review stage does not change duplicate identity; it only creates explicit preservation exceptions to otherwise-disabled Remix/Live categories.
+- Asking the user to reconfirm a category that is already enabled is a release-blocking regression.
 
 ## Fingerprint comparison execution - v0.21.0
 
