@@ -835,7 +835,7 @@ STANDARD_NON_REMIX_MIX_RE = re.compile(
 GENERIC_MIX_WORDS = {
     "original", "extended", "vip", "radio", "album", "single", "main", "vocal",
     "instrumental", "studio", "full", "ambient", "downtempo",
-    "garage", "house", "trance", "dance", "continuous", "mix", "new", "big",
+    "garage", "house", "trance", "dance", "continuous", "club", "mix", "new", "big",
     "smooth", "roll", "evolution",
 }
 
@@ -1345,7 +1345,12 @@ def _descriptor_compact_key(text: str) -> str:
 
 def _primary_artist_key(track: "Track") -> str:
     source = ascii_punctuation(track.artist or "")
-    source = re.split(r"\b(?:feat(?:uring)?|ft)\.?\b|;", source, maxsplit=1, flags=re.I)[0]
+    source = re.split(
+        r"\b(?:feat(?:uring)?|ft)\.?\b|;|,|&|\band\b|\bx\b",
+        source,
+        maxsplit=1,
+        flags=re.I,
+    )[0]
     return re.sub(r"[^a-z0-9]+", "", normalize_title(source))
 
 
@@ -1378,63 +1383,73 @@ def _confident_possessive_remix_descriptor(track: "Track", text: str) -> bool:
 
 
 def _contextual_remix_track_ids(releases: List["Release"]) -> Set[int]:
-    """Infer remixes from explicit sibling remixer evidence on any release.
+    """Infer remix-family children from explicit remixer evidence collection-wide.
 
-    A release does not need "Remix" in its own title. If one sibling explicitly
-    establishes a remixer credit (e.g. "Mood II Swing Remix"), variants carrying
-    the same credit ("Mood II Swing Radio Edit") inherit Remix status. This also
-    covers named variants such as "Mantronik Electrohippy Formula".
+    Evidence is scoped by base song + primary artist so unrelated same-title songs
+    cannot contaminate each other. A named remixer established anywhere in the
+    analyzed collection can classify its child edit/version elsewhere.
+
+    Examples:
+      Mood II Swing Remix -> Mood II Swing Radio Edit
+      Lucid 12" Club Mix -> Lucid Mix Edit
+      Maor Levi Remix -> Maor Levi Radio Edit
+      Mantronik Electrohippy Dub -> Mantronik Electrohippy Formula
     """
+    tracks = [track for release in releases for track in release.tracks]
+    explicit_by_song: Dict[Tuple[str, str], Set[str]] = defaultdict(set)
+
+    for track in tracks:
+        classification_text = f"{track.display_title} {strip_track_number(track.path.stem)}"
+        if not is_remix_text(classification_text):
+            continue
+
+        base_key = _base_title_identity(track.display_title)
+        artist_key = _primary_artist_key(track)
+        if not base_key:
+            continue
+
+        for part in _descriptor_parts(track.display_title):
+            credit = _remix_credit_key_from_explicit_descriptor(part)
+            # Do not let the primary artist's own generic Mix/Edit wording
+            # establish an external-remixer family for the whole collection.
+            if credit and credit != artist_key:
+                explicit_by_song[(base_key, artist_key)].add(credit)
+
     result: Set[int] = set()
-    for release in releases:
-        explicit_by_base: Dict[str, Set[str]] = defaultdict(set)
+    for track in tracks:
+        classification_text = f"{track.display_title} {strip_track_number(track.path.stem)}"
+        if is_remix_text(classification_text):
+            continue
 
-        for track in release.tracks:
-            base_key = _base_title_identity(track.display_title)
-            if not base_key:
-                continue
-            classification_text = f"{track.display_title} {strip_track_number(track.path.stem)}"
-            if not is_remix_text(classification_text):
-                continue
-            for part in _descriptor_parts(track.display_title):
-                key = _remix_credit_key_from_explicit_descriptor(part)
-                if key:
-                    explicit_by_base[base_key].add(key)
+        base_key = _base_title_identity(track.display_title)
+        artist_key = _primary_artist_key(track)
+        parts = _descriptor_parts(track.display_title)
+        if not base_key or not parts:
+            continue
 
-        for track in release.tracks:
-            classification_text = f"{track.display_title} {strip_track_number(track.path.stem)}"
-            if is_remix_text(classification_text):
-                continue
+        explicit_keys = explicit_by_song.get((base_key, artist_key), set())
+        inherited = False
+        for part in parts:
+            child_key = _remix_credit_key_from_child_edit(part)
+            compact = _descriptor_compact_key(part)
+            if child_key and child_key in explicit_keys:
+                inherited = True
+                break
+            if any(
+                compact.startswith(key) and compact != key
+                for key in explicit_keys
+                if _valid_remix_credit_key(key)
+            ):
+                inherited = True
+                break
+            if _confident_possessive_remix_descriptor(track, part):
+                inherited = True
+                break
 
-            base_key = _base_title_identity(track.display_title)
-            parts = _descriptor_parts(track.display_title)
-            if not base_key or not parts:
-                continue
-
-            explicit_keys = explicit_by_base.get(base_key, set())
-            inherited = False
-            for part in parts:
-                child_key = _remix_credit_key_from_child_edit(part)
-                compact = _descriptor_compact_key(part)
-                if child_key and child_key in explicit_keys:
-                    inherited = True
-                    break
-                if any(
-                    compact.startswith(key) and compact != key
-                    for key in explicit_keys
-                    if _valid_remix_credit_key(key)
-                ):
-                    inherited = True
-                    break
-                if _confident_possessive_remix_descriptor(track, part):
-                    inherited = True
-                    break
-
-            if inherited:
-                result.add(id(track))
+        if inherited:
+            result.add(id(track))
 
     return result
-
 
 def version_labels(text: str) -> Set[str]:
     """Return semantic named-version labels such as US/French/Guitar Version.
@@ -12256,29 +12271,34 @@ def _standalone_self_test() -> None:
     if added_feature_remix.exclude_from_coverage or not added_feature_remix.remix_feature_exception:
         raise RuntimeError("Remix-feature self-test failed: remix-added feature was not preserved.")
 
-    # Named remixer variants inherit Remix status from explicit sibling evidence,
-    # even on ordinary single releases.
-    contextual_release = Release(
+    # Named remixer variants inherit Remix status collection-wide, not only
+    # when the explicit Remix and child edit happen to share one release.
+    contextual_source = Release(
         rid=-106,
         root_kind="recycle",
-        path=Path("Remember"),
-        title="Remember",
+        path=Path("Context source"),
+        title="Context source",
+    )
+    contextual_child = Release(
+        rid=-108,
+        root_kind="recycle",
+        path=Path("Context child"),
+        title="Context child",
     )
     mood_remix = Track(-106, Path("Remember (Mood II Swing Remix).flac"), 1, title="Remember (Mood II Swing Remix)", artist="BT")
-    mood_radio = Track(-106, Path("Remember (Mood II Swing Radio Edit).flac"), 2, title="Remember (Mood II Swing Radio Edit)", artist="BT")
+    mood_radio = Track(-108, Path("Remember (Mood II Swing Radio Edit).flac"), 2, title="Remember (Mood II Swing Radio Edit)", artist="BT")
     mantronik_dub = Track(-106, Path("Love Peace Grease (Mantronik Electrohippy Dub).flac"), 3, title="Love, Peace And Grease (Mantronik Electrohippy Dub)", artist="BT")
-    mantronik_formula = Track(-106, Path("Love Peace Grease (Mantronik Electrohippy Formula).flac"), 4, title="Love, Peace And Grease (Mantronik Electrohippy Formula)", artist="BT")
-    simon_hale = Track(-106, Path("Flaming June (Simon Hale's Orchestrata).flac"), 5, title="Flaming June (Simon Hale's Orchestrata)", artist="BT")
+    mantronik_formula = Track(-108, Path("Love Peace Grease (Mantronik Electrohippy Formula).flac"), 4, title="Love, Peace And Grease (Mantronik Electrohippy Formula)", artist="BT")
+    simon_hale = Track(-108, Path("Flaming June (Simon Hale's Orchestrata).flac"), 5, title="Flaming June (Simon Hale's Orchestrata)", artist="BT")
     bbe_club = Track(-106, Path("Flaming June (B.B.E. Club Mix 1).flac"), 6, title="Flaming June (B.B.E. Club Mix 1)", artist="BT")
-    bbe_radio = Track(-106, Path("Flaming June (B.B.E. Radio Edit).flac"), 7, title="Flaming June (B.B.E. Radio Edit)", artist="BT")
-    contextual_release.tracks = [
-        mood_remix, mood_radio,
-        mantronik_dub, mantronik_formula,
-        simon_hale,
-        bbe_club, bbe_radio,
-    ]
+    bbe_radio = Track(-108, Path("Flaming June (B.B.E. Radio Edit).flac"), 7, title="Flaming June (B.B.E. Radio Edit)", artist="BT")
+    lucid_club = Track(-106, Path('Dreaming (Lucid 12" Club Mix).flac'), 8, title='Dreaming (Lucid 12" Club Mix)', artist="BT")
+    lucid_edit = Track(-108, Path("Dreaming (Lucid Mix Edit).flac"), 9, title="Dreaming (Lucid Mix Edit)", artist="BT")
+
+    contextual_source.tracks = [mood_remix, mantronik_dub, bbe_club, lucid_club]
+    contextual_child.tracks = [mood_radio, mantronik_formula, simon_hale, bbe_radio, lucid_edit]
     configure_exclusions(
-        [contextual_release],
+        [contextual_source, contextual_child],
         exclude_remixes=True,
         exclude_live=False,
     )
@@ -12287,6 +12307,7 @@ def _standalone_self_test() -> None:
         (mantronik_formula, "Mantronik Electrohippy Formula"),
         (simon_hale, "Simon Hale's Orchestrata"),
         (bbe_radio, "B.B.E. Radio Edit"),
+        (lucid_edit, "Lucid Mix Edit"),
     ):
         if not candidate.is_remix or not candidate.exclude_from_coverage:
             raise RuntimeError(f"Contextual remix self-test failed: {label}")
