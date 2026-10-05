@@ -756,8 +756,8 @@ Do not flatten release folders into the duplicate root. After successful moves, 
 - Track-row **Ignore** must become clearly visible on hover with destructive/high-contrast styling. It may be hidden when not hovering, but it must not be obscured by the status text.
 - Closing and reopening the Release Map after analysis must preserve the live editable analysis context until Apply or a new Analyze starts. Reopening must not silently downgrade to a read-only snapshot and remove Ignore/Re-Analyze/Apply actions.
 
-- Clicking **Ignore** on a track marks that track/recording identity as ignored for optimization and adds it to the persistent track-ignore list. The current graph does **not** silently mutate into a final state yet; instead, the global **Re-Analyze** button becomes visually highlighted/enabled to show there are unapplied analysis changes.
-- Track Ignore means: this ignored recording no longer contributes coverage, uniqueness, or release-retention value during the next re-analysis. Other tracks in the same release continue to follow normal rules.
+- Clicking **Ignore** on a track excludes only that exact physical track instance from optimization and adds only that instance to the persistent track-ignore list. It must never expand through acoustic group ID, fingerprint equality, base title, or another release carrying the same recording. The current graph does **not** silently mutate into a final state yet; instead, the global **Re-Analyze** button becomes visually highlighted/enabled to show there are unapplied analysis changes.
+- Track Ignore means: only the clicked physical file/CUE track stops contributing coverage, uniqueness, or release-retention value during the next re-analysis. Other copies of the same recording and other tracks in the same release continue to follow normal rules.
 - Clicking **Ignore** on a release is a separate operation from track Ignore. It excludes **only that exact release** as a source candidate for the next optimization pass. It does **not** ignore or blacklist the recordings inside that release; those recordings remain eligible to be supplied by any other release according to normal matching/selection rules.
 - Any pending track-ignore or release-ignore change highlights/enables **Re-Analyze**. Re-Analyze must use the already-computed scan/probe/fingerprint/comparison data whenever possible and re-run the collection-selection logic with the new ignore constraints; do not unnecessarily rescan or re-fingerprint unchanged audio.
 - Re-Analyze must reconsider releases that were previously classified as duplicate/hidden, because they may become necessary replacement sources after a track or release is ignored.
@@ -1052,3 +1052,13 @@ This section supersedes older featured-remix, contextual-remix, and generic Edit
 - Weak labels such as `BT Edit`, `Album Edit`, `Single Mix`, and generic/named edits are not strong enough to veto acoustic comparison.
 - Regression pairs that must reach the acoustic matcher include `Godspeed (Radio Edit)` vs `Godspeed (BT Edit)`, `Remember (American Radio Edit)` vs `Remember (Album Edit)`, and `Remember (Edit)` vs `Remember (Single Mix)`.
 - Strong structural conflicts such as Radio vs Extended or Acoustic vs Instrumental remain eligible for semantic pre-blocking unless exact identical Chromaprint overrides the wording.
+
+
+## v0.22.6 Release Map track-ignore and responsiveness correction
+
+- Track-level `Ignore` / `Restore` is exact-instance only. It must affect only the clicked physical file or virtual CUE track.
+- Acoustic-group identity, identical fingerprint, same base title, and same recording on another release must never cause a second track row to inherit the click.
+- Legacy pre-v0.22.6 broad manual-skip rules based on fingerprint groups/base titles are not reapplied because their original physical target cannot be recovered safely.
+- Ignore/Restore clicks update the visible row and dirty/Re-Analyze state immediately without rebuilding the complete Release Map or rerunning optimization.
+- Expensive plan/map reconstruction happens on explicit `Re-Analyze`, not on every click.
+- Full track titles in Release Map details wrap to multiple lines instead of permanent ellipsis truncation; the complete title is also available as a native hover tooltip.
