@@ -260,6 +260,17 @@ public:
     explicit MainWindow(HINSTANCE instance);
     int Run();
 
+    AnalysisResult& Result() { return result_; }
+    Settings& CurrentSettings() { return settings_; }
+    Engine& Core() { return engine_; }
+    HFONT UiFont() const { return font_; }
+    HBRUSH PanelBrush() const { return panelBrush_; }
+    HBRUSH FieldBrush() const { return fieldBrush_; }
+    uint64_t InitialReleaseCount() const { return initialReleaseCount_; }
+    uint64_t InitialTrackCount() const { return initialTrackCount_; }
+    void LogUi(const std::wstring& s) { AppendActivity(s); }
+    void RefreshButtons() { UpdateButtons(); }
+
 private:
     HINSTANCE instance_{};
     HWND hwnd_{};
