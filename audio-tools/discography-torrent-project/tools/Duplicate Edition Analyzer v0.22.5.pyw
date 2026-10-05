@@ -1774,7 +1774,8 @@ def _review_pair_payload(
 
 
 FEATURE_CREDIT_RE = re.compile(
-    r"(?:[\[(]\s*)?\b(?:feat(?:uring)?|ft)\.?\s+([^\])]+)",
+    r"(?:[\[(]\s*)?\b(?:feat(?:uring)?|ft)\.?\s+"
+    r"(.+?)(?=\s+-\s+|\s+[\[(]|[\])]|$)",
     re.I,
 )
 
@@ -12234,6 +12235,16 @@ def _standalone_self_test() -> None:
         title="Always (Example Remix) (feat. New Singer)",
         artist="BT feat. Rob Dickinson",
     )
+    filename_feature_probe = Track(
+        release_id=-105,
+        path=Path("BT feat. Kirsty Hawkshaw - Dreaming (Libra Mix).flac"),
+        index=99,
+        title="Dreaming (Libra Mix)",
+        artist="BT feat. Kirsty Hawkshaw",
+    )
+    if featured_artists(filename_feature_probe) != {"kirstyhawkshaw"}:
+        raise RuntimeError("Featured-artist parser self-test failed: filename credit over-captured.")
+
     baseline_release.tracks = [normal_featured, same_feature_remix, added_feature_remix]
     configure_exclusions(
         [baseline_release],
