@@ -22,7 +22,7 @@ Current priority order:
 9. When all earlier rules tie for interchangeable releases, any measurable better DR/mastering score wins.
 10. If mastering also ties, prefer the already processed Existing copy over Recycle/update.
 11. Compilations are below regular Album/EP/Single releases and are retained only for wanted song/version coverage unavailable on regular releases.
-12. Use manual acoustic review only for rare ambiguous cases: strong same-audio evidence with different titles, or a narrow near-threshold same-title match.
+12. Duplicate identity is fully automatic: accepted acoustic matches merge automatically regardless of title/artist naming differences; non-accepted matches stay separate automatically. No acoustic manual review.
 
 ## 2. Albums and editions
 
@@ -147,10 +147,10 @@ Acoustic fingerprinting is the duplicate authority for tracks that are eligible 
 - A stated semantic Version is a unique song/version and different Version families do not enter cross-version duplicate comparison.
 - Examples include Radio Edit/Version, Extended Mix/Version, Acoustic, Instrumental, A Cappella, language versions and comparable explicit version descriptors.
 
-Rare manual review:
-- strong acoustic match + different base titles -> manual review;
-- narrow near-threshold same-title match -> manual review;
-- unchecked review means keep them separate; checked Same recording merges them.
+Automatic acoustic decision policy:
+- accepted acoustic match -> merge automatically, even when titles or artist credits differ;
+- non-accepted / near-threshold match -> keep separate automatically;
+- no acoustic identity decision is delegated to the user.
 
 ## 7. Source preference
 
@@ -238,13 +238,13 @@ Final filesystem-plan states:
 - REPLACE
 - NEW
 
-Manual acoustic REVIEW is a temporary analysis-stage state, not a final release outcome.
+There is no acoustic REVIEW state.
 
-Only rare ambiguous pairs enter REVIEW:
-- strong acoustic match but different base titles;
-- narrow near-threshold same-title acoustic match.
+Duplicate identity is automatic:
+- accepted acoustic evidence merges the pair;
+- anything below automatic acceptance remains separate;
+- different naming never turns an accepted acoustic match into a user choice.
 
-Unchecked review means treat the pair as different. Checked Same recording merges it.
 Every REDUNDANT/REPLACE result must explain which retained release/track covers it.
 
 ## 11. Confidence
@@ -255,9 +255,9 @@ Automatic duplicate identity requires high-confidence acoustic evidence.
 - alignment may compensate for silence/padding;
 - substantial unmatched non-silent content blocks a merge;
 - different stated Version families are unique and are filtered before cross-version matching;
-- different-title strong matches go to manual review instead of auto-merge;
-- narrow near-threshold same-title matches go to manual review instead of silent rejection;
-- everything outside automatic acceptance and the narrow review window remains separate.
+- different-title strong matches merge automatically when the acoustic matcher accepts them;
+- narrow near-threshold non-matches remain separate automatically;
+- everything outside automatic acceptance remains separate without asking the user.
 
 External database recording identifiers are not part of this analyzer.
 
@@ -349,7 +349,7 @@ The historical 3OH!3 dataset remains a regression dataset, but current v0.22.0 r
 - Explicit supersedes corresponding Clean before fingerprinting;
 - keep all albums represented;
 - CD/WEB, CD-log threshold/quality, total retained track count, DR/mastering, then Existing precedence apply in that order;
-- rare ambiguous acoustic cases use manual review.
+- acoustic duplicate identity requires zero manual input: accepted matches merge automatically; all others remain separate.
 
 ## Persistent user data
 
@@ -967,10 +967,27 @@ This section supersedes older historical wording elsewhere in this file.
 - External database recording IDs are not read or used.
 - No external rip-database confidence/verifier is used.
 - Version = unique song/version; different stated Version families are not cross-compared.
-- Different-title strong acoustic matches and narrow near-threshold same-title matches go to rare manual review.
+- Different-title accepted acoustic matches merge automatically; near-threshold non-matches remain separate automatically. No acoustic manual review.
 - Explicit > Clean before fingerprinting.
 - Compilations are lower than regular Album/EP/Single and survive only for wanted groups unavailable on regular releases.
 - CD rip log threshold is 80, with hey-bro-check-log as the authority.
 - Optimize total retained track count, not physical file count; CUE images receive no one-file discount.
 - DR has no material threshold: when earlier rules tie, any measurable better DR score wins.
 - Existing is only the later tie when source/log/track-count/DR all tie.
+
+## v0.22.1 zero-manual-input acoustic identity
+
+This section supersedes every older manual-acoustic-review rule.
+
+- The analyzer must never ask the user whether two tracks are the same recording.
+- If the acoustic matcher accepts a pair, the pair is the same recording automatically.
+- Different title spelling, alternate title, typo, artist-credit difference, featured-credit difference, or release context must not downgrade an accepted acoustic match to REVIEW.
+- If the acoustic matcher does not accept a pair, keep both recordings separate automatically.
+- Near-threshold/ambiguous non-matches are preserved, not reviewed.
+- Stated semantic Version families remain unique and are filtered before cross-version duplicate comparison.
+- The goal is zero manual duplicate-identity input while remaining conservative when audio evidence is insufficient.
+
+Regression case:
+- `Voigt Kampff Test - BT & Nick Phoenix` vs `Voigt Kamff Test - BT`;
+- score about 0.1152, overlap 100%, good 100%, definitive acoustic identity true;
+- required result: automatic MATCH and no user prompt.
