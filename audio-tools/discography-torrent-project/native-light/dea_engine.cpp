@@ -902,7 +902,7 @@ void Engine::ApplyDynamicRangeFinalTies(std::vector<Release>& releases,std::vect
     if(checked&&log)log(L"DR final-tie comparisons: "+std::to_wstring(checked));
 }
 
-bool Engine::Analyze(const Settings& settings,const AnalysisOptions& options,AnalysisResult& out,ProgressFn progress,LogFn log,std::atomic_bool& cancel,std::wstring& error){
+bool Engine::Analyze(const Settings& settings,const AnalysisOptions& options,AnalysisResult& out,PatternReviewFn patternReview,ProgressFn progress,LogFn log,std::atomic_bool& cancel,std::wstring& error){
     out={};auto started=std::chrono::steady_clock::now();
     if(!EnsureDependencies(progress,log,error))return false;
     if(settings.incoming.empty()||!fs::is_directory(settings.incoming)){error=L"Select a valid New / update releases folder.";return false;}
@@ -916,13 +916,21 @@ bool Engine::Analyze(const Settings& settings,const AnalysisOptions& options,Ana
     if(!ScanRoot(settings.incoming,RootKind::Incoming,out.releases,out.tracks,progress,log,cancel,error))return false;
     out.totalFiles=out.tracks.size();
     if(!ProbeTracks(out.tracks,progress,log,cancel,error))return false;
-    ClassifyTracks(out.releases,out.tracks,options,log);
+
+    AnalysisOptions effectiveOptions=options;
+    for(auto& t:out.tracks)t.unusualPattern=DetectUnusualPattern(t.title);
+    auto unusual=CollectUnusualPatterns(out.tracks);
+    if(!unusual.empty()&&patternReview){
+        effectiveOptions.keptPatterns=patternReview(unusual);
+        if(cancel)return false;
+    }
+    ClassifyTracks(out.releases,out.tracks,effectiveOptions,log);
     for(auto&t:out.tracks){if(t.excluded)++out.excludedTracks;else ++out.eligibleTracks;}
     DetectReleaseTypes(out.releases);DetectAlbumFamilies(out.releases);ScoreRipLogs(out.releases,log);
     if(!FingerprintTracks(out.tracks,progress,log,cancel,error))return false;
     BuildRecordingGroups(out.tracks,progress,log,cancel);if(cancel)return false;
     BuildReleaseGroups(out.releases,out.tracks);
-    out.selectedReleases=Optimize(out.releases,out.tracks,options,progress,log);
+    out.selectedReleases=Optimize(out.releases,out.tracks,effectiveOptions,progress,log);
     ApplyDynamicRangeFinalTies(out.releases,out.tracks,out.selectedReleases,progress,log);
     for(auto&r:out.releases)r.selected=out.selectedReleases.count(r.id)>0;
     if(progress)progress({L"Analysis complete",out.tracks.size(),out.tracks.size(),0,started});
