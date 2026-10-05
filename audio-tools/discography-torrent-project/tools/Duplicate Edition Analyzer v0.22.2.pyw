@@ -11842,6 +11842,25 @@ def _standalone_self_test() -> None:
     if not callable(score_log):
         raise RuntimeError("Standalone dependency self-test failed: hey-bro-check-log")
 
+    policy_checks = [
+        (clean_metadata_text("NamastÃ©") == "Namasté", "mojibake repair"),
+        (clean_metadata_text('BT"') == "BT", "unmatched tag-edge quote cleanup"),
+        (clean_metadata_text("'Til Morning") == "'Til Morning", "legitimate apostrophe preservation"),
+        (
+            "lunar mode" in _semantic_version_descriptors("The Overview Effect (Lunar Mode)"),
+            "named Mode semantic version detection",
+        ),
+        (
+            "extended" in _release_level_version_families("Extended Versions"),
+            "release-level Extended Versions detection",
+        ),
+    ]
+    failed_policy_checks = [label for ok, label in policy_checks if not ok]
+    if failed_policy_checks:
+        raise RuntimeError(
+            "Standalone policy self-test failed: " + ", ".join(failed_policy_checks)
+        )
+
     checks = [
         ([ffmpeg, "-version"], "ffmpeg"),
         ([ffprobe, "-version"], "ffprobe"),
