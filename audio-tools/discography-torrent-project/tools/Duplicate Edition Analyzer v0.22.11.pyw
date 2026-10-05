@@ -908,7 +908,7 @@ def _mix_descriptor_candidates(text: str, allow_bare: bool = True) -> List[str]:
         candidates.append(normalize_space(trailing.group(1)))
 
     # Also catch a bare descriptor only when explicitly allowed. Full track titles
-    # such as "Club Rocker (Play & Win Mix)" must not become phrase candidates.
+    # such as "Club Rocker (Play & Win Mix)" must not become standalone descriptor candidates.
     if allow_bare and re.fullmatch(r".+\bmix(?:\s*#?\d+)?", source, re.I):
         candidates.append(source)
 
@@ -10268,7 +10268,7 @@ class App(tk.Tk):
         self.run_btn.configure(state="disabled")
         self.progress_var.set(0)
         self.progress_detail_var.set("")
-        self.status_var.set("Scanning phrases and track patterns")
+        self.status_var.set("Scanning track patterns")
         self._last_progress_stage = ""
         self._clear_activity()
         self._append_activity("Started")
@@ -11417,7 +11417,7 @@ def _qt_main_app() -> int:
             self.review_pending = False
             self.progress_pct = 0.0
             self.progress_count = ""
-            self.status = "Scanning phrases and track patterns"
+            self.status = "Scanning track patterns"
             self._last_progress_stage = ""
             self._clear_activity()
             self._append_activity("Started")
