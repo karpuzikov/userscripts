@@ -59,6 +59,11 @@ void SetFontAll(HWND parent,HFONT font){
 std::wstring GetText(HWND h){
     int n=GetWindowTextLengthW(h);std::wstring s(n,0);if(n)GetWindowTextW(h,s.data(),n+1);return s;
 }
+std::wstring TrimUi(std::wstring s){
+    while(!s.empty()&&std::iswspace(s.front()))s.erase(s.begin());
+    while(!s.empty()&&std::iswspace(s.back()))s.pop_back();
+    return s;
+}
 void PutText(HWND h,const std::wstring& s){SetWindowTextW(h,s.c_str());}
 
 std::optional<fs::path> PickFolder(HWND owner,const fs::path& start){
@@ -185,7 +190,7 @@ LRESULT CALLBACK PickProc(HWND h,UINT m,WPARAM w,LPARAM l){
         MoveWindow(d->list,p,120,W-2*p,H-180,TRUE);MoveWindow(GetDlgItem(h,IDC_PICK_REMOVE),p,H-48,116,32,TRUE);MoveWindow(GetDlgItem(h,IDC_CANCEL),W-198,H-48,84,32,TRUE);MoveWindow(GetDlgItem(h,IDC_PICK_SAVE),W-106,H-48,90,32,TRUE);return 0;}
     case WM_COMMAND:{
         int id=LOWORD(w);
-        if(id==IDC_PICK_PHRASE||id==IDC_PICK_EXACT){auto v=Trim(GetText(d->edit));if(!v.empty()){PersonalPick p;p.mode=id==IDC_PICK_EXACT?PersonalPick::Mode::Exact:PersonalPick::Mode::Contains;p.value=v;d->picks.push_back(p);PutText(d->edit,L"");RefreshPickList(d);}}
+        if(id==IDC_PICK_PHRASE||id==IDC_PICK_EXACT){auto v=TrimUi(GetText(d->edit));if(!v.empty()){PersonalPick p;p.mode=id==IDC_PICK_EXACT?PersonalPick::Mode::Exact:PersonalPick::Mode::Contains;p.value=v;d->picks.push_back(p);PutText(d->edit,L"");RefreshPickList(d);}}
         else if(id==IDC_PICK_REMOVE){int sel=ListView_GetNextItem(d->list,-1,LVNI_SELECTED);if(sel>=0&&sel<(int)d->picks.size()){d->picks.erase(d->picks.begin()+sel);RefreshPickList(d);}}
         else if(id==IDC_PICK_SAVE){d->save=true;d->done=true;DestroyWindow(h);}
         else if(id==IDC_CANCEL){d->save=false;d->done=true;DestroyWindow(h);}return 0;}
