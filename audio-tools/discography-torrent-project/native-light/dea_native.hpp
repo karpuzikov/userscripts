@@ -183,6 +183,9 @@ class Engine {
 public:
     using ProgressFn = std::function<void(const Progress&)>;
     using LogFn = std::function<void(const std::wstring&)>;
+    using PatternReviewFn = std::function<std::set<std::wstring>(
+        const std::vector<std::pair<std::wstring,int>>&
+    )>;
 
     Engine();
     const AppPaths& Paths() const { return paths_; }
@@ -192,7 +195,8 @@ public:
 
     bool EnsureDependencies(ProgressFn progress, LogFn log, std::wstring& error);
     bool Analyze(const Settings& settings, const AnalysisOptions& options, AnalysisResult& out,
-                 ProgressFn progress, LogFn log, std::atomic_bool& cancel, std::wstring& error);
+                 PatternReviewFn patternReview, ProgressFn progress, LogFn log,
+                 std::atomic_bool& cancel, std::wstring& error);
     bool Reoptimize(AnalysisResult& result, const AnalysisOptions& options, ProgressFn progress,
                     LogFn log, std::wstring& error);
     bool ApplyPlan(const AnalysisResult& result, const Settings& settings, LogFn log, std::wstring& error);
