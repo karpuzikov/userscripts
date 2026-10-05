@@ -959,7 +959,7 @@ Featured-remix exception:
 - applies only when the remix introduces at least one featured performer absent from the normal non-remix version of that same song/primary artist;
 - such tracks are not early-discarded when `Save Remixes` is OFF;
 - a featured vocalist already present on the normal song does not qualify;
-- if no normal counterpart exists in the analyzed collection, an explicit feat./ft./featuring credit remains a conservative exception;
+- if no normal counterpart exists, artist-tag or filename-prefix feat./ft./featuring is not enough to preserve the remix; only a feature explicitly attached to the remix/version wording itself is an exception;
 - they are fingerprinted, compared, grouped, coverage-counted, dynamically analyzed when otherwise eligible, and optimized like normal wanted audio;
 - the exception does not apply to ordinary remixer naming such as `Artist Remix` or `Artist Mix`.
 
@@ -968,7 +968,7 @@ Featured-remix exception:
 
 - Early Remix/Live elimination is implemented in the executable pipeline.
 - Eliminated tracks are not fingerprinted, indexed, acoustically compared, grouped, dynamically analyzed, or optimized.
-- A remix with an explicit `feat.`, `ft.`, or `featuring` credit in title/filename/artist metadata is an exception only when that feature is new relative to the normal version of the same song/primary artist, or when no normal counterpart exists to disprove it.
+- A remix with `feat.`/`ft.`/`featuring` is an exception only when the performer is proven new relative to a normal version of the same song/primary artist, or when the feature is explicitly attached to the remix/version wording itself. Artist-credit prefixes alone never prove a remix-added feature.
 - A featured remix that is also Live still obeys `Save Live recordings`.
 - Detailed comparison logs record eligible-track count, early-eliminated count, and featured-remix exception count.
 
@@ -1045,7 +1045,7 @@ This section supersedes older featured-remix, contextual-remix, and generic Edit
 - Determine ordinary featured performers from non-remix/non-live versions of the same base song and primary artist across the analyzed collection.
 - If a remix carries only those ordinary feature credits, it is excluded when Save Remixes is OFF.
 - If the remix adds a new explicit featured performer, it remains the sole Save-Remixes exception.
-- If no normal counterpart exists, an explicit feat./ft./featuring credit is kept conservatively.
+- If no normal counterpart exists, a feature in the artist credit or filename artist prefix is not preserved automatically; only remix-specific feature wording can create the exception.
 - Parent-family Remix inheritance is release-title independent and collection-wide, scoped by base song + primary artist. Explicit remixer evidence on one release can classify the same remixer's child edit/version on another release.
 - Examples that must classify as Remix when remixer evidence exists anywhere in the analyzed collection include `Mood II Swing Radio Edit`, `Mantronik Electrohippy Formula`, `Dave Aude Radio Edit`, `Loverush UK! Radio Edit`, `Lucid Mix Edit`, and comparable named child variants.
 - A confident non-primary two-word possessive remixer descriptor such as `Simon Hale's Orchestrata` is Remix even without a literal Mix/Remix word.
