@@ -38,6 +38,30 @@ jobs:
           print(f"Compiling {latest}")
           py_compile.compile(str(latest), doraise=True)
 
+      - name: Install Ruff
+        run: python -m pip install --disable-pip-version-check --quiet ruff
+
+      - name: Check undefined names
+        shell: python
+        run: |
+          import re
+          import subprocess
+          from pathlib import Path
+
+          root = Path("audio-tools/discography-torrent-project/tools")
+          files = list(root.glob("Duplicate Edition Analyzer v*.pyw"))
+
+          def version_key(path):
+              match = re.search(r"v(\d+)\.(\d+)\.(\d+)\.pyw$", path.name)
+              return tuple(map(int, match.groups())) if match else (-1, -1, -1)
+
+          latest = max(files, key=version_key)
+          print(f"Checking undefined names in {latest}")
+          subprocess.run(
+              ["ruff", "check", "--select", "F821", str(latest)],
+              check=True,
+          )
+
       - name: Validate embedded Release Map JavaScript
         shell: python
         run: |
