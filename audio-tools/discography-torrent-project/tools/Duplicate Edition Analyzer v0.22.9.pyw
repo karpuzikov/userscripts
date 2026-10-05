@@ -9534,8 +9534,12 @@ def _qt_release_map_process(session_path: Path, result_path: Path) -> int:
         def openFolder(self, value: str):
             try:
                 _open_path_location(value)
-            except Exception as exc:
-                QMessageBox.warning(QApplication.activeWindow(), APP_NAME, str(exc))
+            except Exception:
+                QMessageBox.warning(
+                    QApplication.activeWindow(),
+                    APP_NAME,
+                    "This release path could not be opened. The displayed path remains unchanged.",
+                )
 
         @Slot(str)
         def copyPath(self, value: str):
@@ -11124,7 +11128,11 @@ button:focus-visible,input:focus-visible{
 .pickMode{color:#8fbfe4;font-size:11px;font-weight:700}
 .pickValue{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .empty{color:#7f8a99;padding:15px;text-align:center}
-.msg{line-height:1.55;color:#dce3ec;white-space:pre-wrap}
+.msg{line-height:1.55;color:#dce3ec}
+.msgLine{min-height:1.55em;white-space:pre-wrap}
+.msgPathLine{display:flex;align-items:center;gap:7px;min-width:0}
+.msgPathPrefix{white-space:pre-wrap}
+.msgPathValue{min-width:0;word-break:break-all;font-family:"Cascadia Mono","Consolas",monospace;font-size:11px;color:#b8c5d6}
 .doneGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .doneStat{padding:9px 10px;border:1px solid #29313c;border-radius:8px;background:#151a21}
 .doneStat b{display:block;font-size:16px;margin-top:2px}
@@ -11297,9 +11305,33 @@ document.addEventListener("keydown",function(e){
     closeModal();
   }
 });
+function messageBodyWithPaths(message){
+  const lines=String(message==null?"":message).split("\n");
+  return '<div class="msg">'+lines.map(function(line){
+    let pos=line.search(/[A-Za-z]:[\\/]/);
+    if(pos<0){
+      const unc=line.indexOf("\\\\");
+      if(unc>=0)pos=unc;
+    }
+    if(pos<0)return '<div class="msgLine">'+(line?esc(line):'&nbsp;')+'</div>';
+    const prefix=line.slice(0,pos);
+    const path=line.slice(pos).trim();
+    if(!path)return '<div class="msgLine">'+esc(line)+'</div>';
+    return '<div class="msgLine msgPathLine">'
+      +'<span class="msgPathPrefix">'+esc(prefix)+'</span>'
+      +'<button class="iconBtn msgPathOpen" data-path="'+esc(path)+'" title="Open path location" aria-label="Open path location">📁</button>'
+      +'<span class="msgPathValue">'+esc(path)+'</span></div>';
+  }).join("")+'</div>';
+}
+function bindMessagePathButtons(){
+  document.querySelectorAll(".msgPathOpen").forEach(function(btn){
+    btn.onclick=function(){bridge.openPath(btn.dataset.path||"");};
+  });
+}
 function messageModal(title,message){
-  openModal("message",title,"",'<div class="msg">'+esc(message)+'</div>',
+  openModal("message",title,"",messageBodyWithPaths(message),
     '<div class="modalSpacer"></div><button class="btn primary" id="msgOk">OK</button>');
+  bindMessagePathButtons();
   document.getElementById("msgOk").onclick=closeModal;
 }
 function confirmModal(title,message,yesText,onYes){
@@ -12544,6 +12576,11 @@ def _standalone_self_test() -> None:
             'id="applyBtn" disabled>Apply file changes</button>' in map_html
             and 'window.confirm(' in map_html,
             "Release Map file-changing Apply action requires an explicit confirmation.",
+        ),
+        (
+            'function messageBodyWithPaths(message)' in main_html
+            and 'class="iconBtn msgPathOpen"' in main_html,
+            "Main error/info messages must automatically add open-location controls for displayed paths.",
         ),
     ]
     failed_ui_checks = [message for ok, message in ui_checks if not ok]
