@@ -261,7 +261,7 @@ Automatic duplicate identity requires high-confidence acoustic evidence.
 - same-title eligible tracks can merge only after passing active acoustic thresholds;
 - alignment may compensate for silence/padding;
 - substantial unmatched non-silent content blocks a merge;
-- different stated Version families are unique and are filtered before cross-version matching;
+- only two explicitly stated, disjoint Version families may be filtered before expensive cross-version matching; unlabeled-vs-labeled pairs remain eligible, and exact identical Chromaprint always overrides wording;
 - different-title strong matches merge automatically when the acoustic matcher accepts them;
 - narrow near-threshold non-matches remain separate automatically;
 - everything outside automatic acceptance remains separate without asking the user.
