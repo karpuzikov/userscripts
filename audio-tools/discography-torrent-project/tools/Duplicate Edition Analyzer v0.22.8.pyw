@@ -6463,17 +6463,16 @@ def report_text(existing: Optional[Path], recycle: Path, releases: List[Release]
     lines.append(f"Recycle/update: {recycle}")
     lines.append("")
     lines.append("RULE PRIORITY")
-    lines.append("1. Preserve every wanted unique song/version and keep every album represented.")
-    lines.append("2. Remix/Live exclusions happen at step 1; the only Save-Remixes exception is a featured artist added by the remix itself, not a vocalist already present on the normal song.")
-    lines.append("3. Explicit supersedes the corresponding Clean track before fingerprint analysis.")
-    lines.append("4. Only two explicitly stated, disjoint Version families are hard-skipped before audio comparison. Unlabeled titles remain acoustically comparable, and exact identical Chromaprint always overrides wording.")
-    lines.append("5. Prefer CD/physical source over equivalent WEB content.")
-    lines.append("6. For CD alternatives, hey-bro-check-log is the rip-quality authority; 80 is the acceptable threshold.")
-    lines.append("7. Minimize total carried track count across the retained collection, including excluded extras inside a kept release.")
-    lines.append("8. Prefer the Existing processed copy when the earlier non-DR criteria are otherwise tied.")
-    lines.append("9. DR/mastering is measured only for a final unresolved tie after every non-DR criterion above is equal; any measurable better score then wins.")
-    lines.append("10. Compilations are below regular Album/EP/Single releases and are retained only for wanted material unavailable on regular releases.")
-    lines.append("11. Acoustic identity is automatic: accepted acoustic matches merge; rejected/near-threshold pairs remain separate. No manual acoustic choice is required.")
+    lines.append("1. Preserve every wanted unique recording root/group.")
+    lines.append("2. Keep every album represented by one of its editions with the highest distinct included wanted-track count; strict same-album subsets are eliminated first.")
+    lines.append("3. Minimize total retained track count across the whole collection.")
+    lines.append("4. If tied, minimize total retained release count.")
+    lines.append("5. Source/CD-rip quality is a later tie-break; hey-bro-check-log score 80 remains the acceptable CD threshold.")
+    lines.append("6. Prefer the Existing processed copy only after the earlier criteria tie.")
+    lines.append("7. DR/mastering is measured only for a final unresolved tie after every non-DR criterion is equal.")
+    lines.append("8. Radio/Edit forms may be replaceable Versions; base Extended, Instrumental, Acapella, Acoustic, Live/Unplugged and Remix are distinct recording roots.")
+    lines.append("9. Remix/Live exclusions happen before comparison; Explicit still supersedes the corresponding Clean track.")
+    lines.append("10. Acoustic identity is automatic; exact identical Chromaprint overrides wording.")
     lines.append("")
     lines.append("SUMMARY")
     lines.append(f"Releases scanned: {len(releases)}")
@@ -6792,7 +6791,10 @@ def build_release_decisions(
             if essential_tracks:
                 factors.append(f"{len(essential_tracks)} recording(s) are unique to this retained release within the final set.")
             elif rel.release_type == "album":
-                factors.append("Album representation is required even though its recordings are covered elsewhere.")
+                factors.append(
+                    f"Album representation requires a most-complete edition; this edition carries "
+                    f"{_album_unique_track_count(rel)} distinct included wanted recording group(s)."
+                )
             else:
                 factors.append("Chosen by the global minimum-track/minimum-release coverage solution.")
 
