@@ -292,6 +292,8 @@ private:
     std::thread worker_;
     std::mutex resultMutex_;
     bool running_{false};
+    uint64_t initialReleaseCount_{0};
+    uint64_t initialTrackCount_{0};
 
     static LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
     static LRESULT CALLBACK ReleaseMapProc(HWND, UINT, WPARAM, LPARAM);
