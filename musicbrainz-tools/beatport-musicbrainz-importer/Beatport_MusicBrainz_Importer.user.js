@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Beatport - MusicBrainz Importer
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.2.14
+// @version      1.2.15
 // @description  Import Beatport and BPTopTracker releases into MusicBrainz, with BPTopTracker 500-page redirect, Beatport enrichment, ISRC matching, and release-source handling.
 // @author       karpuzikov
 // @match        https://www.beatport.com/*
@@ -10,6 +10,7 @@
 // @match        *://www.bptoptracker.com/*
 // @match        *://bptoptracker.com/*
 // @connect      musicbrainz.org
+// @connect      harmony.pulsewidth.org.uk
 // @connect      api.github.com
 // @connect      music.apple.com
 // @connect      amp-api.music.apple.com
@@ -212,13 +213,14 @@ function __bpMbGmXmlhttpRequest(details) {
     const MB_WS = 'https://musicbrainz.org/ws/2';
     const MAGIC_ISRC = 'https://magicisrc.kepstin.ca/';
     const APPLE_API_BASE = 'https://amp-api.music.apple.com/v1';
+    const HARMONY_URL = 'https://harmony.pulsewidth.org.uk/';
     const PURCHASE_FOR_DOWNLOAD = 74;
     const PAID_STREAMING = 980;
     const VARIOUS_ARTISTS_MBID = '89ad4ac3-39f7-470e-963a-56509c546377';
     const UI_ID = 'beatport-musicbrainz-importer';
     const MB_RELEASE_INDICATOR_ID = 'beatport-mb-release-indicator';
     const MB_RELEASE_INDICATOR_STYLE_ID = 'beatport-mb-release-indicator-style';
-    const MB_RELEASE_LINK_CACHE_KEY = 'beatport-mb-release-links:v1';
+    const MB_RELEASE_LINK_CACHE_KEY = 'beatport-mb-release-links:v2';
     const MB_RELEASE_FOUND_TTL = 30 * 24 * 60 * 60 * 1000;
     const MB_RELEASE_MISSING_TTL = 15 * 1000;
     const MAX_DIFFERENCE_MS = 7000;
@@ -1511,9 +1513,29 @@ function __bpMbGmXmlhttpRequest(details) {
         return sources;
     }
 
-    async function fetchReleaseSourcesByMbid(mbid) {
-        const release = await mbJson(`/release/${encodeURIComponent(mbid)}?inc=url-rels+media&fmt=json`, { allow404: true });
-        return release ? releaseRelationSources(release) : [];
+    async function fetchReleaseSourcesByMbid(mbid, expectedBarcode = '') {
+        const release = await mbJson(
+            `/release/${encodeURIComponent(mbid)}?inc=url-rels+media&fmt=json`,
+            {allow404: true}
+        );
+        if (!release) return [];
+
+        if (
+            expectedBarcode &&
+            (!release.barcode || !equalGtin(release.barcode, expectedBarcode))
+        ) {
+            console.warn(
+                '[Beatport MB Importer] Ignoring MusicBrainz release sources because its barcode does not exactly match Beatport:',
+                {
+                    beatportBarcode: expectedBarcode,
+                    musicBrainzBarcode: release.barcode || '',
+                    musicBrainzRelease: mbid,
+                }
+            );
+            return [];
+        }
+
+        return releaseRelationSources(release);
     }
 
     async function findMusicBrainzSourcesByBarcode(barcode, linkedReleaseIds, setStatus) {
@@ -1524,7 +1546,11 @@ function __bpMbGmXmlhttpRequest(details) {
         const ids = new Set(linkedReleaseIds || []);
 
         for (const release of search?.releases || []) {
-            if (release?.id && (!release.barcode || equalGtin(release.barcode, barcode))) {
+            if (
+                release?.id &&
+                release?.barcode &&
+                equalGtin(release.barcode, barcode)
+            ) {
                 ids.add(release.id);
             }
         }
@@ -1533,7 +1559,12 @@ function __bpMbGmXmlhttpRequest(details) {
         const sources = [];
         for (let index = 0; index < selected.length; index++) {
             setStatus(`Reading linked release sources (${index + 1}/${selected.length})...`);
-            sources.push(...await fetchReleaseSourcesByMbid(selected[index]));
+            sources.push(
+                ...await fetchReleaseSourcesByMbid(
+                    selected[index],
+                    barcode
+                )
+            );
         }
         return sources;
     }
@@ -1641,22 +1672,147 @@ function __bpMbGmXmlhttpRequest(details) {
         return null;
     }
 
+    async function lookupAppleBarcodeByUrl(value) {
+        const parsed = parseAppleAlbumUrl(value);
+        if (!parsed) return '';
+
+        try {
+            const json = await appleApiRequest(
+                `${APPLE_API_BASE}/catalog/${parsed.storefront}/albums/${parsed.id}`,
+                parsed.pageUrl
+            );
+            const album = (json.data || []).find(
+                item => item?.type === 'albums'
+            ) || json.data?.[0];
+            return String(album?.attributes?.upc || '').trim();
+        } catch (error) {
+            console.debug(
+                '[Beatport MB Importer] Apple Music URL barcode lookup failed',
+                value,
+                error
+            );
+            return '';
+        }
+    }
+
+    function harmonyBarcodeFromHtml(html) {
+        const doc = new DOMParser().parseFromString(html, 'text/html');
+        const row = [...doc.querySelectorAll('table.release-info tr')]
+            .find(item =>
+                normalizeSpace(item.querySelector('th')?.textContent)
+                    .toLowerCase() === 'gtin'
+            );
+        const text = normalizeSpace(
+            row?.querySelector('td')?.textContent || ''
+        );
+        return text.match(
+            /\b(?:\d{14}|\d{13}|\d{12}|\d{8})\b/
+        )?.[0] || '';
+    }
+
+    async function lookupHarmonyBarcodeByUrl(value) {
+        const lookupUrl =
+            HARMONY_URL +
+            'release?url=' +
+            encodeURIComponent(value) +
+            '&gtin=&region=&deezer=&spotify=&tidal=&qobuz=';
+
+        try {
+            const response = await gmTextRequest(lookupUrl, {
+                timeout: 60000,
+            });
+            return harmonyBarcodeFromHtml(response.text);
+        } catch (error) {
+            console.debug(
+                '[Beatport MB Importer] Harmony provider barcode lookup failed',
+                value,
+                error
+            );
+            return '';
+        }
+    }
+
+    async function lookupProviderBarcode(value) {
+        const family = providerFamily(value);
+        if (!family) return '';
+
+        return family === 'apple'
+            ? lookupAppleBarcodeByUrl(value)
+            : lookupHarmonyBarcodeByUrl(value);
+    }
+
+    async function validateSourcesByExactBarcode(
+        sources,
+        barcode,
+        sourceBeatportUrl,
+        setStatus
+    ) {
+        if (!barcode) return [];
+
+        const candidates = dedupeSources(sources, sourceBeatportUrl);
+        const validated = [];
+
+        for (let index = 0; index < candidates.length; index++) {
+            const source = candidates[index];
+            const provider = providerFamily(source.url);
+            setStatus(
+                'Checking ' +
+                (provider || 'provider') +
+                ' barcode (' +
+                (index + 1) +
+                '/' +
+                candidates.length +
+                ')...'
+            );
+
+            const providerBarcode =
+                await lookupProviderBarcode(source.url);
+
+            if (
+                providerBarcode &&
+                equalGtin(providerBarcode, barcode)
+            ) {
+                validated.push(source);
+                continue;
+            }
+
+            console.warn(
+                '[Beatport MB Importer] Rejected release URL: exact barcode check failed',
+                {
+                    provider,
+                    beatportBarcode: barcode,
+                    providerBarcode: providerBarcode || '',
+                    url: source.url,
+                }
+            );
+        }
+
+        return validated;
+    }
+
     async function findReleaseSources(release, reverseInfo, setStatus) {
         const sourceUrl = cleanBeatportUrl();
         const barcode = String(release?.upc || '').trim();
+        if (!barcode) return [];
+
         const sources = await findMusicBrainzSourcesByBarcode(
             barcode,
             reverseInfo?.linkedReleaseIds || [],
             setStatus
         );
 
-        if (barcode && !sources.some(source => providerFamily(source.url) === 'apple')) {
+        if (!sources.some(source => providerFamily(source.url) === 'apple')) {
             setStatus('Checking Apple Music by barcode...');
             const apple = await lookupAppleByBarcode(barcode);
             if (apple) sources.push(apple);
         }
 
-        return dedupeSources(sources, sourceUrl);
+        return validateSourcesByExactBarcode(
+            sources,
+            barcode,
+            sourceUrl,
+            setStatus
+        );
     }
 
     function buildImport(release, tracks, extraSources = []) {
@@ -1717,7 +1873,7 @@ function __bpMbGmXmlhttpRequest(details) {
             'Existing recordings were matched by Beatport ISRC where the result was unambiguous.',
         ];
         if (extraSources.length) {
-            editNoteLines.push(`Additional release URLs found from barcode/reverse-link lookups: ${extraSources.length}.`);
+            editNoteLines.push(`Barcode-matched provider links: ${extraSources.length}.`);
         }
         editNoteLines.push(`Importer: ${GITHUB_SCRIPT_URL}`);
         params.push(['edit_note', editNoteLines.join('\n')]);
@@ -1835,9 +1991,13 @@ function __bpMbGmXmlhttpRequest(details) {
         const item = readMbReleaseLinkCache()[resource];
         if (!item?.checkedAt || !Array.isArray(item.releases)) return null;
 
-        const ttl = item.releases.length
-            ? MB_RELEASE_FOUND_TTL
-            : MB_RELEASE_MISSING_TTL;
+        const hasUnlinked = item.releases.some(
+            release => release?.linkState === 'unlinked'
+        );
+        const ttl =
+            item.releases.length && !hasUnlinked
+                ? MB_RELEASE_FOUND_TTL
+                : MB_RELEASE_MISSING_TTL;
         return Date.now() - Number(item.checkedAt) <= ttl
             ? item.releases
             : null;
@@ -1864,17 +2024,81 @@ function __bpMbGmXmlhttpRequest(details) {
                 id,
                 title: normalizeSpace(release?.title),
                 disambiguation: normalizeSpace(release?.disambiguation),
+                barcode: '',
+                linkState: 'linked',
             });
         }
 
         return [...unique.values()];
     }
 
-    async function lookupMbReleasesForBeatport(resource, force = false) {
+    function barcodeSearchVariants(value) {
+        const digits = String(value || '').replace(/\D/g, '');
+        if (!digits) return [];
+
+        const base = digits.replace(/^0+/, '') || '0';
+        const variants = new Set([digits, base]);
+        for (let zeros = 1; zeros <= 3; zeros++) {
+            variants.add('0'.repeat(zeros) + base);
+        }
+
+        return [...variants].filter(value => /^\d{8,14}$/.test(value));
+    }
+
+    async function fetchMbReleaseForIndicator(mbid) {
+        return mbJson(
+            '/release/' + encodeURIComponent(mbid) + '?fmt=json',
+            {allow404: true}
+        );
+    }
+
+    async function searchMbReleasesByExactBarcode(barcode) {
+        const variants = barcodeSearchVariants(barcode);
+        if (!variants.length) return [];
+
+        const query = variants
+            .map(value => 'barcode:' + value)
+            .join(' OR ');
+        const data = await mbJson(
+            '/release?query=' + encodeURIComponent(query) +
+            '&fmt=json&limit=100'
+        );
+
+        const unique = new Map();
+        for (const release of data?.releases || []) {
+            const id = String(release?.id || '').trim().toLowerCase();
+            if (
+                !UUID.test(id) ||
+                !release?.barcode ||
+                !equalGtin(release.barcode, barcode)
+            ) {
+                continue;
+            }
+
+            if (!unique.has(id)) {
+                unique.set(id, {
+                    id,
+                    title: normalizeSpace(release?.title),
+                    disambiguation: normalizeSpace(release?.disambiguation),
+                    barcode: String(release.barcode),
+                    linkState: 'unlinked',
+                });
+            }
+        }
+
+        return [...unique.values()];
+    }
+
+    async function lookupMbReleasesForBeatport(
+        resource,
+        barcode = '',
+        force = false
+    ) {
         const cached = cachedMbReleaseLinks(resource, force);
         if (cached !== null) return cached;
 
-        const pendingKey = resource + (force ? ':force' : '');
+        const pendingKey =
+            resource + '|' + String(barcode || '') + (force ? ':force' : '');
         if (mbReleaseLinkPending.has(pendingKey)) {
             return mbReleaseLinkPending.get(pendingKey);
         }
@@ -1886,7 +2110,45 @@ function __bpMbGmXmlhttpRequest(details) {
                     '&inc=release-rels&fmt=json',
                     {allow404: true}
                 );
-                const releases = parseMbReleaseRelations(data);
+
+                let releases = parseMbReleaseRelations(data);
+
+                if (barcode) {
+                    const exactLinked = [];
+                    for (const candidate of releases) {
+                        const full = await fetchMbReleaseForIndicator(candidate.id);
+                        if (
+                            full?.barcode &&
+                            equalGtin(full.barcode, barcode)
+                        ) {
+                            exactLinked.push({
+                                ...candidate,
+                                title: normalizeSpace(full.title) || candidate.title,
+                                disambiguation:
+                                    normalizeSpace(full.disambiguation) ||
+                                    candidate.disambiguation,
+                                barcode: String(full.barcode),
+                                linkState: 'linked',
+                            });
+                        } else if (full?.barcode) {
+                            console.warn(
+                                '[Beatport MB Importer] Ignoring Beatport URL relation with barcode mismatch:',
+                                {
+                                    beatportBarcode: barcode,
+                                    musicBrainzBarcode: full.barcode,
+                                    musicBrainzRelease: candidate.id,
+                                    beatportUrl: resource,
+                                }
+                            );
+                        }
+                    }
+                    releases = exactLinked;
+
+                    if (!releases.length) {
+                        releases = await searchMbReleasesByExactBarcode(barcode);
+                    }
+                }
+
                 storeMbReleaseLinks(resource, releases);
                 return releases;
             } catch (error) {
@@ -1914,6 +2176,19 @@ function __bpMbGmXmlhttpRequest(details) {
         url.searchParams.set('type', 'release');
         url.searchParams.set('method', 'indexed');
         return url.href;
+    }
+
+        function beatportHarmonyReleaseUrl(providerUrl, musicBrainzId = '') {
+        const base =
+            HARMONY_URL +
+            'release?url=' +
+            encodeURIComponent(String(providerUrl || '')) +
+            '&gtin=&region=&deezer=&spotify=&tidal=&qobuz=';
+
+        return musicBrainzId
+            ? base + '&musicbrainz=' +
+                encodeURIComponent(String(musicBrainzId))
+            : base;
     }
 
     function installMbReleaseIndicatorStyles() {
@@ -1948,6 +2223,24 @@ function __bpMbGmXmlhttpRequest(details) {
             #${MB_RELEASE_INDICATOR_ID} a:hover img {
                 opacity: 1 !important;
                 transform: scale(1.12) !important;
+            }
+            #${MB_RELEASE_INDICATOR_ID} > a.beatport-mb-release-link-missing {
+                position: relative !important;
+                overflow: visible !important;
+            }
+            #${MB_RELEASE_INDICATOR_ID} .beatport-mb-broken-chain-badge {
+                position: absolute !important;
+                right: -2px !important;
+                bottom: -2px !important;
+                z-index: 2 !important;
+                width: 10px !important;
+                height: 10px !important;
+                overflow: visible !important;
+                font-size: 9px !important;
+                line-height: 10px !important;
+                text-align: center !important;
+                pointer-events: none !important;
+                filter: drop-shadow(0 1px 1px rgba(0,0,0,.9)) !important;
             }
             #${MB_RELEASE_INDICATOR_ID} .beatport-mb-release-search {
                 width: 16px !important;
@@ -1988,7 +2281,12 @@ function __bpMbGmXmlhttpRequest(details) {
         const heading = findBeatportReleaseHeading();
         if (!heading) return;
 
-        const releases = await lookupMbReleasesForBeatport(resource, force);
+        const barcode = normalizeSpace(release?.upc);
+        const releases = await lookupMbReleasesForBeatport(
+            resource,
+            barcode,
+            force
+        );
         if (
             !Array.isArray(releases) ||
             serial !== processSerial ||
@@ -2006,27 +2304,54 @@ function __bpMbGmXmlhttpRequest(details) {
         const holder = document.createElement('span');
         holder.id = MB_RELEASE_INDICATOR_ID;
         holder.dataset.resource = resource;
-        holder.dataset.missing = releases.length ? '0' : '1';
+        const hasUnlinked = releases.some(
+            candidate => candidate?.linkState === 'unlinked'
+        );
+        holder.dataset.missing =
+            releases.length && !hasUnlinked ? '0' : '1';
 
         if (releases.length) {
-            const linkedRelease = releases[0];
-            const link = document.createElement('a');
-            link.href = 'https://musicbrainz.org/release/' + linkedRelease.id;
-            link.target = '_blank';
-            link.rel = 'noopener noreferrer';
+            for (const candidate of releases) {
+                const unlinked = candidate.linkState === 'unlinked';
+                const link = document.createElement('a');
+                link.href = unlinked
+                    ? beatportHarmonyReleaseUrl(resource, candidate.id)
+                    : 'https://musicbrainz.org/release/' + candidate.id;
+                link.target = '_blank';
+                link.rel = 'noopener noreferrer';
+                if (unlinked) {
+                    link.className = 'beatport-mb-release-link-missing';
+                }
 
-            const label = linkedRelease.title
-                ? 'Open MusicBrainz release: ' + linkedRelease.title
-                : 'Open MusicBrainz release';
-            link.title = linkedRelease.disambiguation
-                ? label + ' (' + linkedRelease.disambiguation + ')'
-                : label;
-            link.setAttribute('aria-label', link.title);
-            link.appendChild(makeMbFavicon());
-            holder.appendChild(link);
+                const releaseLabel = candidate.disambiguation
+                    ? (candidate.title || candidate.id) +
+                        ' (' + candidate.disambiguation + ')'
+                    : (candidate.title || candidate.id);
+
+                link.title = unlinked
+                    ? 'Exact barcode ' +
+                        (candidate.barcode || barcode) +
+                        ' found on MusicBrainz, but the Beatport release is not linked: ' +
+                        releaseLabel
+                    : 'Open MusicBrainz release: ' + releaseLabel;
+                link.setAttribute('aria-label', link.title);
+                link.appendChild(makeMbFavicon());
+
+                if (unlinked) {
+                    const badge = document.createElement('span');
+                    badge.className = 'beatport-mb-broken-chain-badge';
+                    badge.textContent = '⛓️‍💥';
+                    badge.setAttribute('aria-hidden', 'true');
+                    link.appendChild(badge);
+                }
+
+                holder.appendChild(link);
+            }
         } else {
             const icon = document.createElement('span');
-            icon.title = 'No MusicBrainz release link found';
+            icon.title = barcode
+                ? 'No exact-barcode MusicBrainz release link found'
+                : 'No MusicBrainz release link found';
             icon.appendChild(makeMbFavicon());
 
             const question = document.createElement('a');
@@ -2036,7 +2361,8 @@ function __bpMbGmXmlhttpRequest(details) {
             question.target = '_blank';
             question.rel = 'noopener noreferrer';
             question.title = release?.catalog_number
-                ? 'Search MusicBrainz releases by catalog number: ' + release.catalog_number
+                ? 'Search MusicBrainz releases by catalog number: ' +
+                    release.catalog_number
                 : 'Search MusicBrainz releases';
             question.setAttribute('aria-label', question.title);
 
