@@ -3835,7 +3835,8 @@ def merge_equivalent_tracks(
             continue
         for a, b in itertools.combinations(sorted(ids), 2):
             pair = (a, b)
-            if _semantic_version_conflict(tracks[a], tracks[b]):
+            already_exact = "exact_fingerprint" in candidate_reasons.get(pair, set())
+            if not already_exact and _semantic_version_conflict(tracks[a], tracks[b]):
                 funnel["exact_fingerprint_semantic_override"] += 1
             candidate_reasons[pair].add("exact_fingerprint")
             pair_metrics(a, b)
