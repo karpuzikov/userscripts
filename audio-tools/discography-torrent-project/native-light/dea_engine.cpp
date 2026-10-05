@@ -769,7 +769,7 @@ void Engine::BuildRecordingGroups(std::vector<Track>& tracks,ProgressFn progress
 }
 
 void Engine::BuildReleaseGroups(std::vector<Release>& releases,const std::vector<Track>& tracks){
-    for(auto&r:releases){r.groups.clear();for(int ti:r.trackIndices)if(ti>=0&&ti<(int)tracks.size()&&!tracks[ti].excluded&&tracks[ti].groupId>=0)r.groups.insert(tracks[ti].groupId);}
+    for(auto&r:releases){r.groups.clear();for(int ti:r.trackIndices)if(ti>=0&&ti<(int)tracks.size()&&!tracks[ti].excluded&&!tracks[ti].manualSkip&&tracks[ti].groupId>=0)r.groups.insert(tracks[ti].groupId);}
 }
 void Engine::DetectReleaseTypes(std::vector<Release>& releases){
     for(auto&r:releases){
@@ -951,7 +951,8 @@ bool Engine::Analyze(const Settings& settings,const AnalysisOptions& options,Ana
 }
 
 bool Engine::Reoptimize(AnalysisResult& result,const AnalysisOptions& options,ProgressFn progress,LogFn log,std::wstring& error){
-    (void)error;result.selectedReleases=Optimize(result.releases,result.tracks,options,progress,log);
+    (void)error;BuildReleaseGroups(result.releases,result.tracks);
+    result.selectedReleases=Optimize(result.releases,result.tracks,options,progress,log);
     ApplyDynamicRangeFinalTies(result.releases,result.tracks,result.selectedReleases,progress,log);
     for(auto&r:result.releases)r.selected=result.selectedReleases.count(r.id)>0;return true;
 }
