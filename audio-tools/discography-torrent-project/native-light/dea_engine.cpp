@@ -675,7 +675,20 @@ void Engine::ClassifyTracks(std::vector<Release>& releases,std::vector<Track>& t
         bool remixOff=!options.saveRemixes&&t.isRemix&&!t.remixFeatureException;
         bool liveOff=!options.saveLive&&t.isLive;
         t.excluded=remixOff||liveOff;
-        if(!t.unusualPattern.empty()&&!options.keptPatterns.count(t.unusualPattern))t.excluded=true;
+
+        bool picked=false;
+        const std::wstring normTitle=Normalize(t.title);
+        for(const auto& pick:options.personalPicks){
+            if(pick.mode==PersonalPick::Mode::Pattern)continue;
+            const auto needle=Normalize(pick.value);
+            if(needle.empty())continue;
+            if(pick.mode==PersonalPick::Mode::Exact ? normTitle==needle : normTitle.find(needle)!=std::wstring::npos){
+                picked=true;break;
+            }
+        }
+        // Personal Picks never resurrect a globally disabled Remix/Live category.
+        if(!t.unusualPattern.empty()&&!options.keptPatterns.count(t.unusualPattern)&&!picked)
+            t.excluded=true;
     }
     ApplyExplicitCleanPolicy(tracks);
     size_t ex=0;for(auto&t:tracks)if(t.excluded)++ex;if(log)log(L"Early exclusions: "+std::to_wstring(ex)+L" track(s)");
