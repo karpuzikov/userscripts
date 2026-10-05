@@ -5,6 +5,7 @@
 #include <deque>
 #include <bit>
 #include <limits>
+#include <climits>
 
 #pragma comment(lib, "shell32.lib")
 #pragma comment(lib, "shlwapi.lib")
