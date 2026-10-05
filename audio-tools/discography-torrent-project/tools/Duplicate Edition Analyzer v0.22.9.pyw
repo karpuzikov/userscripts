@@ -394,6 +394,9 @@ def _open_path_location(value: str) -> None:
         return
 
     path = Path(raw).expanduser()
+    if not path.exists():
+        raise RuntimeError(f"Path no longer exists:\n\n{raw}")
+
     try:
         if os.name == "nt":
             if path.is_file():
@@ -403,15 +406,12 @@ def _open_path_location(value: str) -> None:
                     stderr=subprocess.DEVNULL,
                 )
                 return
-            target = path if path.is_dir() else path.parent
-            if target and target.exists():
-                os.startfile(str(target))
-                return
+            os.startfile(str(path))
+            return
 
         target = path if path.is_dir() else path.parent
-        if target and target.exists():
-            import webbrowser
-            webbrowser.open(target.resolve().as_uri())
+        import webbrowser
+        webbrowser.open(target.resolve().as_uri())
     except Exception as exc:
         raise RuntimeError(f"Could not open path location: {raw}\n\n{exc}") from exc
 
@@ -8285,7 +8285,7 @@ button:focus-visible,input:focus-visible { outline:2px solid #8cc8ff; outline-of
   <button class="btn" id="clearTrackBtn" style="display:none">Clear track highlight</button>
   <div id="modeText" aria-live="polite">Chronological release board</div>
   <button class="btn" id="reanalyzeBtn" disabled>Re-Analyze</button>
-  <button class="btn" id="applyBtn" disabled>Apply</button>
+  <button class="btn" id="applyBtn" disabled>Apply file changes</button>
   <div id="spacer"></div>
   <button class="btn" id="closeBtn">Close</button>
 </div>
@@ -8817,7 +8817,13 @@ document.getElementById("clearTrackBtn").onclick=function(){
   document.querySelectorAll(".track").forEach(function(el){el.classList.remove("activeTrack");});
 };
 document.getElementById("reanalyzeBtn").onclick=function(){bridge.reanalyze(receiveState);};
-document.getElementById("applyBtn").onclick=function(){bridge.apply();};
+document.getElementById("applyBtn").onclick=function(){
+  if(!state||!state.applyEnabled)return;
+  const ok=window.confirm(
+    "Apply file changes now?\n\nThis will move/remove files according to the current Release Map plan. You can use Undo last run afterward."
+  );
+  if(ok)bridge.apply();
+};
 document.getElementById("closeBtn").onclick=function(){bridge.closeMap();};
 document.addEventListener("keydown",function(e){
   if(e.key==="Escape" && document.getElementById("details").classList.contains("open")){
@@ -9224,7 +9230,7 @@ def _qt_release_map_process(session_path: Path, result_path: Path) -> int:
     ensure_qt_release_map_dependencies()
     from PySide6.QtCore import QObject, QTimer, QUrl, Signal, Slot
     from PySide6.QtGui import QDesktopServices
-    from PySide6.QtWidgets import QApplication, QMainWindow
+    from PySide6.QtWidgets import QApplication, QMainWindow, QMessageBox
     from PySide6.QtWebChannel import QWebChannel
     from PySide6.QtWebEngineWidgets import QWebEngineView
 
@@ -9526,7 +9532,10 @@ def _qt_release_map_process(session_path: Path, result_path: Path) -> int:
 
         @Slot(str)
         def openFolder(self, value: str):
-            _open_path_location(value)
+            try:
+                _open_path_location(value)
+            except Exception as exc:
+                QMessageBox.warning(QApplication.activeWindow(), APP_NAME, str(exc))
 
         @Slot(str)
         def copyPath(self, value: str):
@@ -12530,6 +12539,11 @@ def _standalone_self_test() -> None:
         (
             'role="button" tabindex="0" aria-label="Inspect track ' in map_html,
             "Release Map track rows must be keyboard-operable.",
+        ),
+        (
+            'id="applyBtn" disabled>Apply file changes</button>' in map_html
+            and 'window.confirm(' in map_html,
+            "Release Map file-changing Apply action requires an explicit confirmation.",
         ),
     ]
     failed_ui_checks = [message for ok, message in ui_checks if not ok]
