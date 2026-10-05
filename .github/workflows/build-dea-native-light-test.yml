@@ -37,7 +37,7 @@ jobs:
             main.cpp dea_engine.cpp dea_ui.cpp ^
             /Fe:dist\Duplicate.Edition.Analyzer.Native.Test.0.1.0.exe ^
             /link /LTCG /SUBSYSTEM:WINDOWS /OPT:REF /OPT:ICF ^
-            comctl32.lib shell32.lib shlwapi.lib ole32.lib comdlg32.lib dwmapi.lib winhttp.lib bcrypt.lib uxtheme.lib
+            user32.lib gdi32.lib comctl32.lib shell32.lib shlwapi.lib ole32.lib comdlg32.lib dwmapi.lib winhttp.lib bcrypt.lib uxtheme.lib
 
       - name: Native rule regression self-test
         shell: cmd
