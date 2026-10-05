@@ -1046,8 +1046,8 @@ This section supersedes older featured-remix, contextual-remix, and generic Edit
 - If a remix carries only those ordinary feature credits, it is excluded when Save Remixes is OFF.
 - If the remix adds a new explicit featured performer, it remains the sole Save-Remixes exception.
 - If no normal counterpart exists, an explicit feat./ft./featuring credit is kept conservatively.
-- Parent-family Remix inheritance is release-title independent. Ordinary singles can establish it from sibling tracks.
-- Examples that must classify as Remix when sibling evidence exists include `Mood II Swing Radio Edit`, `Mantronik Electrohippy Formula`, `Dave Aude Radio Edit`, `Loverush UK! Radio Edit`, and comparable named child variants.
+- Parent-family Remix inheritance is release-title independent and collection-wide, scoped by base song + primary artist. Explicit remixer evidence on one release can classify the same remixer's child edit/version on another release.
+- Examples that must classify as Remix when remixer evidence exists anywhere in the analyzed collection include `Mood II Swing Radio Edit`, `Mantronik Electrohippy Formula`, `Dave Aude Radio Edit`, `Loverush UK! Radio Edit`, `Lucid Mix Edit`, and comparable named child variants.
 - A confident non-primary two-word possessive remixer descriptor such as `Simon Hale's Orchestrata` is Remix even without a literal Mix/Remix word.
 - Weak labels such as `BT Edit`, `Album Edit`, `Single Mix`, and generic/named edits are not strong enough to veto acoustic comparison.
 - Regression pairs that must reach the acoustic matcher include `Godspeed (Radio Edit)` vs `Godspeed (BT Edit)`, `Remember (American Radio Edit)` vs `Remember (Album Edit)`, and `Remember (Edit)` vs `Remember (Single Mix)`.
