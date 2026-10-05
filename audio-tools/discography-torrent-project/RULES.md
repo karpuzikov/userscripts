@@ -15,7 +15,7 @@ Current priority order:
 2. Keep every album represented.
 3. Apply Save Remixes / Save Live at the first classification stage. Unchecked material leaves the analysis pipeline immediately. The sole Save-Remixes exception is a remix with an explicit featured-artist credit.
 4. Explicit supersedes the corresponding Clean track before fingerprint analysis.
-5. Stated Version families are unique. Radio Edit, Extended Mix/Version, Acoustic, Instrumental, A Cappella, language versions and comparable explicit versions are not cross-compared as duplicates of other stated versions.
+5. Explicitly incompatible stated Version families are unique. A hard semantic skip is allowed only when both sides explicitly state disjoint version families (for example Radio Edit vs Extended Mix). An unlabeled title is not evidence of a base/different version and must remain eligible for acoustic comparison. Exact identical Chromaprint fingerprints always override semantic wording.
 6. Prefer CD/physical over equivalent WEB.
 7. For CD alternatives, hey-bro-check-log is the rip-quality authority. 80 is the acceptable-score threshold; a better comparable log is preferred for otherwise equivalent CD choices.
 8. Minimize total retained track count. Every track physically carried by a retained release counts, including Remix/Live tracks excluded from analysis.
@@ -146,8 +146,12 @@ Acoustic fingerprinting is the duplicate authority for tracks that are eligible 
 - Every automatic duplicate merge must pass the acoustic matcher.
 - Alignment may compensate for leading/trailing silence or padding.
 - Substantial unmatched non-silent content means a distinct recording/version.
-- A stated semantic Version is a unique song/version and different Version families do not enter cross-version duplicate comparison.
-- Examples include Radio Edit/Version, Extended Mix/Version, Acoustic, Instrumental, A Cappella, language versions and comparable explicit version descriptors.
+- Semantic wording is a candidate-routing safety gate, not stronger identity evidence than exact audio.
+- If only one side states a Version label, compare acoustically: the unlabeled side may simply omit the same version wording.
+- If both sides share any stated family/context, compare acoustically.
+- Only two explicitly stated, disjoint Version families may be hard-skipped before full audio comparison (for example Radio Edit vs Extended Mix).
+- Exact identical Chromaprint fingerprints are always the same recording regardless of conflicting Version text.
+- Examples of Version families include Radio Edit/Version, Extended Mix/Version, Acoustic, Instrumental, A Cappella, language versions and comparable explicit version descriptors.
 
 Automatic acoustic decision policy:
 - accepted acoustic match -> merge automatically, even when titles or artist credits differ;
@@ -971,7 +975,7 @@ This section supersedes older historical wording elsewhere in this file.
 
 - External database recording IDs are not read or used.
 - No external rip-database confidence/verifier is used.
-- Version = unique song/version; different stated Version families are not cross-compared.
+- Version = unique song/version, but unlabeled metadata is not proof of a different/base version. Only explicitly incompatible disjoint Version families are hard-skipped; exact identical Chromaprint always wins over wording.
 - Different-title accepted acoustic matches merge automatically; near-threshold non-matches remain separate automatically. No acoustic manual review.
 - Explicit > Clean before fingerprinting.
 - Compilations are lower than regular Album/EP/Single and survive only for wanted groups unavailable on regular releases.
@@ -1015,3 +1019,15 @@ This section supersedes older candidate-routing, DR-order and detailed-log wordi
 - DR/mastering runs only after the normal optimizer and all non-DR preference passes. Only exact interchangeable releases that remain fully tied are measured.
 - Existing/Recycle status is part of the pre-DR tie signature. DR cannot override Existing with an otherwise-equivalent Recycle copy.
 - Re-Analyze uses the same final-tie-only DR rule without rescanning/re-fingerprinting unchanged audio.
+
+
+## v0.22.4 semantic-version false-unique correction
+
+This section supersedes every older rule that treated one labeled side and one unlabeled side as automatically different recordings.
+
+- An unlabeled title does not mean "base/original version". It means the version is unspecified.
+- Therefore pairs such as `Four (Original Mix)` vs `Four`, `Tomahawk (Original Mix Edit)` vs `Tomahawk`, `Always (Radio Edit)` vs `Always`, and equivalent cases must reach acoustic comparison when candidate evidence permits.
+- Same-base-title routing remains a safety route for these pairs.
+- Exact identical Chromaprint fingerprints bypass semantic-version conflict completely and merge automatically.
+- If both sides explicitly state version families, a hard semantic skip is allowed only when their declared families are disjoint. Shared family/release context means audio gets the final say.
+- Explicitly incompatible examples such as `Radio Edit` vs `Extended Mix` remain safely separated before expensive comparison unless their fingerprints are literally identical.
