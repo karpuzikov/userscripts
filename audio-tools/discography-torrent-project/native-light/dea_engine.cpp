@@ -553,7 +553,10 @@ std::optional<FingerprintSimilarity> Engine::CompareFingerprints(const std::vect
         for(size_t k=0;k<n;++k){int x=std::popcount(a[a0+k]^b[b0+k]);d.push_back(x);sum+=x;if(x<=10)++good;if(x<=5)++excellent;}
         std::sort(d.begin(),d.end());double med=n%2?d[n/2]:(d[n/2-1]+d[n/2])/2.0;int p90=d[(size_t)(0.90*(n-1))];
         FingerprintSimilarity s{sum/n,(double)good/n,(double)n/std::min(a.size(),b.size()),sh,(double)excellent/n,med,p90};
-        if(!best||std::tie(s.score,s.good,s.excellent,s.overlap)<std::tie(best->score,best->good,best->excellent,best->overlap))best=s;
+        if(!best ||
+           std::tuple<double,double,double,double>{s.score,-s.good,-s.excellent,-s.overlap}
+             < std::tuple<double,double,double,double>{best->score,-best->good,-best->excellent,-best->overlap})
+            best=s;
     }
     return best;
 }
