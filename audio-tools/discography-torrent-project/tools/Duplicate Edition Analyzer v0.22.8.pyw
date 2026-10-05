@@ -5233,23 +5233,22 @@ def _release_explicit_preference(rel: Release) -> int:
     )
 
 
-def equivalent_release_preference_key(rel: Release):
-    """All non-DR exact-equivalent preferences, excluding deterministic ID.
 
-    Equal keys intentionally remain alive until the final DR tie-break. This is
-    what prevents the pre-optimizer dominance pass from discarding the only
-    alternative that DR may legitimately need to compare.
+def equivalent_release_preference_key(rel: Release):
+    """Preference for exact-equivalent editions after coverage is identical.
+
+    Total retained track count is the first optimization criterion after album
+    representation, so an exact-equivalent larger container must not beat a
+    smaller one merely because of source metadata.
     """
     rip = cd_rip_quality_key(rel) or (0, 0, 0.0, 0)
     return (
+        -rel.track_count,
         source_rank(rel),
         rip,
-        -rel.track_count,
-        1 if rel.root_kind == "existing" else 0,
         _release_explicit_preference(rel),
+        1 if rel.root_kind == "existing" else 0,
     )
-
-
 def _dynamic_final_tie_signature(rel: Release):
     """Return a signature only for releases equal on every pre-DR criterion."""
     if rel.excluded_only:
@@ -5865,20 +5864,26 @@ def _optimizer_quality_floor(rel: Release) -> Tuple[int, int]:
 
 
 
+
 def _optimizer_cost(by_id: Dict[int, Release], selected: Set[int]) -> Tuple[object, ...]:
-    """Deterministic objective after coverage and album completeness are fixed."""
+    """Exact objective after wanted coverage and album completeness are fixed."""
     rels = [by_id[rid] for rid in selected]
     below_threshold_cd = sum(
         1 for rel in rels
         if source_rank(rel) >= 2 and cd_rip_quality_class(rel) == 1
     )
     return (
+        # User-defined hard ordering:
+        # 1) every album/wanted recording is already a requirement,
+        # 2) lower total retained track count,
+        # 3) lower retained release count.
         sum(rel.track_count for rel in rels),
         len(rels),
+        # Remaining quality/existing rules are tie-breaks only.
         below_threshold_cd,
-        sum(1 for rel in rels if rel.root_kind == "recycle"),
         -sum(source_rank(rel) for rel in rels),
         -sum(cd_rip_quality_class(rel) for rel in rels),
+        sum(1 for rel in rels if rel.root_kind == "recycle"),
         tuple(sorted(selected)),
     )
 
@@ -5926,9 +5931,9 @@ def _exact_component_cover(
     mandatory_satisfied = satisfied(mandatory)
     unsatisfied_start = frozenset(requirements - mandatory_satisfied)
     states = 0
-    memo: Dict[frozenset, Tuple[int, int, int, int]] = {}
+    memo: Dict[frozenset, Tuple[int, int, int]] = {}
 
-    def partial_key(selected: Set[int]) -> Tuple[int, int, int, int]:
+    def partial_key(selected: Set[int]) -> Tuple[int, int, int]:
         rels = [by_id[rid] for rid in selected]
         return (
             sum(rel.track_count for rel in rels),
@@ -5937,7 +5942,6 @@ def _exact_component_cover(
                 1 for rel in rels
                 if source_rank(rel) >= 2 and cd_rip_quality_class(rel) == 1
             ),
-            sum(1 for rel in rels if rel.root_kind == "recycle"),
         )
 
     def branch_key(rid: int, unsatisfied: frozenset) -> Tuple[object, ...]:
@@ -5965,7 +5969,9 @@ def _exact_component_cover(
             memo[unsatisfied] = part
 
         if best_cost is not None:
-            best_prefix = tuple(best_cost[:4])
+            # Only compare the monotonic cost prefix. Source quality and
+            # Existing/Recycle are later tie-breaks and cannot safely prune.
+            best_prefix = tuple(best_cost[:3])
             if part > best_prefix:
                 return
 
@@ -6014,11 +6020,10 @@ def exact_global_collection_minimize(
     early Remix/Live policy, and Apply workflow. This solver only replaces the old
     greedy/local collection minimization stage.
 
-    The rule-respecting heuristic seed establishes a source/CD-log quality
-    floor for every currently covered recording and album family. The exact
-    search may then choose any globally smaller release combination that keeps
-    every active recording group, keeps every active album family represented,
-    and never drops below those quality floors.
+    The exact search keeps every active wanted recording group and requires
+    each album family to be represented by one of its most-complete editions.
+    It then minimizes total retained tracks first and retained releases second;
+    source/log/Existing preferences are later tie-breaks only.
     """
     by_id = {r.rid: r for r in releases}
     seed_selected = set(seed_selected)
@@ -6032,23 +6037,14 @@ def exact_global_collection_minimize(
     release_requirements: Dict[int, Set[Tuple[str, int]]] = defaultdict(set)
 
     for gid in sorted(all_groups):
-        seed_carriers = [
-            by_id[rid]
-            for rid in seed_selected
-            if rid in by_id and gid in by_id[rid].groups
-        ]
-        floor = max(
-            (_optimizer_quality_floor(rel) for rel in seed_carriers),
-            default=(0, 0),
-        )
         req = ("group", gid)
+        # Source/log quality is a later tie-break. It must not block a solution
+        # with fewer total tracks or releases.
         providers = {
             rel.rid
             for rel in releases
-            if gid in rel.groups and _optimizer_quality_floor(rel) >= floor
+            if gid in rel.groups
         }
-        if not providers:
-            providers = {rel.rid for rel in releases if gid in rel.groups}
         requirement_providers[req] = providers
         for rid in providers:
             release_requirements[rid].add(req)
@@ -6061,24 +6057,8 @@ def exact_global_collection_minimize(
         # A smaller edition cannot satisfy the album obligation merely because
         # its missing bonus tracks exist on singles/EPs elsewhere.
         complete_ids = _max_complete_album_ids(cluster)
-        seed_members = [
-            by_id[rid]
-            for rid in seed_selected & complete_ids
-            if rid in by_id
-        ]
-        floor = max(
-            (_optimizer_quality_floor(rel) for rel in seed_members),
-            default=(0, 0),
-        )
         req = ("album", cluster_id)
-        providers = {
-            rel.rid
-            for rel in cluster
-            if rel.rid in complete_ids
-            and _optimizer_quality_floor(rel) >= floor
-        }
-        if not providers:
-            providers = set(complete_ids)
+        providers = set(complete_ids)
         requirement_providers[req] = providers
         for rid in providers:
             release_requirements[rid].add(req)
@@ -6202,10 +6182,10 @@ def optimize_collection(
     Manual Release Map removals are planning constraints only. Fingerprints and
     recording groups are reused; the expensive audio-analysis stage is not rerun.
 
-    The established DEA heuristic/source passes first produce a valid,
-    rule-respecting seed. A Coverage Atlas-style exact component solver then
-    minimizes the whole collection without reducing the seed's source/existing
-    quality floor for any active recording or album family.
+    The established DEA passes first produce a valid seed. A Coverage
+    Atlas-style exact component solver then enforces wanted coverage plus the
+    most-complete-edition album requirement, minimizes total retained tracks,
+    then minimizes retained releases. Source/log/Existing are later tie-breaks.
     """
     blocked = set(blocked_release_ids or set())
     eligible = [r for r in releases if r.rid not in blocked]
