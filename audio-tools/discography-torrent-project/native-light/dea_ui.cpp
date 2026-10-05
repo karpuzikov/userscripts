@@ -1,6 +1,7 @@
 #include "dea_native.hpp"
 #include <uxtheme.h>
 #include <windowsx.h>
+#include <cstring>
 
 #pragma comment(lib, "uxtheme.lib")
 
