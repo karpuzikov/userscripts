@@ -38,7 +38,7 @@ namespace dea {
 namespace fs = std::filesystem;
 
 inline constexpr wchar_t APP_NAME[] = L"Duplicate / Edition Analyzer Native";
-inline constexpr wchar_t APP_VERSION[] = L"0.1.1";
+inline constexpr wchar_t APP_VERSION[] = L"0.1.2";
 inline constexpr wchar_t STATUS_TEXT[] = L"Under construction \x26A0";
 inline constexpr wchar_t PROGRAM_DIR_NAME[] = L"Duplicate Edition Analyzer Native Test";
 

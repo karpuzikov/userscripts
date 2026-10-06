@@ -90,6 +90,11 @@ The release gate runs:
 5. branch-only GitHub prerelease.
 
 
+## 0.1.2
+
+- Grouped Suggested Callout Hook, Call Out Hook, and Suggested Call Out Research Hook into one unusual-pattern choice.
+- Added regression coverage so callout spacing/wording variants cannot split into separate checkboxes again.
+
 ## 0.1.1
 
 - Dependency policy is now WinGet-first.

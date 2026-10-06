@@ -600,16 +600,25 @@ bool Engine::IsKnownDescriptor(const std::wstring& d){
     return std::regex_search(s,known);
 }
 std::wstring Engine::DetectUnusualPattern(const std::wstring& title){
+    auto canonical=[](std::wstring n){
+        n=Normalize(n);
+        n=std::regex_replace(n,std::wregex(LR"(\bcall\s+out\b)",std::regex::icase),L"callout");
+        // These are spelling/wording variants of one semantic pattern, not
+        // separate user choices. Keep the historical key for saved picks.
+        if(std::regex_search(n,std::wregex(LR"(\bcallout\b)",std::regex::icase))||n==L"hook")
+            return std::wstring(L"suggested callout");
+        return n;
+    };
     std::wregex bracket(LR"([\(\[]([^\)\]]+)[\)\]])");
     for(auto i=std::wsregex_iterator(title.begin(),title.end(),bracket),e=std::wsregex_iterator();i!=e;++i){
         auto d=Trim((*i)[1].str()),n=Normalize(d);
         if(IsKnownDescriptor(d))continue;
-        if(std::regex_search(n,std::wregex(LR"(\b(callout|call\s+out|hook|performance|take|promo|broadcast|special|alternate|alternative)\b)",std::regex::icase)))return n;
+        if(std::regex_search(n,std::wregex(LR"(\b(callout|call\s+out|hook|performance|take|promo|broadcast|special|alternate|alternative)\b)",std::regex::icase)))return canonical(n);
     }
     std::wsmatch m;
     if(std::regex_search(title,m,std::wregex(LR"(\s[-:]\s([^-:]+)$)"))){
         auto d=Trim(m[1].str()),n=Normalize(d);
-        if(!IsKnownDescriptor(d)&&std::regex_search(n,std::wregex(LR"(\b(callout|hook|performance|take|promo|broadcast|alternate|alternative)\b)",std::regex::icase)))return n;
+        if(!IsKnownDescriptor(d)&&std::regex_search(n,std::wregex(LR"(\b(callout|call\s+out|hook|performance|take|promo|broadcast|alternate|alternative)\b)",std::regex::icase)))return canonical(n);
     }
     return {};
 }
@@ -1090,6 +1099,9 @@ bool Engine::SelfTest(std::wstring& report){
     chk(!SemanticConflict(a,b),L"Radio Edit must stay comparable to base.");
     b.title=L"Girlfriend (Extended Version)";b.root=DetectRecordingRoot(b.title);b.rootKey=RecordingRootKey(b.title);chk(SemanticConflict(a,b),L"Extended must not replace base.");
     chk(DetectUnusualPattern(L"Song (Suggested Callout)")==L"suggested callout",L"Unusual callout pattern detection failed.");
+    chk(DetectUnusualPattern(L"Song (Suggested Callout Hook)")==L"suggested callout",L"Suggested Callout Hook must share one pattern key.");
+    chk(DetectUnusualPattern(L"Song (Call Out Hook)")==L"suggested callout",L"Call Out Hook must share one pattern key.");
+    chk(DetectUnusualPattern(L"Song (Suggested Call Out Research Hook)")==L"suggested callout",L"Suggested Call Out Research Hook must share one pattern key.");
     chk(DetectUnusualPattern(L"Artist - Song").empty(),L"Artist-title separator false positive.");
     chk(IsKnownDescriptor(L"Radio Edit"),L"Known descriptor classification failed.");
     if(failures.empty()){report=L"Native DEA self-test passed.";return true;}
