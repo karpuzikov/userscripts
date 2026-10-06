@@ -237,7 +237,7 @@ int MainWindow::Run(){
     INITCOMMONCONTROLSEX ic{sizeof(ic),ICC_STANDARD_CLASSES|ICC_PROGRESS_CLASS|ICC_LISTVIEW_CLASSES};InitCommonControlsEx(&ic);
     WNDCLASSW wc{};wc.lpfnWndProc=WndProc;wc.hInstance=instance_;wc.lpszClassName=L"DEA_Native_Main";wc.hCursor=LoadCursor(nullptr,IDC_ARROW);wc.hbrBackground=nullptr;
     RegisterClassW(&wc);
-    hwnd_=CreateWindowExW(0,wc.lpszClassName,L"Duplicate / Edition Analyzer Native 0.1.0",WS_OVERLAPPEDWINDOW|WS_CLIPCHILDREN,CW_USEDEFAULT,CW_USEDEFAULT,1180,780,nullptr,nullptr,instance_,this);
+    hwnd_=CreateWindowExW(0,wc.lpszClassName,L"Duplicate / Edition Analyzer Native 0.1.1",WS_OVERLAPPEDWINDOW|WS_CLIPCHILDREN,CW_USEDEFAULT,CW_USEDEFAULT,1180,780,nullptr,nullptr,instance_,this);
     if(!hwnd_)return 1;ShowWindow(hwnd_,SW_SHOW);UpdateWindow(hwnd_);
     MSG m;while(GetMessageW(&m,nullptr,0,0)>0){TranslateMessage(&m);DispatchMessageW(&m);}
     cancel_=true;if(worker_.joinable())worker_.join();
@@ -257,7 +257,7 @@ void MainWindow::CreateUi(){
     bgBrush_=CreateSolidBrush(C_BG);panelBrush_=CreateSolidBrush(C_PANEL);fieldBrush_=CreateSolidBrush(C_FIELD);
 
     auto title=MakeCtrl(hwnd_,L"STATIC",L"Duplicate / Edition Analyzer",SS_LEFT,2200);SendMessage(title,WM_SETFONT,(WPARAM)fontMajor_,TRUE);
-    auto ver=MakeCtrl(hwnd_,L"STATIC",L"v0.1.0",SS_LEFT,2201);
+    auto ver=MakeCtrl(hwnd_,L"STATIC",L"v0.1.1",SS_LEFT,2201);
     auto stat=MakeCtrl(hwnd_,L"STATIC",STATUS_TEXT,SS_RIGHT,2202);
 
     MakeCtrl(hwnd_,L"STATIC",L"Source folders",SS_LEFT,2210);
@@ -344,7 +344,24 @@ void MainWindow::AppendActivity(const std::wstring& line){
 void MainWindow::SetProgress(const Progress&p){
     PutText(status_,p.stage);
     int pos=p.total?int(std::min<uint64_t>(1000,p.current*1000/p.total)):0;SendMessage(progress_,PBM_SETPOS,pos,0);
-    std::wstringstream ss;if(p.total)ss<<p.current<<L" / "<<p.total<<L" ("<<(p.current*100/p.total)<<L"%)";if(p.rate>0)ss<<L"  |  "<<std::fixed<<std::setprecision(1)<<p.rate<<L"/s";
+    std::wstringstream ss;
+    if(p.total){
+        bool download=p.stage.rfind(L"Downloading ",0)==0;
+        if(download){
+            auto human=[](uint64_t bytes){
+                std::wstringstream out;
+                if(bytes>=1000000000ULL)out<<std::fixed<<std::setprecision(2)<<(double)bytes/1000000000.0<<L" GB";
+                else if(bytes>=1000000ULL)out<<std::fixed<<std::setprecision(1)<<(double)bytes/1000000.0<<L" MB";
+                else if(bytes>=1000ULL)out<<std::fixed<<std::setprecision(1)<<(double)bytes/1000.0<<L" KB";
+                else out<<bytes<<L" B";
+                return out.str();
+            };
+            ss<<human(p.current)<<L" / "<<human(p.total)<<L" ("<<(p.current*100/p.total)<<L"%)";
+        }else{
+            ss<<p.current<<L" / "<<p.total<<L" ("<<(p.current*100/p.total)<<L"%)";
+        }
+    }
+    if(p.rate>0)ss<<L"  |  "<<std::fixed<<std::setprecision(1)<<p.rate<<L"/s";
     PutText(detail_,ss.str());
 }
 void MainWindow::UpdateButtons(){
