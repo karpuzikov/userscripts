@@ -263,5 +263,7 @@ This is a blocking repository rule.
 
 ## GitHub development status
 
-- New or updated software must initially use `Under construction ⚠️` in the GitHub Version/status column.
-- Keep `Under construction ⚠️` until the user confirms testing is complete; then replace it with the actual version.
+- The GitHub Version/status column must always show the software's actual current version.
+- `Under construction ⚠️` is a status only. It must never replace, hide, or stand in for the version.
+- New or updated software must show the actual version together with the status, in the form `<version> - Under construction ⚠️`.
+- Keep `Under construction ⚠️` alongside the version until the user confirms testing is complete; then remove only the status and leave the version unchanged.
