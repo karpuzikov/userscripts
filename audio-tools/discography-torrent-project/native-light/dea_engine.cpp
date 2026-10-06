@@ -154,6 +154,30 @@ std::optional<fs::path> FindOnPath(const std::wstring& exe) {
     return std::nullopt;
 }
 
+std::optional<fs::path> FindWinGetPortable(const std::wstring& exe) {
+    wchar_t* raw=nullptr;
+    size_t len=0;
+    fs::path local;
+    if(_wdupenv_s(&raw,&len,L"LOCALAPPDATA")==0 && raw){
+        local=raw;
+        free(raw);
+    }
+    if(local.empty()) return std::nullopt;
+
+    fs::path link=local/L"Microsoft"/L"WinGet"/L"Links"/exe;
+    std::error_code ec;
+    if(fs::exists(link,ec)) return link;
+
+    fs::path packages=local/L"Microsoft"/L"WinGet"/L"Packages";
+    return FindExeUnder(packages,exe);
+}
+
+std::optional<fs::path> FindDependencyExe(const fs::path& appLocalRoot,const std::wstring& exe) {
+    if(auto p=FindOnPath(exe);p) return p;
+    if(auto p=FindWinGetPortable(exe);p) return p;
+    return FindExeUnder(appLocalRoot,exe);
+}
+
 bool DownloadWinHttp(const std::wstring& url,const fs::path& dest,std::function<void(uint64_t,uint64_t)> cb,std::wstring& error) {
     URL_COMPONENTS uc{sizeof(uc)};
     wchar_t host[512]{},path[4096]{};
@@ -410,49 +434,109 @@ bool Engine::SaveSettings(const Settings& s) const{
 }
 
 bool Engine::EnsureDependencies(ProgressFn progress,LogFn log,std::wstring& error){
-    auto emit=[&](const std::wstring& s,uint64_t c=0,uint64_t t=0){if(progress)progress({s,c,t,0,std::chrono::steady_clock::now()});if(log)log(s);};
+    auto emit=[&](const std::wstring& s,uint64_t c=0,uint64_t t=0){
+        if(progress)progress({s,c,t,0,std::chrono::steady_clock::now()});
+        if(log)log(s);
+    };
     emit(L"Checking dependencies");
 
-    // Global rule: check WinGet first; repair only when it is unavailable.
-    if(!FindOnPath(L"winget.exe")){
-        emit(L"WinGet not found - attempting Windows Package Manager repair");
+    // Global dependency policy: WinGet is the primary install/update channel.
+    auto winget=FindOnPath(L"winget.exe");
+    if(!winget){
+        emit(L"WinGet not found - repairing Windows Package Manager");
         std::wstring ps=L"$ErrorActionPreference='SilentlyContinue';"
                          L"Install-PackageProvider -Name NuGet -Force | Out-Null;"
                          L"Install-Module -Name Microsoft.WinGet.Client -Force -Repository PSGallery | Out-Null;"
                          L"Import-Module Microsoft.WinGet.Client;Repair-WinGetPackageManager -Force -Latest";
         RunCapture({L"powershell.exe",L"-NoProfile",L"-ExecutionPolicy",L"Bypass",L"-Command",ps},180000);
+        winget=FindOnPath(L"winget.exe");
     }
 
-    auto localFF=FindExeUnder(paths_.dependencies/L"FFmpeg",L"ffmpeg.exe");
-    auto localProbe=FindExeUnder(paths_.dependencies/L"FFmpeg",L"ffprobe.exe");
-    if(localFF&&localProbe){ffmpeg_=*localFF;ffprobe_=*localProbe;}
-    else if(auto p=FindOnPath(L"ffmpeg.exe");p){
-        auto q=FindOnPath(L"ffprobe.exe");if(q){ffmpeg_=*p;ffprobe_=*q;}
+    auto wingetCommon=[&](){
+        return std::vector<std::wstring>{
+            L"--silent",L"--accept-package-agreements",L"--accept-source-agreements",L"--disable-interactivity"
+        };
+    };
+    auto appendArgs=[](std::vector<std::wstring> a,const std::vector<std::wstring>& b){
+        a.insert(a.end(),b.begin(),b.end());
+        return a;
+    };
+
+    // FFmpeg has a maintained WinGet package. Check/update it first on every run.
+    if(winget){
+        emit(L"Checking FFmpeg updates via WinGet");
+        auto listed=RunCapture({winget->wstring(),L"list",L"--id",L"Gyan.FFmpeg",L"-e",L"--source",L"winget",
+                                L"--accept-source-agreements",L"--disable-interactivity"},60000);
+        bool installed=Lower(listed.out).find(L"gyan.ffmpeg")!=std::wstring::npos;
+        if(installed){
+            auto args=appendArgs({winget->wstring(),L"upgrade",L"--id",L"Gyan.FFmpeg",L"-e",L"--source",L"winget"},wingetCommon());
+            auto upgraded=RunCapture(args,180000);
+            if(log){
+                if(upgraded.code==0) log(L"FFmpeg WinGet check complete.");
+                else log(L"FFmpeg WinGet upgrade check returned no applicable update or could not update; existing install will be verified.");
+            }
+        }else{
+            emit(L"Installing FFmpeg via WinGet");
+            auto args=appendArgs({winget->wstring(),L"install",L"--id",L"Gyan.FFmpeg",L"-e",L"--source",L"winget"},wingetCommon());
+            auto installedResult=RunCapture(args,300000);
+            if(installedResult.code!=0 && log)
+                log(L"WinGet could not install FFmpeg; app-local fallback will be used.");
+        }
     }
+
+    auto ff=FindDependencyExe(paths_.dependencies/L"FFmpeg",L"ffmpeg.exe");
+    auto probe=FindDependencyExe(paths_.dependencies/L"FFmpeg",L"ffprobe.exe");
+    if(ff&&probe){ffmpeg_=*ff;ffprobe_=*probe;}
+
+    // Fallback exists only for systems where WinGet/package installation is unavailable.
     if(ffmpeg_.empty()||ffprobe_.empty()){
-        emit(L"Installing app-local FFmpeg");
+        emit(L"WinGet FFmpeg unavailable - using app-local fallback");
         fs::path zip=paths_.temp/L"ffmpeg.zip",dest=paths_.dependencies/L"FFmpeg";
         std::error_code ec;fs::remove_all(dest,ec);
-        if(!DownloadWinHttp(FFMPEG_URL,zip,[&](uint64_t d,uint64_t t){if(progress)progress({L"Downloading FFmpeg",d,t,0,std::chrono::steady_clock::now()});},error))return false;
+        if(!DownloadWinHttp(FFMPEG_URL,zip,[&](uint64_t d,uint64_t t){
+            if(progress)progress({L"Downloading FFmpeg fallback",d,t,0,std::chrono::steady_clock::now()});
+        },error))return false;
         if(!ExpandZip(zip,dest,error))return false;fs::remove(zip,ec);
-        localFF=FindExeUnder(dest,L"ffmpeg.exe");localProbe=FindExeUnder(dest,L"ffprobe.exe");
-        if(!localFF||!localProbe){error=L"FFmpeg archive did not contain ffmpeg.exe and ffprobe.exe.";return false;}
-        ffmpeg_=*localFF;ffprobe_=*localProbe;
+        ff=FindExeUnder(dest,L"ffmpeg.exe");probe=FindExeUnder(dest,L"ffprobe.exe");
+        if(!ff||!probe){error=L"FFmpeg fallback archive did not contain ffmpeg.exe and ffprobe.exe.";return false;}
+        ffmpeg_=*ff;ffprobe_=*probe;
     }
 
-    auto localFp=FindExeUnder(paths_.dependencies/L"Chromaprint",L"fpcalc.exe");
-    if(localFp)fpcalc_=*localFp;else if(auto p=FindOnPath(L"fpcalc.exe");p)fpcalc_=*p;
+    // Prefer WinGet for Chromaprint too whenever a package is available. At
+    // present the public WinGet source may not expose an unambiguous package,
+    // so failure here intentionally falls back to the app-local official build.
+    auto fp=FindDependencyExe(paths_.dependencies/L"Chromaprint",L"fpcalc.exe");
+    if(!fp && winget){
+        emit(L"Checking Chromaprint via WinGet");
+        auto args=appendArgs({winget->wstring(),L"install",L"--query",L"Chromaprint",L"--source",L"winget"},wingetCommon());
+        auto installedFp=RunCapture(args,180000);
+        if(installedFp.code!=0){
+            args=appendArgs({winget->wstring(),L"install",L"--query",L"fpcalc",L"--source",L"winget"},wingetCommon());
+            installedFp=RunCapture(args,180000);
+        }
+        fp=FindDependencyExe(paths_.dependencies/L"Chromaprint",L"fpcalc.exe");
+        if(!fp && log)log(L"No usable Chromaprint WinGet package was found; app-local fallback will be used.");
+    }
+    if(fp)fpcalc_=*fp;
+
     if(fpcalc_.empty()){
-        emit(L"Installing app-local Chromaprint");
+        emit(L"Installing app-local Chromaprint fallback");
         fs::path zip=paths_.temp/L"chromaprint.zip",dest=paths_.dependencies/L"Chromaprint";
         std::error_code ec;fs::remove_all(dest,ec);
-        if(!DownloadWinHttp(CHROMAPRINT_URL,zip,[&](uint64_t d,uint64_t t){if(progress)progress({L"Downloading Chromaprint",d,t,0,std::chrono::steady_clock::now()});},error))return false;
+        if(!DownloadWinHttp(CHROMAPRINT_URL,zip,[&](uint64_t d,uint64_t t){
+            if(progress)progress({L"Downloading Chromaprint fallback",d,t,0,std::chrono::steady_clock::now()});
+        },error))return false;
         if(!ExpandZip(zip,dest,error))return false;fs::remove(zip,ec);
-        localFp=FindExeUnder(dest,L"fpcalc.exe");if(!localFp){error=L"Chromaprint archive did not contain fpcalc.exe.";return false;}fpcalc_=*localFp;
+        fp=FindExeUnder(dest,L"fpcalc.exe");
+        if(!fp){error=L"Chromaprint fallback archive did not contain fpcalc.exe.";return false;}
+        fpcalc_=*fp;
     }
 
-    for(auto [exe,label]:std::vector<std::pair<fs::path,std::wstring>>{{ffmpeg_,L"FFmpeg"},{ffprobe_,L"FFprobe"},{fpcalc_,L"Chromaprint"}}){
-        auto r=RunCapture({exe.wstring(),L"-version"},20000);if(r.code!=0){error=label+L" failed its startup check.";return false;}
+    for(auto [exe,label]:std::vector<std::pair<fs::path,std::wstring>>{
+        {ffmpeg_,L"FFmpeg"},{ffprobe_,L"FFprobe"},{fpcalc_,L"Chromaprint"}
+    }){
+        auto r=RunCapture({exe.wstring(),L"-version"},20000);
+        if(r.code!=0){error=label+L" failed its startup check.";return false;}
     }
     emit(L"Dependencies ready");
     return true;
