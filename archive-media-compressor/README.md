@@ -1,10 +1,10 @@
 # Archive Media Compressor
 
-Download and double-click `ArchiveMedia.bat`.
+Download and double-click `ArchiveMedia v6.0.12.bat`.
 
 ## Single-file design
 
-`ArchiveMedia.bat` is self-contained. It embeds the compressor PowerShell payload and extracts it only to a temporary folder while running. Temporary payload files are removed when the run finishes.
+`ArchiveMedia v6.0.12.bat` is self-contained. It embeds the compressor PowerShell payload and extracts it only to a temporary folder while running. Temporary payload files are removed when the run finishes.
 
 On startup it:
 
@@ -32,7 +32,7 @@ On startup it:
 
 ## Download
 
-[Download ArchiveMedia.bat](https://raw.githubusercontent.com/karpuzikov/userscripts/main/archive-media-compressor/ArchiveMedia.bat)
+[Download ArchiveMedia v6.0.12.bat](https://raw.githubusercontent.com/karpuzikov/userscripts/main/archive-media-compressor/ArchiveMedia%20v6.0.12.bat)
 
 ## Important
 
