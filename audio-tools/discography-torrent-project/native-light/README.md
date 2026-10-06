@@ -15,7 +15,7 @@ This is a ground-up native Windows rewrite created specifically to test a much l
 - No PySide6.
 - No Qt.
 - No Chromium / Qt WebEngine.
-- FFmpeg/FFprobe and Chromaprint are installed automatically into this program's isolated dependency directory only when needed.
+- WinGet is the primary dependency install/update channel. FFmpeg/FFprobe use `Gyan.FFmpeg`; direct downloading is fallback-only. Chromaprint is attempted through WinGet first and falls back to the official app-local build when no usable WinGet package is available.
 - Persistent data lives under `Documents\Karpuzikov Tools\Duplicate Edition Analyzer Native Test\`.
 
 The branch build has a hard **15 MB EXE size gate**. Runtime audio helper binaries are intentionally kept outside the executable in the program-owned `dependencies` directory so the UI/application binary stays genuinely small.
@@ -66,10 +66,10 @@ Implemented in this test:
 
 ## Native dependency strategy
 
-The EXE checks WinGet availability first, then uses app-local automatic dependency setup for:
+The EXE checks/repairs WinGet first. Then:
 
-- FFmpeg / FFprobe
-- Chromaprint / fpcalc
+- FFmpeg / FFprobe: install or upgrade through WinGet package `Gyan.FFmpeg`; direct app-local download only if WinGet cannot provide a working install.
+- Chromaprint / fpcalc: try WinGet first; if no usable package is available, use the official app-local fallback.
 
 Dependencies are stored under:
 
@@ -89,3 +89,11 @@ The release gate runs:
 4. SHA-256 generation;
 5. branch-only GitHub prerelease.
 
+
+## 0.1.1
+
+- Dependency policy is now WinGet-first.
+- FFmpeg is installed/updated through `Gyan.FFmpeg` when WinGet is available.
+- Built-in FFmpeg download is fallback-only.
+- Chromaprint attempts WinGet first and falls back only when necessary.
+- Fallback download progress uses human-readable B / KB / MB / GB units instead of raw byte counts.
