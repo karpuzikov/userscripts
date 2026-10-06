@@ -92,7 +92,7 @@ jobs:
       - name: Build single-file standalone EXE
         shell: pwsh
         run: |
-          $name = "Duplicate Edition Analyzer $env:DEA_VERSION"
+          $name = "Duplicate.Edition.Analyzer.$env:DEA_VERSION"
           $args = @(
             "-m", "PyInstaller",
             "--noconfirm",

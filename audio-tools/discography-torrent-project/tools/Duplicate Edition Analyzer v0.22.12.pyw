@@ -1128,6 +1128,7 @@ def canonical_track_pattern(text: str) -> str:
     value = re.sub(r"\bcall\s+out\b", "callout", value)
     value = re.sub(r"\ba\s+capella\b", "acapella", value)
     words = set(re.findall(r"[a-z0-9]+", value))
+    # Preserve the historical Personal Picks key while grouping all callout aliases.
     if "callout" in words or words == {"hook"}:
         return "suggested callout"
     return re.sub(r"[^a-z0-9]+", " ", value).strip()
