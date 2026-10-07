@@ -1,6 +1,6 @@
 # Duplicate Edition Analyzer Lightweight
 
-Version: **0.3.2 - Under construction ⚠️**
+Version: **0.3.3 - Under construction ⚠️**
 
 Branch: `dea-lightweight-modern`
 
@@ -41,6 +41,14 @@ The lightweight build preserves the regular DEA feature surface, including:
 - path openers, logging, settings and Undo.
 
 The failed `native-light` prototype is not the reference.
+
+## 0.3.3
+
+- Fixed Unusual Track Pattern Review repeatedly asking about Pattern rules that are already saved in Personal Picks.
+- A saved Personal Pick Pattern is now treated as a resolved persistent keep decision and is filtered out before the review dialog is shown.
+- If every detected unusual pattern is already in Personal Picks, analysis continues automatically with no pattern-review popup.
+- Only genuinely new/unresolved unusual patterns appear in the review; removing a Pattern from Personal Picks makes it eligible for review again if encountered.
+- Added a regression self-test that fails if a saved Pattern is re-prompted or a new unresolved Pattern is accidentally filtered out.
 
 ## 0.3.2
 
