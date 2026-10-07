@@ -1,0 +1,109 @@
+name: Duplicate Edition Analyzer Lightweight check
+
+on:
+  push:
+    paths:
+      - "audio-tools/discography-torrent-project/lightweight/Duplicate Edition Analyzer Lightweight v*.pyw"
+      - ".github/workflows/dea-lightweight-check.yml"
+  pull_request:
+    paths:
+      - "audio-tools/discography-torrent-project/lightweight/Duplicate Edition Analyzer Lightweight v*.pyw"
+      - ".github/workflows/dea-lightweight-check.yml"
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Find latest lightweight DEA
+        id: latest
+        shell: python
+        run: |
+          import os, re
+          from pathlib import Path
+          root = Path("audio-tools/discography-torrent-project/lightweight")
+          files = list(root.glob("Duplicate Edition Analyzer Lightweight v*.pyw"))
+          if not files:
+              raise SystemExit("Lightweight DEA source not found")
+          def key(p):
+              m = re.search(r"v(\d+)\.(\d+)\.(\d+)\.pyw$", p.name)
+              return tuple(map(int, m.groups())) if m else (-1,-1,-1)
+          latest = max(files, key=key)
+          print(latest)
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as h:
+              h.write(f"path={latest.as_posix()}\n")
+
+      - name: Compile source
+        shell: python
+        run: |
+          import py_compile
+          py_compile.compile(r"${{ steps.latest.outputs.path }}", doraise=True)
+
+      - name: Check undefined names
+        run: |
+          python -m pip install --disable-pip-version-check --quiet ruff
+          ruff check --select F821 "${{ steps.latest.outputs.path }}"
+
+      - name: Validate embedded Main UI and Release Map JavaScript
+        shell: python
+        run: |
+          import ast, re, subprocess
+          from pathlib import Path
+          source_path = Path(r"${{ steps.latest.outputs.path }}")
+          source = source_path.read_text(encoding="utf-8")
+          tree = ast.parse(source)
+          wanted = {"_webview_main_html", "_webview_release_map_html"}
+          found = {}
+          for node in tree.body:
+              if isinstance(node, ast.FunctionDef) and node.name in wanted:
+                  for stmt in node.body:
+                      if isinstance(stmt, ast.Assign) and any(isinstance(t, ast.Name) and t.id == "html" for t in stmt.targets):
+                          if isinstance(stmt.value, ast.Constant) and isinstance(stmt.value.value, str):
+                              found[node.name] = stmt.value.value
+                              break
+          missing = wanted - found.keys()
+          if missing:
+              raise SystemExit("Missing embedded HTML: " + ", ".join(sorted(missing)))
+          for name, html in found.items():
+              scripts = re.findall(r"<script(?:\s[^>]*)?>(.*?)</script>", html, re.S | re.I)
+              if not scripts:
+                  raise SystemExit(f"No JavaScript found in {name}")
+              for index, js in enumerate(scripts, start=1):
+                  out = Path(f"{name}-{index}.js")
+                  out.write_text(js.replace("__APP_VERSION__", "test"), encoding="utf-8")
+                  subprocess.run(["node", "--check", str(out)], check=True)
+
+      - name: Validate bridge regression contract
+        shell: python
+        run: |
+          import ast
+          from pathlib import Path
+          source = Path(r"${{ steps.latest.outputs.path }}").read_text(encoding="utf-8")
+          tree = ast.parse(source)
+          html = {}
+          for node in tree.body:
+              if isinstance(node, ast.FunctionDef) and node.name in {"_webview_main_html","_webview_release_map_html"}:
+                  for stmt in node.body:
+                      if isinstance(stmt, ast.Assign) and any(isinstance(t, ast.Name) and t.id=="html" for t in stmt.targets):
+                          if isinstance(stmt.value, ast.Constant):
+                              html[node.name]=stmt.value.value
+                              break
+          main = html["_webview_main_html"]
+          release = html["_webview_release_map_html"]
+          required_main = [
+              "bridge=createLightMainBridge();",
+              "function waitForPywebviewApi(timeoutMs)",
+              "bridge.getState(renderState).catch(function(){});",
+          ]
+          required_release = [
+              "bridge=createLightBridge();",
+              "function waitForPywebviewApi(timeoutMs)",
+              "bridge.getState(receiveState).catch(function(){});",
+          ]
+          missing = [x for x in required_main if x not in main] + [x for x in required_release if x not in release]
+          if missing:
+              raise SystemExit("Bridge regression contract failed: " + " | ".join(missing))

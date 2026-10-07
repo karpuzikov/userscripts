@@ -1,6 +1,6 @@
 # Duplicate Edition Analyzer Lightweight
 
-Version: **0.2.1 - Under construction ⚠️**
+Version: **0.2.2 - Under construction ⚠️**
 
 Branch: `dea-lightweight-modern`
 
@@ -41,6 +41,13 @@ The lightweight build preserves the regular DEA feature surface, including:
 - path openers, logging, settings and Undo.
 
 The failed `native-light` prototype is not the reference.
+
+## 0.2.2
+
+- Fixed the WebView2 desktop bridge initialization that could leave every button dead.
+- Main UI and Release Map now create their JS bridge immediately and wait/poll for `window.pywebview.api` instead of relying exclusively on the one-shot `pywebviewready` event.
+- Bridge failures are surfaced in the UI instead of being swallowed only in the developer console.
+- Added release-blocking bridge-initialization checks so this dead-button regression cannot silently return.
 
 ## 0.2.1
 

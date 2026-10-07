@@ -33,7 +33,7 @@ from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Set, Tuple
 
 APP_NAME = "Duplicate / Edition Analyzer Lightweight"
-APP_VERSION = "0.2.1"
+APP_VERSION = "0.2.2"
 PROGRAM_DATA_DIR_NAME = "Duplicate Edition Analyzer"
 PYWEBVIEW_VERSION = "6.2.1"
 AUDIO_EXTS = {".m4a", ".flac", ".wav", ".ape", ".wv", ".mp3", ".aac", ".ogg", ".opus"}
@@ -8759,23 +8759,52 @@ document.getElementById("search").addEventListener("keydown",function(e){
 });
 window.addEventListener("resize",function(){clearTimeout(resizeTimer);resizeTimer=setTimeout(renderBoard,100);});
 new ResizeObserver(function(){drawConnections();}).observe(document.getElementById("boardContent"));
+function waitForPywebviewApi(timeoutMs){
+  const limit=Number(timeoutMs||15000);
+  return new Promise(function(resolve,reject){
+    const started=Date.now();
+    function probe(){
+      const api=window.pywebview&&window.pywebview.api;
+      if(api){resolve(api);return;}
+      if(Date.now()-started>=limit){
+        reject(new Error("Desktop bridge did not become ready."));
+        return;
+      }
+      setTimeout(probe,25);
+    }
+    probe();
+  });
+}
+function bridgeCall(name,args,callback){
+  return waitForPywebviewApi(15000).then(function(api){
+    const fn=api[name];
+    if(typeof fn!=="function") throw new Error("Desktop bridge method is unavailable: "+String(name));
+    return fn.apply(api,args);
+  }).then(function(result){
+    if(callback)callback(typeof result==="string"?result:JSON.stringify(result));
+    return result;
+  }).catch(function(error){
+    console.error(error);
+    const mode=document.getElementById("modeText");
+    if(mode)mode.textContent="Desktop bridge error: "+String(error&&error.message||error);
+    throw error;
+  });
+}
 function createLightBridge(){
   return new Proxy({},{
     get:function(_target,name){
       return function(){
         const args=Array.from(arguments);
         const callback=(args.length&&typeof args[args.length-1]==="function")?args.pop():null;
-        return window.pywebview.api[name].apply(window.pywebview.api,args).then(function(result){
-          if(callback)callback(typeof result==="string"?result:JSON.stringify(result));
-          return result;
-        }).catch(function(error){console.error(error);});
+        return bridgeCall(name,args,callback);
       };
     }
   });
 }
+bridge=createLightBridge();
+bridge.getState(receiveState).catch(function(){});
 window.addEventListener("pywebviewready",function(){
-  bridge=createLightBridge();
-  bridge.getState(receiveState);
+  bridge.getState(receiveState).catch(function(){});
 });
 </script>
 </body>
@@ -10086,8 +10115,50 @@ document.getElementById("closeBtn").onclick=function(){bridge.closeApp();};
 
 let __deaStateListener=null;
 let __deaEventListener=null;
+let __deaBridgeFailureShown=false;
 window.__deaStateChanged=function(raw){if(__deaStateListener)__deaStateListener(raw);};
 window.__deaEventRaised=function(raw){if(__deaEventListener)__deaEventListener(raw);};
+
+function waitForPywebviewApi(timeoutMs){
+  const limit=Number(timeoutMs||15000);
+  return new Promise(function(resolve,reject){
+    const started=Date.now();
+    function probe(){
+      const api=window.pywebview&&window.pywebview.api;
+      if(api){resolve(api);return;}
+      if(Date.now()-started>=limit){
+        reject(new Error("Desktop bridge did not become ready."));
+        return;
+      }
+      setTimeout(probe,25);
+    }
+    probe();
+  });
+}
+function showBridgeFailure(error){
+  console.error(error);
+  if(__deaBridgeFailureShown)return;
+  __deaBridgeFailureShown=true;
+  const message=String(error&&error.message||error||"Unknown desktop bridge error");
+  try{
+    document.getElementById("progressStatus").textContent="Desktop bridge failed";
+    document.getElementById("progressDetail").textContent=message;
+    messageModal("Duplicate / Edition Analyzer","Desktop bridge failed:\n\n"+message);
+  }catch(_ignored){}
+}
+function bridgeCall(name,args,callback){
+  return waitForPywebviewApi(15000).then(function(api){
+    const fn=api[name];
+    if(typeof fn!=="function") throw new Error("Desktop bridge method is unavailable: "+String(name));
+    return fn.apply(api,args);
+  }).then(function(result){
+    if(callback)callback(typeof result==="string"?result:JSON.stringify(result));
+    return result;
+  }).catch(function(error){
+    showBridgeFailure(error);
+    throw error;
+  });
+}
 function createLightMainBridge(){
   const target={
     stateChanged:{connect:function(fn){__deaStateListener=fn;}},
@@ -10099,19 +10170,23 @@ function createLightMainBridge(){
       return function(){
         const args=Array.from(arguments);
         const callback=(args.length&&typeof args[args.length-1]==="function")?args.pop():null;
-        return window.pywebview.api[name].apply(window.pywebview.api,args).then(function(result){
-          if(callback)callback(typeof result==="string"?result:JSON.stringify(result));
-          return result;
-        }).catch(function(error){console.error(error);});
+        return bridgeCall(name,args,callback);
       };
     }
   });
 }
+
+// Create the bridge immediately. API calls queue until pywebview has injected
+// window.pywebview.api, so buttons never depend on catching a one-shot event.
+bridge=createLightMainBridge();
+bridge.stateChanged.connect(renderState);
+bridge.eventRaised.connect(handleEvent);
+bridge.getState(renderState).catch(function(){});
+
+// Refresh once more when pywebview announces readiness. This is additive,
+// not the only initialization path.
 window.addEventListener("pywebviewready",function(){
-  bridge=createLightMainBridge();
-  bridge.stateChanged.connect(renderState);
-  bridge.eventRaised.connect(handleEvent);
-  bridge.getState(renderState);
+  bridge.getState(renderState).catch(function(){});
 });
 </script>
 </body>
@@ -11089,6 +11164,18 @@ def _ui_contract_self_test() -> None:
             'function createLightBridge()' in map_html
             and 'function createLightMainBridge()' in main_html,
             "Lightweight WebView2 JavaScript bridge is missing.",
+        ),
+        (
+            'bridge=createLightMainBridge();' in main_html
+            and 'function waitForPywebviewApi(timeoutMs)' in main_html
+            and 'bridge.getState(renderState).catch(function(){});' in main_html,
+            "Main UI bridge must initialize immediately and wait for pywebview instead of depending only on pywebviewready.",
+        ),
+        (
+            'bridge=createLightBridge();' in map_html
+            and 'function waitForPywebviewApi(timeoutMs)' in map_html
+            and 'bridge.getState(receiveState).catch(function(){});' in map_html,
+            "Release Map bridge must initialize immediately and wait for pywebview instead of depending only on pywebviewready.",
         ),
     ]
     failed_ui_checks = [message for ok, message in ui_checks if not ok]
