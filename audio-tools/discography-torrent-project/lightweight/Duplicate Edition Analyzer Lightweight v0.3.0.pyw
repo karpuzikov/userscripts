@@ -33,7 +33,7 @@ from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Set, Tuple
 
 APP_NAME = "Duplicate / Edition Analyzer Lightweight"
-APP_VERSION = "0.2.9"
+APP_VERSION = "0.3.0"
 PROGRAM_DATA_DIR_NAME = "Duplicate Edition Analyzer"
 PYWEBVIEW_VERSION = "6.2.1"
 WEBVIEW_PRIVATE_MODE = True
@@ -7003,6 +7003,10 @@ def build_decision_snapshot(
                     "name": other.path.name,
                     "action": by_decision.get(other.rid).action if other.rid in by_decision else "",
                     "source": _release_source_description(other),
+                    "source_medium": other.source_medium,
+                    "source_rank": source_rank(other),
+                    "root_kind": other.root_kind,
+                    "scan_root": str(other.scan_root or ""),
                     "included_tracks": other.counted_track_count,
                 }
             )
@@ -7170,6 +7174,9 @@ def build_decision_snapshot(
                 "name": rel.path.name,
                 "path": str(rel.path),
                 "root_kind": rel.root_kind,
+                "scan_root": str(rel.scan_root or ""),
+                "source_medium": rel.source_medium,
+                "source_rank": source_rank(rel),
                 "action": decision.action,
                 "outcome": outcome,
                 "reason": decision.reason,
@@ -7446,6 +7453,175 @@ def _automatic_move_set(releases: List[Release], decisions: List[ReleaseDecision
         result.append((r, d))
         moved_roots.extend(sources)
     return result
+
+
+def copy_retained_plan(
+    existing: Optional[Path],
+    recycle: Path,
+    destination: Path,
+    releases: List[Release],
+    decisions: List[ReleaseDecision],
+    mode: str,
+    progress_cb=None,
+) -> Dict[str, object]:
+    """Copy the retained plan without modifying either source collection.
+
+    mode="all" copies the final improved discography: retained Existing + retained
+    New/Update releases. mode="new" copies only retained releases originating
+    from the New/Update source (ADD/REPLACE).
+    """
+    mode = str(mode or "").strip().lower()
+    if mode not in {"all", "new"}:
+        raise RuntimeError(f"Unknown copy mode: {mode!r}")
+
+    destination = Path(destination).expanduser()
+    by_id = {release.rid: release for release in releases}
+    retained_actions = {"KEEP", "ADD", "REPLACE"}
+    chosen: List[Tuple[Release, ReleaseDecision]] = []
+
+    for decision in decisions:
+        if decision.action not in retained_actions:
+            continue
+        release = by_id.get(decision.release_id)
+        if release is None:
+            continue
+        if mode == "new" and release.root_kind != "recycle":
+            continue
+        chosen.append((release, decision))
+
+    if not chosen:
+        label = "new/update" if mode == "new" else "retained"
+        raise RuntimeError(f"No {label} releases are selected for copying.")
+
+    resolved_destination = destination.resolve(strict=False)
+    source_roots: Set[Path] = set()
+    for release, _decision in chosen:
+        root = release.scan_root or (existing if release.root_kind == "existing" else recycle)
+        if root is not None:
+            source_roots.add(Path(root).resolve(strict=False))
+    for source_root in source_roots:
+        if resolved_destination == source_root or _is_ancestor(source_root, resolved_destination):
+            raise RuntimeError(
+                "Destination must be outside the source collection folders:\n\n"
+                f"Destination: {destination}\nSource: {source_root}"
+            )
+
+    chosen_releases = [release for release, _decision in chosen]
+    chosen_decisions = [decision for _release, decision in chosen]
+    intra_duplicates = plan_intra_release_duplicates(chosen_releases, chosen_decisions)
+    redundant_files = {item.redundant.resolve(strict=False) for item in intra_duplicates}
+
+    planned: List[Tuple[Release, ReleaseDecision, Path, Path]] = []
+    target_sources: Dict[str, Path] = {}
+
+    for release, decision in chosen:
+        root = release.scan_root or (existing if release.root_kind == "existing" else recycle)
+        if root is None:
+            raise RuntimeError(f"Missing source root for: {release.path}")
+        root = Path(root)
+        for source in _release_paths(release):
+            try:
+                relative = source.relative_to(root)
+            except ValueError:
+                raise RuntimeError(
+                    "Release is outside its source root:\n\n"
+                    f"Release: {source}\nRoot: {root}"
+                )
+            target = destination / relative
+            key = os.path.normcase(str(target.resolve(strict=False)))
+            previous = target_sources.get(key)
+            if previous is not None and previous.resolve(strict=False) != source.resolve(strict=False):
+                raise RuntimeError(
+                    "Two retained releases would copy to the same destination:\n\n"
+                    f"{previous}\n{source}\n\nDestination: {target}"
+                )
+            target_sources[key] = source
+            if target.exists():
+                raise RuntimeError(
+                    "Destination release folder already exists:\n\n"
+                    f"{target}\n\nChoose an empty/new destination or remove the conflict first."
+                )
+            planned.append((release, decision, source, target))
+
+    destination.mkdir(parents=True, exist_ok=True)
+
+    def _ignore_redundant(current: str, names: List[str]) -> Set[str]:
+        current_path = Path(current)
+        ignored: Set[str] = set()
+        for name in names:
+            candidate = (current_path / name).resolve(strict=False)
+            if candidate in redundant_files:
+                ignored.add(name)
+        return ignored
+
+    old_ids = {release.rid for release, _decision in chosen if release.root_kind == "existing"}
+    new_ids = {release.rid for release, _decision in chosen if release.root_kind == "recycle"}
+    upgrade_ids = {
+        release.rid
+        for release, decision in chosen
+        if release.root_kind == "recycle" and decision.action == "REPLACE"
+    }
+    addition_ids = {
+        release.rid
+        for release, decision in chosen
+        if release.root_kind == "recycle" and decision.action == "ADD"
+    }
+
+    completed_targets: List[Path] = []
+    total = max(1, len(planned))
+    if progress_cb:
+        progress_cb(
+            "Copying final discography..." if mode == "all" else "Copying new/update releases...",
+            0,
+            total,
+        )
+
+    try:
+        for index, (_release, _decision, source, target) in enumerate(planned, 1):
+            if not source.exists():
+                raise RuntimeError(f"Copy source is missing:\n\n{source}")
+            target.parent.mkdir(parents=True, exist_ok=True)
+            if source.is_dir():
+                shutil.copytree(
+                    source,
+                    target,
+                    copy_function=shutil.copy2,
+                    ignore=_ignore_redundant,
+                )
+            else:
+                shutil.copy2(source, target)
+            completed_targets.append(target)
+
+            if progress_cb:
+                progress_cb(
+                    "Copying final discography..." if mode == "all" else "Copying new/update releases...",
+                    index,
+                    total,
+                )
+    except Exception:
+        for target in reversed(completed_targets):
+            try:
+                if target.is_dir():
+                    shutil.rmtree(target)
+                elif target.exists():
+                    target.unlink()
+            except Exception:
+                pass
+        raise
+
+    logical_release_ids = {release.rid for release, _decision in chosen}
+    return {
+        "mode": mode,
+        "destination": str(destination),
+        "logical_releases": len(logical_release_ids),
+        "physical_folders": len(planned),
+        "existing_releases": len(old_ids),
+        "new_releases": len(new_ids),
+        "upgrades": len(upgrade_ids),
+        "additions": len(addition_ids),
+        "duplicate_files_omitted": len(redundant_files),
+        "source_folders_modified": False,
+    }
 
 
 def apply_automatic_plan(
@@ -8037,6 +8213,59 @@ button,input { font:inherit; }
 }
 .releaseName { min-width:0; flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-size:12px; }
 .releaseMeta { flex:0 0 auto; color:#707b8b; font-size:10px; }
+.originBadge,.actionBadge {
+  flex:0 0 auto; height:20px; padding:0 6px; border-radius:6px;
+  display:inline-flex; align-items:center; justify-content:center;
+  font-size:9px; font-weight:850; letter-spacing:.03em; white-space:nowrap;
+}
+.originBadge.old { border:1px solid #4b647e; background:#172332; color:#acd3ff; }
+.originBadge.new { border:1px solid #2c7568; background:#102923; color:#95f3d5; }
+.actionBadge.keep { border:1px solid #46515f; background:#1b2027; color:#b9c4d3; }
+.actionBadge.add { border:1px solid #2d7a46; background:#112b1a; color:#9bf1b3; }
+.actionBadge.upgrade { border:1px solid #9a6b22; background:#31230f; color:#ffd985; }
+.actionBadge.remove,.actionBadge.skip { border:1px solid #74404a; background:#29171b; color:#ffb9c0; }
+#sourceLegend { display:flex; align-items:center; gap:5px; min-width:0; }
+.sourceLegendPill {
+  min-width:0; max-width:220px; height:26px; display:flex; align-items:center; gap:6px;
+  border:1px solid #303846; border-radius:7px; padding:0 7px; background:#151920;
+  color:#9eabba; font-size:10px;
+}
+.sourceLegendPill b { flex:0 0 auto; font-size:9px; letter-spacing:.04em; }
+.sourceLegendPill span { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.sourceLegendPill.old b { color:#acd3ff; }
+.sourceLegendPill.new b { color:#95f3d5; }
+.sourceSummary {
+  margin:9px 0 0; padding:8px 10px; border:1px solid #29313c; border-radius:7px;
+  background:#0d1116; color:#aeb9c8; font-size:11px; line-height:1.42;
+}
+.sourceSummary strong { color:#edf3fb; }
+#exportBar {
+  display:none; flex:0 0 auto; padding:9px 12px; border-top:1px solid var(--line);
+  background:#0f1217; gap:8px;
+}
+#exportBar.open { display:grid; grid-template-columns:1fr 1fr; }
+.exportChoice {
+  min-width:0; display:grid; grid-template-columns:minmax(150px,auto) 34px minmax(120px,1fr) auto auto;
+  gap:6px; align-items:center; padding:8px; border:1px solid #29313c; border-radius:9px; background:#141820;
+}
+.exportLabel { min-width:0; }
+.exportLabel b { display:block; font-size:11px; color:#edf3fb; margin-bottom:2px; }
+.exportLabel span { display:block; color:#8693a4; font-size:9px; line-height:1.2; }
+.exportPath {
+  min-width:0; height:32px; display:flex; align-items:center; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  border:1px solid #303844; border-radius:7px; background:#0c1015; color:#aeb9c8; padding:0 8px; font-size:10px;
+}
+.exportCopyBtn { font-weight:780; border-color:#2f7d4b; background:#12301d; color:#b8f7c9; }
+.exportCopyBtn:hover:not(:disabled) { background:#19472a; border-color:#4bb96c; }
+@media (max-width:1250px) {
+  #sourceLegend { display:none; }
+  #exportBar.open { grid-template-columns:1fr; }
+}
+@media (max-width:850px) {
+  .exportChoice { grid-template-columns:1fr 34px minmax(90px,1fr) auto; }
+  .exportLabel { grid-column:1 / -1; }
+}
+
 .uniqueBadge,.duplicateBadge,.ignoredBadge,.pendingBadge {
   flex:0 0 auto; min-width:22px; height:20px; padding:0 6px; border-radius:10px;
   display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:800;
@@ -8187,8 +8416,11 @@ button:focus-visible,input:focus-visible { outline:2px solid #8cc8ff; outline-of
   <input id="search" aria-label="Find release or track" placeholder="Find release or track...">
   <button class="btn" id="clearTrackBtn" style="display:none">Clear track highlight</button>
   <div id="modeText" aria-live="polite">Chronological release board</div>
+  <div id="sourceLegend" aria-label="Release source legend">
+    <div class="sourceLegendPill old" id="oldLegend" title=""><b>OLD</b><span>Existing</span></div>
+    <div class="sourceLegendPill new" id="newLegend" title=""><b>NEW</b><span>New / update</span></div>
+  </div>
   <button class="btn" id="reanalyzeBtn" disabled>Re-Analyze</button>
-  <button class="btn" id="applyBtn" disabled>Apply file changes</button>
   <div id="spacer"></div>
   <button class="btn" id="closeBtn">Close</button>
 </div>
@@ -8207,6 +8439,22 @@ button:focus-visible,input:focus-visible { outline:2px solid #8cc8ff; outline-of
   <div id="resultTitle">Re-Analyze result</div>
   <div id="resultBody"></div>
 </div>
+<div id="exportBar" aria-label="Copy selected releases">
+  <div class="exportChoice">
+    <div class="exportLabel"><b>Copy old + new releases into:</b><span>Final improved discography: retained OLD + additions/upgrades from NEW.</span></div>
+    <button class="btn pathOpenBtn" id="openAllDestination" disabled title="Open destination" aria-label="Open old plus new destination">📁</button>
+    <div class="exportPath" id="allDestination" title="">Choose destination...</div>
+    <button class="btn" id="chooseAllDestination">Browse...</button>
+    <button class="btn exportCopyBtn" id="copyAllBtn" disabled>Copy old + new</button>
+  </div>
+  <div class="exportChoice">
+    <div class="exportLabel"><b>Copy new releases into:</b><span>Only retained releases from the NEW/update folder: ADD + UPGRADE.</span></div>
+    <button class="btn pathOpenBtn" id="openNewDestination" disabled title="Open destination" aria-label="Open new releases destination">📁</button>
+    <div class="exportPath" id="newDestination" title="">Choose destination...</div>
+    <button class="btn" id="chooseNewDestination">Browse...</button>
+    <button class="btn exportCopyBtn" id="copyNewBtn" disabled>Copy new releases</button>
+  </div>
+</div>
 <script type="module">
 let bridge = null;
 let state = null;
@@ -8214,6 +8462,49 @@ let selectedId = null;
 let activeTrack = null;
 let rowEls = new Map();
 let resizeTimer = null;
+const exportDestinations={all:"",new:""};
+
+function pathLeaf(value) {
+  const parts=String(value||"").split(/[\\/]+/).filter(Boolean);
+  return parts.length?parts[parts.length-1]:"";
+}
+function actionDisplay(n) {
+  const action=String(n.action||"").toUpperCase();
+  if(action==="REPLACE"){
+    const oldMedium=(n.upgradeFrom||[]).map(function(x){return String(x.sourceMedium||"").trim();}).filter(Boolean)[0]||"OLD";
+    const newMedium=String(n.sourceMedium||"").trim()||"NEW";
+    return {label:"UPGRADE "+oldMedium+" → "+newMedium, cls:"upgrade"};
+  }
+  if(action==="ADD") return {label:"ADD",cls:"add"};
+  if(action==="KEEP") return {label:"KEEP",cls:"keep"};
+  if(action==="REMOVE") return {label:"REMOVE",cls:"remove"};
+  if(action==="SKIP") return {label:"SKIP",cls:"skip"};
+  return {label:action||"PLAN",cls:"keep"};
+}
+function renderSourceLegend(){
+  const roots=state&&state.sourceRoots?state.sourceRoots:{};
+  const oldEl=document.getElementById("oldLegend"), newEl=document.getElementById("newLegend");
+  const oldPath=String(roots.existing||""), newPath=String(roots.recycle||"");
+  oldEl.title=oldPath; newEl.title=newPath;
+  oldEl.querySelector("span").textContent=pathLeaf(oldPath)||"Existing";
+  newEl.querySelector("span").textContent=pathLeaf(newPath)||"New / update";
+}
+function updateExportControls(){
+  const bar=document.getElementById("exportBar");
+  const enabled=!!(state&&state.editable);
+  bar.classList.toggle("open",enabled);
+  ["all","new"].forEach(function(mode){
+    const cap=mode==="all"?"All":"New";
+    const path=String(exportDestinations[mode]||"");
+    const pathEl=document.getElementById(mode==="all"?"allDestination":"newDestination");
+    const openBtn=document.getElementById("open"+cap+"Destination");
+    const copyBtn=document.getElementById(mode==="all"?"copyAllBtn":"copyNewBtn");
+    pathEl.textContent=path||"Choose destination...";
+    pathEl.title=path;
+    openBtn.disabled=!path;
+    copyBtn.disabled=!enabled||!path||!!state.dirty||!state.applyEnabled;
+  });
+}
 
 function esc(v) {
   return String(v == null ? "" : v)
@@ -8455,9 +8746,14 @@ function appendReleaseRow(host,n) {
             :(Number(n.uniqueCount)>0
               ?'<span class="uniqueBadge '+badgeClass(n.uniqueCount)+'">'+n.uniqueCount+'</span>'
               :"")))));
-  const meta=n.manualRemoved?"IGNORED":(n.pendingReleaseIgnore?"PENDING IGNORE":(n.pendingReleaseRestore?"PENDING RESTORE":n.action));
+  const origin=String(n.rootKind||"")==="existing"
+    ?'<span class="originBadge old" title="From existing discography">OLD</span>'
+    :'<span class="originBadge new" title="From new / update folder">NEW</span>';
+  const plan=actionDisplay(n);
+  const planBadge='<span class="actionBadge '+plan.cls+'" title="'+esc(n.reason||"")+'">'+esc(plan.label)+'</span>';
+  const meta=n.manualRemoved?"IGNORED":(n.pendingReleaseIgnore?"PENDING":(n.pendingReleaseRestore?"RESTORE":""));
   row.innerHTML='<span class="folderIcon"></span><span class="releaseName">'+esc(n.name)+'</span>'
-    +'<span class="releaseMeta">'+esc(meta)+'</span>'+badge;
+    +(meta?'<span class="releaseMeta">'+esc(meta)+'</span>':'')+origin+planBadge+badge;
   function activateReleaseRow(){
     const details=document.getElementById("details");
     if(selectedId!=null && Number(selectedId)===Number(n.id) && details.classList.contains("open")){
@@ -8659,17 +8955,30 @@ function openDetails(n) {
   } else if(n.manualRemoved){
     ignoreNotice='<div class="ignoredNotice"><b>Ignored by you.</b> This release stays on the map so you can inspect its replacement sources. To undo: click <b>Restore release</b>, then <b>Re-Analyze</b>.</div>';
   }
+  const plan=actionDisplay(n);
   const releaseMeta=n.manualRemoved
-    ?"IGNORED BY YOU / "+n.action
+    ?"IGNORED BY YOU / "+plan.label
     :(n.pendingReleaseIgnore
-      ?"PENDING IGNORE / "+n.action
+      ?"PENDING IGNORE / "+plan.label
       :(n.pendingReleaseRestore
-        ?"PENDING RESTORE / "+n.action
-        :(n.kind==="duplicate"?"DUPLICATE / "+n.action:n.action)));
+        ?"PENDING RESTORE / "+plan.label
+        :(n.kind==="duplicate"?"DUPLICATE / "+plan.label:plan.label)));
+  const originLabel=String(n.rootKind||"")==="existing"?"OLD / existing discography":"NEW / new-update folder";
+  const rootText=String(n.sourceRoot||"");
+  let sourceSummary='<div class="sourceSummary"><strong>Origin:</strong> '+esc(originLabel)
+    +(rootText?' · '+esc(rootText):'')
+    +'<br><strong>Source:</strong> '+esc(n.sourceMedium||n.sourceDescription||"Unknown");
+  if(String(n.action||"").toUpperCase()==="REPLACE" && (n.upgradeFrom||[]).length){
+    const upgrades=(n.upgradeFrom||[]).map(function(old){
+      return esc(old.name||"old release")+' ('+esc(old.sourceMedium||old.source||"Unknown")+')';
+    }).join("; ");
+    sourceSummary+='<br><strong>Upgrade:</strong> '+upgrades+' → '+esc(n.name)+' ('+esc(n.sourceMedium||"Unknown")+')';
+  }
+  sourceSummary+='</div>';
   inner.innerHTML='<div id="detailsHead"><button id="closeDetailsBtn" title="Close details" aria-label="Close details">×</button><div id="releaseName">'+esc(n.name)+'</div>'
     +'<div id="releaseMeta">'+esc(releaseMeta)
     +' | '+n.uniqueCount+' unique | '+n.includedTracks+' included</div>'
-    +ignoreNotice+'<div id="releaseActions">'+ignoreRelease+'</div><div id="pathRow">'
+    +sourceSummary+ignoreNotice+'<div id="releaseActions">'+ignoreRelease+'</div><div id="pathRow">'
     +'<button class="btn pathOpenBtn" id="openFolderBtn" title="Open release folder" aria-label="Open release folder">📁</button>'
     +'<div id="releasePath">'+esc(n.path)+'</div><button class="btn" id="copyPathBtn">Copy path</button></div>'
     +'<div id="reason">'+esc(
@@ -8742,7 +9051,7 @@ function openDetails(n) {
   });
 }
 function receiveState(raw) {
-  state=JSON.parse(raw); renderPlanCounts(); updateButtons(); renderBoard();
+  state=JSON.parse(raw); renderPlanCounts(); renderSourceLegend(); updateButtons(); renderBoard();
   if(selectedId!=null && getNode(selectedId)) openDetails(getNode(selectedId));
   else document.getElementById("details").classList.remove("open");
   updateTrackMode(); renderResult();
@@ -8784,10 +9093,9 @@ function receiveReleaseToggle(raw) {
   if(selectedId!=null && getNode(selectedId)) openDetails(getNode(selectedId));
 }
 function updateButtons() {
-  const r=document.getElementById("reanalyzeBtn"), a=document.getElementById("applyBtn");
+  const r=document.getElementById("reanalyzeBtn");
   r.disabled=!state.editable||!state.dirty; r.classList.toggle("dirty",!!state.dirty);
-  a.disabled=!state.editable||!state.applyEnabled||!!state.dirty;
-  a.classList.toggle("apply-ready",!!state.applyHighlighted&&!state.dirty);
+  updateExportControls();
 }
 function renderResult() {
   const drawer=document.getElementById("resultDrawer"), body=document.getElementById("resultBody");
@@ -8823,13 +9131,39 @@ document.getElementById("clearTrackBtn").onclick=function(){
   document.querySelectorAll(".track").forEach(function(el){el.classList.remove("activeTrack");});
 };
 document.getElementById("reanalyzeBtn").onclick=function(){bridge.reanalyze(receiveState);};
-document.getElementById("applyBtn").onclick=function(){
-  if(!state||!state.applyEnabled)return;
+function chooseDestination(mode){
+  bridge.chooseDestination(mode,function(path){
+    path=String(path||"").trim();
+    if(!path)return;
+    exportDestinations[mode]=path;
+    updateExportControls();
+  });
+}
+function copyPlan(mode){
+  if(!state||!state.applyEnabled||state.dirty)return;
+  const path=String(exportDestinations[mode]||"").trim();
+  if(!path){chooseDestination(mode);return;}
+  const nodes=(state.nodes||[]).filter(function(n){
+    const retained=["KEEP","ADD","REPLACE"].includes(String(n.action||"").toUpperCase())&&!n.manualRemoved;
+    return retained && (mode==="all" || String(n.rootKind||"")==="recycle");
+  });
+  const oldCount=nodes.filter(function(n){return String(n.rootKind||"")==="existing";}).length;
+  const newCount=nodes.filter(function(n){return String(n.rootKind||"")==="recycle";}).length;
+  const upgradeCount=nodes.filter(function(n){return String(n.action||"").toUpperCase()==="REPLACE";}).length;
+  const label=mode==="all"?"old + new retained releases":"new/update retained releases";
   const ok=window.confirm(
-    "Apply file changes now?\n\nThis will move/remove files according to the current Release Map plan. You can use Undo last run afterward."
+    "Copy "+label+" to:\n\n"+path+"\n\n"
+    +oldCount+" OLD + "+newCount+" NEW releases ("+upgradeCount+" upgrade(s)).\n\n"
+    +"This is non-destructive: the existing and new/update source folders will not be moved, deleted, or modified."
   );
-  if(ok)bridge.apply();
-};
+  if(ok)bridge.copyPlan(mode,path);
+}
+document.getElementById("chooseAllDestination").onclick=function(){chooseDestination("all");};
+document.getElementById("chooseNewDestination").onclick=function(){chooseDestination("new");};
+document.getElementById("openAllDestination").onclick=function(){if(exportDestinations.all)bridge.openFolder(exportDestinations.all);};
+document.getElementById("openNewDestination").onclick=function(){if(exportDestinations.new)bridge.openFolder(exportDestinations.new);};
+document.getElementById("copyAllBtn").onclick=function(){copyPlan("all");};
+document.getElementById("copyNewBtn").onclick=function(){copyPlan("new");};
 document.getElementById("closeBtn").onclick=function(){bridge.closeMap();};
 document.addEventListener("keydown",function(e){
   if(e.key==="Escape" && document.getElementById("details").classList.contains("open")){
@@ -9356,6 +9690,21 @@ def _release_map_state_for_ui(
                 "reason": str(item.get("reason", "")),
                 "releaseType": str(item.get("release_type", "") or "").lower(),
                 "family": str(item.get("family", "") or ""),
+                "rootKind": str(item.get("root_kind", "") or ""),
+                "sourceRoot": str(item.get("scan_root", "") or ""),
+                "sourceMedium": str(item.get("source_medium", "") or ""),
+                "sourceDescription": str(item.get("source", "") or ""),
+                "upgradeFrom": [
+                    {
+                        "name": str(row.get("name", "") or ""),
+                        "sourceMedium": str(row.get("source_medium", "") or ""),
+                        "source": str(row.get("source", "") or ""),
+                        "sourceRoot": str(row.get("scan_root", "") or ""),
+                    }
+                    for row in (item.get("related", []) or [])
+                    if action == "REPLACE"
+                    and str(row.get("root_kind", "") or "") == "existing"
+                ],
                 "albumTitles": sorted({
                     str(track.get("album", "") or "").strip()
                     for track in ui_tracks
@@ -9429,6 +9778,26 @@ def _release_map_state_for_ui(
                 "releases": current_releases - initial_releases,
                 "tracks": current_tracks - initial_tracks,
             },
+        },
+        "sourceRoots": {
+            "existing": next(
+                (
+                    str(node.get("sourceRoot", "") or "")
+                    for node in nodes
+                    if str(node.get("rootKind", "") or "") == "existing"
+                    and str(node.get("sourceRoot", "") or "")
+                ),
+                "",
+            ),
+            "recycle": next(
+                (
+                    str(node.get("sourceRoot", "") or "")
+                    for node in nodes
+                    if str(node.get("rootKind", "") or "") == "recycle"
+                    and str(node.get("sourceRoot", "") or "")
+                ),
+                "",
+            ),
         },
         "nodes": nodes,
         "versionFamilies": version_families,
@@ -9746,19 +10115,49 @@ def launch_webview_release_map(session: Dict[str, object]) -> Dict[str, object]:
     
         def copyPath(self, value: str):
             _copy_text_to_clipboard(value or "")
-    
-        def apply(self):
-            if not self.editable or self.dirty or not self.apply_enabled:
+
+        def chooseDestination(self, mode: str):
+            if self.window is None:
+                return ""
+            roots = [
+                str(item.get("scan_root", "") or "").strip()
+                for item in self.snapshots
+                if str(item.get("scan_root", "") or "").strip()
+            ]
+            start = ""
+            if roots:
+                try:
+                    start = str(Path(roots[0]).parent)
+                except Exception:
+                    start = ""
+            if not start or not Path(start).is_dir():
+                start = str(Path.home())
+            chosen_items = self.window.create_file_dialog(
+                webview.FileDialog.FOLDER,
+                directory=start,
+            )
+            return chosen_items[0] if chosen_items else ""
+
+        def copyPlan(self, mode: str, destination: str):
+            mode = str(mode or "").strip().lower()
+            destination = str(destination or "").strip()
+            if (
+                not self.editable
+                or self.dirty
+                or not self.apply_enabled
+                or mode not in {"all", "new"}
+                or not destination
+            ):
                 return
-            payload = {
-                "action": "apply",
+            self.result_payload = {
+                "action": "copy_all" if mode == "all" else "copy_new",
+                "destination": destination,
                 "snapshots": self.snapshots,
                 "selected": self.selected,
                 "decisions": self.decisions,
                 "blocked_release_ids": self.blocked_release_ids,
                 "initial_plan_counts": self.initial_plan_counts,
             }
-            self.result_payload = payload
             self.done_event.set()
             if self.window is not None:
                 self.window.destroy()
@@ -9799,7 +10198,8 @@ def launch_webview_release_map(session: Dict[str, object]) -> Dict[str, object]:
             "reanalyze",
             "openFolder",
             "copyPath",
-            "apply",
+            "chooseDestination",
+            "copyPlan",
             "closeMap",
         ),
     )
@@ -9996,7 +10396,7 @@ button:focus-visible,input:focus-visible{
 
 <div id="content">
   <section class="card">
-    <div class="cardHead"><div class="cardTitle">Source folders</div><div class="cardHint">Nothing is moved until Apply in Release Map</div></div>
+    <div class="cardHead"><div class="cardTitle">Source folders</div><div class="cardHint">Analysis never changes these folders. Release Map exports copies only.</div></div>
     <div class="sources">
       <div class="sourceBlock">
         <div class="labelRow"><label class="fieldLabel" for="existingPath">Existing discography</label><div class="optional">optional</div></div>
@@ -10344,11 +10744,35 @@ function doneModal(data){
   document.getElementById("mapDone").onclick=function(){closeModal();bridge.openReleaseMap();};
   document.getElementById("doneClose").onclick=closeModal;
 }
+function copyDoneModal(data){
+  const r=data.result||{};
+  const mode=String(r.mode||"");
+  const title=mode==="new"?"New/update releases copied":"Improved discography copied";
+  const body='<div class="doneGrid">'
+    +'<div class="doneStat">Retained releases copied<b>'+esc(r.logical_releases||0)+'</b></div>'
+    +'<div class="doneStat">From OLD / existing<b>'+esc(r.existing_releases||0)+'</b></div>'
+    +'<div class="doneStat">From NEW / update<b>'+esc(r.new_releases||0)+'</b></div>'
+    +'<div class="doneStat">Upgrades<b>'+esc(r.upgrades||0)+'</b></div>'
+    +'</div><div class="reviewDetails" style="margin-top:10px">New additions: '+esc(r.additions||0)
+    +' · Duplicate files omitted from copied output: '+esc(r.duplicate_files_omitted||0)
+    +' · Source folders modified: NO</div>'
+    +'<div class="pathNote"><button class="iconBtn" id="openCopyPathInline" title="Open copied output" aria-label="Open copied output">📁</button>'
+    +'<span class="pathNoteText">Destination: '+esc(data.destination||"")+'</span></div>';
+  openModal("done",title,"Copy completed. Original OLD and NEW source folders were left unchanged.",body,
+    '<button class="btn" id="openCopyDone">Open destination</button>'
+    +'<button class="btn" id="mapAfterCopy">Release Map...</button>'
+    +'<div class="modalSpacer"></div><button class="btn primary" id="copyDoneClose">Close</button>');
+  document.getElementById("openCopyDone").onclick=function(){bridge.openPath(data.destination||"");};
+  document.getElementById("openCopyPathInline").onclick=function(){bridge.openPath(data.destination||"");};
+  document.getElementById("mapAfterCopy").onclick=function(){closeModal();bridge.openReleaseMap();};
+  document.getElementById("copyDoneClose").onclick=closeModal;
+}
 function handleEvent(raw){
   const e=typeof raw==="string"?JSON.parse(raw):raw;
   if(e.type==="error"||e.type==="info"){messageModal(e.title||"Duplicate / Edition Analyzer",e.message||"");return;}
   if(e.type==="patternReview"){patternReview(e);return;}
   if(e.type==="manualReview"){manualReview(e);return;}
+  if(e.type==="copyDone"){copyDoneModal(e);return;}
   if(e.type==="done"){doneModal(e);return;}
 }
 function syncPaths(){
@@ -11214,48 +11638,67 @@ def _webview_main_app() -> int:
         ) -> None:
             self._update_live_release_map_session(session, map_result)
             self.map_open = False
-            if map_result.get("action") != "apply":
-                self.status = "Analysis complete - plan not applied."
+            action = str(map_result.get("action", "") or "")
+            if action not in {"copy_all", "copy_new"}:
+                self.status = "Analysis complete - no copy performed."
                 self._emit_state()
                 return
-    
+
             existing = session.get("existing")
             recycle = session.get("recycle")
             releases = session.get("releases")
             decisions = list(session.get("decisions", []) or [])
+            destination_text = str(map_result.get("destination", "") or "").strip()
             if not isinstance(recycle, Path) or not isinstance(releases, list):
                 self._error("The live analysis context is no longer available.")
                 return
-    
-            counts = action_summary(decisions)
-            intra_duplicates = plan_intra_release_duplicates(releases, decisions)
-            to_move = counts["SKIP"] + counts["REMOVE"] + len(intra_duplicates)
-            if to_move == 0:
-                self.status = "Analysis complete - no moves in current plan."
-                self._append_activity("Current plan contains no filesystem moves.")
-                self._emit_state()
+            if not destination_text:
+                self._error("No copy destination was selected.")
                 return
-    
-            self._live_release_map_session = None
+
+            mode = "all" if action == "copy_all" else "new"
+            destination = Path(destination_text)
             self.progress_pct = 0.0
             self.progress_count = ""
-            self.status = "Applying moves"
+            self.status = "Copying final discography" if mode == "all" else "Copying new/update releases"
             self._last_progress_stage = ""
-            self._append_activity("Applying moves")
+            self._append_activity(self.status)
             self._set_running(True)
+
             try:
-                result = apply_automatic_plan(
-                    existing,
+                result = copy_retained_plan(
+                    existing if isinstance(existing, Path) else None,
                     recycle,
+                    destination,
                     releases,
                     decisions,
-                    intra_duplicates,
+                    mode,
                     self._progress,
                 )
-                self._apply_done(recycle, result)
+                self._live_release_map_session = None
+                self._copy_done(destination, result)
             except Exception as exc:
+                self.running = False
+                self.run_started_epoch_ms = 0
+                self.status = "Analysis complete - copy failed."
                 self._error(str(exc))
-    
+
+        def _copy_done(self, destination: Path, result: Dict[str, object]) -> None:
+            self.running = False
+            self.run_started_epoch_ms = 0
+            self.progress_pct = 100.0
+            self.progress_count = "100%"
+            self.status = "Copy complete"
+            self._append_activity(
+                f"Copy complete: {result.get('logical_releases', 0)} retained release(s)"
+            )
+            self._emit_state()
+            self._event({
+                "type": "copyDone",
+                "destination": str(destination),
+                "result": result,
+            })
+
         def _apply_done(self, recycle: Path, result: Dict[str, object]) -> None:
             self.running = False
             self.run_started_epoch_ms = 0
@@ -11434,9 +11877,22 @@ def _ui_contract_self_test() -> None:
             "Release Map track rows must be keyboard-operable.",
         ),
         (
-            'id="applyBtn" disabled>Apply file changes</button>' in map_html
-            and 'window.confirm(' in map_html,
-            "Release Map file-changing Apply action requires an explicit confirmation.",
+            'id="copyAllBtn" disabled>Copy old + new</button>' in map_html
+            and 'id="copyNewBtn" disabled>Copy new releases</button>' in map_html
+            and 'id="allDestination"' in map_html
+            and 'id="newDestination"' in map_html,
+            "Release Map must provide separate old+new and new-only copy destinations/actions.",
+        ),
+        (
+            'originBadge old' in map_html
+            and 'originBadge new' in map_html
+            and 'UPGRADE ' in map_html
+            and 'sourceLegendPill' in map_html,
+            "Release Map must visibly distinguish OLD, NEW, and UPGRADE releases.",
+        ),
+        (
+            'source folders will not be moved, deleted, or modified' in map_html,
+            "Release Map copy workflow must state that source folders are non-destructive.",
         ),
         (
             'function messageBodyWithPaths(message)' in main_html
@@ -11555,6 +12011,10 @@ def _ui_contract_self_test() -> None:
     )
     if (explicit_ep_type, explicit_ep_source) != ("ep", "name"):
         raise RuntimeError("Release type self-test failed: explicit EP name must override duration.")
+
+    copy_contract_source = copy_retained_plan.__doc__ or ""
+    if "without modifying either source collection" not in copy_contract_source:
+        raise RuntimeError("Copy workflow self-test failed: non-destructive export contract is missing.")
 
     grouping_probe = [
         {"id": 1, "releaseType": "album", "name": "2002 - Let Go (Japan Tour Special Limited Version) [JP - BVCA-21138 - 2005]"},

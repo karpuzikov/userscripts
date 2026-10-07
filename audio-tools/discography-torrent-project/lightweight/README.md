@@ -1,6 +1,6 @@
 # Duplicate Edition Analyzer Lightweight
 
-Version: **0.2.9 - Under construction ⚠️**
+Version: **0.3.0 - Under construction ⚠️**
 
 Branch: `dea-lightweight-modern`
 
@@ -41,6 +41,23 @@ The lightweight build preserves the regular DEA feature surface, including:
 - path openers, logging, settings and Undo.
 
 The failed `native-light` prototype is not the reference.
+
+## 0.3.0
+
+- Reworked Release Map around the actual project goal: improve an existing discography while keeping OLD and NEW origins obvious.
+- Every release row now shows **OLD** (existing discography) or **NEW** (new/update folder).
+- Plan badges clearly show **KEEP**, **ADD**, **UPGRADE**, **REMOVE**, or **SKIP**.
+- Replacements show source-medium direction such as **UPGRADE WEB → CD** when available.
+- Release details show source root, source medium, and which OLD release(s) a NEW upgrade replaces.
+- Removed the visible destructive **Apply file changes** workflow.
+- Added two explicit non-destructive export workflows:
+  - **Copy old + new releases into:** final improved discography containing retained OLD releases plus NEW additions/upgrades.
+  - **Copy new releases into:** only retained releases from the NEW/update source, including ADD and UPGRADE releases.
+- Each export shows its destination path, Browse control, adjacent open-folder button, and explicit confirmation.
+- Copying never moves, deletes, or modifies either source folder.
+- Exports preserve relative release-folder structure and omit analyzer-detected duplicate files inside retained releases.
+- Completion reports OLD/NEW counts, additions, upgrades, omitted duplicate files, and destination.
+- The legacy move/Undo code remains internally only for compatibility with old manifests; the current map no longer invokes it.
 
 ## 0.2.9
 

@@ -102,7 +102,7 @@ Reason for this architecture: it preserves the exact proven Python decision engi
 - Undo last run.
 - Release Map.
 - Close.
-- Analysis and file modification are separate; nothing moves until Apply in Release Map.
+- Analysis and export are separate; analysis never modifies either source folder. Copy actions in Release Map create curated output copies only.
 
 ### Unusual track pattern review
 - Only genuinely unknown/non-standard version-like patterns are reviewed.
@@ -255,7 +255,7 @@ A lightweight build is not parity-complete until all of these pass:
 3. Main UI feature checklist matches production.
 4. Release Map feature checklist matches production, including visible SVG links/connections.
 5. Ignore/restore exact-instance track behavior matches production.
-6. Ignore/restore release + Re-Analyze + Apply gating matches production.
+6. Ignore/restore release + Re-Analyze + Copy gating works with both non-destructive export modes.
 7. Version/Remix/Live panels and navigation match production.
 8. Replacement-source/result-drawer behavior matches production.
 9. Filesystem-path opener invariant passes on every visible path.
@@ -272,13 +272,13 @@ A lightweight build is not parity-complete until all of these pass:
 - New request: create a separate lightweight, fast implementation with a modern UI and zero functional loss from production.
 - Architecture implemented at source level: production Python core + pywebview 6.2.1 + Microsoft Edge WebView2 host, with the production main HTML UI and full Release Map HTML/JS retained. Legacy Qt/PySide6 and dormant Tk/Tcl UI code have been removed from the lightweight source.
 - WebView2 detection uses Microsoft-documented runtime registry keys and WinGet package `Microsoft.EdgeWebView2Runtime` when installation is required.
-- New source version is 0.2.9 on branch `dea-lightweight-modern`. Release-type fallback classification now considers total duration as well as track count. The exact 5-track / ~76.49-minute `[1995] BT - 今 Ima [0630-12345-2] CD` case is regression-tested as Album; short 5-track releases remain EP and explicit EP/Single evidence still wins.
+- New source version is 0.3.0 on branch `dea-lightweight-modern`. Release Map now explicitly distinguishes OLD existing-discography releases from NEW/update releases, marks ADD/KEEP/UPGRADE/REMOVE/SKIP decisions, and surfaces replacement source media such as WEB → CD. The destructive visible Apply workflow is replaced by two non-destructive copy exports: final OLD+NEW retained discography, or NEW-only retained additions/upgrades. Both choose/show a destination, preserve relative release folders, omit analyzer-detected intra-release duplicate files, and never modify either source folder.
 - No new lightweight build has yet been declared parity-complete.
 - Do not send another "native/light" test merely because it launches. Complete the parity checklist first.
 
 ## Exact next steps
 
-1. Validate 0.2.9 release types against the user's BT run, especially 今 Ima, while retaining 0.2.8 grouping and 0.2.7 bridge behavior.
+1. Validate 0.3.0 on the user's Skrillex OLD/NEW run: origin badges, UPGRADE visibility, destination selection, OLD+NEW copy, NEW-only copy, and proof that both source folders remain unchanged.
 2. Run syntax/static checks and source-mode launch checks.
 3. Compare main-window controls and behaviors against production 0.22.12.
 4. Compare full Release Map behavior against production 0.22.12, especially SVG links, cross-release highlighting, alternative-family panels, ignore/restore, Re-Analyze and result drawer.
