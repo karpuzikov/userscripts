@@ -23,7 +23,10 @@ This file is the authoritative handoff for DEA development. Read it before chang
   - User tested it and rejected it because it did not preserve 100% of regular DEA functionality.
   - Do not use the native prototype as the functional specification.
 - New lightweight/fast/modern rewrite:
-  - Must be a new implementation, separate from the failed native prototype.
+  - Branch: `dea-lightweight-modern`
+  - Source: `audio-tools/discography-torrent-project/lightweight/Duplicate Edition Analyzer Lightweight v0.1.0.pyw`
+  - Version: `0.1.0 - Under construction ⚠️`
+  - Separate from the failed native prototype.
   - Functional baseline is production/reference DEA 0.22.12.
   - No production feature may disappear merely to reduce EXE size or complexity.
 
@@ -267,17 +270,19 @@ A lightweight build is not parity-complete until all of these pass:
 - User rejected Native Test 0.1.2 for missing functionality.
 - Production/reference DEA 0.22.12 remains the authority.
 - New request: create a separate lightweight, fast implementation with a modern UI and zero functional loss from production.
-- Architecture direction selected: preserve production Python core + modern WebView2 UI host; remove Qt/PySide6.
+- Architecture implemented at source level: production Python core + pywebview 6.2.1 + Microsoft Edge WebView2 host, with the production main HTML UI and full Release Map HTML/JS retained.
+- WebView2 detection uses Microsoft-documented runtime registry keys and WinGet package `Microsoft.EdgeWebView2Runtime` when installation is required.
+- New source version is 0.1.0 on branch `dea-lightweight-modern`.
 - No new lightweight build has yet been declared parity-complete.
 - Do not send another "native/light" test merely because it launches. Complete the parity checklist first.
 
 ## Exact next steps
 
-1. Create a separate lightweight implementation branch/directory; do not reuse the failed native prototype as the base.
-2. Start from the production 0.22.12 Python source so analysis/optimizer behavior is shared rather than reimplemented.
-3. Separate/reuse the core analysis logic from UI-host code with the smallest possible behavioral delta.
-4. Replace PySide6/QWebChannel hosting with a WebView2-capable lightweight bridge while retaining the existing modern HTML/CSS/JS main UI and full Release Map.
-5. Implement the same bridge API used by the current Release Map:
+1. Validate the new 0.1.0 source bridge end-to-end on Windows.
+2. Run syntax/static checks and source-mode launch checks.
+3. Compare main-window controls and behaviors against production 0.22.12.
+4. Compare full Release Map behavior against production 0.22.12, especially SVG links, cross-release highlighting, alternative-family panels, ignore/restore, Re-Analyze and result drawer.
+5. Verify the implemented bridge API used by the current Release Map:
    - getState
    - toggleTrack
    - toggleRelease
