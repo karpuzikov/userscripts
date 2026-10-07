@@ -33,7 +33,7 @@ from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Set, Tuple
 
 APP_NAME = "Duplicate / Edition Analyzer Lightweight"
-APP_VERSION = "0.3.1"
+APP_VERSION = "0.3.2"
 PROGRAM_DATA_DIR_NAME = "Duplicate Edition Analyzer"
 PYWEBVIEW_VERSION = "6.2.1"
 WEBVIEW_PRIVATE_MODE = True
@@ -8270,20 +8270,31 @@ button,input { font:inherit; }
   border:1px solid #262e38; border-radius:9px; background:rgba(16,20,26,.56);
 }
 .releaseGroupTitle {
-  margin:0 2px 5px; color:#aab6c6; font-size:11px; font-weight:760;
-  letter-spacing:.02em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  margin:0 2px 6px; color:#aab6c6; font-size:11px; font-weight:760;
+  letter-spacing:.02em; white-space:nowrap; overflow:hidden; display:flex; align-items:center; gap:6px;
 }
+.groupStatusIcon { flex:0 0 auto; min-width:16px; text-align:center; font-size:13px; line-height:1; font-family:"Segoe UI Emoji","Segoe UI Symbol","Segoe UI",sans-serif; }
+.groupStatusIcon.keep { color:#76d795; font-family:"Segoe UI Symbol","Segoe UI",sans-serif; font-weight:900; }
+.groupTitleText { min-width:0; overflow:hidden; text-overflow:ellipsis; }
 .releaseGroup.compilationGroup .releaseGroupTitle { color:#d6b875; }
 .releaseRow {
   position:relative; height:34px; display:flex; align-items:center; gap:8px; padding:0 8px;
   border:1px solid transparent; border-radius:6px; color:#e8edf5; cursor:pointer; user-select:none;
   transition:background .10s ease,border-color .10s ease,opacity .10s ease,box-shadow .10s ease;
 }
+.releaseRow.retained { background:rgba(20,25,32,.76); border-color:#2a323d; color:#f0f4fa; }
+.releaseRow.retained .releaseName { color:#f2f6fb; font-weight:620; }
 .releaseRow:hover { background:#171c23; border-color:#343d49; }
 .releaseRow:focus-visible { outline:2px solid #8cc8ff; outline-offset:2px; }
-.releaseRow.selected { background:#18283a; border-color:#68a9f5; box-shadow:0 0 0 1px rgba(104,169,245,.18); }
-.releaseRow.duplicate { color:#a9b1be; background:rgba(17,20,25,.56); }
-.releaseRow.duplicate .releaseName { color:#a9b1be; }
+.releaseRow.selected { opacity:1 !important; background:#18283a; border-color:#68a9f5; box-shadow:0 0 0 1px rgba(104,169,245,.18); }
+.releaseRow.duplicate { height:29px; opacity:.18; color:#727b88; background:transparent; border-color:transparent; }
+.releaseRow.duplicate:hover { opacity:.52; background:#13171d; border-color:#252c35; }
+.releaseRow.duplicate .releaseName { color:#7b8491; font-weight:400; }
+.releaseRow.duplicate .folderIcon { filter:grayscale(1); opacity:.42; }
+.releaseRow.retained.originOld .folderIcon { background:#6f8eae; }
+.releaseRow.retained.originOld .folderIcon:before { background:#8dabc9; }
+.releaseRow.retained.originNew .folderIcon { background:#4fa986; }
+.releaseRow.retained.originNew .folderIcon:before { background:#73c7a6; }
 .releaseRow.ignored {
   color:#ffc1c6; background:rgba(86,29,35,.36); border-color:#843640;
   box-shadow:inset 3px 0 #dc5965;
@@ -8298,9 +8309,10 @@ button,input { font:inherit; }
   box-shadow:inset 3px 0 #4fb574;
 }
 .releaseRow.carrier { border-color:#54d6ff; background:#102934; color:#e8fbff; box-shadow:0 0 0 1px rgba(84,214,255,.24); }
-.releaseRow.searchMatch { border-color:#f3c969; background:#2a2413; box-shadow:0 0 0 1px rgba(243,201,105,.22); }
-.releaseRow.searchDimmed { opacity:.16; }
-.releaseRow.dimmed { opacity:.18; }
+.releaseRow.searchMatch { opacity:1 !important; border-color:#f3c969; background:#2a2413; box-shadow:0 0 0 1px rgba(243,201,105,.22); }
+.releaseRow.searchDimmed { opacity:.08 !important; }
+.releaseRow.dimmed { opacity:.08 !important; }
+.releaseRow.carrier { opacity:1 !important; }
 .folderIcon {
   position:relative; width:16px; height:11px; flex:0 0 16px; border-radius:2px;
   background:#e1b548; box-shadow:inset 0 -1px rgba(0,0,0,.22);
@@ -8311,18 +8323,6 @@ button,input { font:inherit; }
 }
 .releaseName { min-width:0; flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-size:12px; }
 .releaseMeta { flex:0 0 auto; color:#707b8b; font-size:10px; }
-.originBadge,.actionBadge {
-  flex:0 0 auto; height:20px; padding:0 6px; border-radius:6px;
-  display:inline-flex; align-items:center; justify-content:center;
-  font-size:9px; font-weight:850; letter-spacing:.03em; white-space:nowrap;
-}
-.originBadge.old { border:1px solid #4b647e; background:#172332; color:#acd3ff; }
-.originBadge.new { border:1px solid #2c7568; background:#102923; color:#95f3d5; }
-.actionBadge.keep { border:1px solid #46515f; background:#1b2027; color:#b9c4d3; }
-.actionBadge.add { border:1px solid #2d7a46; background:#112b1a; color:#9bf1b3; }
-.actionBadge.upgrade { border:1px solid #9a6b22; background:#31230f; color:#ffd985; }
-.actionBadge.replace { border:1px solid #596779; background:#19212b; color:#c7d3e2; }
-.actionBadge.remove,.actionBadge.skip { border:1px solid #74404a; background:#29171b; color:#ffb9c0; }
 #sourceLegend { display:flex; align-items:center; gap:5px; min-width:0; }
 .sourceLegendPill {
   min-width:0; max-width:220px; height:26px; display:flex; align-items:center; gap:6px;
@@ -8365,22 +8365,6 @@ button,input { font:inherit; }
   .exportLabel { grid-column:1 / -1; }
 }
 
-.uniqueBadge,.duplicateBadge,.ignoredBadge,.pendingBadge {
-  flex:0 0 auto; min-width:22px; height:20px; padding:0 6px; border-radius:10px;
-  display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:800;
-}
-.uniqueBadge.red { background:var(--red); color:#fff; }
-.uniqueBadge.yellow { background:var(--yellow); color:#17130a; }
-.uniqueBadge.green { background:var(--green); color:#07140a; }
-.uniqueBadge.neutral { background:#64748b; color:#fff; }
-.uniqueBadge.gem {
-  min-width:20px; padding:0; background:transparent; color:inherit;
-  font-size:14px; line-height:20px;
-  font-family:"Segoe UI Emoji","Segoe UI Symbol","Segoe UI",sans-serif;
-}
-.duplicateBadge { border:1px solid #4f5968; color:#9aa5b5; background:#20252d; font-weight:700; }
-.ignoredBadge { border:1px solid #ad4a55; color:#ffd5d9; background:#542128; }
-.pendingBadge { border:1px solid #8a6a25; color:#f5d98b; background:#302611; }
 #details {
   width:0; overflow:hidden; transition:width .16s ease; border-left:0 solid var(--line);
   background:var(--panel); display:flex; flex-direction:column; z-index:10;
@@ -8832,6 +8816,13 @@ function groupTitleForNodes(items) {
   candidates.sort(function(a,b){return a.length-b.length||a.localeCompare(b,undefined,{sensitivity:"base"});});
   return candidates[0];
 }
+function groupStatusForNodes(items) {
+  if(items.some(function(n){return !n.manualRemoved&&String(n.action||"").toUpperCase()==="REPLACE"&&actionDisplay(n).cls==="upgrade";}))
+    return {symbol:"⬆️",cls:"upgrade",label:"Upgrade"};
+  if(items.some(function(n){return !n.manualRemoved&&String(n.rootKind||"")==="existing"&&String(n.action||"").toUpperCase()==="KEEP";}))
+    return {symbol:"✓",cls:"keep",label:"Current / old release stays"};
+  return null;
+}
 function appendReleaseRow(host,n) {
   const row=document.createElement("div");
   let rowState=n.kind==="duplicate"?"duplicate":"retained";
@@ -8839,31 +8830,15 @@ function appendReleaseRow(host,n) {
   else if(n.pendingReleaseIgnore) rowState+=" pendingIgnore";
   else if(n.pendingReleaseRestore) rowState+=" pendingRestore";
   row.className="releaseRow "+rowState;
-  row.dataset.id=String(n.id); row.title=n.name;
+  row.dataset.id=String(n.id);
   row.setAttribute("role","button");
   row.tabIndex=0;
-  row.setAttribute("aria-label","Inspect release "+String(n.name||""));
-  const badge=n.manualRemoved
-    ?'<span class="ignoredBadge">IGN</span>'
-    :(n.pendingReleaseIgnore
-      ?'<span class="pendingBadge">PENDING</span>'
-      :(n.pendingReleaseRestore
-        ?'<span class="pendingBadge">RESTORE</span>'
-        :(n.kind==="duplicate"
-          ?'<span class="duplicateBadge">DUP</span>'
-          :(n.isGem
-            ?'<span class="uniqueBadge gem" title="Gem track: '+esc((n.gemTitles||[]).join("; "))+'">💎</span>'
-            :(Number(n.uniqueCount)>0
-              ?'<span class="uniqueBadge '+badgeClass(n.uniqueCount)+'">'+n.uniqueCount+'</span>'
-              :"")))));
-  const origin=String(n.rootKind||"")==="existing"
-    ?'<span class="originBadge old" title="From existing discography">OLD</span>'
-    :'<span class="originBadge new" title="From new / update folder">NEW</span>';
+  row.classList.add(String(n.rootKind||"")==="existing"?"originOld":"originNew");
   const plan=actionDisplay(n);
-  const planBadge='<span class="actionBadge '+plan.cls+'" title="'+esc(n.reason||"")+'">'+esc(plan.label)+'</span>';
-  const meta=n.manualRemoved?"IGNORED":(n.pendingReleaseIgnore?"PENDING":(n.pendingReleaseRestore?"RESTORE":""));
-  row.innerHTML='<span class="folderIcon"></span><span class="releaseName">'+esc(n.name)+'</span>'
-    +(meta?'<span class="releaseMeta">'+esc(meta)+'</span>':'')+origin+planBadge+badge;
+  const stateText=n.manualRemoved?"Ignored":(n.pendingReleaseIgnore?"Pending ignore":(n.pendingReleaseRestore?"Pending restore":(n.kind==="duplicate"?"Duplicate":plan.label)));
+  row.title=String(n.name||"")+"\n"+stateText+"\n"+(String(n.rootKind||"")==="existing"?"OLD / existing":"NEW / update");
+  row.setAttribute("aria-label","Inspect release "+String(n.name||"")+". "+stateText+". "+(String(n.rootKind||"")==="existing"?"Existing discography.":"New or update source."));
+  row.innerHTML='<span class="folderIcon"></span><span class="releaseName">'+esc(n.name)+'</span>';
   function activateReleaseRow(){
     const details=document.getElementById("details");
     if(selectedId!=null && Number(selectedId)===Number(n.id) && details.classList.contains("open")){
@@ -8914,10 +8889,16 @@ function renderBoard() {
       group.className="releaseGroup"+(items.some(function(n){return String(n.releaseType||"")==="compilation";})?" compilationGroup":"");
       const title=document.createElement("div");
       title.className="releaseGroupTitle";
-      const base=groupTitleForNodes(items);
-      title.textContent=items.some(function(n){return String(n.releaseType||"")==="compilation";})
-        ? base+" · Compilation"
-        : base;
+      const base=groupTitleForNodes(items), status=groupStatusForNodes(items);
+      if(status){
+        const icon=document.createElement("span");
+        icon.className="groupStatusIcon "+status.cls; icon.textContent=status.symbol; icon.title=status.label; icon.setAttribute("aria-label",status.label);
+        title.appendChild(icon);
+      }
+      const titleText=document.createElement("span");
+      titleText.className="groupTitleText";
+      titleText.textContent=items.some(function(n){return String(n.releaseType||"")==="compilation";})?base+" · Compilation":base;
+      title.appendChild(titleText);
       group.appendChild(title);
       items.forEach(function(n){appendReleaseRow(group,n);});
       col.appendChild(group);
@@ -12038,12 +12019,13 @@ def _ui_contract_self_test() -> None:
             "Release Map must provide separate old+new and new-only copy destinations/actions.",
         ),
         (
-            'originBadge old' in map_html
-            and 'originBadge new' in map_html
-            and 'UPGRADE ' in map_html
-            and 'return {label:"REPLACE",cls:"replace"}' in map_html
-            and 'sourceLegendPill' in map_html,
-            "Release Map must distinguish OLD/NEW and must not label every replacement as an upgrade.",
+            'sourceLegendPill' in map_html and 'originOld' in map_html and 'originNew' in map_html,
+            "Release Map must preserve OLD/NEW source distinction without per-row badges.",
+        ),
+        (
+            'return {symbol:"⬆️",cls:"upgrade",label:"Upgrade"}' in map_html
+            and 'return {symbol:"✓",cls:"keep",label:"Current / old release stays"}' in map_html,
+            "Release-group headers must use ✓ for OLD-stays and ⬆️ for real upgrades.",
         ),
         (
             'source folders will not be moved, deleted, or modified' in map_html,
