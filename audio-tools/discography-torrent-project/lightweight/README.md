@@ -1,6 +1,6 @@
 # Duplicate Edition Analyzer Lightweight
 
-Version: **0.3.1 - Under construction ⚠️**
+Version: **0.3.2 - Under construction ⚠️**
 
 Branch: `dea-lightweight-modern`
 
@@ -41,6 +41,18 @@ The lightweight build preserves the regular DEA feature surface, including:
 - path openers, logging, settings and Undo.
 
 The failed `native-light` prototype is not the reference.
+
+## 0.3.2
+
+- Simplified the Release Map to remove row-level visual clutter.
+- Removed per-release OLD / NEW / KEEP / SKIP / DUP / unique-count / gem chips from map rows.
+- Retained releases are now bright and visually dominant.
+- Duplicate/discarded releases are heavily faded and slightly more compact; hover/selection/search restores readability.
+- OLD vs NEW remains visible through subtle source-colored folder icons plus the top source legend.
+- Release-family headers now summarize the result:
+  - **✓** = current/OLD release stays.
+  - **⬆️** = a real upgrade replaces it.
+- New-only additions have no extra group symbol.
 
 ## 0.3.1
 
