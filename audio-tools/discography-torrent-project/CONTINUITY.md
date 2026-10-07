@@ -24,8 +24,8 @@ This file is the authoritative handoff for DEA development. Read it before chang
   - Do not use the native prototype as the functional specification.
 - New lightweight/fast/modern rewrite:
   - Branch: `dea-lightweight-modern`
-  - Source: `audio-tools/discography-torrent-project/lightweight/Duplicate Edition Analyzer Lightweight v0.1.1.pyw`
-  - Version: `0.1.1 - Under construction ⚠️`
+  - Source: `audio-tools/discography-torrent-project/lightweight/Duplicate Edition Analyzer Lightweight v0.3.3.pyw`
+  - Version: `0.3.3 - Under construction ⚠️`
   - Separate from the failed native prototype.
   - Functional baseline is production/reference DEA 0.22.12.
   - No production feature may disappear merely to reduce EXE size or complexity.
@@ -112,9 +112,10 @@ Reason for this architecture: it preserves the exact proven Python decision engi
   - Call Out Hook
   - Suggested Call Out Research Hook
   - all resolve to the stable key `suggested callout` and one UI row, currently labeled `Callout hook`.
+- Only unresolved unusual patterns appear in this review. A Pattern already saved in Personal Picks is a resolved persistent keep decision and must not be shown or re-confirmed on later analyses.
 - Checked unusual pattern is kept and saved to Personal Picks.
 - Unchecked pattern is skipped for that run.
-- Existing Personal Picks remain checked.
+- Removing a Pattern from Personal Picks makes it eligible for review again if that pattern is encountered later.
 - Check all / Uncheck all / Cancel / Continue behavior is preserved.
 
 ### Personal Picks
@@ -272,13 +273,13 @@ A lightweight build is not parity-complete until all of these pass:
 - New request: create a separate lightweight, fast implementation with a modern UI and zero functional loss from production.
 - Architecture implemented at source level: production Python core + pywebview 6.2.1 + Microsoft Edge WebView2 host, with the production main HTML UI and full Release Map HTML/JS retained. Legacy Qt/PySide6 and dormant Tk/Tcl UI code have been removed from the lightweight source.
 - WebView2 detection uses Microsoft-documented runtime registry keys and WinGet package `Microsoft.EdgeWebView2Runtime` when installation is required.
-- New source version is 0.3.2 on branch `dea-lightweight-modern`. Release Map row-level badges were removed to reduce visual clutter. Retained rows are visually dominant; duplicate rows are heavily faded but remain inspectable. OLD/NEW origin stays visible via subtle source-colored folder icons and the source legend. Group headers use `✓` when the current/OLD release stays and `⬆️` for a real upgrade.
+- New source version is 0.3.3 on branch `dea-lightweight-modern`. Unusual Track Pattern Review now filters out Pattern rules already saved in Personal Picks, so persistent choices are never re-prompted. If all detected unusual patterns are already resolved by Personal Picks, analysis continues without opening the review. Release Map row-level badges remain removed to reduce visual clutter; retained rows are visually dominant, duplicate rows are heavily faded but remain inspectable, OLD/NEW origin stays visible via subtle source-colored folder icons and the source legend, and group headers use `✓` when the current/OLD release stays and `⬆️` for a real upgrade.
 - No new lightweight build has yet been declared parity-complete.
 - Do not send another "native/light" test merely because it launches. Complete the parity checklist first.
 
 ## Exact next steps
 
-1. Validate 0.3.2 on the user's Skrillex OLD/NEW run: retained rows should dominate, duplicate rows should be nearly invisible until interaction, and group headers must show ✓ for OLD-stays or ⬆️ for real upgrades.
+1. Validate 0.3.3: a Pattern already saved in Personal Picks must not appear in Unusual Track Pattern Review; a genuinely new unusual pattern must still appear. Also re-check the user's Skrillex OLD/NEW run: retained rows should dominate, duplicate rows should be nearly invisible until interaction, and group headers must show ✓ for OLD-stays or ⬆️ for real upgrades.
 2. Run syntax/static checks and source-mode launch checks.
 3. Compare main-window controls and behaviors against production 0.22.12.
 4. Compare full Release Map behavior against production 0.22.12, especially SVG links, cross-release highlighting, alternative-family panels, ignore/restore, Re-Analyze and result drawer.
