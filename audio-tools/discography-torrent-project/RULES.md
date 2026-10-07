@@ -745,7 +745,7 @@ There is **no automatic Live/Remix phrase review, phrase detector review, or cat
 
 ### Release Map UI architecture
 
-- The Release Map must show **all analyzed releases at the same time in one graph**. Never replace the full graph with a selected-release subgraph, neighborhood-only view, drill-down graph, or any other sub-map.
+- **Full map** mode must show all analyzed releases at the same time in one graph. The default presentation may be a compact Changes-first delta view, but Full map must remain one direct action away and must preserve the complete release/relationship context. Never replace Full map with a selected-release subgraph, neighborhood-only view, drill-down graph, or other partial graph.
 - The graph contains release nodes only. Selecting a release may highlight/dim relationships, but must not remove other release nodes from the map.
 - **Duplicate releases appear on the Release Map only as secondary duplicate rows connected to the retained release(s) that cover them.** They must be visually distinct from retained releases and must never be mistaken for retained output.
 - **Remix-only releases must not appear on the graph when Save Remixes is unchecked.** A release whose only relevant/included material is excluded by the remix setting is omitted from the graph.
@@ -759,6 +759,22 @@ There is **no automatic Live/Remix phrase review, phrase detector review, or cat
 - The Release Map must support smooth scrolling, search-to-release, click selection, connected-line highlighting, and track-carrier highlighting while all currently relevant release rows remain loaded in the same board.
 - Selecting a release must not navigate away from the graph. Show release/track details in a single flat side or bottom panel; closing/changing selection returns focus to the same full graph state.
 
+### Release Map changes-first presentation - v0.3.4 authoritative
+
+This section supersedes older wording that required the complete chronological board to be the default visible surface.
+
+- Release Map opens in **Changes** view by default. Its primary purpose is to show what differs between the current OLD discography and the proposed improved result.
+- The default Changes view is compact and must not reserve Albums/EPs/Singles columns or large blank regions.
+- Provide direct, clickable filters for **All changes**, **+ Added**, **⬆️ Upgraded**, **- Removed**, and **🚫 Ignored**.
+- A retained NEW release that is a genuine new addition uses the **+** symbol. This marker is mandatory and must not be replaced by color alone.
+- Changes view hides unchanged retained OLD releases and rejected NEW duplicate candidates unless the user searches for them. Full map remains the complete inspection surface.
+- Every change row gives an immediate short reason: new addition, replacement/upgrade source and reason, OLD release removal reason, or manual ignore state.
+- Search must still find every analyzed release/track. Search is not restricted to the currently visible change set.
+- Track-carrier mode and alternative Version/Remix/Live navigation may automatically switch to Full map when complete cross-release context is required.
+- Full map keeps the chronological Albums/EPs/Singles organization and all SVG relationships. Entirely empty release-type columns must not consume width.
+- Re-Analyze results use a compact result drawer. Added/removed release items in the drawer are directly clickable and navigate to the affected release.
+- The changes-first presentation is a view/filter layer only. It must not alter optimizer decisions, retained coverage, ignore state, search data, Copy output, or analysis results.
+
 ### Release Map interaction workflow
 
 - Release nodes must be rendered as compact **rectangular release cards**, not circles/bubbles. The release name is the primary visible content of the card.
@@ -766,11 +782,7 @@ There is **no automatic Live/Remix phrase review, phrase detector review, or cat
 - Release-card text must be high-contrast light text on a dark card. Black/dark text on the dark graph background is prohibited.
 - Relationship edges between releases must remain visibly distinguishable on the dark background at the default fitted view. Use clear mid/high-contrast lines; selecting a release strengthens its connected edges while unrelated edges may dim but must not disappear completely.
 - Layout spacing must account for card dimensions so release cards do not collapse into an unreadable pile at the default view.
-- Every visible retained release node shows a **unique-track count badge** based on the current plan:
-  - **1-2 unique tracks:** red badge.
-  - **3-5 unique tracks:** yellow badge.
-  - **6+ unique tracks:** green badge.
-  - A retained release with zero unique tracks shows **no unique-track badge**. Never render a `0` bubble. If such a release survives for another explicit rule, explain the reason in details without inventing a numeric badge.
+- Do not overload release rows with permanent OLD/NEW/KEEP/SKIP/DUP/unique-count chip clutter. Keep release names primary and use compact semantic change symbols plus details-on-demand. Unique-track information remains available in release details.
 - Clicking a release does not navigate away from the full graph. Its details panel unfolds in place while **all visible releases remain on the same map**.
 - The details panel must show the full currently relevant track list. Tracks that are unique to the selected retained release are visually highlighted.
 - Hovering a track exposes a compact **Ignore** action for that track. Do not permanently show Ignore buttons on every row.
