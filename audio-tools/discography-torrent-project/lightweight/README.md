@@ -1,6 +1,6 @@
 # Duplicate Edition Analyzer Lightweight
 
-Version: **0.2.7 - Under construction ⚠️**
+Version: **0.2.8 - Under construction ⚠️**
 
 Branch: `dea-lightweight-modern`
 
@@ -41,6 +41,15 @@ The lightweight build preserves the regular DEA feature surface, including:
 - path openers, logging, settings and Undo.
 
 The failed `native-light` prototype is not the reference.
+
+## 0.2.8
+
+- Fixed the root cause of album blocks being scattered around the Albums column.
+- Release Map grouping now uses each audio file's embedded **ALBUM metadata** as its primary release-family identity instead of trying to reverse-engineer the album from arbitrary folder names.
+- Multi-disc tags such as **These Hopeful Machines: CD1** / **CD2** normalize to **These Hopeful Machines**.
+- Folder names remain only a fallback for files with missing ALBUM metadata.
+- Added a regression test using all five **These Hopeful Machines** folder styles from the user's 2026-10-07 comparison run, including Deemix, RED/scene and rutracker naming.
+- Analyzer/optimizer behavior is unchanged; this affects Release Map visual grouping only.
 
 ## 0.2.7
 

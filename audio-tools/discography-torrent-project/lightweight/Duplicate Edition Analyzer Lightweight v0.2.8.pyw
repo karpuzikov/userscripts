@@ -33,7 +33,7 @@ from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Set, Tuple
 
 APP_NAME = "Duplicate / Edition Analyzer Lightweight"
-APP_VERSION = "0.2.7"
+APP_VERSION = "0.2.8"
 PROGRAM_DATA_DIR_NAME = "Duplicate Edition Analyzer"
 PYWEBVIEW_VERSION = "6.2.1"
 WEBVIEW_PRIVATE_MODE = True
@@ -7033,6 +7033,7 @@ def build_decision_snapshot(
                     "number": track_number if track_number is not None else fallback_number,
                     "title": track.display_title,
                     "artist": track.artist,
+                    "album": track.album,
                     "duration": _duration_display(track.duration),
                     "duration_seconds": round(track.duration, 3),
                     "path": str(track.path),
@@ -8925,29 +8926,36 @@ def _release_map_plan_counts(
 
 
 def _release_map_visual_title(name: str) -> str:
-    """Return the human album/EP/single title without folder bookkeeping."""
+    """Fallback human title when embedded ALBUM metadata is unavailable."""
     value = normalize_space(str(name or ""))
-    value = re.sub(r"^\s*\d{4}(?:-\d{2}-\d{2})?\s*-\s*", "", value).strip()
+
+    # Common folder prefixes: "2010 - Title", "[2010] Artist - Title",
+    # and "Artist - Title (2010)" style scene/rip folders.
+    value = re.sub(r"^\s*\[?\d{4}(?:-\d{2}-\d{2})?\]?\s*-?\s*", "", value).strip()
 
     previous = None
     while value != previous:
         previous = value
-        # Folder-only advisory suffixes such as "... [CAT] -clean-".
         value = re.sub(
             r"\s*(?:-\s*)?(?:clean|explicit)(?:\s*-)?\s*$",
             "",
             value,
             flags=re.I,
         ).strip()
-        # Multi-disc physical folder suffixes may appear after the catalog block.
         value = re.sub(
-            r"\s+(?:cd|disc|disk)\s*\d+(?:\s*(?:of|/)\s*\d+)?\s*$",
+            r"\s+(?:\d+\s*)?(?:cd|disc|disk)\s*\d*(?:\s*(?:of|/)\s*\d+)?\s*$",
             "",
             value,
             flags=re.I,
         ).strip()
-        # Region/catalog/source block.
+        value = re.sub(r"\s+(?:web|flac|mp3|lossless)\s*$", "", value, flags=re.I).strip()
+        value = re.sub(r"\s*\{[^{}]+\}\s*$", "", value).strip()
         value = re.sub(r"\s*\[[^\]]+\]\s*$", "", value).strip()
+        value = re.sub(r"\s*\(\d{4}\)\s*$", "", value).strip()
+
+    # Last-resort scene/rip artist prefix. Metadata is preferred, so this only
+    # matters when ALBUM tags are missing.
+    value = re.sub(r"^\s*[^-]{1,80}\s+-\s+(?=\S)", "", value).strip()
     return value
 
 
@@ -8958,17 +8966,61 @@ _RELEASE_MAP_EDITION_SUFFIX_RE = re.compile(
 )
 
 
+_RELEASE_MAP_DISC_SUFFIX_RE = re.compile(
+    r"\s*(?:(?:[:\-–—]\s*)|\()?(?:cd|disc|disk)\s*\d+"
+    r"(?:\s*(?:of|/)\s*\d+)?\)?\s*$",
+    re.I,
+)
+
+
 def _release_map_known_edition_base(title: str) -> str:
     value = normalize_space(title)
     previous = None
     while value != previous:
         previous = value
+        value = _RELEASE_MAP_DISC_SUFFIX_RE.sub("", value).strip()
         value = _RELEASE_MAP_EDITION_SUFFIX_RE.sub("", value).strip()
     return value
 
 
+def _release_map_metadata_title(node: Dict[str, object]) -> str:
+    """Choose one stable release title from embedded ALBUM tags."""
+    raw_values = node.get("albumTitles", []) or []
+    if isinstance(raw_values, str):
+        raw_values = [raw_values]
+
+    candidates: List[str] = []
+    for raw in raw_values:
+        value = normalize_space(clean_metadata_text(str(raw or "")))
+        if not value:
+            continue
+        value = _RELEASE_MAP_DISC_SUFFIX_RE.sub("", value).strip()
+        if value:
+            candidates.append(value)
+
+    if not candidates:
+        return ""
+
+    # After CD1/CD2 normalization, prefer the most frequent title. Shortest
+    # wins ties so "Album" is preferred over a verbose edition label.
+    counts = Counter(normalize_title(value) for value in candidates if normalize_title(value))
+    if not counts:
+        return candidates[0]
+    best_key = min(
+        counts,
+        key=lambda key: (
+            -counts[key],
+            min(len(value) for value in candidates if normalize_title(value) == key),
+            key,
+        ),
+    )
+    matching = [value for value in candidates if normalize_title(value) == best_key]
+    matching.sort(key=lambda value: (len(value), value.casefold()))
+    return matching[0]
+
+
 def _assign_release_map_display_groups(nodes: List[Dict[str, object]]) -> None:
-    """Assign display-only release-family keys without touching optimizer semantics."""
+    """Assign display-only families, preferring embedded ALBUM metadata."""
     by_kind: Dict[str, List[Dict[str, object]]] = defaultdict(list)
     for node in nodes:
         release_type = str(node.get("releaseType", "") or "").lower()
@@ -8981,29 +9033,37 @@ def _assign_release_map_display_groups(nodes: List[Dict[str, object]]) -> None:
         by_kind[kind].append(node)
 
     for rows in by_kind.values():
-        visual_titles = {
-            int(row.get("id", -1)): _release_map_visual_title(str(row.get("name", "")))
-            for row in rows
+        source_titles: Dict[int, str] = {}
+        for row in rows:
+            rid = int(row.get("id", -1))
+            metadata_title = _release_map_metadata_title(row)
+            source_titles[rid] = metadata_title or _release_map_visual_title(str(row.get("name", "")))
+
+        known_bases = {
+            normalize_title(_release_map_known_edition_base(title))
+            for title in source_titles.values()
+            if normalize_title(_release_map_known_edition_base(title))
         }
         exact_titles = {
             normalize_title(title)
-            for title in visual_titles.values()
+            for title in source_titles.values()
             if normalize_title(title)
         }
 
         for row in rows:
             rid = int(row.get("id", -1))
-            title = visual_titles.get(rid, "")
+            title = source_titles.get(rid, "")
             base = _release_map_known_edition_base(title)
 
-            # For arbitrary parenthetical variants (Sketch Book, Instrumentals,
-            # etc.), fold into the plain base only when that plain release exists
-            # in the same Albums / EPs / Singles column. This avoids broad guessing.
+            # Unknown parenthetical labels (Instrumentals, Sketch Book, etc.)
+            # join a plain base only when that plain title is actually present
+            # in the same Albums / EPs / Singles column.
             if base == title:
                 match = re.match(r"^(.*?)\s*\([^()]+\)\s*$", title)
                 if match:
                     candidate = normalize_space(match.group(1))
-                    if normalize_title(candidate) in exact_titles:
+                    candidate_key = normalize_title(candidate)
+                    if candidate_key in exact_titles or candidate_key in known_bases:
                         base = candidate
 
             group_key = normalize_title(base) or normalize_title(title) or str(rid)
@@ -9196,6 +9256,7 @@ def _release_map_state_for_ui(
         gem_titles: List[str] = []
         for row in item.get("tracklist", []) or []:
             track_index = int(row.get("track_global_index", -1))
+            track_album = str(row.get("album", "") or "")
             unique = bool(row.get("unique_to_release")) if retained else False
             if unique:
                 unique_count += 1
@@ -9212,6 +9273,7 @@ def _release_map_state_for_ui(
                 manual_skip = bool(tracks[track_index].manual_skip_rule)
                 is_remix = bool(tracks[track_index].is_remix)
                 is_live = bool(tracks[track_index].is_live)
+                track_album = str(tracks[track_index].album or track_album)
             semantic_family = "live" if is_live else ("remix" if is_remix else "version")
             base_key = (
                 str(row.get("base_title_key", "") or "").strip()
@@ -9238,6 +9300,7 @@ def _release_map_state_for_ui(
                     "index": track_index,
                     "number": row.get("number", ""),
                     "title": str(row.get("title", "")),
+                    "album": track_album,
                     "duration": str(row.get("duration", "")),
                     "groupId": group_id,
                     "included": included,
@@ -9274,6 +9337,11 @@ def _release_map_state_for_ui(
                 "reason": str(item.get("reason", "")),
                 "releaseType": str(item.get("release_type", "") or "").lower(),
                 "family": str(item.get("family", "") or ""),
+                "albumTitles": sorted({
+                    str(track.get("album", "") or "").strip()
+                    for track in ui_tracks
+                    if str(track.get("album", "") or "").strip()
+                }),
                 "displayGroupKey": "",
                 "displayGroupTitle": "",
                 "includedTracks": int(item.get("included_tracks", 0) or 0),
@@ -11450,6 +11518,36 @@ def _ui_contract_self_test() -> None:
         {"id": 10, "releaseType": "album", "name": "2013 - Avril Lavigne [JP - EICP-1588]"},
         {"id": 11, "releaseType": "album", "name": "2019 - Head Above Water (Instrumentals) [WEB]"},
         {"id": 12, "releaseType": "album", "name": "2019 - Head Above Water [WEB]"},
+        {
+            "id": 13,
+            "releaseType": "album",
+            "name": "2010-01-31 - These Hopeful Machines [8715197006125]",
+            "albumTitles": ["These Hopeful Machines"],
+        },
+        {
+            "id": 14,
+            "releaseType": "album",
+            "name": "BT - These Hopeful Machines (2010) [FLAC] {NEWCD9070}",
+            "albumTitles": ["These Hopeful Machines"],
+        },
+        {
+            "id": 15,
+            "releaseType": "album",
+            "name": "[2010] BT - These Hopeful Machines [0 6700 30849 2 5] 2CD",
+            "albumTitles": ["These Hopeful Machines: CD1", "These Hopeful Machines: CD2"],
+        },
+        {
+            "id": 16,
+            "releaseType": "album",
+            "name": "[2010] BT - These Hopeful Machines [067003576758] WEB",
+            "albumTitles": ["These Hopeful Machines"],
+        },
+        {
+            "id": 17,
+            "releaseType": "album",
+            "name": "[2010] BT - These Hopeful Machines [ПР3 CD28862] 2CD",
+            "albumTitles": ["These Hopeful Machines: CD1", "These Hopeful Machines: CD2"],
+        },
     ]
     _assign_release_map_display_groups(grouping_probe)
 
@@ -11468,6 +11566,8 @@ def _ui_contract_self_test() -> None:
         raise RuntimeError("Release Map grouping self-test failed: Avril Lavigne editions split.")
     if len(_probe_keys({11, 12})) != 1:
         raise RuntimeError("Release Map grouping self-test failed: Head Above Water instrumental/base editions split.")
+    if len(_probe_keys({13, 14, 15, 16, 17})) != 1:
+        raise RuntimeError("Release Map grouping self-test failed: These Hopeful Machines folder variants split.")
 
     failed_ui_checks = [message for ok, message in ui_checks if not ok]
     if failed_ui_checks:
