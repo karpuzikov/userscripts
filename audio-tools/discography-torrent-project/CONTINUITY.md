@@ -270,15 +270,15 @@ A lightweight build is not parity-complete until all of these pass:
 - User rejected Native Test 0.1.2 for missing functionality.
 - Production/reference DEA 0.22.12 remains the authority.
 - New request: create a separate lightweight, fast implementation with a modern UI and zero functional loss from production.
-- Architecture implemented at source level: production Python core + pywebview 6.2.1 + Microsoft Edge WebView2 host, with the production main HTML UI and full Release Map HTML/JS retained. Legacy Qt/PySide6 host code has been removed from the lightweight source.
+- Architecture implemented at source level: production Python core + pywebview 6.2.1 + Microsoft Edge WebView2 host, with the production main HTML UI and full Release Map HTML/JS retained. Legacy Qt/PySide6 and dormant Tk/Tcl UI code have been removed from the lightweight source.
 - WebView2 detection uses Microsoft-documented runtime registry keys and WinGet package `Microsoft.EdgeWebView2Runtime` when installation is required.
-- New source version is 0.1.1 on branch `dea-lightweight-modern`.
+- New source version is 0.2.0 on branch `dea-lightweight-modern`; it also removes the dead Tk/Tcl runtime path, uses a persistent WebView2 profile for faster warm starts, and includes a source-safe UI parity self-test.
 - No new lightweight build has yet been declared parity-complete.
 - Do not send another "native/light" test merely because it launches. Complete the parity checklist first.
 
 ## Exact next steps
 
-1. Validate the new 0.1.1 source bridge end-to-end on Windows.
+1. Validate the new 0.2.0 source bridge end-to-end on Windows.
 2. Run syntax/static checks and source-mode launch checks.
 3. Compare main-window controls and behaviors against production 0.22.12.
 4. Compare full Release Map behavior against production 0.22.12, especially SVG links, cross-release highlighting, alternative-family panels, ignore/restore, Re-Analyze and result drawer.

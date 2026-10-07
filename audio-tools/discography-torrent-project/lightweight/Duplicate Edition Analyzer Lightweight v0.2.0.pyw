@@ -31,11 +31,9 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Set, Tuple
-import tkinter as tk
-from tkinter import filedialog, messagebox, ttk
 
 APP_NAME = "Duplicate / Edition Analyzer Lightweight"
-APP_VERSION = "0.1.1"
+APP_VERSION = "0.2.0"
 PROGRAM_DATA_DIR_NAME = "Duplicate Edition Analyzer"
 PYWEBVIEW_VERSION = "6.2.1"
 AUDIO_EXTS = {".m4a", ".flac", ".wav", ".ape", ".wv", ".mp3", ".aac", ".ogg", ".opus"}
@@ -80,18 +78,6 @@ STANDALONE_BUNDLE_REVISION = 1
 
 # hey-bro-check-log by ligh7s, Apache-2.0:
 # https://github.com/ligh7s/hey-bro-check-log
-
-
-# Unified dark UI palette.
-DARK_BG = "#1e1e1e"
-DARK_PANEL = "#252526"
-DARK_FIELD = "#2d2d30"
-DARK_BUTTON = "#333337"
-DARK_BUTTON_ACTIVE = "#3f3f46"
-DARK_FG = "#f0f0f0"
-DARK_MUTED = "#b8b8b8"
-DARK_BORDER = "#4a4a4f"
-DARK_ACCENT = "#5b9bd5"
 
 
 def _is_frozen_build() -> bool:
@@ -271,116 +257,6 @@ def _startup_self_update() -> bool:
     if not update:
         return False
     return _schedule_self_update(update)
-
-
-def _enable_dark_titlebar(window) -> None:
-    if os.name != "nt":
-        return
-    try:
-        import ctypes
-        window.update_idletasks()
-        hwnd = ctypes.windll.user32.GetParent(window.winfo_id())
-        value = ctypes.c_int(1)
-        # DWMWA_USE_IMMERSIVE_DARK_MODE: 20 on current Windows 10/11, 19 on older builds.
-        for attribute in (20, 19):
-            try:
-                if ctypes.windll.dwmapi.DwmSetWindowAttribute(
-                    hwnd, attribute, ctypes.byref(value), ctypes.sizeof(value)
-                ) == 0:
-                    break
-            except Exception:
-                pass
-    except Exception:
-        pass
-
-
-def _apply_dark_theme(root) -> None:
-    root.configure(background=DARK_BG)
-    style = ttk.Style(root)
-    try:
-        style.theme_use("clam")
-    except Exception:
-        pass
-
-    style.configure(".", background=DARK_BG, foreground=DARK_FG, font=("Segoe UI", 9))
-    style.configure("TFrame", background=DARK_BG)
-    style.configure("TLabel", background=DARK_BG, foreground=DARK_FG)
-    style.configure("Section.TLabel", background=DARK_BG, foreground=DARK_FG, font=("Segoe UI", 10, "bold"))
-    style.configure("Help.TLabel", background=DARK_BG, foreground=DARK_MUTED, font=("Segoe UI", 9))
-    style.configure("TCheckbutton", background=DARK_BG, foreground=DARK_FG)
-    style.map(
-        "TCheckbutton",
-        background=[("active", DARK_BG)],
-        foreground=[("disabled", "#777777"), ("active", DARK_FG)],
-    )
-    style.configure(
-        "TEntry",
-        fieldbackground=DARK_FIELD,
-        foreground=DARK_FG,
-        insertcolor=DARK_FG,
-        bordercolor=DARK_BORDER,
-        lightcolor=DARK_BORDER,
-        darkcolor=DARK_BORDER,
-        padding=5,
-    )
-    style.map(
-        "TEntry",
-        fieldbackground=[("disabled", DARK_PANEL), ("readonly", DARK_FIELD)],
-        foreground=[("disabled", "#777777")],
-        bordercolor=[("focus", DARK_ACCENT)],
-    )
-    style.configure(
-        "TButton",
-        background=DARK_BUTTON,
-        foreground=DARK_FG,
-        bordercolor=DARK_BORDER,
-        lightcolor=DARK_BORDER,
-        darkcolor=DARK_BORDER,
-        padding=(10, 6),
-    )
-    style.map(
-        "TButton",
-        background=[("pressed", DARK_PANEL), ("active", DARK_BUTTON_ACTIVE), ("disabled", "#292929")],
-        foreground=[("disabled", "#777777"), ("active", DARK_FG)],
-        bordercolor=[("focus", DARK_ACCENT)],
-    )
-    style.configure(
-        "TProgressbar",
-        troughcolor=DARK_FIELD,
-        background=DARK_ACCENT,
-        bordercolor=DARK_BORDER,
-        lightcolor=DARK_ACCENT,
-        darkcolor=DARK_ACCENT,
-    )
-    style.configure(
-        "Analyzer.Treeview",
-        background="#18181b",
-        fieldbackground="#18181b",
-        foreground="#f4f4f5",
-        borderwidth=0,
-        relief="flat",
-        rowheight=30,
-        font=("Segoe UI", 9),
-    )
-    style.map(
-        "Analyzer.Treeview",
-        background=[("selected", "#264f78")],
-        foreground=[("selected", "#ffffff")],
-    )
-    style.configure(
-        "Analyzer.Treeview.Heading",
-        background="#27272a",
-        foreground="#f4f4f5",
-        bordercolor="#3f3f46",
-        relief="flat",
-        font=("Segoe UI", 9, "bold"),
-        padding=(8, 7),
-    )
-    style.map(
-        "Analyzer.Treeview.Heading",
-        background=[("active", "#3f3f46")],
-    )
-    _enable_dark_titlebar(root)
 
 
 def _open_path_location(value: str) -> None:
@@ -7907,8 +7783,14 @@ def _ensure_webview2_runtime() -> str:
 
 
 def _copy_text_to_clipboard(value: str) -> None:
+    """Copy text without importing Tk; the lightweight build is Windows/WebView2-only."""
+    if os.name != "nt":
+        raise RuntimeError("Clipboard support is available on Windows only.")
+
     text = str(value or "")
-    if os.name == "nt":
+    last_error: Optional[BaseException] = None
+    for _attempt in range(8):
+        hmem = None
         try:
             user32 = ctypes.windll.user32
             kernel32 = ctypes.windll.kernel32
@@ -7922,6 +7804,7 @@ def _copy_text_to_clipboard(value: str) -> None:
             user32.OpenClipboard.argtypes = [ctypes.c_void_p]
             user32.SetClipboardData.argtypes = [ctypes.c_uint, ctypes.c_void_p]
             user32.SetClipboardData.restype = ctypes.c_void_p
+
             data = ctypes.create_unicode_buffer(text)
             size = ctypes.sizeof(data)
             hmem = kernel32.GlobalAlloc(GMEM_MOVEABLE, size)
@@ -7932,27 +7815,26 @@ def _copy_text_to_clipboard(value: str) -> None:
                 raise OSError("GlobalLock failed")
             ctypes.memmove(ptr, ctypes.addressof(data), size)
             kernel32.GlobalUnlock(hmem)
+
             if not user32.OpenClipboard(None):
                 raise OSError("OpenClipboard failed")
             try:
                 user32.EmptyClipboard()
                 if not user32.SetClipboardData(CF_UNICODETEXT, hmem):
                     raise OSError("SetClipboardData failed")
-                hmem = None
+                hmem = None  # Clipboard now owns the memory.
             finally:
                 user32.CloseClipboard()
             return
-        except Exception:
-            pass
-
-    root = tk.Tk()
-    root.withdraw()
-    try:
-        root.clipboard_clear()
-        root.clipboard_append(text)
-        root.update()
-    finally:
-        root.destroy()
+        except Exception as exc:
+            last_error = exc
+            if hmem:
+                try:
+                    kernel32.GlobalFree(hmem)
+                except Exception:
+                    pass
+            time.sleep(0.03)
+    raise RuntimeError(f"Could not copy text to the Windows clipboard: {last_error}")
 
 
 def _light_emit(window, function_name: str, payload: str) -> None:
@@ -9544,1066 +9426,6 @@ def launch_webview_release_map(session: Dict[str, object]) -> Dict[str, object]:
     return bridge.result_payload or {"action": "close"}
 
 
-class DoneWindow(tk.Toplevel):
-    def __init__(
-        self,
-        master,
-        recycle: Path,
-        result: Dict[str, object],
-        decision_callback=None,
-    ):
-        super().__init__(master)
-        self.title(f"{APP_NAME} - Done")
-        self.resizable(False, False)
-        self.configure(background=DARK_BG)
-        _enable_dark_titlebar(self)
-        self.recycle = recycle
-        self.duplicates = Path(str(result["duplicates"]))
-        self.decision_callback = decision_callback
-
-        frame = ttk.Frame(self)
-        frame.pack(fill="both", expand=True, padx=18, pady=18)
-
-        ttk.Label(frame, text="Completed", font=("Segoe UI", 15, "bold")).pack(anchor="w")
-        ttk.Label(
-            frame,
-            text=(
-                f"Recycle releases kept: {result['remaining_recycle']}\n"
-                f"Redundant releases moved: {result['moved']}\n"
-                f"Duplicate files removed inside retained releases: {result['intra_duplicate_files']}\n"
-                f"Moved under !Remixes: {result['remix_moved']}\n"
-                f"Added: {result['add']}   Replaced: {result['replace']}   "
-                f"Recycle skipped: {result['skipped_recycle']}   Existing removed: {result['removed_current']}"
-            ),
-            justify="left",
-        ).pack(anchor="w", pady=(8, 10))
-        ttk.Label(frame, text=f"Duplicates:\n{self.duplicates}", justify="left").pack(anchor="w", pady=(0, 14))
-
-        buttons = ttk.Frame(frame)
-        buttons.pack(fill="x")
-        ttk.Button(buttons, text="Open recycle", command=lambda: os.startfile(self.recycle)).pack(side="left")
-        ttk.Button(buttons, text="Open duplicates", command=lambda: os.startfile(self.duplicates)).pack(side="left", padx=8)
-        ttk.Button(buttons, text="Undo last run", command=self.undo).pack(side="left", padx=8)
-        if self.decision_callback is not None:
-            ttk.Button(buttons, text="Release Map...", command=self.open_decision_map).pack(side="left", padx=8)
-        ttk.Button(buttons, text="Close", command=self.destroy).pack(side="right")
-
-        self.transient(master)
-        self.grab_set()
-        self.focus_force()
-
-    def open_decision_map(self):
-        if self.decision_callback is None:
-            return
-        try:
-            self.grab_release()
-        except Exception:
-            pass
-        try:
-            self.decision_callback()
-        finally:
-            try:
-                if self.winfo_exists():
-                    self.grab_set()
-                    self.focus_force()
-            except Exception:
-                pass
-
-    def undo(self):
-        if not messagebox.askyesno(APP_NAME, "Undo last run?", parent=self):
-            return
-        try:
-            restored, conflicts = undo_last_run()
-        except Exception as exc:
-            messagebox.showerror(APP_NAME, str(exc), parent=self)
-            return
-        if conflicts:
-            messagebox.showwarning(
-                APP_NAME,
-                f"Restored: {restored}\nConflicts: {len(conflicts)}",
-                parent=self,
-            )
-        else:
-            messagebox.showinfo(APP_NAME, f"Restored: {restored}", parent=self)
-        self.destroy()
-
-
-
-class ToolTip:
-    def __init__(self, widget, text: str):
-        self.widget = widget
-        self.text = text
-        self.tip = None
-        widget.bind("<Enter>", self._show, add="+")
-        widget.bind("<Leave>", self._hide, add="+")
-        widget.bind("<ButtonPress>", self._hide, add="+")
-
-    def _show(self, _event=None):
-        if self.tip or not self.text:
-            return
-        try:
-            x = self.widget.winfo_rootx() + 14
-            y = self.widget.winfo_rooty() + self.widget.winfo_height() + 6
-            self.tip = tk.Toplevel(self.widget)
-            self.tip.wm_overrideredirect(True)
-            self.tip.wm_geometry(f"+{x}+{y}")
-            label = tk.Label(
-                self.tip,
-                text=self.text,
-                justify="left",
-                background=DARK_FIELD,
-                foreground=DARK_FG,
-                relief="solid",
-                borderwidth=1,
-                padx=8,
-                pady=5,
-                font=("Segoe UI", 9),
-            )
-            label.pack()
-        except Exception:
-            self.tip = None
-
-    def _hide(self, _event=None):
-        if self.tip is not None:
-            try:
-                self.tip.destroy()
-            except Exception:
-                pass
-            self.tip = None
-
-
-class PersonalPicksWindow(tk.Toplevel):
-    """Persistent user-selected phrase/title and unusual-pattern preferences."""
-
-    def __init__(self, master, rules: List[Dict[str, str]]):
-        super().__init__(master)
-        self.title(f"{APP_NAME} - Personal Picks")
-        self.geometry("760x500")
-        self.minsize(660, 430)
-        self.configure(background=DARK_BG)
-        _enable_dark_titlebar(self)
-        self.result: Optional[List[Dict[str, str]]] = None
-        self.rules: List[Dict[str, str]] = []
-        for item in rules:
-            if not isinstance(item, dict) or not str(item.get("value", "")).strip():
-                continue
-            mode = str(item.get("mode", "contains")).strip().lower()
-            rule = {"mode": mode, "value": str(item.get("value", ""))}
-            if mode == "pattern":
-                key = _personal_pattern_key(item)
-                if not key:
-                    continue
-                rule["key"] = key
-            elif mode not in {"contains", "exact"}:
-                continue
-            self.rules.append(rule)
-
-        outer = ttk.Frame(self)
-        outer.pack(fill="both", expand=True, padx=16, pady=14)
-
-        ttk.Label(outer, text="Personal Picks", font=("Segoe UI", 15, "bold")).pack(anchor="w")
-        ttk.Label(
-            outer,
-            text=(
-                "Saved user choices from phrase/title rules and Unusual track pattern review. "
-                "Pattern picks stay here until you remove them. Phrase rules ignore case and punctuation; "
-                "none of these rules creates duplicate identity or forces a specific release to stay."
-            ),
-            style="Help.TLabel",
-            wraplength=720,
-            justify="left",
-        ).pack(anchor="w", pady=(5, 10))
-
-        self.listbox = tk.Listbox(
-            outer,
-            background="#161616",
-            foreground=DARK_FG,
-            selectbackground=DARK_ACCENT,
-            selectforeground=DARK_FG,
-            relief="solid",
-            borderwidth=1,
-            font=("Segoe UI", 10),
-            activestyle="none",
-        )
-        self.listbox.pack(fill="both", expand=True)
-        self.listbox.bind("<Control-c>", self._copy_selected)
-        self.listbox.bind("<Control-C>", self._copy_selected)
-        self._refresh()
-
-        entry_row = ttk.Frame(outer)
-        entry_row.pack(fill="x", pady=(10, 0))
-        self.value_var = tk.StringVar()
-        entry = ttk.Entry(entry_row, textvariable=self.value_var)
-        entry.pack(side="left", fill="x", expand=True)
-        entry.bind("<Return>", lambda _e: self._add("contains"))
-        ttk.Button(entry_row, text="Add phrase", command=lambda: self._add("contains")).pack(side="left", padx=(8, 0))
-        ttk.Button(entry_row, text="Add exact title", command=lambda: self._add("exact")).pack(side="left", padx=(6, 0))
-
-        toolbar = ttk.Frame(outer)
-        toolbar.pack(fill="x", pady=(8, 0))
-        ttk.Button(toolbar, text="Remove selected", command=self._remove).pack(side="left")
-        ttk.Button(toolbar, text="Clear all", command=self._clear).pack(side="left", padx=(8, 0))
-        ttk.Button(toolbar, text="Copy all", command=self._copy_all).pack(side="left", padx=(8, 0))
-
-        footer = ttk.Frame(outer)
-        footer.pack(fill="x", pady=(12, 0))
-        ttk.Button(footer, text="Cancel", command=self._cancel).pack(side="right")
-        ttk.Button(footer, text="Save", command=self._accept).pack(side="right", padx=(0, 8))
-
-        self.protocol("WM_DELETE_WINDOW", self._cancel)
-        self.transient(master)
-        self.grab_set()
-        entry.focus_set()
-
-    def _refresh(self) -> None:
-        self.listbox.delete(0, "end")
-        for item in self.rules:
-            raw_mode = str(item.get("mode", "contains")).lower()
-            mode = "Pattern" if raw_mode == "pattern" else ("Exact title" if raw_mode == "exact" else "Phrase")
-            self.listbox.insert("end", f"{mode}: {item.get('value', '')}")
-
-    def _add(self, mode: str) -> None:
-        value = self.value_var.get().strip()
-        if not value:
-            return
-        normalized = _personal_pick_normalize(value)
-        if not normalized:
-            return
-        for item in self.rules:
-            if (
-                str(item.get("mode", "contains")).lower() == mode
-                and _personal_pick_normalize(str(item.get("value", ""))) == normalized
-            ):
-                self.value_var.set("")
-                return
-        self.rules.append({"mode": mode, "value": value})
-        self.value_var.set("")
-        self._refresh()
-        self.listbox.see("end")
-
-    def _copy_selected(self, _event=None):
-        indexes = list(self.listbox.curselection())
-        if not indexes:
-            return "break"
-        lines = [self.listbox.get(index) for index in indexes]
-        self.clipboard_clear()
-        self.clipboard_append("\n".join(lines))
-        self.update_idletasks()
-        return "break"
-
-    def _copy_all(self) -> None:
-        lines = [self.listbox.get(index) for index in range(self.listbox.size())]
-        self.clipboard_clear()
-        self.clipboard_append("\n".join(lines))
-        self.update_idletasks()
-
-    def _remove(self) -> None:
-        indexes = list(self.listbox.curselection())
-        for index in reversed(indexes):
-            if 0 <= index < len(self.rules):
-                del self.rules[index]
-        self._refresh()
-
-    def _clear(self) -> None:
-        self.rules.clear()
-        self._refresh()
-
-    def _accept(self) -> None:
-        self.result = [dict(item) for item in self.rules]
-        self.destroy()
-
-    def _cancel(self) -> None:
-        self.result = None
-        self.destroy()
-
-
-class PatternReviewWindow(tk.Toplevel):
-    def __init__(self, master, patterns: List[Dict[str, object]], personal_rules: List[Dict[str, str]]):
-        super().__init__(master)
-        self.title(f"{APP_NAME} - Track Pattern Review")
-        self.geometry("860x640")
-        self.minsize(720, 480)
-        self.configure(background=DARK_BG)
-        _enable_dark_titlebar(self)
-        self.result: Optional[Dict[str, bool]] = None
-        self.vars: Dict[str, tk.BooleanVar] = {}
-        self.existing_pattern_keys = _personal_pattern_keys(personal_rules)
-
-        outer = ttk.Frame(self)
-        outer.pack(fill="both", expand=True, padx=16, pady=14)
-
-        ttk.Label(outer, text="Unusual track pattern review", font=("Segoe UI", 15, "bold")).pack(anchor="w")
-        ttk.Label(
-            outer,
-            text=(
-                "Only unusual / non-standard patterns are shown. Check a pattern to keep it now and save it to Personal Picks. "
-                "Existing Personal Picks stay checked here; remove them later from Personal Picks if needed. "
-                "Unchecked patterns are skipped for this run. Remix/live tracks stay controlled by their own switches."
-            ),
-            style="Help.TLabel",
-            wraplength=810,
-            justify="left",
-        ).pack(anchor="w", pady=(5, 10))
-
-        toolbar = ttk.Frame(outer)
-        toolbar.pack(fill="x", pady=(0, 8))
-        ttk.Button(toolbar, text="Check all", command=lambda: self._set_all(True)).pack(side="left")
-        ttk.Button(toolbar, text="Uncheck all", command=lambda: self._set_all(False)).pack(side="left", padx=(8, 0))
-
-        body = ttk.Frame(outer)
-        body.pack(fill="both", expand=True)
-        canvas = tk.Canvas(body, background=DARK_BG, highlightthickness=0, borderwidth=0)
-        scroll = ttk.Scrollbar(body, orient="vertical", command=canvas.yview)
-        canvas.configure(yscrollcommand=scroll.set)
-        canvas.pack(side="left", fill="both", expand=True)
-        scroll.pack(side="right", fill="y")
-
-        rows = ttk.Frame(canvas)
-        window_id = canvas.create_window((0, 0), window=rows, anchor="nw")
-
-        def sync_scroll(_event=None):
-            canvas.configure(scrollregion=canvas.bbox("all"))
-            canvas.itemconfigure(window_id, width=canvas.winfo_width())
-
-        rows.bind("<Configure>", sync_scroll)
-        canvas.bind("<Configure>", sync_scroll)
-        canvas.bind("<MouseWheel>", lambda e: canvas.yview_scroll(int(-e.delta / 120), "units"))
-
-        for row_index, item in enumerate(patterns):
-            key = str(item["key"])
-            existing_pick = normalize_space(key).casefold() in self.existing_pattern_keys
-            var = tk.BooleanVar(value=existing_pick)
-            self.vars[key] = var
-
-            row = ttk.Frame(rows)
-            row.grid(row=row_index, column=0, sticky="ew", pady=(0, 9))
-            rows.columnconfigure(0, weight=1)
-
-            count = int(item.get("count", 0))
-            label = str(item.get("label", key))
-            check = ttk.Checkbutton(
-                row,
-                text=f"{label} ({count})" + ("  [Personal Pick]" if existing_pick else ""),
-                variable=var,
-            )
-            check.pack(anchor="w")
-            if existing_pick:
-                check.state(["disabled"])
-
-            variants = [str(x) for x in item.get("variants", [])]
-            examples = [str(x) for x in item.get("examples", [])]
-            details = []
-            if len(variants) > 1:
-                details.append("Variants: " + "; ".join(variants[:6]))
-            if examples:
-                details.append("Examples: " + "; ".join(examples[:3]))
-            if details:
-                ttk.Label(
-                    row,
-                    text=" | ".join(details),
-                    style="Help.TLabel",
-                    wraplength=790,
-                    justify="left",
-                ).pack(anchor="w", padx=(24, 0), pady=(2, 0))
-
-        footer = ttk.Frame(outer)
-        footer.pack(fill="x", pady=(12, 0))
-        ttk.Button(footer, text="Cancel", command=self._cancel).pack(side="right")
-        ttk.Button(footer, text="Continue", command=self._accept).pack(side="right", padx=(0, 8))
-
-        self.protocol("WM_DELETE_WINDOW", self._cancel)
-        self.transient(master)
-        self.grab_set()
-        self.focus_force()
-
-    def _set_all(self, value: bool) -> None:
-        for var in self.vars.values():
-            var.set(value)
-
-    def _accept(self) -> None:
-        self.result = {key: bool(var.get()) for key, var in self.vars.items()}
-        self.destroy()
-
-    def _cancel(self) -> None:
-        self.result = None
-        self.destroy()
-
-
-class App(tk.Tk):
-    def __init__(self):
-        super().__init__()
-        self.title(f"{APP_NAME} {APP_VERSION}")
-        self.geometry("920x620")
-        self.minsize(820, 560)
-        _apply_dark_theme(self)
-        saved = _load_app_settings()
-        self.existing_var = tk.StringVar(value=saved.get("existing_discography", ""))
-        self.recycle_var = tk.StringVar(value=saved.get("recycle_update_folder", ""))
-
-        if "save_remixes" in saved:
-            save_remixes = bool(saved.get("save_remixes"))
-        else:
-            save_remixes = not bool(saved.get("exclude_remixes", True))
-        if "save_live" in saved:
-            save_live = bool(saved.get("save_live"))
-        else:
-            save_live = not bool(saved.get("exclude_live", True))
-
-        self.save_remixes_var = tk.BooleanVar(value=save_remixes)
-        self.save_live_var = tk.BooleanVar(value=save_live)
-        self.logging_var = tk.BooleanVar(value=bool(saved.get("logging_enabled", False)))
-        self.pattern_preferences: Dict[str, bool] = {}
-        self.personal_keep_rules = _load_personal_keep_rules(saved)
-        self.status_var = tk.StringVar(value="Ready")
-        self.progress_detail_var = tk.StringVar(value="")
-        self.progress_var = tk.DoubleVar(value=0)
-        self._running = False
-        self._run_started_at = 0.0
-        self._last_progress_stage = ""
-        self._decision_snapshot: List[Dict[str, object]] = _load_decision_snapshot()
-        self._live_release_map_session: Optional[Dict[str, object]] = None
-        self._build()
-        self.protocol("WM_DELETE_WINDOW", self.on_close)
-
-    def _build(self):
-        frm = ttk.Frame(self)
-        frm.pack(fill="both", expand=True, padx=16, pady=14)
-        frm.columnconfigure(0, weight=1)
-        frm.rowconfigure(11, weight=1)
-
-        ttk.Label(frm, text="Existing discography (optional)").grid(row=0, column=0, sticky="w", pady=(0, 3))
-        existing_entry = ttk.Entry(frm, textvariable=self.existing_var)
-        existing_entry.grid(row=1, column=0, sticky="ew")
-        existing_buttons = ttk.Frame(frm)
-        existing_buttons.grid(row=1, column=1, padx=(10, 0), sticky="e")
-        ttk.Button(existing_buttons, text="Browse...", command=lambda: self.browse(self.existing_var)).pack(side="left")
-        ttk.Button(existing_buttons, text="Clear", command=self.clear_existing).pack(side="left", padx=(6, 0))
-        ToolTip(existing_entry, "Already processed collection. Leave blank to analyze only the new/update folder.")
-
-        ttk.Label(frm, text="New / update releases").grid(row=2, column=0, sticky="w", pady=(12, 3))
-        recycle_entry = ttk.Entry(frm, textvariable=self.recycle_var)
-        recycle_entry.grid(row=3, column=0, sticky="ew")
-        ttk.Button(frm, text="Browse...", command=lambda: self.browse(self.recycle_var)).grid(
-            row=3, column=1, padx=(10, 0), sticky="e"
-        )
-        ToolTip(recycle_entry, "Folder containing releases to analyze and filter.")
-
-        options = ttk.Frame(frm)
-        options.grid(row=4, column=0, columnspan=2, sticky="w", pady=(14, 8))
-        remix_cb = ttk.Checkbutton(
-            options,
-            text="Save Remixes",
-            variable=self.save_remixes_var,
-            command=self.save_settings,
-        )
-        remix_cb.pack(side="left")
-        live_cb = ttk.Checkbutton(
-            options,
-            text="Save Live recordings",
-            variable=self.save_live_var,
-            command=self.save_settings,
-        )
-        live_cb.pack(side="left", padx=(18, 0))
-        self.personal_picks_btn = ttk.Button(
-            options,
-            text=self._personal_picks_button_text(),
-            command=self.edit_personal_picks,
-        )
-        self.personal_picks_btn.pack(side="left", padx=(18, 0))
-        logging_cb = ttk.Checkbutton(
-            options,
-            text="Logging",
-            variable=self.logging_var,
-            command=self.save_settings,
-        )
-        logging_cb.pack(side="left", padx=(18, 0))
-        self.open_logs_btn = ttk.Button(
-            options,
-            text="📁",
-            width=3,
-            command=self.open_logs_folder,
-        )
-        self.open_logs_btn.pack(side="left", padx=(4, 0))
-        ToolTip(remix_cb, "Checked: remixes are included in comparison and selection. Unchecked: remixes are skipped.")
-        ToolTip(live_cb, "Checked: live recordings are included in comparison and selection. Unchecked: live recordings are skipped.")
-        ToolTip(self.personal_picks_btn, "Persistent exceptions: matching remix/live tracks are included even when their global checkbox is unchecked.")
-        ToolTip(logging_cb, "Checked: write a detailed JSONL log for the audio comparison process.")
-        ToolTip(self.open_logs_btn, "Open Duplicate Edition Analyzer logs folder.")
-
-        match_label = ttk.Label(frm, text="Match: Chromaprint (audio only)", style="Help.TLabel")
-        match_label.grid(row=5, column=0, columnspan=2, sticky="w", pady=(0, 10))
-        ToolTip(match_label, "Titles, filenames, tags, barcodes, and folder names do not decide duplicate identity.")
-
-        ttk.Label(frm, text="Progress", style="Section.TLabel").grid(
-            row=6, column=0, columnspan=2, sticky="w", pady=(2, 5)
-        )
-        ttk.Label(frm, textvariable=self.status_var).grid(
-            row=7, column=0, columnspan=2, sticky="w"
-        )
-        self.progress = ttk.Progressbar(frm, variable=self.progress_var, maximum=100)
-        self.progress.grid(row=8, column=0, columnspan=2, sticky="ew", pady=(5, 3))
-        ttk.Label(frm, textvariable=self.progress_detail_var, style="Help.TLabel").grid(
-            row=9, column=0, columnspan=2, sticky="w"
-        )
-
-        ttk.Label(frm, text="Activity", style="Section.TLabel").grid(
-            row=10, column=0, columnspan=2, sticky="w", pady=(12, 5)
-        )
-        self.activity = tk.Text(
-            frm,
-            height=9,
-            wrap="word",
-            background="#161616",
-            foreground=DARK_FG,
-            insertbackground=DARK_FG,
-            selectbackground=DARK_ACCENT,
-            relief="solid",
-            borderwidth=1,
-            font=("Cascadia Mono", 9),
-            state="disabled",
-        )
-        self.activity.grid(row=11, column=0, columnspan=2, sticky="nsew")
-
-        actions = ttk.Frame(frm)
-        actions.grid(row=12, column=0, columnspan=2, sticky="ew", pady=(12, 0))
-        self.run_btn = ttk.Button(actions, text="Analyze", command=self.start)
-        self.run_btn.pack(side="left")
-        ttk.Button(actions, text="Undo last run", command=self.undo_main).pack(side="left", padx=(8, 0))
-        self.decision_map_btn = ttk.Button(
-            actions,
-            text="Release Map...",
-            command=self.open_decision_map,
-            state="normal" if self._decision_snapshot else "disabled",
-        )
-        self.decision_map_btn.pack(side="left", padx=(8, 0))
-        ttk.Button(actions, text="Close", command=self.on_close).pack(side="right")
-
-
-    def _personal_picks_button_text(self) -> str:
-        count = len(self.personal_keep_rules)
-        return f"Personal Picks... ({count})" if count else "Personal Picks..."
-
-    def edit_personal_picks(self):
-        if self._running:
-            return
-        dialog = PersonalPicksWindow(self, self.personal_keep_rules)
-        self.wait_window(dialog)
-        if dialog.result is None:
-            return
-        self.personal_keep_rules = dialog.result
-        self.personal_picks_btn.configure(text=self._personal_picks_button_text())
-        self.save_settings()
-
-    def _update_live_release_map_session(
-        self,
-        session: Dict[str, object],
-        map_result: Dict[str, object],
-    ) -> None:
-        session["snapshots"] = list(map_result.get("snapshots", session.get("snapshots", [])) or [])
-        session["selected"] = set(map_result.get("selected", session.get("selected", set())) or set())
-        session["decisions"] = list(map_result.get("decisions", session.get("decisions", [])) or [])
-        session["blocked_release_ids"] = set(
-            map_result.get(
-                "blocked_release_ids",
-                session.get("blocked_release_ids", set()),
-            ) or set()
-        )
-        incoming_initial = map_result.get("initial_plan_counts")
-        if isinstance(incoming_initial, dict):
-            session["initial_plan_counts"] = {
-                "releases": max(0, int(incoming_initial.get("releases", 0) or 0)),
-                "tracks": max(0, int(incoming_initial.get("tracks", 0) or 0)),
-            }
-        self._decision_snapshot = list(session["snapshots"])
-        _save_decision_snapshot(self._decision_snapshot)
-
-    def _apply_release_map_result(
-        self,
-        session: Dict[str, object],
-        map_result: Dict[str, object],
-    ) -> None:
-        self._update_live_release_map_session(session, map_result)
-        if map_result.get("action") != "apply":
-            self.status_var.set("Analysis complete - plan not applied.")
-            return
-
-        existing = session.get("existing")
-        recycle = session.get("recycle")
-        releases = session.get("releases")
-        decisions = list(session.get("decisions", []) or [])
-        if not isinstance(recycle, Path) or not isinstance(releases, list):
-            messagebox.showerror(
-                APP_NAME,
-                "The live analysis context is no longer available.",
-                parent=self,
-            )
-            return
-
-        counts = action_summary(decisions)
-        intra_duplicates = plan_intra_release_duplicates(releases, decisions)
-        to_move = counts["SKIP"] + counts["REMOVE"] + len(intra_duplicates)
-        if to_move == 0:
-            self.status_var.set("Analysis complete - no moves in current plan.")
-            self._append_activity("Current plan contains no filesystem moves.")
-            return
-
-        self._live_release_map_session = None
-        self.run_btn.configure(state="disabled")
-        self.progress_var.set(0)
-        self.progress_detail_var.set("")
-        self.status_var.set("Applying moves")
-        self._last_progress_stage = ""
-        self._append_activity("Applying moves")
-        self._set_running(True)
-        threading.Thread(
-            target=self.apply_worker,
-            args=(existing, recycle, releases, decisions, intra_duplicates),
-            daemon=True,
-        ).start()
-
-    def open_decision_map(self):
-        if self._running:
-            return
-
-        session = self._live_release_map_session
-        if session is None:
-            snapshots = self._decision_snapshot or _load_decision_snapshot()
-            if not snapshots:
-                messagebox.showinfo(
-                    APP_NAME,
-                    "No analyzed release decisions are available yet.",
-                    parent=self,
-                )
-                return
-            session = {
-                "snapshots": snapshots,
-                "allow_apply": False,
-            }
-
-        try:
-            self.status_var.set("Opening Release Map")
-            map_result = launch_webview_release_map(dict(session))
-            if self._live_release_map_session is not None:
-                self._apply_release_map_result(self._live_release_map_session, map_result)
-            else:
-                self.status_var.set("Ready")
-        except Exception as exc:
-            self.status_var.set("Release Map failed")
-            messagebox.showerror(APP_NAME, f"Release Map failed:\n\n{exc}", parent=self)
-
-    def undo_main(self):
-        if self._running:
-            return
-        if not messagebox.askyesno(APP_NAME, "Undo last run?", parent=self):
-            return
-        try:
-            restored, conflicts = undo_last_run()
-        except Exception as exc:
-            messagebox.showerror(APP_NAME, str(exc), parent=self)
-            return
-        if conflicts:
-            messagebox.showwarning(APP_NAME, f"Restored: {restored}\nConflicts: {len(conflicts)}", parent=self)
-        else:
-            messagebox.showinfo(APP_NAME, f"Restored: {restored}", parent=self)
-
-    def open_logs_folder(self):
-        _migrate_legacy_app_data()
-        path = _logs_dir()
-        path.mkdir(parents=True, exist_ok=True)
-        try:
-            if os.name == "nt":
-                os.startfile(str(path))
-            elif sys.platform == "darwin":
-                subprocess.Popen(["open", str(path)])
-            else:
-                subprocess.Popen(["xdg-open", str(path)])
-        except Exception as exc:
-            messagebox.showerror(
-                APP_NAME,
-                f"Could not open logs folder:\n\n{exc}",
-                parent=self,
-            )
-
-    def save_settings(self):
-        _save_app_settings(
-            self.existing_var.get(),
-            self.recycle_var.get(),
-            self.save_remixes_var.get(),
-            self.save_live_var.get(),
-            self.logging_var.get(),
-            self.pattern_preferences,
-            self.personal_keep_rules,
-        )
-
-    def on_close(self):
-        self.save_settings()
-        self.destroy()
-
-    def browse(self, var: tk.StringVar):
-        initial = var.get().strip()
-        kwargs = {"title": "Select folder"}
-        if initial and Path(initial).is_dir():
-            kwargs["initialdir"] = initial
-        path = filedialog.askdirectory(**kwargs)
-        if path:
-            var.set(path)
-            self.save_settings()
-
-    def clear_existing(self):
-        self.existing_var.set("")
-        self.save_settings()
-
-    def _append_activity(self, text: str):
-        timestamp = datetime.now().strftime("%H:%M:%S")
-        self.activity.configure(state="normal")
-        self.activity.insert("end", f"{timestamp}  {text}\n")
-        self.activity.see("end")
-        self.activity.configure(state="disabled")
-
-    def _clear_activity(self):
-        self.activity.configure(state="normal")
-        self.activity.delete("1.0", "end")
-        self.activity.configure(state="disabled")
-
-    @staticmethod
-    def _format_elapsed(seconds: float) -> str:
-        seconds = max(0, int(seconds))
-        hours, rem = divmod(seconds, 3600)
-        minutes, secs = divmod(rem, 60)
-        if hours:
-            return f"{hours}:{minutes:02d}:{secs:02d}"
-        return f"{minutes:02d}:{secs:02d}"
-
-    def _heartbeat(self):
-        if not self._running:
-            return
-        elapsed = self._format_elapsed(time.monotonic() - self._run_started_at)
-        current = self.progress_detail_var.get()
-        base = current.split(" | Elapsed ", 1)[0] if current else ""
-        self.progress_detail_var.set(f"{base} | Elapsed {elapsed}" if base else f"Elapsed {elapsed}")
-        self.after(1000, self._heartbeat)
-
-    def _set_running(self, running: bool):
-        self._running = running
-        if running:
-            self._run_started_at = time.monotonic()
-            self._heartbeat()
-
-    def update_progress(self, text: str, current: int, total: int):
-        def apply_update():
-            pct = 0 if total <= 0 else (current / total) * 100
-            stage = text.rstrip(".")
-            if stage != self._last_progress_stage:
-                self._last_progress_stage = stage
-                self._append_activity(stage)
-            self.status_var.set(stage)
-            self.progress_var.set(pct)
-            count = f"{current:,} / {total:,}" if total > 0 else ""
-            elapsed = self._format_elapsed(time.monotonic() - self._run_started_at) if self._running else "00:00"
-            self.progress_detail_var.set(
-                f"{count} ({pct:.0f}%) | Elapsed {elapsed}" if count else f"Elapsed {elapsed}"
-            )
-        self.after(0, apply_update)
-
-    def start(self):
-        existing_text = self.existing_var.get().strip()
-        existing = Path(existing_text) if existing_text else None
-        recycle_text = self.recycle_var.get().strip()
-        recycle = Path(recycle_text) if recycle_text else None
-
-        if recycle is None or not recycle.is_dir():
-            messagebox.showerror(APP_NAME, "Invalid Recycle / update folder.")
-            return
-        if existing is not None and not existing.is_dir():
-            messagebox.showerror(APP_NAME, "Invalid Existing discography folder.")
-            return
-
-        if existing is not None:
-            try:
-                if existing.resolve() == recycle.resolve() or _is_ancestor(existing, recycle) or _is_ancestor(recycle, existing):
-                    messagebox.showerror(APP_NAME, "Existing and Recycle folders must be separate and non-nested.")
-                    return
-            except Exception:
-                pass
-
-        self.save_settings()
-        self._live_release_map_session = None
-        self.run_btn.configure(state="disabled")
-        self.progress_var.set(0)
-        self.progress_detail_var.set("")
-        self.status_var.set("Scanning track patterns")
-        self._last_progress_stage = ""
-        self._clear_activity()
-        self._append_activity("Started")
-        if self.logging_var.get():
-            self._append_activity("Logging enabled")
-        if self.personal_keep_rules:
-            self._append_activity(f"Personal Picks: {len(self.personal_keep_rules)} rule(s)")
-        self._set_running(True)
-        threading.Thread(
-            target=self.preflight_worker,
-            args=(
-                existing,
-                recycle,
-                self.save_remixes_var.get(),
-                self.save_live_var.get(),
-                self.logging_var.get(),
-            ),
-            daemon=True,
-        ).start()
-
-    def preflight_worker(
-        self,
-        existing: Optional[Path],
-        recycle: Path,
-        save_remixes: bool,
-        save_live: bool,
-        logging_enabled: bool,
-    ):
-        try:
-            releases, tracks = prepare_analysis(existing, recycle, self.update_progress)
-            patterns = collect_track_patterns(tracks)
-            self.after(
-                0,
-                lambda releases=releases, tracks=tracks, patterns=patterns: self.review_patterns(
-                    existing,
-                    recycle,
-                    save_remixes,
-                    save_live,
-                    logging_enabled,
-                    releases,
-                    tracks,
-                    patterns,
-                ),
-            )
-        except Exception as exc:
-            error = str(exc)
-            self.after(0, lambda error=error: self.failed(error))
-
-    def review_patterns(
-        self,
-        existing: Optional[Path],
-        recycle: Path,
-        save_remixes: bool,
-        save_live: bool,
-        logging_enabled: bool,
-        releases: List[Release],
-        tracks: List[Track],
-        patterns: List[Dict[str, object]],
-    ):
-        self._set_running(False)
-
-        excluded_pattern_keys: Set[str] = set()
-        if patterns:
-            dialog = PatternReviewWindow(self, patterns, self.personal_keep_rules)
-            self.wait_window(dialog)
-            if dialog.result is None:
-                self.run_btn.configure(state="normal")
-                self.status_var.set("Cancelled")
-                self.progress_detail_var.set("")
-                self._append_activity("Cancelled before audio comparison")
-                return
-
-            labels = {
-                str(item.get("key", "")): str(item.get("label", item.get("key", "")))
-                for item in patterns
-            }
-            added = 0
-            for key, keep in dialog.result.items():
-                if keep and _add_personal_pattern_rule(
-                    self.personal_keep_rules,
-                    key,
-                    labels.get(key, key),
-                ):
-                    added += 1
-            excluded_pattern_keys = {key for key, keep in dialog.result.items() if not keep}
-            self.personal_picks_btn.configure(text=self._personal_picks_button_text())
-            self.save_settings()
-            if added:
-                self._append_activity(f"Personal Picks: added {added} unusual pattern(s)")
-            self._append_activity(
-                f"Pattern review complete: {len(patterns)} pattern(s), "
-                f"{len(excluded_pattern_keys)} excluded"
-            )
-        else:
-            self._append_activity("No version-style track patterns detected")
-
-        self.status_var.set("Continuing analysis")
-        self.progress_var.set(0)
-        self.progress_detail_var.set("")
-        self._last_progress_stage = ""
-        self._set_running(True)
-        threading.Thread(
-            target=self.worker_prepared,
-            args=(
-                existing,
-                recycle,
-                releases,
-                tracks,
-                save_remixes,
-                save_live,
-                logging_enabled,
-                excluded_pattern_keys,
-                [dict(item) for item in self.personal_keep_rules],
-            ),
-            daemon=True,
-        ).start()
-
-    def worker_prepared(
-        self,
-        existing: Optional[Path],
-        recycle: Path,
-        releases: List[Release],
-        tracks: List[Track],
-        save_remixes: bool,
-        save_live: bool,
-        logging_enabled: bool,
-        excluded_pattern_keys: Set[str],
-        personal_keep_rules: List[Dict[str, str]],
-    ):
-        try:
-            comparison_log_path = _new_comparison_log_path(recycle) if logging_enabled else None
-            result = analyze_prepared(
-                releases,
-                tracks,
-                True,
-                self.update_progress,
-                not save_remixes,
-                not save_live,
-                excluded_pattern_keys,
-                comparison_log_path,
-                personal_keep_rules,
-            )
-            self.after(0, lambda result=result: self.done(existing, recycle, result))
-        except Exception as exc:
-            error = str(exc)
-            self.after(0, lambda error=error: self.failed(error))
-
-    def done(self, existing: Optional[Path], recycle: Path, result):
-        self._set_running(False)
-        self.run_btn.configure(state="normal")
-        self.progress_var.set(100)
-        self.progress_detail_var.set("100%")
-        self._append_activity("Analysis complete")
-
-        releases, tracks, groups, selected, reviews, notes = result
-        comparison_log = next(
-            (n.split("COMPARISON LOG:", 1)[1].strip() for n in notes if n.startswith("COMPARISON LOG:")),
-            "",
-        )
-        if comparison_log:
-            self._append_activity(f"Comparison log: {comparison_log}")
-
-        blocked_release_ids: Set[int] = set()
-        decisions = build_release_decisions(
-            releases,
-            tracks,
-            selected,
-            reviews,
-            blocked_release_ids,
-        )
-        counts = action_summary(decisions)
-        recycle_kept = sum(
-            1 for d in decisions
-            if next(r for r in releases if r.rid == d.release_id).root_kind == "recycle"
-            and d.action in {"ADD", "REPLACE", "KEEP"}
-        )
-        initial_intra_duplicates = plan_intra_release_duplicates(releases, decisions)
-
-        self._decision_snapshot = build_decision_snapshot(
-            releases,
-            tracks,
-            selected,
-            decisions,
-            blocked_release_ids,
-        )
-        _save_decision_snapshot(self._decision_snapshot)
-        self.decision_map_btn.configure(state="normal")
-        self.status_var.set("Analysis complete - review Release Map")
-        self._append_activity(
-            f"Release Map ready: {sum(1 for d in decisions if d.action in {'KEEP','ADD','REPLACE'})} retained release(s)"
-        )
-
-        summary_parts = [
-            f"Retained recycle releases: {recycle_kept}",
-            f"Hidden duplicate recycle releases: {counts['SKIP']}",
-        ]
-        if existing is not None:
-            summary_parts.append(f"Hidden duplicate existing releases: {counts['REMOVE']}")
-        if initial_intra_duplicates:
-            summary_parts.append(
-                f"Duplicate files inside retained releases: {len(initial_intra_duplicates)}"
-            )
-        if comparison_log:
-            summary_parts.append("Detailed comparison logging is enabled.")
-
-        session: Dict[str, object] = {
-            "snapshots": list(self._decision_snapshot),
-            "initial_plan_counts": _release_map_plan_counts(self._decision_snapshot),
-            "allow_apply": True,
-            "summary_text": " | ".join(summary_parts),
-            "existing": existing,
-            "recycle": recycle,
-            "releases": releases,
-            "tracks": tracks,
-            "groups": groups,
-            "selected": set(selected),
-            "reviews": list(reviews),
-            "decisions": list(decisions),
-            "blocked_release_ids": set(blocked_release_ids),
-        }
-        self._live_release_map_session = session
-
-        try:
-            self.status_var.set("Opening Release Map")
-            map_result = launch_webview_release_map(dict(session))
-        except Exception as exc:
-            self.status_var.set("Release Map failed")
-            messagebox.showerror(APP_NAME, f"Release Map failed:\n\n{exc}", parent=self)
-            return
-
-        self._apply_release_map_result(session, map_result)
-
-    def apply_worker(
-        self,
-        existing: Optional[Path],
-        recycle: Path,
-        releases: List[Release],
-        decisions: List[ReleaseDecision],
-        intra_duplicates: List[IntraReleaseDuplicate],
-    ):
-        try:
-            result = apply_automatic_plan(
-                existing,
-                recycle,
-                releases,
-                decisions,
-                intra_duplicates,
-                self.update_progress,
-            )
-            self.after(0, lambda: self.applied(recycle, result))
-        except Exception as exc:
-            error = str(exc)
-            self.after(0, lambda error=error: self.failed(error))
-
-    def applied(self, recycle: Path, result: Dict[str, object]):
-        self._set_running(False)
-        self._live_release_map_session = None
-        self.run_btn.configure(state="normal")
-        self.progress_var.set(100)
-        self.progress_detail_var.set("100%")
-        self.status_var.set("Complete")
-        self._append_activity("Moves complete")
-        DoneWindow(self, recycle, result, self.open_decision_map)
-
-    def failed(self, error: str):
-        self._set_running(False)
-        self.run_btn.configure(state="normal")
-        self.status_var.set("Failed")
-        self._append_activity(f"Failed: {error}")
-        messagebox.showerror(APP_NAME, error, parent=self)
-
-
 def _startup_crash_log_path() -> Path:
     _migrate_legacy_app_data()
     return _logs_dir() / "Duplicate Edition Analyzer - Crash.log"
@@ -10623,20 +9445,17 @@ def _report_startup_crash(exc: BaseException) -> None:
     except Exception:
         pass
 
+    message = (
+        f"Startup failed.\n\n{type(exc).__name__}: {exc}\n\n"
+        f"Crash log:\n{path}"
+    )
     try:
-        error_root = tk.Tk()
-        error_root.withdraw()
-        messagebox.showerror(
-            APP_NAME,
-            "Startup failed.\n\n"
-            f"{type(exc).__name__}: {exc}\n\n"
-            f"Crash log:\n{path}",
-            parent=error_root,
-        )
-        error_root.destroy()
+        if os.name == "nt":
+            ctypes.windll.user32.MessageBoxW(None, message, APP_NAME, 0x10)
+        else:
+            sys.stderr.write(message + "\n")
     except Exception:
         pass
-
 
 
 def _webview_main_html() -> str:
@@ -12073,13 +10892,13 @@ def _webview_main_app() -> int:
     webview.start(
         gui="edgechromium",
         debug=False,
-        private_mode=True,
+        private_mode=False,
         storage_path=str(storage_path),
     )
     return 0
 
 
-def _standalone_self_test() -> None:
+def _ui_contract_self_test() -> None:
     # v0.22.9 global software compliance gate: path controls and basic
     # keyboard/accessibility semantics are release-blocking invariants.
     main_html = _webview_main_html()
@@ -12163,6 +10982,11 @@ def _standalone_self_test() -> None:
     failed_ui_checks = [message for ok, message in ui_checks if not ok]
     if failed_ui_checks:
         raise RuntimeError("Global UI compliance self-test failed: " + " | ".join(failed_ui_checks))
+
+
+
+def _standalone_self_test() -> None:
+    _ui_contract_self_test()
 
     """Build-time smoke test for every dependency required by the standalone EXE."""
     if not _is_frozen_build():
@@ -12770,10 +11594,15 @@ def _standalone_self_test() -> None:
 
 
 def main():
+    if len(sys.argv) >= 2 and sys.argv[1] == "--ui-self-test":
+        _ui_contract_self_test()
+        print(f"{APP_NAME} {APP_VERSION}: UI parity contract passed.")
+        raise SystemExit(0)
     if len(sys.argv) >= 2 and sys.argv[1] == "--self-test":
         _standalone_self_test()
         raise SystemExit(0)
     if len(sys.argv) >= 2 and sys.argv[1] == "--version":
+        print(f"{APP_NAME} {APP_VERSION}")
         raise SystemExit(0)
     if _is_frozen_build() and _startup_self_update():
         raise SystemExit(0)
