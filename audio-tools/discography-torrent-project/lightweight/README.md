@@ -1,6 +1,6 @@
 # Duplicate Edition Analyzer Lightweight
 
-Version: **0.2.3 - Under construction ⚠️**
+Version: **0.2.4 - Under construction ⚠️**
 
 Branch: `dea-lightweight-modern`
 
@@ -41,6 +41,15 @@ The lightweight build preserves the regular DEA feature surface, including:
 - path openers, logging, settings and Undo.
 
 The failed `native-light` prototype is not the reference.
+
+## 0.2.4
+
+- Fixed Release Map grouping so editions such as **Let Go (Japan Tour Special Limited Version)**, **Let Go (Sketch Book)**, **Let Go (Special Bonus Edition)** and plain **Let Go** appear in one **Let Go** block.
+- Fixed **Avril Lavigne (Exclusive Edition)** and plain **Avril Lavigne** appearing as separate groups.
+- The visual grouping fix is UI-only and does not change DEA's analysis/optimizer album-family rules.
+- Fixed the minimum-width toolbar so **Apply file changes** stays inside its button.
+- Reworked Release Map connection rendering from one SVG DOM element per edge to a few batched SVG paths with cached row geometry.
+- Redraws are requestAnimationFrame-throttled, greatly reducing first-open hangs, resize lag and selection lag while preserving all relationship links.
 
 ## 0.2.3
 

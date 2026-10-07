@@ -33,7 +33,7 @@ from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Set, Tuple
 
 APP_NAME = "Duplicate / Edition Analyzer Lightweight"
-APP_VERSION = "0.2.3"
+APP_VERSION = "0.2.4"
 PROGRAM_DATA_DIR_NAME = "Duplicate Edition Analyzer"
 PYWEBVIEW_VERSION = "6.2.1"
 AUDIO_EXTS = {".m4a", ".flac", ".wav", ".ape", ".wv", ".mp3", ".aac", ".ogg", ".opus"}
@@ -7882,13 +7882,14 @@ button,input { font:inherit; }
 #resultCounts.changed { border-color:#527b92; background:#14212a; color:#d9f3ff; }
 #resultCounts.pending { border-color:#8a6a25; background:#251f12; color:#f5d98b; }
 #search {
-  width:min(520px,38vw); height:34px; border:1px solid #37404d; border-radius:8px;
+  width:auto; max-width:520px; min-width:120px; flex:1 1 260px; height:34px;
+  border:1px solid #37404d; border-radius:8px;
   background:#181c23; color:var(--text); padding:0 11px; outline:none;
 }
 #search:focus { border-color:var(--blue); box-shadow:0 0 0 2px rgba(102,169,255,.16); }
 .btn {
   height:34px; border:1px solid #3a4351; border-radius:8px; background:#1b2028; color:var(--text);
-  padding:0 12px; cursor:pointer; transition:.12s ease;
+  padding:0 12px; cursor:pointer; transition:.12s ease; white-space:nowrap; flex:0 0 auto;
 }
 .btn:hover:not(:disabled) { background:#252c36; border-color:#596579; }
 .btn:disabled { opacity:.38; cursor:default; }
@@ -7898,7 +7899,20 @@ button,input { font:inherit; }
   min-width:0; max-width:440px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
   color:#b9c4d3; font-size:12px; padding-left:4px;
 }
-#spacer { flex:1; }
+#spacer { flex:1 1 20px; min-width:0; }
+@media (max-width:1250px) {
+  #toolbar { gap:6px; padding:0 10px; }
+  #modeText { display:none; }
+  #planCounts { min-width:0; flex:0 1 auto; }
+  .planCount { min-width:0; max-width:210px; overflow:hidden; text-overflow:ellipsis; }
+  #search { min-width:140px; flex-basis:200px; }
+}
+@media (max-width:1100px) {
+  #title { font-size:15px; }
+  .planCount { max-width:180px; padding:0 6px; font-size:10px; }
+  #search { min-width:110px; }
+  .btn { padding:0 9px; }
+}
 #main { min-height:0; flex:1; display:flex; position:relative; }
 #boardViewport {
   position:relative; min-width:0; flex:1; overflow-y:auto; overflow-x:hidden;
@@ -8210,23 +8224,38 @@ function baseRelationsForRelease(releaseId) {
   });
   return {versions:versionIds,remixes:remixIds,live:liveIds};
 }
-function rowCenter(id) {
-  const el = rowEls.get(String(id));
-  const content = document.getElementById("boardContent");
-  if (!el || !content) return null;
-  const a = el.getBoundingClientRect();
-  const b = content.getBoundingClientRect();
-  return {x:a.left-b.left+a.width/2,y:a.top-b.top+a.height/2};
+function buildRowCenters() {
+  const content=document.getElementById("boardContent");
+  const centers=new Map();
+  if(!content) return centers;
+  const b=content.getBoundingClientRect();
+  rowEls.forEach(function(el,id){
+    const a=el.getBoundingClientRect();
+    centers.set(String(id),{x:a.left-b.left+a.width/2,y:a.top-b.top+a.height/2});
+  });
+  return centers;
 }
-function addCurve(svg,a,b,color,width,opacity,dash) {
-  if (!a || !b) return;
+function curveSegment(a,b) {
+  if(!a||!b) return "";
   const dx=b.x-a.x, bend=Math.max(42,Math.min(170,Math.abs(dx)*0.42)), sign=dx>=0?1:-1;
+  return "M "+a.x+" "+a.y+" C "+(a.x+bend*sign)+" "+a.y+", "+(b.x-bend*sign)+" "+b.y+", "+b.x+" "+b.y+" ";
+}
+function addCurveBatch(svg,d,color,width,opacity,dash) {
+  if(!d) return;
   const p=document.createElementNS("http://www.w3.org/2000/svg","path");
-  p.setAttribute("d","M "+a.x+" "+a.y+" C "+(a.x+bend*sign)+" "+a.y+", "+(b.x-bend*sign)+" "+b.y+", "+b.x+" "+b.y);
-  p.setAttribute("fill","none"); p.setAttribute("stroke",color); p.setAttribute("stroke-width",String(width));
-  p.setAttribute("stroke-opacity",String(opacity)); p.setAttribute("stroke-linecap","round");
+  p.setAttribute("d",d); p.setAttribute("fill","none"); p.setAttribute("stroke",color);
+  p.setAttribute("stroke-width",String(width)); p.setAttribute("stroke-opacity",String(opacity));
+  p.setAttribute("stroke-linecap","round"); p.setAttribute("stroke-linejoin","round");
   if(dash) p.setAttribute("stroke-dasharray",dash);
   svg.appendChild(p);
+}
+let connectionFrame=0;
+function scheduleConnections(){
+  if(connectionFrame) return;
+  connectionFrame=requestAnimationFrame(function(){
+    connectionFrame=0;
+    drawConnections();
+  });
 }
 let searchCursor=-1;
 let lastSearchQuery="";
@@ -8274,31 +8303,48 @@ function drawConnections() {
   const svg=document.getElementById("connections"), content=document.getElementById("boardContent");
   const width=Math.max(1,content.clientWidth), height=Math.max(content.scrollHeight,content.clientHeight);
   svg.setAttribute("width",String(width)); svg.setAttribute("height",String(height));
-  svg.setAttribute("viewBox","0 0 "+width+" "+height); svg.innerHTML="";
+  svg.setAttribute("viewBox","0 0 "+width+" "+height);
+  svg.replaceChildren();
+
+  const centers=buildRowCenters();
+  const center=function(id){return centers.get(String(id))||null;};
   const selected=selectedId==null?null:Number(selectedId);
+
+  let dupNormal="",dupTouch="";
   (state.duplicateLinks||[]).forEach(function(link){
+    const segment=curveSegment(center(link.duplicate),center(link.retained));
+    if(!segment) return;
     const touch=selected!=null && (Number(link.duplicate)===selected || Number(link.retained)===selected);
-    const opacity=activeTrack?0.06:(selected==null?0.24:(touch?0.72:0.10));
-    addCurve(svg,rowCenter(link.duplicate),rowCenter(link.retained),"#758296",touch?2.4:1.15,opacity);
+    if(touch) dupTouch+=segment; else dupNormal+=segment;
   });
-  if(selected!=null && !activeTrack){
-    const related=baseRelationsForRelease(selected), source=rowCenter(selected);
-    related.versions.forEach(function(id){
-      addCurve(svg,source,rowCenter(id),"#f3c969",2.6,0.88,"8 5");
-    });
-    related.remixes.forEach(function(id){
-      addCurve(svg,source,rowCenter(id),"#b989ef",2.2,0.70,"3 6");
-    });
-    related.live.forEach(function(id){
-      addCurve(svg,source,rowCenter(id),"#6ee7b7",2.2,0.72,"10 4 2 4");
-    });
-  }
   if(activeTrack){
-    const source=rowCenter(activeTrack.releaseId);
+    addCurveBatch(svg,dupNormal+dupTouch,"#758296",1.1,0.045);
+  } else if(selected==null){
+    addCurveBatch(svg,dupNormal,"#758296",1.1,0.22);
+  } else {
+    addCurveBatch(svg,dupNormal,"#758296",1.05,0.075);
+    addCurveBatch(svg,dupTouch,"#758296",2.35,0.72);
+  }
+
+  if(selected!=null && !activeTrack){
+    const related=baseRelationsForRelease(selected), source=center(selected);
+    let versions="",remixes="",live="";
+    related.versions.forEach(function(id){versions+=curveSegment(source,center(id));});
+    related.remixes.forEach(function(id){remixes+=curveSegment(source,center(id));});
+    related.live.forEach(function(id){live+=curveSegment(source,center(id));});
+    addCurveBatch(svg,versions,"#f3c969",2.6,0.88,"8 5");
+    addCurveBatch(svg,remixes,"#b989ef",2.2,0.70,"3 6");
+    addCurveBatch(svg,live,"#6ee7b7",2.2,0.72,"10 4 2 4");
+  }
+
+  if(activeTrack){
+    const source=center(activeTrack.releaseId);
+    let carriers="";
     carriersForGroup(activeTrack.groupId).forEach(function(n){
       if(Number(n.id)===Number(activeTrack.releaseId)) return;
-      addCurve(svg,source,rowCenter(n.id),"#55d7ff",3.3,0.94);
+      carriers+=curveSegment(source,center(n.id));
     });
+    addCurveBatch(svg,carriers,"#55d7ff",3.3,0.94);
   }
 }
 function releaseColumnKind(n) {
@@ -8315,14 +8361,17 @@ function cleanReleaseLabel(name) {
   let prev="";
   while(prev!==s){
     prev=s;
-    s=s.replace(/\s*\((?:[^)]*\b(?:deluxe|limited|special|expanded|bonus|exclusive|tour|edition|version|remaster(?:ed)?|anniversary)\b[^)]*)\)\s*$/i,"").trim();
+    s=s.replace(/\s*\((?:[^)]*\b(?:deluxe|limited|special|expanded|bonus|exclusive|tour|edition|version|remaster(?:ed)?|anniversary|sketch\s*book)\b[^)]*)\)\s*$/i,"").trim();
   }
   return s||String(name||"").trim();
 }
 function groupKeyForNode(n) {
+  // UI grouping is intentionally display-oriented. The backend family is used
+  // only as a fallback so an edition label cannot split one visible release family.
+  const cleaned=cleanReleaseLabel(n.name).toLowerCase().replace(/[^a-z0-9]+/g," ").trim();
+  if(cleaned) return cleaned;
   const family=String(n.family||"").trim().toLowerCase();
-  if(family) return family;
-  return cleanReleaseLabel(n.name).toLowerCase().replace(/[^a-z0-9]+/g," ").trim()||String(n.id);
+  return family||String(n.id);
 }
 function groupTitleForNodes(items) {
   const candidates=items.map(function(n){return cleanReleaseLabel(n.name);}).filter(Boolean);
@@ -8363,7 +8412,7 @@ function appendReleaseRow(host,n) {
       closeDetails();
       return;
     }
-    selectedId=Number(n.id); activeTrack=null; openDetails(n); updateRowHighlights(); drawConnections(); updateTrackMode();
+    selectedId=Number(n.id); activeTrack=null; openDetails(n); updateRowHighlights(); scheduleConnections(); updateTrackMode();
   }
   row.onclick=activateReleaseRow;
   row.onkeydown=function(e){
@@ -8423,7 +8472,7 @@ function renderBoard() {
     }
     columns.appendChild(col);
   });
-  updateRowHighlights(); requestAnimationFrame(drawConnections);
+  updateRowHighlights(); scheduleConnections();
 }
 function updateTrackMode() {
   const clear=document.getElementById("clearTrackBtn"), mode=document.getElementById("modeText");
@@ -8441,7 +8490,7 @@ function selectTrack(releaseId,track) {
   if(Number(track.groupId)<0) return;
   selectedId=Number(releaseId);
   activeTrack={releaseId:Number(releaseId),groupId:Number(track.groupId),title:String(track.title||"")};
-  updateRowHighlights(); drawConnections(); updateTrackMode();
+  updateRowHighlights(); scheduleConnections(); updateTrackMode();
   document.querySelectorAll(".track").forEach(function(el){
     el.classList.toggle("activeTrack",Number(el.dataset.group)===Number(activeTrack.groupId));
   });
@@ -8463,7 +8512,7 @@ function highlightAlternativeVersion(v) {
     groupId:Number(v.groupId),
     title:String(v.title||"Alternative version")
   };
-  updateRowHighlights(); drawConnections(); updateTrackMode();
+  updateRowHighlights(); scheduleConnections(); updateTrackMode();
   document.querySelectorAll(".track").forEach(function(el){
     el.classList.toggle("activeTrack",Number(el.dataset.group)===Number(activeTrack.groupId));
   });
@@ -8494,7 +8543,7 @@ function closeDetails() {
   const aside=document.getElementById("details");
   aside.classList.remove("open");
   updateRowHighlights();
-  drawConnections();
+  scheduleConnections();
   updateTrackMode();
 }
 function openDetails(n) {
@@ -8718,7 +8767,7 @@ function renderResult() {
   body.innerHTML=html; drawer.classList.add("open");
 }
 document.getElementById("clearTrackBtn").onclick=function(){
-  activeTrack=null;updateRowHighlights();drawConnections();updateTrackMode();
+  activeTrack=null;updateRowHighlights();scheduleConnections();updateTrackMode();
   document.querySelectorAll(".track").forEach(function(el){el.classList.remove("activeTrack");});
 };
 document.getElementById("reanalyzeBtn").onclick=function(){bridge.reanalyze(receiveState);};
@@ -8739,7 +8788,7 @@ document.addEventListener("keydown",function(e){
 document.getElementById("search").addEventListener("input",function(){
   activeTrack=null;
   applySearchHighlights(true);
-  drawConnections();
+  scheduleConnections();
   updateTrackMode();
 });
 document.getElementById("search").addEventListener("keydown",function(e){
@@ -8752,13 +8801,13 @@ document.getElementById("search").addEventListener("keydown",function(e){
   activeTrack=null;
   openDetails(n);
   updateRowHighlights();
-  drawConnections();
+  scheduleConnections();
   updateTrackMode();
   const row=rowEls.get(String(n.id));
   if(row)row.scrollIntoView({behavior:"smooth",block:"center",inline:"center"});
 });
-window.addEventListener("resize",function(){clearTimeout(resizeTimer);resizeTimer=setTimeout(renderBoard,100);});
-new ResizeObserver(function(){drawConnections();}).observe(document.getElementById("boardContent"));
+window.addEventListener("resize",function(){clearTimeout(resizeTimer);resizeTimer=setTimeout(function(){renderBoard();scheduleConnections();},100);});
+new ResizeObserver(function(){scheduleConnections();}).observe(document.getElementById("boardContent"));
 function waitForPywebviewMethod(name,timeoutMs){
   const limit=Number(timeoutMs||30000);
   return new Promise(function(resolve,reject){
@@ -11140,6 +11189,22 @@ def _ui_contract_self_test() -> None:
             'function groupKeyForNode(n)' in map_html
             and 'className="releaseGroup"' in map_html,
             "Release Map same-release-family grouping is missing.",
+        ),
+        (
+            'sketch\\s*book' in map_html
+            and 'const cleaned=cleanReleaseLabel(n.name)' in map_html,
+            "Release Map display grouping must merge edition-label variants such as Let Go Sketch Book / Exclusive Edition.",
+        ),
+        (
+            'function addCurveBatch(svg,d,color,width,opacity,dash)' in map_html
+            and 'svg.replaceChildren();' in map_html
+            and 'function buildRowCenters()' in map_html,
+            "Release Map connections must be batched instead of creating one SVG DOM node per edge.",
+        ),
+        (
+            'white-space:nowrap; flex:0 0 auto;' in map_html
+            and '@media (max-width:1100px)' in map_html,
+            "Release Map toolbar must keep action-button labels inside their buttons at minimum width.",
         ),
         (
             'overflow-x:hidden' in map_html

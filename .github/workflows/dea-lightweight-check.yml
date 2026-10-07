@@ -113,3 +113,19 @@ jobs:
           for label, body in (("main", main), ("release", release)):
               if "const fn=api&&api[name];" not in body or 'typeof fn==="function"' not in body:
                   raise SystemExit(f"Bridge regression contract failed: {label} does not wait for requested method.")
+          perf_contract = [
+              "function addCurveBatch(svg,d,color,width,opacity,dash)",
+              "function buildRowCenters()",
+              "svg.replaceChildren();",
+              "function scheduleConnections()",
+          ]
+          missing_perf = [x for x in perf_contract if x not in release]
+          if missing_perf:
+              raise SystemExit("Release Map performance contract failed: " + " | ".join(missing_perf))
+          grouping_contract = [
+              "const cleaned=cleanReleaseLabel(n.name)",
+              "sketch\\s*book",
+          ]
+          missing_group = [x for x in grouping_contract if x not in release]
+          if missing_group:
+              raise SystemExit("Release Map grouping contract failed: " + " | ".join(missing_group))
