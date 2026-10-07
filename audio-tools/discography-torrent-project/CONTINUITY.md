@@ -272,7 +272,7 @@ A lightweight build is not parity-complete until all of these pass:
 - New request: create a separate lightweight, fast implementation with a modern UI and zero functional loss from production.
 - Architecture implemented at source level: production Python core + pywebview 6.2.1 + Microsoft Edge WebView2 host, with the production main HTML UI and full Release Map HTML/JS retained. Legacy Qt/PySide6 and dormant Tk/Tcl UI code have been removed from the lightweight source.
 - WebView2 detection uses Microsoft-documented runtime registry keys and WinGet package `Microsoft.EdgeWebView2Runtime` when installation is required.
-- New source version is 0.2.1 on branch `dea-lightweight-modern`. The Release Map now uses full-width Albums / EPs / Singles columns, groups editions by release family inside each column, and removes the erroneous horizontal blank-scroll area while retaining SVG links/connections. The 0.2.0 WebView2-only/Tk-removal work remains intact.
+- New source version is 0.2.1 on branch `dea-lightweight-modern`. The Release Map now uses full-width Albums / EPs / Singles columns, groups editions by release family inside each column, and removes the erroneous horizontal blank-scroll area while retaining SVG links/connections. Python compilation, undefined-name checking, and embedded Release Map JavaScript syntax validation passed on 2026-10-07. The 0.2.0 WebView2-only/Tk-removal work remains intact.
 - No new lightweight build has yet been declared parity-complete.
 - Do not send another "native/light" test merely because it launches. Complete the parity checklist first.
 
