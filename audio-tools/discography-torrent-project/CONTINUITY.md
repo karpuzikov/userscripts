@@ -272,13 +272,13 @@ A lightweight build is not parity-complete until all of these pass:
 - New request: create a separate lightweight, fast implementation with a modern UI and zero functional loss from production.
 - Architecture implemented at source level: production Python core + pywebview 6.2.1 + Microsoft Edge WebView2 host, with the production main HTML UI and full Release Map HTML/JS retained. Legacy Qt/PySide6 and dormant Tk/Tcl UI code have been removed from the lightweight source.
 - WebView2 detection uses Microsoft-documented runtime registry keys and WinGet package `Microsoft.EdgeWebView2Runtime` when installation is required.
-- New source version is 0.2.8 on branch `dea-lightweight-modern`. Release Map visual grouping now prefers embedded track ALBUM metadata rather than folder-name parsing. CD1/CD2 album-tag suffixes normalize to one base title, with folder parsing only as a fallback. Exact regression coverage includes the five These Hopeful Machines folder/tag variants from the user's 2026-10-07 run. Analyzer/optimizer semantics are unchanged.
+- New source version is 0.2.9 on branch `dea-lightweight-modern`. Release-type fallback classification now considers total duration as well as track count. The exact 5-track / ~76.49-minute `[1995] BT - 今 Ima [0630-12345-2] CD` case is regression-tested as Album; short 5-track releases remain EP and explicit EP/Single evidence still wins.
 - No new lightweight build has yet been declared parity-complete.
 - Do not send another "native/light" test merely because it launches. Complete the parity checklist first.
 
 ## Exact next steps
 
-1. Validate 0.2.8 grouping against the user's BT run, especially These Hopeful Machines, then repeat close/reopen bridge checks.
+1. Validate 0.2.9 release types against the user's BT run, especially 今 Ima, while retaining 0.2.8 grouping and 0.2.7 bridge behavior.
 2. Run syntax/static checks and source-mode launch checks.
 3. Compare main-window controls and behaviors against production 0.22.12.
 4. Compare full Release Map behavior against production 0.22.12, especially SVG links, cross-release highlighting, alternative-family panels, ignore/restore, Re-Analyze and result drawer.

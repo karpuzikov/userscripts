@@ -1,6 +1,6 @@
 # Duplicate Edition Analyzer Lightweight
 
-Version: **0.2.8 - Under construction ⚠️**
+Version: **0.2.9 - Under construction ⚠️**
 
 Branch: `dea-lightweight-modern`
 
@@ -41,6 +41,14 @@ The lightweight build preserves the regular DEA feature surface, including:
 - path openers, logging, settings and Undo.
 
 The failed `native-light` prototype is not the reference.
+
+## 0.2.9
+
+- Fixed **[1995] BT - 今 Ima [0630-12345-2] CD** being marked as an EP.
+- Root cause: fallback release-type detection used only track count. The release has **5 tracks**, which fell into the old 3-6-track EP heuristic, despite a total duration of about **76.49 minutes**.
+- Heuristic classification now uses both track count and total included duration: releases of **30 minutes or longer** are treated as Albums unless explicit tag/name evidence says EP/Single.
+- Explicit release-type metadata and explicit `EP` / `Single` naming still take precedence.
+- Added regression tests for the exact Ima case, a short 5-track EP, and an explicitly named long EP.
 
 ## 0.2.8
 

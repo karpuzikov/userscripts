@@ -33,7 +33,7 @@ from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Set, Tuple
 
 APP_NAME = "Duplicate / Edition Analyzer Lightweight"
-APP_VERSION = "0.2.8"
+APP_VERSION = "0.2.9"
 PROGRAM_DATA_DIR_NAME = "Duplicate Edition Analyzer"
 PYWEBVIEW_VERSION = "6.2.1"
 WEBVIEW_PRIVATE_MODE = True
@@ -1189,11 +1189,13 @@ def refresh_heuristic_release_types(releases: List["Release"]) -> None:
         if rel.type_source != "heuristic":
             continue
         first_tags = rel.tracks[0].tags if rel.tracks else {}
+        included_tracks = [track for track in rel.tracks if not track.exclude_from_coverage]
         rel.release_type, rel.type_source = infer_release_type(
             rel.title,
             rel.path.name,
             rel.included_track_count,
             first_tags,
+            sum(max(0.0, float(track.duration or 0.0)) for track in included_tracks),
         )
 
 
@@ -2165,7 +2167,13 @@ def album_family(title: str) -> str:
     return normalize_title(s)
 
 
-def infer_release_type(title: str, folder_name: str, track_count: int, tags: Dict[str, str]) -> Tuple[str, str]:
+def infer_release_type(
+    title: str,
+    folder_name: str,
+    track_count: int,
+    tags: Dict[str, str],
+    total_duration_seconds: float = 0.0,
+) -> Tuple[str, str]:
     raw = tag_lookup(
         tags,
         "releasetype",
@@ -2193,12 +2201,17 @@ def infer_release_type(title: str, folder_name: str, track_count: int, tags: Dic
             return "ep", "tag"
         if "single" in raw:
             return "single", "tag"
+
     x = f"{title} {folder_name}".lower()
     if re.search(r"\b(?:single)\b", x):
         return "single", "name"
     if re.search(r"\bep\b|remix(?:es)?|\brmx\b", x):
         return "ep", "name"
-    if track_count >= 7:
+
+    # Track count alone is not enough: legitimate albums can contain only a few
+    # long tracks. The 1995 BT album "今 Ima" is five tracks but ~76.5 minutes.
+    duration = max(0.0, float(total_duration_seconds or 0.0))
+    if track_count >= 7 or duration >= 30.0 * 60.0:
         return "album", "heuristic"
     if track_count <= 2:
         return "single", "heuristic"
@@ -4504,7 +4517,13 @@ def finalize_release_metadata(releases: List[Release]) -> None:
         album_tag = rel.tracks[0].album if rel.tracks else ""
         if album_tag:
             rel.title = album_tag
-        rel.release_type, rel.type_source = infer_release_type(rel.title, rel.path.name, rel.track_count, first_tags)
+        rel.release_type, rel.type_source = infer_release_type(
+            rel.title,
+            rel.path.name,
+            rel.track_count,
+            first_tags,
+            sum(max(0.0, float(track.duration or 0.0)) for track in rel.tracks),
+        )
         rel.family = album_family(rel.title)
         rel.explicit = release_explicit_state(rel)
 
@@ -11505,6 +11524,38 @@ def _ui_contract_self_test() -> None:
             "WebView2 bridge readiness must wait for the requested method; api-object-only readiness causes dead buttons.",
         ),
     ]
+    # Release-type regression: track-count-only classification incorrectly
+    # called the 5-track / 76.49-minute 1995 BT album "今 Ima" an EP.
+    ima_type, ima_source = infer_release_type(
+        "今 Ima",
+        "[1995] BT - 今 Ima [0630-12345-2] CD",
+        5,
+        {},
+        4589.266666,
+    )
+    if (ima_type, ima_source) != ("album", "heuristic"):
+        raise RuntimeError(
+            f"Release type self-test failed: 今 Ima classified as {ima_type}/{ima_source}."
+        )
+    short_ep_type, _ = infer_release_type(
+        "Test Release",
+        "Test Release",
+        5,
+        {},
+        20.0 * 60.0,
+    )
+    if short_ep_type != "ep":
+        raise RuntimeError("Release type self-test failed: short 5-track release should remain EP.")
+    explicit_ep_type, explicit_ep_source = infer_release_type(
+        "Named EP",
+        "Named EP",
+        8,
+        {},
+        60.0 * 60.0,
+    )
+    if (explicit_ep_type, explicit_ep_source) != ("ep", "name"):
+        raise RuntimeError("Release type self-test failed: explicit EP name must override duration.")
+
     grouping_probe = [
         {"id": 1, "releaseType": "album", "name": "2002 - Let Go (Japan Tour Special Limited Version) [JP - BVCA-21138 - 2005]"},
         {"id": 2, "releaseType": "album", "name": "2002 - Let Go (Limited Edition) [AU - 82876-52937-2] CD 1"},
