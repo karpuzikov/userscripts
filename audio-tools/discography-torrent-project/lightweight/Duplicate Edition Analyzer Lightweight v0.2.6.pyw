@@ -33,9 +33,10 @@ from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Set, Tuple
 
 APP_NAME = "Duplicate / Edition Analyzer Lightweight"
-APP_VERSION = "0.2.5"
+APP_VERSION = "0.2.6"
 PROGRAM_DATA_DIR_NAME = "Duplicate Edition Analyzer"
 PYWEBVIEW_VERSION = "6.2.1"
+WEBVIEW_PRIVATE_MODE = True
 AUDIO_EXTS = {".m4a", ".flac", ".wav", ".ape", ".wv", ".mp3", ".aac", ".ogg", ".opus"}
 def _logical_cpu_count() -> int:
     return max(1, os.cpu_count() or 1)
@@ -330,6 +331,19 @@ def _temp_dir() -> Path:
 
 def _cache_dir() -> Path:
     return _saved_data_dir() / "cache"
+
+
+def _cleanup_legacy_webview_profile() -> None:
+    """Remove the obsolete persistent WebView2 profile used by 0.2.0-0.2.5."""
+    profile = _cache_dir() / "webview2-profile"
+    if not profile.exists():
+        return
+    try:
+        shutil.rmtree(profile)
+    except Exception:
+        # The new private-mode session never uses this directory, so a locked
+        # leftover profile must not block startup.
+        pass
 
 
 def _state_dir() -> Path:
@@ -11192,18 +11206,26 @@ def _webview_main_app() -> int:
             pass
 
     window.events.closed += _closed
-    storage_path = _cache_dir() / "webview2-profile"
-    storage_path.mkdir(parents=True, exist_ok=True)
+
+    # pywebview's documented default is private mode. DEA has no browser-side
+    # persistence requirement; all real settings/state live in the app data
+    # directory. A persistent WebView2 profile caused later launches to show a
+    # window while window.pywebview.api never received methods such as getState.
+    _cleanup_legacy_webview_profile()
     webview.start(
         gui="edgechromium",
         debug=False,
-        private_mode=False,
-        storage_path=str(storage_path),
+        private_mode=WEBVIEW_PRIVATE_MODE,
     )
     return 0
 
 
 def _ui_contract_self_test() -> None:
+    if WEBVIEW_PRIVATE_MODE is not True:
+        raise RuntimeError(
+            "Lightweight WebView2 restart self-test failed: browser profile persistence must remain disabled."
+        )
+
     # v0.22.9 global software compliance gate: path controls and basic
     # keyboard/accessibility semantics are release-blocking invariants.
     main_html = _webview_main_html()

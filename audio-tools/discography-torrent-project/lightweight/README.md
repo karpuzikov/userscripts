@@ -1,6 +1,6 @@
 # Duplicate Edition Analyzer Lightweight
 
-Version: **0.2.5 - Under construction ⚠️**
+Version: **0.2.6 - Under construction ⚠️**
 
 Branch: `dea-lightweight-modern`
 
@@ -14,7 +14,7 @@ This is the new lightweight/fast DEA implementation. It preserves the production
 - pywebview 6.2.1 + Microsoft Edge WebView2 Evergreen host.
 - No PySide6 / Qt WebEngine.
 - No Tk/Tcl UI runtime.
-- Stable WebView2 profile/cache under `Documents\\Karpuzikov Tools\\Duplicate Edition Analyzer\\cache` for faster warm starts.
+- WebView2 browser sessions are private/ephemeral; DEA settings, decisions and logs remain persistent in the normal program data directory.
 - WebView2 is detected through the documented Windows runtime registry locations and installed through WinGet only when missing.
 - FFmpeg/FFprobe and Chromaprint/fpcalc remain external WinGet/app-local dependencies instead of inflating the lightweight executable.
 - Production DEA settings/state directory is reused.
@@ -41,6 +41,15 @@ The lightweight build preserves the regular DEA feature surface, including:
 - path openers, logging, settings and Undo.
 
 The failed `native-light` prototype is not the reference.
+
+## 0.2.6
+
+- Fixed the intermittent **second-launch / later-launch dead UI** where Browse and other buttons stopped responding and `getState` never appeared.
+- Root cause was the persistent WebView2 browser profile introduced in 0.2.0. DEA does not need browser cookies/localStorage persistence because its real settings and state are stored separately.
+- Returned pywebview/WebView2 to a clean private browser session on every application launch.
+- Added best-effort cleanup of the obsolete `webview2-profile` cache left by 0.2.0-0.2.5.
+- The restart fix does not clear DEA settings, Personal Picks, logs, decisions or other application data.
+- Added a source self-test that fails if persistent WebView2 browser mode is accidentally re-enabled.
 
 ## 0.2.5
 
@@ -86,7 +95,7 @@ The failed `native-light` prototype is not the reference.
 
 - Removed the entire dormant Tk/Tcl UI implementation and Tk clipboard fallback.
 - Startup crash reporting now uses the native Windows message box.
-- WebView2 uses the persistent application profile for faster subsequent starts.
+- WebView2 browser state is intentionally ephemeral; persistent DEA settings/state remain in the application data directory.
 - Added a source-safe `--ui-self-test` parity gate.
 - Kept the production analysis/optimization code and full Release Map instead of reimplementing them.
 

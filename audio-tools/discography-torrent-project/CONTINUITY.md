@@ -272,13 +272,13 @@ A lightweight build is not parity-complete until all of these pass:
 - New request: create a separate lightweight, fast implementation with a modern UI and zero functional loss from production.
 - Architecture implemented at source level: production Python core + pywebview 6.2.1 + Microsoft Edge WebView2 host, with the production main HTML UI and full Release Map HTML/JS retained. Legacy Qt/PySide6 and dormant Tk/Tcl UI code have been removed from the lightweight source.
 - WebView2 detection uses Microsoft-documented runtime registry keys and WinGet package `Microsoft.EdgeWebView2Runtime` when installation is required.
-- New source version is 0.2.5 on branch `dea-lightweight-modern`. Album/EP/Single display grouping is now prepared in Python, correctly removing folder-only CD/Disc/Disk suffixes, catalog/source blocks, and Clean/Explicit suffixes before grouping. Parenthetical variants join a plain base only when that base exists in the same column. Exact regression cases cover Let Go, The Best Damn Thing, Avril Lavigne and Head Above Water from the failing test run. Core analyzer/optimizer semantics remain unchanged.
+- New source version is 0.2.6 on branch `dea-lightweight-modern`. The persistent WebView2 profile has been removed because it caused later launches to create the page without exposing pywebview API methods such as `getState`. Every launch now uses a clean private WebView2 session while DEA's real settings/state remain persistent in the normal program data directory. The obsolete profile directory is cleaned best-effort.
 - No new lightweight build has yet been declared parity-complete.
 - Do not send another "native/light" test merely because it launches. Complete the parity checklist first.
 
 ## Exact next steps
 
-1. Validate the new 0.2.5 source bridge end-to-end on Windows.
+1. Validate the new 0.2.6 source across repeated close/reopen cycles on Windows.
 2. Run syntax/static checks and source-mode launch checks.
 3. Compare main-window controls and behaviors against production 0.22.12.
 4. Compare full Release Map behavior against production 0.22.12, especially SVG links, cross-release highlighting, alternative-family panels, ignore/restore, Re-Analyze and result drawer.
