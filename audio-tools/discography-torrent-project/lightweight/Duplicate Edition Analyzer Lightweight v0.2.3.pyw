@@ -33,7 +33,7 @@ from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Set, Tuple
 
 APP_NAME = "Duplicate / Edition Analyzer Lightweight"
-APP_VERSION = "0.2.2"
+APP_VERSION = "0.2.3"
 PROGRAM_DATA_DIR_NAME = "Duplicate Edition Analyzer"
 PYWEBVIEW_VERSION = "6.2.1"
 AUDIO_EXTS = {".m4a", ".flac", ".wav", ".ape", ".wv", ".mp3", ".aac", ".ogg", ".opus"}
@@ -8759,15 +8759,16 @@ document.getElementById("search").addEventListener("keydown",function(e){
 });
 window.addEventListener("resize",function(){clearTimeout(resizeTimer);resizeTimer=setTimeout(renderBoard,100);});
 new ResizeObserver(function(){drawConnections();}).observe(document.getElementById("boardContent"));
-function waitForPywebviewApi(timeoutMs){
-  const limit=Number(timeoutMs||15000);
+function waitForPywebviewMethod(name,timeoutMs){
+  const limit=Number(timeoutMs||30000);
   return new Promise(function(resolve,reject){
     const started=Date.now();
     function probe(){
       const api=window.pywebview&&window.pywebview.api;
-      if(api){resolve(api);return;}
+      const fn=api&&api[name];
+      if(typeof fn==="function"){resolve({api:api,fn:fn});return;}
       if(Date.now()-started>=limit){
-        reject(new Error("Desktop bridge did not become ready."));
+        reject(new Error("Desktop bridge method did not become ready: "+String(name)));
         return;
       }
       setTimeout(probe,25);
@@ -8776,10 +8777,8 @@ function waitForPywebviewApi(timeoutMs){
   });
 }
 function bridgeCall(name,args,callback){
-  return waitForPywebviewApi(15000).then(function(api){
-    const fn=api[name];
-    if(typeof fn!=="function") throw new Error("Desktop bridge method is unavailable: "+String(name));
-    return fn.apply(api,args);
+  return waitForPywebviewMethod(name,30000).then(function(entry){
+    return entry.fn.apply(entry.api,args);
   }).then(function(result){
     if(callback)callback(typeof result==="string"?result:JSON.stringify(result));
     return result;
@@ -10119,15 +10118,16 @@ let __deaBridgeFailureShown=false;
 window.__deaStateChanged=function(raw){if(__deaStateListener)__deaStateListener(raw);};
 window.__deaEventRaised=function(raw){if(__deaEventListener)__deaEventListener(raw);};
 
-function waitForPywebviewApi(timeoutMs){
-  const limit=Number(timeoutMs||15000);
+function waitForPywebviewMethod(name,timeoutMs){
+  const limit=Number(timeoutMs||30000);
   return new Promise(function(resolve,reject){
     const started=Date.now();
     function probe(){
       const api=window.pywebview&&window.pywebview.api;
-      if(api){resolve(api);return;}
+      const fn=api&&api[name];
+      if(typeof fn==="function"){resolve({api:api,fn:fn});return;}
       if(Date.now()-started>=limit){
-        reject(new Error("Desktop bridge did not become ready."));
+        reject(new Error("Desktop bridge method did not become ready: "+String(name)));
         return;
       }
       setTimeout(probe,25);
@@ -10147,10 +10147,8 @@ function showBridgeFailure(error){
   }catch(_ignored){}
 }
 function bridgeCall(name,args,callback){
-  return waitForPywebviewApi(15000).then(function(api){
-    const fn=api[name];
-    if(typeof fn!=="function") throw new Error("Desktop bridge method is unavailable: "+String(name));
-    return fn.apply(api,args);
+  return waitForPywebviewMethod(name,30000).then(function(entry){
+    return entry.fn.apply(entry.api,args);
   }).then(function(result){
     if(callback)callback(typeof result==="string"?result:JSON.stringify(result));
     return result;
@@ -10176,8 +10174,8 @@ function createLightMainBridge(){
   });
 }
 
-// Create the bridge immediately. API calls queue until pywebview has injected
-// window.pywebview.api, so buttons never depend on catching a one-shot event.
+// Create the bridge immediately. Each call waits until its exact pywebview
+// method exists, because pywebview.api can appear before the method table is populated.
 bridge=createLightMainBridge();
 bridge.stateChanged.connect(renderState);
 bridge.eventRaised.connect(handleEvent);
@@ -11167,15 +11165,22 @@ def _ui_contract_self_test() -> None:
         ),
         (
             'bridge=createLightMainBridge();' in main_html
-            and 'function waitForPywebviewApi(timeoutMs)' in main_html
+            and 'function waitForPywebviewMethod(name,timeoutMs)' in main_html
             and 'bridge.getState(renderState).catch(function(){});' in main_html,
-            "Main UI bridge must initialize immediately and wait for pywebview instead of depending only on pywebviewready.",
+            "Main UI bridge must initialize immediately and wait for the requested pywebview method, not just the api object.",
         ),
         (
             'bridge=createLightBridge();' in map_html
-            and 'function waitForPywebviewApi(timeoutMs)' in map_html
+            and 'function waitForPywebviewMethod(name,timeoutMs)' in map_html
             and 'bridge.getState(receiveState).catch(function(){});' in map_html,
-            "Release Map bridge must initialize immediately and wait for pywebview instead of depending only on pywebviewready.",
+            "Release Map bridge must initialize immediately and wait for the requested pywebview method, not just the api object.",
+        ),
+        (
+            'if(api){resolve(api);return;}' not in main_html
+            and 'if(api){resolve(api);return;}' not in map_html
+            and 'const fn=api&&api[name];' in main_html
+            and 'const fn=api&&api[name];' in map_html,
+            "WebView2 bridge readiness must wait for the requested method; api-object-only readiness causes dead buttons.",
         ),
     ]
     failed_ui_checks = [message for ok, message in ui_checks if not ok]

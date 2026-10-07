@@ -1,6 +1,6 @@
 # Duplicate Edition Analyzer Lightweight
 
-Version: **0.2.2 - Under construction ⚠️**
+Version: **0.2.3 - Under construction ⚠️**
 
 Branch: `dea-lightweight-modern`
 
@@ -41,6 +41,13 @@ The lightweight build preserves the regular DEA feature surface, including:
 - path openers, logging, settings and Undo.
 
 The failed `native-light` prototype is not the reference.
+
+## 0.2.3
+
+- Fixed the remaining WebView2 bridge race shown by `Desktop bridge method is unavailable: getState`.
+- The bridge now waits for the **requested method itself** (for example `getState`), not merely for `window.pywebview.api` to exist.
+- Calls made before pywebview finishes populating its method table stay queued for up to 30 seconds instead of failing immediately.
+- Added a regression check that forbids the old API-object-only readiness test.
 
 ## 0.2.2
 

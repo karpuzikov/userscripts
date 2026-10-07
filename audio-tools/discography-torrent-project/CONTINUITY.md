@@ -272,13 +272,13 @@ A lightweight build is not parity-complete until all of these pass:
 - New request: create a separate lightweight, fast implementation with a modern UI and zero functional loss from production.
 - Architecture implemented at source level: production Python core + pywebview 6.2.1 + Microsoft Edge WebView2 host, with the production main HTML UI and full Release Map HTML/JS retained. Legacy Qt/PySide6 and dormant Tk/Tcl UI code have been removed from the lightweight source.
 - WebView2 detection uses Microsoft-documented runtime registry keys and WinGet package `Microsoft.EdgeWebView2Runtime` when installation is required.
-- New source version is 0.2.2 on branch `dea-lightweight-modern`. The WebView2 bridge is now initialized immediately and waits for the injected pywebview API, fixing the dead-button failure caused by relying only on the one-shot `pywebviewready` event. Bridge failures are visible in the UI. The 0.2.1 three-column grouped Release Map remains intact.
+- New source version is 0.2.3 on branch `dea-lightweight-modern`. The WebView2 bridge now waits for each requested method itself because `window.pywebview.api` can exist before pywebview has populated methods such as `getState`. This fixes the remaining all-buttons-dead race while retaining the 0.2.1 grouped three-column Release Map.
 - No new lightweight build has yet been declared parity-complete.
 - Do not send another "native/light" test merely because it launches. Complete the parity checklist first.
 
 ## Exact next steps
 
-1. Validate the new 0.2.2 source bridge end-to-end on Windows.
+1. Validate the new 0.2.3 source bridge end-to-end on Windows.
 2. Run syntax/static checks and source-mode launch checks.
 3. Compare main-window controls and behaviors against production 0.22.12.
 4. Compare full Release Map behavior against production 0.22.12, especially SVG links, cross-release highlighting, alternative-family panels, ignore/restore, Re-Analyze and result drawer.

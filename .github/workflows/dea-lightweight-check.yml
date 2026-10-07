@@ -96,14 +96,20 @@ jobs:
           release = html["_webview_release_map_html"]
           required_main = [
               "bridge=createLightMainBridge();",
-              "function waitForPywebviewApi(timeoutMs)",
+              "function waitForPywebviewMethod(name,timeoutMs)",
               "bridge.getState(renderState).catch(function(){});",
           ]
           required_release = [
               "bridge=createLightBridge();",
-              "function waitForPywebviewApi(timeoutMs)",
+              "function waitForPywebviewMethod(name,timeoutMs)",
               "bridge.getState(receiveState).catch(function(){});",
           ]
           missing = [x for x in required_main if x not in main] + [x for x in required_release if x not in release]
           if missing:
               raise SystemExit("Bridge regression contract failed: " + " | ".join(missing))
+          forbidden = "if(api){resolve(api);return;}"
+          if forbidden in main or forbidden in release:
+              raise SystemExit("Bridge regression contract failed: API-object-only readiness returned.")
+          for label, body in (("main", main), ("release", release)):
+              if "const fn=api&&api[name];" not in body or 'typeof fn==="function"' not in body:
+                  raise SystemExit(f"Bridge regression contract failed: {label} does not wait for requested method.")
