@@ -1035,6 +1035,34 @@ This section supersedes older featured-remix, contextual-remix, and generic Edit
 - Strong structural conflicts such as Radio vs Extended or Acoustic vs Instrumental remain eligible for semantic pre-blocking unless exact identical Chromaprint overrides the wording.
 
 
+## v0.3.5 source preservation and Release Map delta correction - authoritative
+
+This section supersedes older optimization wording wherever it allowed collection-size minimization to erase a better source for recordings that are already available at higher quality.
+
+### CD / source quality preservation
+
+- Source preference applies to the shared **recordings**, not only to whole-release exact-equivalence ties.
+- A lower-source release (for example WEB) may be retained because it contributes a unique wanted recording/version, but it must **not** displace an available higher-source CD/physical copy of the recordings they share.
+- If keeping the unique lower-source release and the higher-source release together is necessary to satisfy both unique coverage and CD>WEB preference, keep both. This source-preservation rule outranks the lower-total-track/lower-release-count objective.
+- A strict album superset does not automatically dominate a higher-source subset when the superset's source quality is lower. The superset may still be required for album completeness/unique material, while the higher-source edition remains for its shared recordings.
+- Among competing source-preservation candidates, prefer higher source rank, then better comparable CD-log quality, then Existing, then the smaller container/stable order.
+- A below-threshold CD still follows the existing CD-log rules; this correction does not turn metadata into duplicate identity.
+- Exact-equivalent Existing preference is based on proven included audio/container shape. Provider Album/EP/Single metadata disagreement alone must not create churn.
+
+### Candidate-routing correction
+
+- Same album + same track number/slot is a permitted **routing-only** safety path to acoustic comparison across releases.
+- This is specifically intended for provider naming drift such as `Warped Tour '05 (ft. pete WENTZ)` vs `Warped Tour ’05 with pete WENTZ`.
+- Album/slot metadata never proves identity. Chromaprint/audio acceptance remains mandatory.
+
+### Changes view pairing and density
+
+- When an OLD release is removed because one retained NEW release covers it, show that cause/effect as one **↔ Replaced** change whenever it is a replacement relationship. Do not force the user to correlate an unrelated-looking `+ Added` row with a separate `- Removed` row elsewhere.
+- A true **+ Added** row must explain what new/unique wanted recording(s) it contributes when that information is available.
+- Paired replacement-source OLD rows do not also count as independent Removed changes in the default Changes summary.
+- Changes/Added/Replaced/Removed/Ignored views must size their scrollable content to their own visible rows. A stale Full-map SVG/board height must never create scrollable empty space.
+- Full map uses compact line-separated release groups and compact line-separated rows; padded card-inside-card group containers are prohibited because they waste vertical space.
+
 ## v0.22.6 Release Map track-ignore and responsiveness correction
 
 - Track-level `Ignore` / `Restore` is exact-instance only. It must affect only the clicked physical file or virtual CUE track.
