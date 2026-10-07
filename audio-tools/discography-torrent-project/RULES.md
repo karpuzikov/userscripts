@@ -629,7 +629,7 @@ Do not flatten release folders into the duplicate root. After successful moves, 
 - Personal Picks are the single persistent home for explicit user keep choices created by phrase/title rules and by **Unusual track pattern review**.
 - Phrase/exact-title Personal Picks do not override an unchecked `Save Remixes` or `Save Live recordings` switch.
 - An unusual track pattern explicitly checked in **Unusual track pattern review** is kept for that run and immediately added to Personal Picks as a persistent Pattern rule.
-- New unusual patterns start unchecked unless they already exist in Personal Picks. Existing Pattern Personal Picks appear checked/locked in the review and are removed persistently only from **Personal Picks**.
+- New unusual patterns start unchecked. A Pattern already saved in **Personal Picks** is a resolved persistent keep decision and must not appear in **Unusual track pattern review** again. It remains active until removed from **Personal Picks**; after removal, the pattern becomes eligible for review again if encountered.
 - Unchecked unusual patterns are skipped for the current run and are not stored as separate negative preferences. The legacy hidden `unusual_pattern_preferences_v5` map is obsolete; positive legacy choices migrate into Personal Picks.
 - The only exception to early remix elimination is a featured performer genuinely added by the remix. An ordinary song vocalist repeated in remix metadata is not an exception.
 - Personal Picks never create duplicate identity. Duplicate identity remains acoustic-fingerprint based.
