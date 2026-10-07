@@ -1,6 +1,6 @@
 # Duplicate Edition Analyzer Lightweight
 
-Version: **0.2.0 - Under construction ⚠️**
+Version: **0.2.1 - Under construction ⚠️**
 
 Branch: `dea-lightweight-modern`
 
@@ -41,6 +41,14 @@ The lightweight build preserves the regular DEA feature surface, including:
 - path openers, logging, settings and Undo.
 
 The failed `native-light` prototype is not the reference.
+
+## 0.2.1
+
+- Release Map is now divided into **Albums / EPs / Singles** columns.
+- Editions of the same release family are grouped together inside each column.
+- The three columns fill the available map width instead of creating fixed-width columns followed by a large horizontally scrollable blank area.
+- SVG links still connect the real release rows across columns.
+- Compilations remain visible and are marked inside the Albums column rather than being dropped.
 
 ## 0.2.0
 

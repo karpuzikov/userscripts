@@ -33,7 +33,7 @@ from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Set, Tuple
 
 APP_NAME = "Duplicate / Edition Analyzer Lightweight"
-APP_VERSION = "0.2.0"
+APP_VERSION = "0.2.1"
 PROGRAM_DATA_DIR_NAME = "Duplicate Edition Analyzer"
 PYWEBVIEW_VERSION = "6.2.1"
 AUDIO_EXTS = {".m4a", ".flac", ".wav", ".ape", ".wv", ".mp3", ".aac", ".ogg", ".opus"}
@@ -7901,14 +7901,36 @@ button,input { font:inherit; }
 #spacer { flex:1; }
 #main { min-height:0; flex:1; display:flex; position:relative; }
 #boardViewport {
-  position:relative; min-width:0; flex:1; overflow:auto; background:linear-gradient(180deg,#0c0e12,#0a0c0f);
+  position:relative; min-width:0; flex:1; overflow-y:auto; overflow-x:hidden;
+  background:linear-gradient(180deg,#0c0e12,#0a0c0f);
 }
 #boardContent {
-  position:relative; min-width:100%; min-height:100%; width:max-content; padding:14px 18px 24px;
+  position:relative; width:100%; min-width:0; min-height:100%; padding:0 0 24px;
 }
 #connections { position:absolute; inset:0; pointer-events:none; overflow:visible; z-index:1; }
-#columns { position:relative; z-index:2; display:flex; align-items:flex-start; gap:34px; width:max-content; }
-.releaseColumn { width:355px; flex:0 0 355px; display:flex; flex-direction:column; gap:3px; }
+#columns {
+  position:relative; z-index:2; display:grid; grid-template-columns:repeat(3,minmax(0,1fr));
+  align-items:start; width:100%; min-width:0;
+}
+.releaseColumn {
+  min-width:0; display:flex; flex-direction:column; padding:0 14px 18px;
+  border-left:1px solid #252c35;
+}
+.releaseColumn:first-child { border-left:0; }
+.releaseColumnHeader {
+  position:sticky; top:0; z-index:5; margin:0 -14px 12px; padding:13px 16px 11px;
+  background:rgba(12,14,18,.96); border-bottom:1px solid #303845;
+  backdrop-filter:blur(10px); font-size:18px; font-weight:780; letter-spacing:-.01em;
+}
+.releaseGroup {
+  min-width:0; margin:0 0 12px; padding:7px 7px 8px;
+  border:1px solid #262e38; border-radius:9px; background:rgba(16,20,26,.56);
+}
+.releaseGroupTitle {
+  margin:0 2px 5px; color:#aab6c6; font-size:11px; font-weight:760;
+  letter-spacing:.02em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.releaseGroup.compilationGroup .releaseGroupTitle { color:#d6b875; }
 .releaseRow {
   position:relative; height:34px; display:flex; align-items:center; gap:8px; padding:0 8px;
   border:1px solid transparent; border-radius:6px; color:#e8edf5; cursor:pointer; user-select:none;
@@ -8250,7 +8272,7 @@ function updateRowHighlights() {
 function drawConnections() {
   if(!state) return;
   const svg=document.getElementById("connections"), content=document.getElementById("boardContent");
-  const width=Math.max(content.scrollWidth,content.clientWidth), height=Math.max(content.scrollHeight,content.clientHeight);
+  const width=Math.max(1,content.clientWidth), height=Math.max(content.scrollHeight,content.clientHeight);
   svg.setAttribute("width",String(width)); svg.setAttribute("height",String(height));
   svg.setAttribute("viewBox","0 0 "+width+" "+height); svg.innerHTML="";
   const selected=selectedId==null?null:Number(selectedId);
@@ -8279,57 +8301,128 @@ function drawConnections() {
     });
   }
 }
+function releaseColumnKind(n) {
+  const t=String(n.releaseType||"").toLowerCase();
+  if(t==="ep") return "ep";
+  if(t==="single") return "single";
+  // Compilations/unknown long-form releases stay visible instead of disappearing.
+  return "album";
+}
+function cleanReleaseLabel(name) {
+  let s=String(name||"").trim();
+  s=s.replace(/^\s*\d{4}(?:-\d{2}-\d{2})?\s*-\s*/,"");
+  s=s.replace(/\s*\[[^\]]+\]\s*$/,"").trim();
+  let prev="";
+  while(prev!==s){
+    prev=s;
+    s=s.replace(/\s*\((?:[^)]*\b(?:deluxe|limited|special|expanded|bonus|exclusive|tour|edition|version|remaster(?:ed)?|anniversary)\b[^)]*)\)\s*$/i,"").trim();
+  }
+  return s||String(name||"").trim();
+}
+function groupKeyForNode(n) {
+  const family=String(n.family||"").trim().toLowerCase();
+  if(family) return family;
+  return cleanReleaseLabel(n.name).toLowerCase().replace(/[^a-z0-9]+/g," ").trim()||String(n.id);
+}
+function groupTitleForNodes(items) {
+  const candidates=items.map(function(n){return cleanReleaseLabel(n.name);}).filter(Boolean);
+  if(!candidates.length) return "Other";
+  candidates.sort(function(a,b){return a.length-b.length||a.localeCompare(b,undefined,{sensitivity:"base"});});
+  return candidates[0];
+}
+function appendReleaseRow(host,n) {
+  const row=document.createElement("div");
+  let rowState=n.kind==="duplicate"?"duplicate":"retained";
+  if(n.manualRemoved) rowState+=" ignored";
+  else if(n.pendingReleaseIgnore) rowState+=" pendingIgnore";
+  else if(n.pendingReleaseRestore) rowState+=" pendingRestore";
+  row.className="releaseRow "+rowState;
+  row.dataset.id=String(n.id); row.title=n.name;
+  row.setAttribute("role","button");
+  row.tabIndex=0;
+  row.setAttribute("aria-label","Inspect release "+String(n.name||""));
+  const badge=n.manualRemoved
+    ?'<span class="ignoredBadge">IGN</span>'
+    :(n.pendingReleaseIgnore
+      ?'<span class="pendingBadge">PENDING</span>'
+      :(n.pendingReleaseRestore
+        ?'<span class="pendingBadge">RESTORE</span>'
+        :(n.kind==="duplicate"
+          ?'<span class="duplicateBadge">DUP</span>'
+          :(n.isGem
+            ?'<span class="uniqueBadge gem" title="Gem track: '+esc((n.gemTitles||[]).join("; "))+'">💎</span>'
+            :(Number(n.uniqueCount)>0
+              ?'<span class="uniqueBadge '+badgeClass(n.uniqueCount)+'">'+n.uniqueCount+'</span>'
+              :"")))));
+  const meta=n.manualRemoved?"IGNORED":(n.pendingReleaseIgnore?"PENDING IGNORE":(n.pendingReleaseRestore?"PENDING RESTORE":n.action));
+  row.innerHTML='<span class="folderIcon"></span><span class="releaseName">'+esc(n.name)+'</span>'
+    +'<span class="releaseMeta">'+esc(meta)+'</span>'+badge;
+  function activateReleaseRow(){
+    const details=document.getElementById("details");
+    if(selectedId!=null && Number(selectedId)===Number(n.id) && details.classList.contains("open")){
+      closeDetails();
+      return;
+    }
+    selectedId=Number(n.id); activeTrack=null; openDetails(n); updateRowHighlights(); drawConnections(); updateTrackMode();
+  }
+  row.onclick=activateReleaseRow;
+  row.onkeydown=function(e){
+    if(e.key==="Enter"||e.key===" "){e.preventDefault();activateReleaseRow();}
+  };
+  host.appendChild(row); rowEls.set(String(n.id),row);
+}
 function renderBoard() {
   if(!state) return;
-  const viewport=document.getElementById("boardViewport"), columns=document.getElementById("columns");
-  const usableHeight=Math.max(420,viewport.clientHeight-48), perColumn=Math.max(10,Math.floor(usableHeight/37));
+  const columns=document.getElementById("columns");
   columns.innerHTML=""; rowEls=new Map();
   const nodes=state.nodes||[];
-  for(let start=0;start<nodes.length;start+=perColumn){
-    const col=document.createElement("div"); col.className="releaseColumn";
-    nodes.slice(start,start+perColumn).forEach(function(n){
-      const row=document.createElement("div");
-      let rowState=n.kind==="duplicate"?"duplicate":"retained";
-      if(n.manualRemoved) rowState+=" ignored";
-      else if(n.pendingReleaseIgnore) rowState+=" pendingIgnore";
-      else if(n.pendingReleaseRestore) rowState+=" pendingRestore";
-      row.className="releaseRow "+rowState;
-      row.dataset.id=String(n.id); row.title=n.name;
-      row.setAttribute("role","button");
-      row.tabIndex=0;
-      row.setAttribute("aria-label","Inspect release "+String(n.name||""));
-      const badge=n.manualRemoved
-        ?'<span class="ignoredBadge">IGN</span>'
-        :(n.pendingReleaseIgnore
-          ?'<span class="pendingBadge">PENDING</span>'
-          :(n.pendingReleaseRestore
-            ?'<span class="pendingBadge">RESTORE</span>'
-            :(n.kind==="duplicate"
-              ?'<span class="duplicateBadge">DUP</span>'
-              :(n.isGem
-                ?'<span class="uniqueBadge gem" title="Gem track: '+esc((n.gemTitles||[]).join("; "))+'">💎</span>'
-                :(Number(n.uniqueCount)>0
-                  ?'<span class="uniqueBadge '+badgeClass(n.uniqueCount)+'">'+n.uniqueCount+'</span>'
-                  :"")))));
-      const meta=n.manualRemoved?"IGNORED":(n.pendingReleaseIgnore?"PENDING IGNORE":(n.pendingReleaseRestore?"PENDING RESTORE":n.action));
-      row.innerHTML='<span class="folderIcon"></span><span class="releaseName">'+esc(n.name)+'</span>'
-        +'<span class="releaseMeta">'+esc(meta)+'</span>'+badge;
-      function activateReleaseRow(){
-        const details=document.getElementById("details");
-        if(selectedId!=null && Number(selectedId)===Number(n.id) && details.classList.contains("open")){
-          closeDetails();
-          return;
-        }
-        selectedId=Number(n.id); activeTrack=null; openDetails(n); updateRowHighlights(); drawConnections(); updateTrackMode();
-      }
-      row.onclick=activateReleaseRow;
-      row.onkeydown=function(e){
-        if(e.key==="Enter"||e.key===" "){e.preventDefault();activateReleaseRow();}
-      };
-      col.appendChild(row); rowEls.set(String(n.id),row);
+  const defs=[
+    {key:"album",label:"Albums"},
+    {key:"ep",label:"EPs"},
+    {key:"single",label:"Singles"}
+  ];
+  defs.forEach(function(def){
+    const col=document.createElement("section");
+    col.className="releaseColumn";
+    col.dataset.kind=def.key;
+    const head=document.createElement("div");
+    head.className="releaseColumnHeader";
+    head.textContent=def.label;
+    col.appendChild(head);
+
+    const typed=nodes.filter(function(n){return releaseColumnKind(n)===def.key;});
+    const grouped=new Map();
+    typed.forEach(function(n){
+      const key=groupKeyForNode(n);
+      if(!grouped.has(key)) grouped.set(key,[]);
+      grouped.get(key).push(n);
     });
+    const groups=Array.from(grouped.values());
+    groups.sort(function(a,b){
+      const ai=nodes.indexOf(a[0]), bi=nodes.indexOf(b[0]);
+      return ai-bi;
+    });
+    groups.forEach(function(items){
+      const group=document.createElement("div");
+      group.className="releaseGroup"+(items.some(function(n){return String(n.releaseType||"")==="compilation";})?" compilationGroup":"");
+      const title=document.createElement("div");
+      title.className="releaseGroupTitle";
+      const base=groupTitleForNodes(items);
+      title.textContent=items.some(function(n){return String(n.releaseType||"")==="compilation";})
+        ? base+" · Compilation"
+        : base;
+      group.appendChild(title);
+      items.forEach(function(n){appendReleaseRow(group,n);});
+      col.appendChild(group);
+    });
+    if(!typed.length){
+      const empty=document.createElement("div");
+      empty.className="empty";
+      empty.textContent="No "+def.label.toLowerCase();
+      col.appendChild(empty);
+    }
     columns.appendChild(col);
-  }
+  });
   updateRowHighlights(); requestAnimationFrame(drawConnections);
 }
 function updateTrackMode() {
@@ -8983,6 +9076,8 @@ def _release_map_state_for_ui(
                 "pendingReleaseIgnore": bool(pending_release_change and release_blocked),
                 "pendingReleaseRestore": bool(pending_release_change and not release_blocked),
                 "reason": str(item.get("reason", "")),
+                "releaseType": str(item.get("release_type", "") or "").lower(),
+                "family": str(item.get("family", "") or ""),
                 "includedTracks": int(item.get("included_tracks", 0) or 0),
                 "uniqueCount": unique_count,
                 "isGem": bool(gem_titles),
@@ -10960,6 +11055,23 @@ def _ui_contract_self_test() -> None:
             '<svg id="connections"></svg>' in map_html
             and 'function drawConnections()' in map_html,
             "Release Map SVG relationship links/connections are missing.",
+        ),
+        (
+            'grid-template-columns:repeat(3,minmax(0,1fr))' in map_html
+            and '{key:"album",label:"Albums"}' in map_html
+            and '{key:"ep",label:"EPs"}' in map_html
+            and '{key:"single",label:"Singles"}' in map_html,
+            "Release Map must use Albums / EPs / Singles columns.",
+        ),
+        (
+            'function groupKeyForNode(n)' in map_html
+            and 'className="releaseGroup"' in map_html,
+            "Release Map same-release-family grouping is missing.",
+        ),
+        (
+            'overflow-x:hidden' in map_html
+            and 'width:max-content' not in map_html,
+            "Release Map must not create a horizontally scrollable blank area.",
         ),
         (
             'function versionsForTrack' in map_html
