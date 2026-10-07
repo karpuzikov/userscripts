@@ -1,6 +1,6 @@
 # Duplicate Edition Analyzer Lightweight
 
-Version: **0.3.3 - Under construction ⚠️**
+Version: **0.3.4 - Under construction ⚠️**
 
 Branch: `dea-lightweight-modern`
 
@@ -41,6 +41,19 @@ The lightweight build preserves the regular DEA feature surface, including:
 - path openers, logging, settings and Undo.
 
 The failed `native-light` prototype is not the reference.
+
+## 0.3.4
+
+- Reworked Release Map around a **Changes-first** default view so the user sees the actual discography delta instead of scanning the complete catalog.
+- Added compact clickable change counters/filters: **All changes**, **+ Added**, **⬆️ Upgraded**, **- Removed**, and **🚫 Ignored**.
+- New additions are explicitly marked with **+**.
+- Changes view hides unchanged OLD releases and rejected NEW duplicates by default; those remain available in **Full map**.
+- Added a compact change list with one-line explanations for why each release was added, upgraded, removed, or ignored.
+- Search in Changes view can still find any analyzed release/track, including unchanged items.
+- Track-carrier and alternative-version inspection automatically switches to Full map so cross-release navigation and SVG relationships remain available.
+- Full map keeps Albums / EPs / Singles, but completely empty release-type columns are no longer reserved.
+- Re-Analyze result drawer is denser and its added/removed release items are clickable.
+- Added UI contract checks for the new Changes-first view and + addition marker.
 
 ## 0.3.3
 
