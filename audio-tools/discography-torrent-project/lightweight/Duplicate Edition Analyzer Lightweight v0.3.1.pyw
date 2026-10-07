@@ -9441,7 +9441,7 @@ _RELEASE_MAP_DISC_SUFFIX_RE = re.compile(
 )
 
 _RELEASE_MAP_FEATURE_CREDIT_SUFFIX_RE = re.compile(
-    r"\s*\((?:feat(?:uring)?|ft)\.?\s+[^()]*)\)\s*$",
+    r"\s*\((?:feat(?:uring)?|ft)\.?\s+[^()]*\)\s*$",
     re.I,
 )
 
