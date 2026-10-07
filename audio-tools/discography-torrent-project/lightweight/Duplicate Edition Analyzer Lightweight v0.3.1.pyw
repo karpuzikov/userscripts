@@ -33,7 +33,7 @@ from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Set, Tuple
 
 APP_NAME = "Duplicate / Edition Analyzer Lightweight"
-APP_VERSION = "0.3.0"
+APP_VERSION = "0.3.1"
 PROGRAM_DATA_DIR_NAME = "Duplicate Edition Analyzer"
 PYWEBVIEW_VERSION = "6.2.1"
 WEBVIEW_PRIVATE_MODE = True
@@ -5000,8 +5000,8 @@ def equivalent_release_preference_key(rel: Release):
         -rel.track_count,
         source_rank(rel),
         rip,
-        _release_explicit_preference(rel),
         1 if rel.root_kind == "existing" else 0,
+        _release_explicit_preference(rel),
     )
 def _dynamic_final_tie_signature(rel: Release):
     """Return a signature only for releases equal on every pre-DR criterion."""
@@ -5907,6 +5907,90 @@ def exact_global_collection_minimize(
     return selected, stats
 
 
+def _exact_equivalent_release_content(a: Release, b: Release) -> bool:
+    """True when two releases carry the same included recordings in the same order."""
+    if a.release_type != b.release_type:
+        return False
+    if a.track_count != b.track_count or a.included_track_count != b.included_track_count:
+        return False
+    seq_a = _included_group_sequence(a)
+    seq_b = _included_group_sequence(b)
+    return bool(
+        seq_a
+        and seq_a == seq_b
+        and _included_group_counter(a) == _included_group_counter(b)
+    )
+
+
+def prefer_existing_equivalent_releases(
+    releases: List[Release],
+    selected: Set[int],
+) -> Set[int]:
+    """Avoid churn: same content + same source quality keeps the Existing copy.
+
+    A New/Update release may replace Existing only when there is an objective
+    improvement such as a higher source class or a better comparable CD rip log.
+    """
+    selected = set(selected)
+    existing = [r for r in releases if r.root_kind == "existing"]
+
+    for new in [r for r in releases if r.root_kind == "recycle" and r.rid in selected]:
+        candidates = [
+            old for old in existing
+            if old.rid not in selected
+            and _exact_equivalent_release_content(old, new)
+            and source_rank(old) == source_rank(new)
+        ]
+        if not candidates:
+            continue
+
+        new_rip = cd_rip_quality_key(new)
+        safe: List[Release] = []
+        for old in candidates:
+            old_rip = cd_rip_quality_key(old)
+            # A genuinely better comparable CD log is allowed to replace Existing.
+            if new_rip is not None and (old_rip is None or new_rip > old_rip):
+                continue
+            safe.append(old)
+        if not safe:
+            continue
+
+        best_old = max(
+            safe,
+            key=lambda old: (
+                cd_rip_quality_key(old) or (0, 0, 0.0, 0),
+                -old.rid,
+            ),
+        )
+        selected.discard(new.rid)
+        selected.add(best_old.rid)
+
+    return selected
+
+
+def _release_upgrade_reason(new: Release, old: Release) -> str:
+    """Describe a real improvement; empty means replacement is not an upgrade."""
+    old_rank = source_rank(old)
+    new_rank = source_rank(new)
+    if new_rank > old_rank:
+        return f"Source {old.source_medium or 'Unknown'} -> {new.source_medium or 'Unknown'}"
+
+    old_rip = cd_rip_quality_key(old)
+    new_rip = cd_rip_quality_key(new)
+    if (
+        new_rank >= 2
+        and new_rip is not None
+        and (old_rip is None or new_rip > old_rip)
+    ):
+        return "Better CD rip log"
+
+    if old.groups and old.groups < new.groups:
+        delta = len(new.groups - old.groups)
+        return f"More complete: +{delta} recording(s)"
+
+    return ""
+
+
 def _append_optimizer_log(path: Optional[Path], stats: Dict[str, object]) -> None:
     if path is None:
         return
@@ -5982,6 +6066,7 @@ def optimize_collection(
     selected = prune_redundant_selected(active, selected)
 
     selected = prefer_better_cd_rips(active, selected)
+    selected = prefer_existing_equivalent_releases(active, selected)
 
     # DR is the true last unresolved quality tie-break. Nothing is decoded for
     # DR until coverage, source, rip-log quality, file count, release count,
@@ -6493,7 +6578,19 @@ def build_release_decisions(
                 new_groups = rel.groups - existing_groups
                 if replaced:
                     action = "REPLACE"
-                    reason = "Use this recycle release instead of: " + "; ".join(r.path.name for r in replaced[:4])
+                    upgrade_bits = [
+                        bit for bit in (_release_upgrade_reason(rel, old) for old in replaced)
+                        if bit
+                    ]
+                    if upgrade_bits:
+                        reason = (
+                            "Upgrade existing release: "
+                            + "; ".join(dict.fromkeys(upgrade_bits))
+                            + ". Replaces: "
+                            + "; ".join(r.path.name for r in replaced[:4])
+                        )
+                    else:
+                        reason = "Replace existing edition with: " + rel.path.name
                 else:
                     action = "ADD"
                     if essential_tracks:
@@ -7008,6 +7105,7 @@ def build_decision_snapshot(
                     "root_kind": other.root_kind,
                     "scan_root": str(other.scan_root or ""),
                     "included_tracks": other.counted_track_count,
+                    "upgrade_reason": _release_upgrade_reason(rel, other),
                 }
             )
 
@@ -8223,6 +8321,7 @@ button,input { font:inherit; }
 .actionBadge.keep { border:1px solid #46515f; background:#1b2027; color:#b9c4d3; }
 .actionBadge.add { border:1px solid #2d7a46; background:#112b1a; color:#9bf1b3; }
 .actionBadge.upgrade { border:1px solid #9a6b22; background:#31230f; color:#ffd985; }
+.actionBadge.replace { border:1px solid #596779; background:#19212b; color:#c7d3e2; }
 .actionBadge.remove,.actionBadge.skip { border:1px solid #74404a; background:#29171b; color:#ffb9c0; }
 #sourceLegend { display:flex; align-items:center; gap:5px; min-width:0; }
 .sourceLegendPill {
@@ -8471,9 +8570,20 @@ function pathLeaf(value) {
 function actionDisplay(n) {
   const action=String(n.action||"").toUpperCase();
   if(action==="REPLACE"){
-    const oldMedium=(n.upgradeFrom||[]).map(function(x){return String(x.sourceMedium||"").trim();}).filter(Boolean)[0]||"OLD";
-    const newMedium=String(n.sourceMedium||"").trim()||"NEW";
-    return {label:"UPGRADE "+oldMedium+" → "+newMedium, cls:"upgrade"};
+    const oldRows=(n.upgradeFrom||[]);
+    const sourceUpgrade=oldRows.find(function(x){
+      return Number(n.sourceRank||0)>Number(x.sourceRank||0);
+    });
+    if(sourceUpgrade){
+      const oldMedium=String(sourceUpgrade.sourceMedium||"OLD").trim()||"OLD";
+      const newMedium=String(n.sourceMedium||"NEW").trim()||"NEW";
+      return {label:"UPGRADE "+oldMedium+" → "+newMedium, cls:"upgrade"};
+    }
+    const reason=oldRows.map(function(x){return String(x.upgradeReason||"").trim();}).find(Boolean)||"";
+    const more=reason.match(/More complete:\s*\+(\d+)\s+recording/i);
+    if(more) return {label:"UPGRADE +"+more[1]+" RECORDING"+(more[1]==="1"?"":"S"),cls:"upgrade"};
+    if(/Better CD rip log/i.test(reason)) return {label:"UPGRADE CD RIP",cls:"upgrade"};
+    return {label:"REPLACE",cls:"replace"};
   }
   if(action==="ADD") return {label:"ADD",cls:"add"};
   if(action==="KEEP") return {label:"KEEP",cls:"keep"};
@@ -8970,9 +9080,14 @@ function openDetails(n) {
     +'<br><strong>Source:</strong> '+esc(n.sourceMedium||n.sourceDescription||"Unknown");
   if(String(n.action||"").toUpperCase()==="REPLACE" && (n.upgradeFrom||[]).length){
     const upgrades=(n.upgradeFrom||[]).map(function(old){
-      return esc(old.name||"old release")+' ('+esc(old.sourceMedium||old.source||"Unknown")+')';
+      const reason=String(old.upgradeReason||"").trim();
+      return esc(old.name||"old release")+' ('+esc(old.sourceMedium||old.source||"Unknown")+')'
+        +(reason?' - '+esc(reason):'');
     }).join("; ");
-    sourceSummary+='<br><strong>Upgrade:</strong> '+upgrades+' → '+esc(n.name)+' ('+esc(n.sourceMedium||"Unknown")+')';
+    const heading=(n.upgradeFrom||[]).some(function(old){return String(old.upgradeReason||"").trim();})
+      ?"Upgrade"
+      :"Replacement";
+    sourceSummary+='<br><strong>'+heading+':</strong> '+upgrades+' → '+esc(n.name)+' ('+esc(n.sourceMedium||"Unknown")+')';
   }
   sourceSummary+='</div>';
   inner.innerHTML='<div id="detailsHead"><button id="closeDetailsBtn" title="Close details" aria-label="Close details">×</button><div id="releaseName">'+esc(n.name)+'</div>'
@@ -9325,6 +9440,16 @@ _RELEASE_MAP_DISC_SUFFIX_RE = re.compile(
     re.I,
 )
 
+_RELEASE_MAP_FEATURE_CREDIT_SUFFIX_RE = re.compile(
+    r"\s*\((?:feat(?:uring)?|ft)\.?\s+[^()]*)\)\s*$",
+    re.I,
+)
+
+_RELEASE_MAP_TYPE_SUFFIX_RE = re.compile(
+    r"\s*(?:[-–—:]\s*)?(?:ep|single)\s*$",
+    re.I,
+)
+
 
 def _release_map_known_edition_base(title: str) -> str:
     value = normalize_space(title)
@@ -9334,6 +9459,19 @@ def _release_map_known_edition_base(title: str) -> str:
         value = _RELEASE_MAP_DISC_SUFFIX_RE.sub("", value).strip()
         value = _RELEASE_MAP_EDITION_SUFFIX_RE.sub("", value).strip()
     return value
+
+
+def _release_map_family_base(title: str, release_type: str) -> str:
+    """Canonical display-family title, independent of provider naming style."""
+    value = _release_map_known_edition_base(title)
+    previous = None
+    while value != previous:
+        previous = value
+        value = _RELEASE_MAP_FEATURE_CREDIT_SUFFIX_RE.sub("", value).strip()
+        if str(release_type or "").lower() in {"ep", "single"}:
+            value = _RELEASE_MAP_TYPE_SUFFIX_RE.sub("", value).strip()
+        value = _RELEASE_MAP_EDITION_SUFFIX_RE.sub("", value).strip()
+    return value or normalize_space(title)
 
 
 def _release_map_metadata_title(node: Dict[str, object]) -> str:
@@ -9392,10 +9530,19 @@ def _assign_release_map_display_groups(nodes: List[Dict[str, object]]) -> None:
             metadata_title = _release_map_metadata_title(row)
             source_titles[rid] = metadata_title or _release_map_visual_title(str(row.get("name", "")))
 
+        canonical_titles: Dict[int, str] = {}
+        for row in rows:
+            rid = int(row.get("id", -1))
+            title = source_titles.get(rid, "")
+            canonical_titles[rid] = _release_map_family_base(
+                title,
+                str(row.get("releaseType", "") or ""),
+            )
+
         known_bases = {
-            normalize_title(_release_map_known_edition_base(title))
-            for title in source_titles.values()
-            if normalize_title(_release_map_known_edition_base(title))
+            normalize_title(value)
+            for value in canonical_titles.values()
+            if normalize_title(value)
         }
         exact_titles = {
             normalize_title(title)
@@ -9406,15 +9553,18 @@ def _assign_release_map_display_groups(nodes: List[Dict[str, object]]) -> None:
         for row in rows:
             rid = int(row.get("id", -1))
             title = source_titles.get(rid, "")
-            base = _release_map_known_edition_base(title)
+            base = canonical_titles.get(rid, "") or title
 
             # Unknown parenthetical labels (Instrumentals, Sketch Book, etc.)
-            # join a plain base only when that plain title is actually present
-            # in the same Albums / EPs / Singles column.
+            # join a plain base only when that plain title is actually present.
             if base == title:
                 match = re.match(r"^(.*?)\s*\([^()]+\)\s*$", title)
                 if match:
                     candidate = normalize_space(match.group(1))
+                    candidate = _release_map_family_base(
+                        candidate,
+                        str(row.get("releaseType", "") or ""),
+                    )
                     candidate_key = normalize_title(candidate)
                     if candidate_key in exact_titles or candidate_key in known_bases:
                         base = candidate
@@ -9693,6 +9843,7 @@ def _release_map_state_for_ui(
                 "rootKind": str(item.get("root_kind", "") or ""),
                 "sourceRoot": str(item.get("scan_root", "") or ""),
                 "sourceMedium": str(item.get("source_medium", "") or ""),
+                "sourceRank": int(item.get("source_rank", 0) or 0),
                 "sourceDescription": str(item.get("source", "") or ""),
                 "upgradeFrom": [
                     {
@@ -9700,6 +9851,9 @@ def _release_map_state_for_ui(
                         "sourceMedium": str(row.get("source_medium", "") or ""),
                         "source": str(row.get("source", "") or ""),
                         "sourceRoot": str(row.get("scan_root", "") or ""),
+                        "sourceRank": int(row.get("source_rank", 0) or 0),
+                        "includedTracks": int(row.get("included_tracks", 0) or 0),
+                        "upgradeReason": str(row.get("upgrade_reason", "") or ""),
                     }
                     for row in (item.get("related", []) or [])
                     if action == "REPLACE"
@@ -11887,8 +12041,9 @@ def _ui_contract_self_test() -> None:
             'originBadge old' in map_html
             and 'originBadge new' in map_html
             and 'UPGRADE ' in map_html
+            and 'return {label:"REPLACE",cls:"replace"}' in map_html
             and 'sourceLegendPill' in map_html,
-            "Release Map must visibly distinguish OLD, NEW, and UPGRADE releases.",
+            "Release Map must distinguish OLD/NEW and must not label every replacement as an upgrade.",
         ),
         (
             'source folders will not be moved, deleted, or modified' in map_html,
@@ -12059,6 +12214,30 @@ def _ui_contract_self_test() -> None:
             "name": "[2010] BT - These Hopeful Machines [ПР3 CD28862] 2CD",
             "albumTitles": ["These Hopeful Machines: CD1", "These Hopeful Machines: CD2"],
         },
+        {"id": 18, "releaseType": "ep", "name": "old", "albumTitles": ["More Monsters and Sprites - EP"]},
+        {"id": 19, "releaseType": "ep", "name": "new", "albumTitles": ["More Monsters and Sprites EP"]},
+        {"id": 20, "releaseType": "ep", "name": "old", "albumTitles": ["Bangarang - EP"]},
+        {"id": 21, "releaseType": "ep", "name": "new", "albumTitles": ["Bangarang EP"]},
+        {"id": 22, "releaseType": "ep", "name": "old", "albumTitles": ["Kora - EP"]},
+        {"id": 23, "releaseType": "ep", "name": "new", "albumTitles": ["Kora"]},
+        {"id": 24, "releaseType": "single", "name": "old", "albumTitles": ["Burial - Single"]},
+        {"id": 25, "releaseType": "single", "name": "new", "albumTitles": ["Burial (feat. Pusha T, Moody Good, TrollPhace)"]},
+        {"id": 26, "releaseType": "single", "name": "old", "albumTitles": ["Bun Up the Dance - Single"]},
+        {"id": 27, "releaseType": "single", "name": "new", "albumTitles": ["Bun Up the Dance"]},
+        {"id": 28, "releaseType": "single", "name": "old", "albumTitles": ["Squad Out! - Single"]},
+        {"id": 29, "releaseType": "single", "name": "new", "albumTitles": ["SQUAD OUT! (feat. Fatman Scoop)"]},
+        {"id": 30, "releaseType": "single", "name": "old", "albumTitles": ["Working for It - Single"]},
+        {"id": 31, "releaseType": "single", "name": "new", "albumTitles": ["Working For It"]},
+        {"id": 32, "releaseType": "single", "name": "old", "albumTitles": ["No Chill - Single"]},
+        {"id": 33, "releaseType": "single", "name": "new", "albumTitles": ["No Chill"]},
+        {"id": 34, "releaseType": "single", "name": "old", "albumTitles": ["Purple Lamborghini - Single"]},
+        {"id": 35, "releaseType": "single", "name": "new", "albumTitles": ["Purple Lamborghini"]},
+        {"id": 36, "releaseType": "single", "name": "old", "albumTitles": ["Slam Dunk - Single"]},
+        {"id": 37, "releaseType": "single", "name": "new", "albumTitles": ["Slam Dunk"]},
+        {"id": 38, "releaseType": "single", "name": "old", "albumTitles": ["Waiting - Single"]},
+        {"id": 39, "releaseType": "single", "name": "new", "albumTitles": ["Waiting"]},
+        {"id": 40, "releaseType": "single", "name": "old", "albumTitles": ["Would You Ever - Single"]},
+        {"id": 41, "releaseType": "single", "name": "new", "albumTitles": ["Would You Ever"]},
     ]
     _assign_release_map_display_groups(grouping_probe)
 
@@ -12079,6 +12258,54 @@ def _ui_contract_self_test() -> None:
         raise RuntimeError("Release Map grouping self-test failed: Head Above Water instrumental/base editions split.")
     if len(_probe_keys({13, 14, 15, 16, 17})) != 1:
         raise RuntimeError("Release Map grouping self-test failed: These Hopeful Machines folder variants split.")
+    for ids, label in [
+        ({18, 19}, "More Monsters and Sprites"),
+        ({20, 21}, "Bangarang"),
+        ({22, 23}, "Kora"),
+        ({24, 25}, "Burial"),
+        ({26, 27}, "Bun Up the Dance"),
+        ({28, 29}, "Squad Out"),
+        ({30, 31}, "Working for It"),
+        ({32, 33}, "No Chill"),
+        ({34, 35}, "Purple Lamborghini"),
+        ({36, 37}, "Slam Dunk"),
+        ({38, 39}, "Waiting"),
+        ({40, 41}, "Would You Ever"),
+    ]:
+        if len(_probe_keys(ids)) != 1:
+            raise RuntimeError(f"Release Map grouping self-test failed: {label} source-title variants split.")
+
+    soma_old = Release(
+        rid=5001,
+        root_kind="existing",
+        path=Path("OLD SOMA"),
+        title="SOMA",
+        release_type="album",
+        family="soma",
+        source_medium="WEB",
+        tracks=[
+            Track(release_id=5001, path=Path("old1.m4a"), index=1, title="Soma", group_id=7001),
+            Track(release_id=5001, path=Path("old2.m4a"), index=2, title="Thistle", group_id=7002),
+        ],
+    )
+    soma_new = Release(
+        rid=5002,
+        root_kind="recycle",
+        path=Path("NEW SOMA"),
+        title="SOMA",
+        release_type="album",
+        family="soma",
+        source_medium="WEB",
+        tracks=[
+            Track(release_id=5002, path=Path("new1.flac"), index=3, title="Soma", group_id=7001),
+            Track(release_id=5002, path=Path("new2.flac"), index=4, title="Thistle", group_id=7002),
+        ],
+    )
+    soma_selected = prefer_existing_equivalent_releases([soma_old, soma_new], {soma_new.rid})
+    if soma_selected != {soma_old.rid}:
+        raise RuntimeError("Existing-preference self-test failed: same-content WEB must not become WEB -> WEB upgrade.")
+    if _release_upgrade_reason(soma_new, soma_old):
+        raise RuntimeError("Upgrade-label self-test failed: same-content WEB -> WEB must not be called an upgrade.")
 
     failed_ui_checks = [message for ok, message in ui_checks if not ok]
     if failed_ui_checks:

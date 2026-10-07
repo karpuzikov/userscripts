@@ -166,9 +166,9 @@ The regular 0.22.12 Release Map is the UI/behavioral reference. Preserve:
 - exact-instance track Ignore / Restore;
 - ignored release remains visible and inspectable;
 - pending ignore/restore visual and textual states;
-- Re-Analyze required before Apply after pending changes;
-- Apply disabled while dirty;
-- Apply file changes only after explicit confirmation;
+- Re-Analyze required before Copy after pending changes;
+- Copy actions disabled while dirty;
+- Copy actions require destination + explicit confirmation;
 - result drawer with causes, THEN added/removed changes and replacement sources;
 - replacement source and alternate retained-copy details;
 - per-track statuses;
@@ -182,7 +182,7 @@ The regular 0.22.12 Release Map is the UI/behavioral reference. Preserve:
 - responsive/reflow behavior;
 - Escape closes details without losing map state.
 
-### Apply and Undo
+### Copy output and legacy Undo
 - File changes occur only after explicit Apply from Release Map.
 - Destructive/move plan is confirmed before execution.
 - Undo last run restores the previous applied move set where possible.
@@ -272,13 +272,13 @@ A lightweight build is not parity-complete until all of these pass:
 - New request: create a separate lightweight, fast implementation with a modern UI and zero functional loss from production.
 - Architecture implemented at source level: production Python core + pywebview 6.2.1 + Microsoft Edge WebView2 host, with the production main HTML UI and full Release Map HTML/JS retained. Legacy Qt/PySide6 and dormant Tk/Tcl UI code have been removed from the lightweight source.
 - WebView2 detection uses Microsoft-documented runtime registry keys and WinGet package `Microsoft.EdgeWebView2Runtime` when installation is required.
-- New source version is 0.3.0 on branch `dea-lightweight-modern`. Release Map now explicitly distinguishes OLD existing-discography releases from NEW/update releases, marks ADD/KEEP/UPGRADE/REMOVE/SKIP decisions, and surfaces replacement source media such as WEB → CD. The destructive visible Apply workflow is replaced by two non-destructive copy exports: final OLD+NEW retained discography, or NEW-only retained additions/upgrades. Both choose/show a destination, preserve relative release folders, omit analyzer-detected intra-release duplicate files, and never modify either source folder.
+- New source version is 0.3.1 on branch `dea-lightweight-modern`. Same-content/same-source-quality NEW releases no longer replace OLD merely because of metadata/tie differences; Existing is preserved unless NEW has a real source/log/completeness improvement. UI UPGRADE labels now require a concrete upgrade reason. Release Map family grouping canonicalizes EP/Single suffixes and trailing featured-credit text so the Skrillex OLD/NEW pairs reported on 2026-10-07 group together.
 - No new lightweight build has yet been declared parity-complete.
 - Do not send another "native/light" test merely because it launches. Complete the parity checklist first.
 
 ## Exact next steps
 
-1. Validate 0.3.0 on the user's Skrillex OLD/NEW run: origin badges, UPGRADE visibility, destination selection, OLD+NEW copy, NEW-only copy, and proof that both source folders remain unchanged.
+1. Validate 0.3.1 on the user's Skrillex OLD/NEW run: SOMA must keep OLD (no WEB→WEB upgrade), and all reported EP/Single title variants must appear in one release-family group.
 2. Run syntax/static checks and source-mode launch checks.
 3. Compare main-window controls and behaviors against production 0.22.12.
 4. Compare full Release Map behavior against production 0.22.12, especially SVG links, cross-release highlighting, alternative-family panels, ignore/restore, Re-Analyze and result drawer.

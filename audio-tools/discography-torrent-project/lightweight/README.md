@@ -1,6 +1,6 @@
 # Duplicate Edition Analyzer Lightweight
 
-Version: **0.3.0 - Under construction ⚠️**
+Version: **0.3.1 - Under construction ⚠️**
 
 Branch: `dea-lightweight-modern`
 
@@ -41,6 +41,21 @@ The lightweight build preserves the regular DEA feature surface, including:
 - path openers, logging, settings and Undo.
 
 The failed `native-light` prototype is not the reference.
+
+## 0.3.1
+
+- Fixed false **UPGRADE WEB → WEB** decisions such as **2026-06-05 - SOMA [075679573001]**.
+- The uploaded Skrillex comparison log proves the OLD and NEW SOMA copies have the same 13-track content and all 13 cross-source comparisons are acoustic MATCHes; same-content/same-source-quality now keeps the OLD existing release instead of creating pointless churn.
+- Exact-equivalent release preference now preserves Existing before metadata-only Explicit/Unknown differences. A NEW copy can replace OLD only for an objective improvement such as higher source class, better comparable CD rip log, or a more-complete recording set.
+- The UI now renders **UPGRADE** only when a real upgrade reason exists. A non-quality replacement is labeled **REPLACE**, never fake `WEB → WEB`.
+- Fixed Release Map family grouping across provider naming conventions:
+  - `More Monsters and Sprites - EP` = `More Monsters and Sprites EP`
+  - `Bangarang - EP` = `Bangarang EP`
+  - `Kora - EP` = `Kora`
+  - `Burial - Single` = `Burial (feat. ...)`
+  - and the same rule for Bun Up the Dance, Squad Out!, Working for It, No Chill, Purple Lamborghini, Slam Dunk, Waiting and Would You Ever.
+- Grouping now strips only display-only release-type suffixes (EP/Single) and trailing featured-artist credits before comparison; it does not alter track identity or optimizer semantics.
+- Added executable regression tests for every named split from the user's Skrillex run plus the SOMA false-upgrade case.
 
 ## 0.3.0
 
