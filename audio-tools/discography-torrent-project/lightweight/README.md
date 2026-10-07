@@ -1,6 +1,6 @@
 # Duplicate Edition Analyzer Lightweight
 
-Version: **0.3.4 - Under construction ⚠️**
+Version: **0.3.5 - Under construction ⚠️**
 
 Branch: `dea-lightweight-modern`
 
@@ -41,6 +41,19 @@ The lightweight build preserves the regular DEA feature surface, including:
 - path openers, logging, settings and Undo.
 
 The failed `native-light` prototype is not the reference.
+
+## 0.3.5
+
+- Fixed a real optimizer/source-preference bug exposed by the Skrillex run: a lower-source WEB release can stay for unique material, but it can no longer make an available higher-source CD copy disappear for the recordings they share.
+- Source quality is now preserved per shared recording after exact collection minimization. This can intentionally retain both a CD release and a WEB superset when the WEB release contributes a unique wanted bonus track.
+- Relaxed exact-equivalent Existing preference so provider Album/EP/Single metadata disagreements do not create pointless replacements when the actual included audio/container shape is the same.
+- Added a same-album + same-track-slot acoustic routing safety path. This specifically covers provider wording drift such as `Warped Tour '05 (ft. pete WENTZ)` vs `Warped Tour ’05 with pete WENTZ`; metadata only routes the pair and Chromaprint still decides identity.
+- Changes view now pairs an OLD removal with its NEW covering release as one **↔ Replaced** change instead of showing a misleading independent **+ Added** plus a separate removal.
+- **+ Added** reasons now name unique recordings when available.
+- Fixed Changes/filter views retaining the old Full-map SVG scroll extent and allowing scrolling deep into empty space.
+- Compressed Full map spacing: groups are separated by lines instead of padded cards, and releases inside a group are separated by compact row lines.
+- Comparison logs now include optimizer-selected release IDs and a release source catalog (source medium/rank, CD-log class, track counts) for future source-preference debugging.
+- Added regression tests for CD-vs-WEB superset preservation, provider Album/EP metadata churn, and Quest for Fire same-album track-slot routing.
 
 ## 0.3.4
 
