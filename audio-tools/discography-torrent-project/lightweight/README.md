@@ -52,4 +52,4 @@ The failed `native-light` prototype is not the reference.
 
 ## Status
 
-Source implementation is **Under construction ⚠️** until Windows runtime parity and real-folder output comparison pass. No GitHub Actions workflow was added or modified for this build.
+Source implementation is **Under construction ⚠️** until Windows runtime parity and real-folder output comparison pass. Static validation on 2026-10-07 passed Python compilation, undefined-name checking, and embedded Release Map JavaScript syntax validation. No GitHub Actions workflow was added or modified for this build.
