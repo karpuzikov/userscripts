@@ -24,8 +24,8 @@ This file is the authoritative handoff for DEA development. Read it before chang
   - Do not use the native prototype as the functional specification.
 - New lightweight/fast/modern rewrite:
   - Branch: `dea-lightweight-modern`
-  - Source: `audio-tools/discography-torrent-project/lightweight/Duplicate Edition Analyzer Lightweight v0.3.4.pyw`
-  - Version: `0.3.4 - Under construction ⚠️`
+  - Source: `audio-tools/discography-torrent-project/lightweight/Duplicate Edition Analyzer Lightweight v0.3.5.pyw`
+  - Version: `0.3.5 - Under construction ⚠️`
   - Separate from the failed native prototype.
   - Functional baseline is production/reference DEA 0.22.12.
   - No production feature may disappear merely to reduce EXE size or complexity.
@@ -273,13 +273,13 @@ A lightweight build is not parity-complete until all of these pass:
 - New request: create a separate lightweight, fast implementation with a modern UI and zero functional loss from production.
 - Architecture implemented at source level: production Python core + pywebview 6.2.1 + Microsoft Edge WebView2 host, with the production main HTML UI and full Release Map HTML/JS retained. Legacy Qt/PySide6 and dormant Tk/Tcl UI code have been removed from the lightweight source.
 - WebView2 detection uses Microsoft-documented runtime registry keys and WinGet package `Microsoft.EdgeWebView2Runtime` when installation is required.
-- New source version is 0.3.4 on branch `dea-lightweight-modern`. Release Map now opens in a compact Changes-first view with clickable `+ Added`, `⬆️ Upgraded`, `- Removed`, and `🚫 Ignored` filters. Unchanged OLD releases and rejected NEW duplicates are hidden from the default delta view but remain available in Full map. Search can surface any analyzed release/track. Track-carrier/alternative-version inspection switches to Full map to preserve complete SVG relationship behavior. Re-Analyze results use a denser clickable drawer. New additions are explicitly marked `+`. The 0.3.3 Personal Picks unusual-pattern fix remains in place.
+- New source version is 0.3.5 on branch `dea-lightweight-modern`. The Skrillex comparison log exposed both UI and optimizer bugs. CD/source quality is now preserved for shared recordings even when a lower-source WEB superset must remain for a unique bonus track; provider release-type metadata cannot cause churn for otherwise exact-equivalent containers; and same album + same track slot is an acoustic-routing safety path for provider naming drift such as Quest for Fire `Warped Tour '05 (ft. pete WENTZ)` vs `Warped Tour ’05 with pete WENTZ`. Changes view now has `↔ Replaced`, pairs OLD->NEW replacements, names unique recordings for real additions, resets stale SVG scroll extent, and uses line-separated compact Full-map groups/rows.
 - No new lightweight build has yet been declared parity-complete.
 - Do not send another "native/light" test merely because it launches. Complete the parity checklist first.
 
 ## Exact next steps
 
-1. Validate 0.3.4 on the user's Skrillex OLD/NEW run: Release Map should open on Changes, show the actual delta compactly, mark additions with `+`, allow category filtering, and keep Full map available for complete relationship inspection. Also verify the 0.3.3 Personal Picks pattern fix remains correct.
+1. Re-run the user's exact Skrillex OLD/NEW test on 0.3.5. Verify: Scary Monsters exact-equivalent Existing no longer churns; the Bangarang CD remains retained while the WEB 8-track release may remain only for its unique wanted bonus track; Make It Bun Dem is shown as one `↔ Replaced` OLD->NEW change; Quest for Fire provider wording routes the 11th track acoustically and does not create a false WEB addition if the audio matches; Changes filters cannot scroll into Full-map-sized empty space; Full map uses line-separated compact groups/rows.
 2. Run syntax/static checks and source-mode launch checks.
 3. Compare main-window controls and behaviors against production 0.22.12.
 4. Compare full Release Map behavior against production 0.22.12, especially SVG links, cross-release highlighting, alternative-family panels, ignore/restore, Re-Analyze and result drawer.
