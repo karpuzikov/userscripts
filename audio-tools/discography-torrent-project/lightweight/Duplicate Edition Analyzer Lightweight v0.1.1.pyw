@@ -35,9 +35,8 @@ import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 
 APP_NAME = "Duplicate / Edition Analyzer Lightweight"
-APP_VERSION = "0.1.0"
+APP_VERSION = "0.1.1"
 PROGRAM_DATA_DIR_NAME = "Duplicate Edition Analyzer"
-PYSIDE6_VERSION = "6.11.2"
 PYWEBVIEW_VERSION = "6.2.1"
 AUDIO_EXTS = {".m4a", ".flac", ".wav", ".ape", ".wv", ".mp3", ".aac", ".ogg", ".opus"}
 def _logical_cpu_count() -> int:
@@ -2537,14 +2536,11 @@ def _winget_install_or_update(package_id: str, installed: bool) -> None:
 
 
 def ensure_ffmpeg() -> Tuple[str, str]:
-    """Ensure FFmpeg/FFprobe are usable; standalone builds never install at runtime."""
+    """Ensure FFmpeg/FFprobe are usable without inflating the lightweight EXE."""
     pair = _locate_ffmpeg_pair()
-    if _is_frozen_build():
-        if pair:
-            return pair
-        raise RuntimeError("Bundled FFmpeg/FFprobe are missing from this standalone build.")
 
-    # Source/development mode retains the automatic dependency fallback.
+    # Frozen and source builds share the same WinGet-first dependency policy.
+    # This intentionally avoids bundling the large FFmpeg binaries in the EXE.
     bootstrap_winget()
     installed = pair is not None
 
@@ -2912,10 +2908,9 @@ def ensure_fpcalc() -> str:
     bundled = _bundled_path("chromaprint", "fpcalc.exe")
     if bundled.is_file():
         return str(bundled)
-    if _is_frozen_build():
-        raise RuntimeError("Bundled Chromaprint/fpcalc is missing from this standalone build.")
-
-    # Source/development mode can still bootstrap the dependency.
+    # Frozen and source builds both bootstrap/use an external app-local or
+    # system fpcalc. This keeps the lightweight EXE small without changing
+    # Chromaprint behavior.
     bootstrap_winget()
     _migrate_legacy_app_data()
 
@@ -7778,80 +7773,6 @@ def undo_last_run() -> Tuple[int, List[str]]:
 
 
 
-def _qt_dependency_dir() -> Path:
-    return _dependencies_dir() / f"pyside6-{PYSIDE6_VERSION}"
-
-
-def ensure_qt_release_map_dependencies() -> Path:
-    """Install the modern Qt UI runtime in this program's isolated dependency folder."""
-    deps = _qt_dependency_dir()
-    deps_text = str(deps)
-    if deps.is_dir() and deps_text not in sys.path:
-        sys.path.insert(0, deps_text)
-
-    try:
-        importlib.import_module("PySide6")
-        importlib.import_module("PySide6.QtWebEngineWidgets")
-        return deps
-    except Exception as exc:
-        if _is_frozen_build():
-            raise RuntimeError(
-                "Bundled PySide6/Qt WebEngine failed to load: " + str(exc)
-            ) from exc
-
-    bootstrap_winget()
-    pip_check = run_hidden(
-        [sys.executable, "-m", "pip", "--version"],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True,
-        errors="replace",
-        check=False,
-    )
-    if pip_check.returncode != 0:
-        run_hidden(
-            [sys.executable, "-m", "ensurepip", "--upgrade"],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            errors="replace",
-            check=False,
-        )
-
-    deps.mkdir(parents=True, exist_ok=True)
-    cp = run_hidden(
-        [
-            sys.executable,
-            "-m",
-            "pip",
-            "install",
-            "--disable-pip-version-check",
-            "--quiet",
-            "--upgrade",
-            "--target",
-            str(deps),
-            f"PySide6=={PYSIDE6_VERSION}",
-        ],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True,
-        errors="replace",
-        check=False,
-    )
-    if cp.returncode != 0:
-        raise RuntimeError(
-            "PySide6 could not be installed automatically: "
-            + (cp.stderr.strip() or cp.stdout.strip() or "pip install failed")
-        )
-
-    if deps_text not in sys.path:
-        sys.path.insert(0, deps_text)
-    importlib.invalidate_caches()
-    importlib.import_module("PySide6")
-    importlib.import_module("PySide6.QtWebEngineWidgets")
-    return deps
-
-
 def _light_ui_dependency_dir() -> Path:
     return _dependencies_dir() / f"pywebview-{PYWEBVIEW_VERSION}"
 
@@ -7994,7 +7915,13 @@ def _copy_text_to_clipboard(value: str) -> None:
             CF_UNICODETEXT = 13
             GMEM_MOVEABLE = 0x0002
             kernel32.GlobalAlloc.restype = ctypes.c_void_p
+            kernel32.GlobalAlloc.argtypes = [ctypes.c_uint, ctypes.c_size_t]
             kernel32.GlobalLock.restype = ctypes.c_void_p
+            kernel32.GlobalLock.argtypes = [ctypes.c_void_p]
+            kernel32.GlobalUnlock.argtypes = [ctypes.c_void_p]
+            user32.OpenClipboard.argtypes = [ctypes.c_void_p]
+            user32.SetClipboardData.argtypes = [ctypes.c_uint, ctypes.c_void_p]
+            user32.SetClipboardData.restype = ctypes.c_void_p
             data = ctypes.create_unicode_buffer(text)
             size = ctypes.sizeof(data)
             hmem = kernel32.GlobalAlloc(GMEM_MOVEABLE, size)
@@ -8040,7 +7967,7 @@ def _light_emit(window, function_name: str, payload: str) -> None:
         pass
 
 
-def _qt_release_map_html() -> str:
+def _webview_release_map_html() -> str:
     html = r"""<!doctype html>
 <html>
 <head>
@@ -9246,400 +9173,7 @@ def _release_map_state_for_ui(
     }
 
 
-def _qt_release_map_process(session_path: Path, result_path: Path) -> int:
-    ensure_qt_release_map_dependencies()
-    from PySide6.QtCore import QObject, QTimer, QUrl, Signal, Slot
-    from PySide6.QtGui import QDesktopServices
-    from PySide6.QtWidgets import QApplication, QMainWindow, QMessageBox
-    from PySide6.QtWebChannel import QWebChannel
-    from PySide6.QtWebEngineWidgets import QWebEngineView
-
-    with session_path.open("rb") as handle:
-        session = pickle.load(handle)
-
-    class Bridge(QObject):
-        closeRequested = Signal()
-
-        def __init__(self):
-            super().__init__()
-            self.snapshots = list(session.get("snapshots", []) or [])
-            self.releases = session.get("releases")
-            self.tracks = session.get("tracks")
-            self.groups = session.get("groups")
-            self.selected = set(session.get("selected", set()) or set())
-            self.reviews = list(session.get("reviews", []) or [])
-            self.decisions = list(session.get("decisions", []) or [])
-            self.blocked_release_ids = set(session.get("blocked_release_ids", set()) or set())
-            self.editable = bool(
-                session.get("allow_apply")
-                and isinstance(self.releases, list)
-                and isinstance(self.tracks, list)
-                and isinstance(self.groups, dict)
-            )
-            self.dirty = False
-            self.apply_enabled = bool(self.editable)
-            self.apply_highlighted = False
-            self.pending_track_indices: Set[int] = set()
-            self.pending_release_ids: Set[int] = set()
-            self.pending_causes: List[str] = []
-            self.result = {"show": False, "causes": [], "added": [], "removed": [], "replacementSources": []}
-            self.initial_track_skip_state = {
-                index: bool(track.manual_skip_rule)
-                for index, track in enumerate(self.tracks or [])
-            }
-            self.initial_blocked_release_ids = set(self.blocked_release_ids)
-            supplied_initial = session.get("initial_plan_counts")
-            if isinstance(supplied_initial, dict):
-                self.initial_plan_counts = {
-                    "releases": max(0, int(supplied_initial.get("releases", 0) or 0)),
-                    "tracks": max(0, int(supplied_initial.get("tracks", 0) or 0)),
-                }
-            else:
-                self.initial_plan_counts = _release_map_plan_counts(self.snapshots)
-            self._ui_state: Dict[str, object] = {}
-            self._rebuild_ui_state()
-
-        def _rebuild_ui_state(self) -> None:
-            self._ui_state = _release_map_state_for_ui(
-                self.snapshots,
-                self.tracks if isinstance(self.tracks, list) else None,
-                self.pending_track_indices,
-                self.pending_release_ids,
-                self.blocked_release_ids,
-                self.editable,
-                self.dirty,
-                self.apply_enabled,
-                self.apply_highlighted,
-                self.initial_plan_counts,
-                self.result,
-            )
-
-        def _sync_ui_root(self) -> None:
-            if not self._ui_state:
-                self._rebuild_ui_state()
-            self._ui_state["editable"] = bool(self.editable)
-            self._ui_state["dirty"] = bool(self.dirty)
-            self._ui_state["applyEnabled"] = bool(self.apply_enabled)
-            self._ui_state["applyHighlighted"] = bool(self.apply_highlighted)
-            self._ui_state["result"] = self.result
-
-        def _state(self) -> str:
-            self._sync_ui_root()
-            return _json_ui_dumps(self._ui_state)
-
-        def _toggle_delta_base(self) -> Dict[str, object]:
-            return {
-                "dirty": bool(self.dirty),
-                "applyEnabled": bool(self.apply_enabled),
-                "applyHighlighted": bool(self.apply_highlighted),
-                "result": self.result,
-            }
-
-        def _refresh_pending_state(self) -> None:
-            has_pending = bool(self.pending_track_indices or self.pending_release_ids)
-            self.dirty = has_pending
-            self.apply_enabled = bool(self.editable and not has_pending)
-            self.apply_highlighted = False
-            if not has_pending:
-                self.pending_causes.clear()
-                self.result = {
-                    "show": False,
-                    "causes": [],
-                    "added": [],
-                    "removed": [],
-                    "replacementSources": [],
-                }
-            self._sync_ui_root()
-
-        def _patch_cached_track_state(self, track_index: int) -> None:
-            if not self._ui_state or not isinstance(self.tracks, list):
-                return
-            track = self.tracks[track_index]
-            pending = track_index in self.pending_track_indices
-            for node in self._ui_state.get("nodes", []) or []:
-                for row in node.get("tracks", []) or []:
-                    if int(row.get("index", -1)) != int(track_index):
-                        continue
-                    row["manualSkip"] = bool(track.manual_skip_rule)
-                    row["pendingIgnore"] = bool(pending and track.manual_skip_rule)
-                    row["pendingRestore"] = bool(pending and not track.manual_skip_rule)
-                    return
-
-        def _patch_cached_release_state(self, release_id: int) -> None:
-            if not self._ui_state:
-                return
-            blocked = release_id in self.blocked_release_ids
-            pending = release_id in self.pending_release_ids
-            for node in self._ui_state.get("nodes", []) or []:
-                if int(node.get("id", -1)) != int(release_id):
-                    continue
-                node["releaseBlocked"] = bool(blocked)
-                node["pendingReleaseChange"] = bool(pending)
-                node["pendingReleaseIgnore"] = bool(pending and blocked)
-                node["pendingReleaseRestore"] = bool(pending and not blocked)
-                return
-
-        def _mark_dirty(self, cause: str) -> None:
-            self.dirty = True
-            self.apply_enabled = False
-            self.apply_highlighted = False
-            self.result = {"show": False, "causes": [], "added": [], "removed": [], "replacementSources": []}
-            if cause:
-                self.pending_causes.append(cause)
-
-        @Slot(result=str)
-        def getState(self):
-            return self._state()
-
-        @Slot(int, result=str)
-        def toggleTrack(self, track_index: int):
-            if not self.editable or not isinstance(self.tracks, list):
-                return self._state()
-            if not (0 <= track_index < len(self.tracks)):
-                return self._state()
-
-            track = self.tracks[track_index]
-            label = track.display_title
-            if track.manual_skip_rule:
-                remove_persistent_track_skip(track.manual_skip_rule, self.tracks)
-                self._mark_dirty(f'IF track: "{label}" restored')
-            else:
-                add_persistent_track_skip(track, self.tracks)
-                self._mark_dirty(f'IF track: "{label}" ignored')
-
-            initial_state = bool(self.initial_track_skip_state.get(track_index, False))
-            if bool(track.manual_skip_rule) == initial_state:
-                self.pending_track_indices.discard(track_index)
-            else:
-                self.pending_track_indices.add(track_index)
-
-            self._refresh_pending_state()
-            self._patch_cached_track_state(track_index)
-            payload = {
-                "kind": "trackToggle",
-                "trackIndex": int(track_index),
-                "manualSkip": bool(track.manual_skip_rule),
-                "pendingIgnore": bool(
-                    track_index in self.pending_track_indices
-                    and track.manual_skip_rule
-                ),
-                "pendingRestore": bool(
-                    track_index in self.pending_track_indices
-                    and not track.manual_skip_rule
-                ),
-                **self._toggle_delta_base(),
-            }
-            return _json_ui_dumps(payload)
-
-        @Slot(int, result=str)
-        def toggleRelease(self, release_id: int):
-            if not self.editable:
-                return self._state()
-            release = next((r for r in self.releases if r.rid == release_id), None)
-            if release is None:
-                return self._state()
-
-            if release_id in self.blocked_release_ids:
-                self.blocked_release_ids.remove(release_id)
-                self._mark_dirty(f'IF release: "{release.path.name}" restored')
-            else:
-                self.blocked_release_ids.add(release_id)
-                self._mark_dirty(f'IF release: "{release.path.name}" ignored')
-
-            if (release_id in self.blocked_release_ids) == (
-                release_id in self.initial_blocked_release_ids
-            ):
-                self.pending_release_ids.discard(release_id)
-            else:
-                self.pending_release_ids.add(release_id)
-
-            self._refresh_pending_state()
-            self._patch_cached_release_state(release_id)
-            blocked = release_id in self.blocked_release_ids
-            payload = {
-                "kind": "releaseToggle",
-                "releaseId": int(release_id),
-                "releaseBlocked": bool(blocked),
-                "pendingReleaseChange": bool(release_id in self.pending_release_ids),
-                "pendingReleaseIgnore": bool(
-                    release_id in self.pending_release_ids and blocked
-                ),
-                "pendingReleaseRestore": bool(
-                    release_id in self.pending_release_ids and not blocked
-                ),
-                **self._toggle_delta_base(),
-            }
-            return _json_ui_dumps(payload)
-
-        @Slot(result=str)
-        def reanalyze(self):
-            if not self.editable or not self.dirty:
-                return self._state()
-            old_selected = set(self.selected)
-            apply_persistent_track_skips(self.tracks)
-            self.selected = optimize_collection(
-                self.releases,
-                self.groups,
-                self.blocked_release_ids,
-            )
-            self.decisions = build_release_decisions(
-                self.releases,
-                self.tracks,
-                self.selected,
-                self.reviews,
-                self.blocked_release_ids,
-            )
-            self.snapshots = build_decision_snapshot(
-                self.releases,
-                self.tracks,
-                self.selected,
-                self.decisions,
-                self.blocked_release_ids,
-            )
-            _save_decision_snapshot(self.snapshots)
-
-            by_id = {r.rid: r for r in self.releases}
-            added_ids = sorted(self.selected - old_selected)
-            removed_ids = sorted(old_selected - self.selected)
-            added = [by_id[rid].path.name for rid in added_ids if rid in by_id]
-            removed = [by_id[rid].path.name for rid in removed_ids if rid in by_id]
-            replacement_rows: List[Dict[str, object]] = []
-            snapshot_by_id = {
-                int(item.get("release_id", -1)): item
-                for item in self.snapshots
-            }
-            for release_id in sorted(self.blocked_release_ids):
-                snap = snapshot_by_id.get(release_id)
-                if not snap or not bool(snap.get("manual_removed")):
-                    continue
-                rows: List[Dict[str, object]] = []
-                for row in snap.get("tracklist", []) or []:
-                    if not bool(row.get("included")) or bool(row.get("excluded")):
-                        continue
-                    source = str(row.get("replacement_source", "") or "")
-                    alternates = list(row.get("replacement_alternates", []) or [])
-                    rows.append({
-                        "title": str(row.get("title", "")),
-                        "source": source,
-                        "alternates": alternates,
-                        "missing": not bool(source),
-                    })
-                replacement_rows.append({
-                    "release": str(snap.get("name", "")),
-                    "tracks": rows,
-                })
-
-            self.result = {
-                "show": True,
-                "causes": list(self.pending_causes) or ["IF pending ignore changes applied"],
-                "added": added,
-                "removed": removed,
-                "replacementSources": replacement_rows,
-            }
-            self.pending_causes.clear()
-            self.pending_track_indices.clear()
-            self.pending_release_ids.clear()
-            self.dirty = False
-            self.apply_enabled = True
-            self.apply_highlighted = bool(added or removed)
-            self.initial_track_skip_state = {
-                index: bool(track.manual_skip_rule)
-                for index, track in enumerate(self.tracks or [])
-            }
-            self.initial_blocked_release_ids = set(self.blocked_release_ids)
-            self._rebuild_ui_state()
-            return self._state()
-
-        @Slot(str)
-        def openFolder(self, value: str):
-            try:
-                _open_path_location(value)
-            except Exception:
-                QMessageBox.warning(
-                    QApplication.activeWindow(),
-                    APP_NAME,
-                    "This release path could not be opened. The displayed path remains unchanged.",
-                )
-
-        @Slot(str)
-        def copyPath(self, value: str):
-            QApplication.clipboard().setText(value or "")
-
-        @Slot()
-        def apply(self):
-            if not self.editable or self.dirty or not self.apply_enabled:
-                return
-            payload = {
-                "action": "apply",
-                "snapshots": self.snapshots,
-                "selected": self.selected,
-                "decisions": self.decisions,
-                "blocked_release_ids": self.blocked_release_ids,
-                "initial_plan_counts": self.initial_plan_counts,
-            }
-            with result_path.open("wb") as handle:
-                pickle.dump(payload, handle, protocol=pickle.HIGHEST_PROTOCOL)
-            self.closeRequested.emit()
-
-        @Slot()
-        def closeMap(self):
-            with result_path.open("wb") as handle:
-                pickle.dump(
-                    {
-                        "action": "close",
-                        "snapshots": self.snapshots,
-                        "selected": self.selected,
-                        "decisions": self.decisions,
-                        "blocked_release_ids": self.blocked_release_ids,
-                        "initial_plan_counts": self.initial_plan_counts,
-                    },
-                    handle,
-                    protocol=pickle.HIGHEST_PROTOCOL,
-                )
-            self.closeRequested.emit()
-
-    app = QApplication.instance() or QApplication(sys.argv[:1])
-    app.setApplicationName(APP_NAME)
-    window = QMainWindow()
-    window.setWindowTitle(f"{APP_NAME} {APP_VERSION} - Release Map")
-    window.resize(1500, 920)
-    window.setMinimumSize(1050, 680)
-
-    view = QWebEngineView(window)
-    channel = QWebChannel(view.page())
-    bridge = Bridge()
-    channel.registerObject("bridge", bridge)
-    view.page().setWebChannel(channel)
-    view.setHtml(_qt_release_map_html(), QUrl("https://cdn.jsdelivr.net/"))
-    window.setCentralWidget(view)
-    bridge.closeRequested.connect(window.close)
-
-    def _window_closed():
-        if not result_path.exists():
-            try:
-                with result_path.open("wb") as handle:
-                    pickle.dump(
-                        {
-                            "action": "close",
-                            "snapshots": bridge.snapshots,
-                            "selected": bridge.selected,
-                            "decisions": bridge.decisions,
-                            "blocked_release_ids": bridge.blocked_release_ids,
-                            "initial_plan_counts": bridge.initial_plan_counts,
-                        },
-                        handle,
-                        protocol=pickle.HIGHEST_PROTOCOL,
-                    )
-            except Exception:
-                pass
-        app.quit()
-
-    window.destroyed.connect(_window_closed)
-    window.show()
-    return app.exec()
-
-
-def launch_qt_release_map(session: Dict[str, object]) -> Dict[str, object]:
+def launch_webview_release_map(session: Dict[str, object]) -> Dict[str, object]:
     """Open the full regular Release Map in a lightweight WebView2 host."""
     webview = ensure_light_ui_dependencies()
     _ensure_webview2_runtime()
@@ -9982,7 +9516,7 @@ def launch_qt_release_map(session: Dict[str, object]) -> Dict[str, object]:
     bridge = ReleaseMapBridge()
     window = webview.create_window(
         f"{APP_NAME} {APP_VERSION} - Release Map",
-        html=_qt_release_map_html(),
+        html=_webview_release_map_html(),
         js_api=bridge,
         width=1500,
         height=920,
@@ -10648,7 +10182,7 @@ class App(tk.Tk):
 
         try:
             self.status_var.set("Opening Release Map")
-            map_result = launch_qt_release_map(dict(session))
+            map_result = launch_webview_release_map(dict(session))
             if self._live_release_map_session is not None:
                 self._apply_release_map_result(self._live_release_map_session, map_result)
             else:
@@ -11022,7 +10556,7 @@ class App(tk.Tk):
 
         try:
             self.status_var.set("Opening Release Map")
-            map_result = launch_qt_release_map(dict(session))
+            map_result = launch_webview_release_map(dict(session))
         except Exception as exc:
             self.status_var.set("Release Map failed")
             messagebox.showerror(APP_NAME, f"Release Map failed:\n\n{exc}", parent=self)
@@ -11105,7 +10639,7 @@ def _report_startup_crash(exc: BaseException) -> None:
 
 
 
-def _qt_main_html() -> str:
+def _webview_main_html() -> str:
     html = r'''<!doctype html>
 <html>
 <head>
@@ -11671,7 +11205,7 @@ window.addEventListener("pywebviewready",function(){
     return html.replace("__APP_VERSION__", APP_VERSION)
 
 
-def _qt_main_app() -> int:
+def _webview_main_app() -> int:
     """Run the regular DEA feature set in a lightweight WebView2/pywebview shell."""
     webview = ensure_light_ui_dependencies()
     _ensure_webview2_runtime()
@@ -12403,7 +11937,7 @@ def _qt_main_app() -> int:
     
         def _release_map_worker(self, session: Dict[str, object], live: bool) -> None:
             try:
-                map_result = launch_qt_release_map(dict(session))
+                map_result = launch_webview_release_map(dict(session))
                 if live and self._live_release_map_session is not None:
                     self._handle_live_map_result(self._live_release_map_session, map_result)
                 else:
@@ -12515,7 +12049,7 @@ def _qt_main_app() -> int:
     bridge = MainBridge()
     window = webview.create_window(
         f"{APP_NAME} {APP_VERSION}",
-        html=_qt_main_html(),
+        html=_webview_main_html(),
         js_api=bridge,
         width=1040,
         height=760,
@@ -12534,7 +12068,7 @@ def _qt_main_app() -> int:
             pass
 
     window.events.closed += _closed
-    storage_path = _dependencies_dir() / "webview2-profile"
+    storage_path = _cache_dir() / "webview2-profile"
     storage_path.mkdir(parents=True, exist_ok=True)
     webview.start(
         gui="edgechromium",
@@ -12548,8 +12082,8 @@ def _qt_main_app() -> int:
 def _standalone_self_test() -> None:
     # v0.22.9 global software compliance gate: path controls and basic
     # keyboard/accessibility semantics are release-blocking invariants.
-    main_html = _qt_main_html()
-    map_html = _qt_release_map_html()
+    main_html = _webview_main_html()
+    map_html = _webview_release_map_html()
     ui_checks = [
         (
             main_html.find('id="openExistingPath"') < main_html.find('id="existingPath"'),
@@ -12603,6 +12137,28 @@ def _standalone_self_test() -> None:
             and ("submit" + "Phrase" + "Review") not in main_html,
             "Obsolete automatic live/remix prompt must not exist.",
         ),
+        (
+            '<svg id="connections"></svg>' in map_html
+            and 'function drawConnections()' in map_html,
+            "Release Map SVG relationship links/connections are missing.",
+        ),
+        (
+            'function versionsForTrack' in map_html
+            and 'function remixesForTrack' in map_html
+            and 'function liveForTrack' in map_html,
+            "Release Map Versions/Remixes/Live family navigation is missing.",
+        ),
+        (
+            'replacementSources' in map_html
+            and 'id="resultDrawer"' in map_html
+            and 'id="reanalyzeBtn"' in map_html,
+            "Release Map replacement-source / result / Re-Analyze functionality is missing.",
+        ),
+        (
+            'function createLightBridge()' in map_html
+            and 'function createLightMainBridge()' in main_html,
+            "Lightweight WebView2 JavaScript bridge is missing.",
+        ),
     ]
     failed_ui_checks = [message for ok, message in ui_checks if not ok]
     if failed_ui_checks:
@@ -12611,6 +12167,9 @@ def _standalone_self_test() -> None:
     """Build-time smoke test for every dependency required by the standalone EXE."""
     if not _is_frozen_build():
         raise RuntimeError("--self-test is intended for the packaged standalone build.")
+    qt_module_name = "Py" + "Side6"
+    if any(name == qt_module_name or name.startswith(qt_module_name + ".") for name in sys.modules):
+        raise RuntimeError("Lightweight build self-test failed: legacy Qt runtime was loaded.")
     ensure_light_ui_dependencies()
     _ensure_webview2_runtime()
     ffmpeg, ffprobe = ensure_ffmpeg()
@@ -13216,14 +12775,10 @@ def main():
         raise SystemExit(0)
     if len(sys.argv) >= 2 and sys.argv[1] == "--version":
         raise SystemExit(0)
-    if len(sys.argv) >= 4 and sys.argv[1] == "--qt-release-map":
-        raise SystemExit(
-            _qt_release_map_process(Path(sys.argv[2]), Path(sys.argv[3]))
-        )
     if _is_frozen_build() and _startup_self_update():
         raise SystemExit(0)
     try:
-        raise SystemExit(_qt_main_app())
+        raise SystemExit(_webview_main_app())
     except SystemExit:
         raise
     except Exception as exc:
