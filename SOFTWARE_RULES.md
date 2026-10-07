@@ -28,6 +28,14 @@ Before creating, modifying, building, publishing, or handing off any software:
 5. For any user-facing UI work, re-check the relevant current UXDT guideline pages before implementation.
 6. Identify all cross-cutting rules affected by the change, not only the feature explicitly requested.
 
+### TLDR response invariant
+
+- `TLDR` is a content contract, not a decorative label. If a user-visible software-work reply begins with `TLDR`, or the user has requested TLDR responses by default, the answer itself must actually be concise.
+- Never write `TLDR` and then follow it with a long design document, exhaustive explanation, many sections, or a large list unless the user explicitly asked for detailed material in addition to the TLDR.
+- Default software replies should contain only the result/current status, the essential change(s), the immediate next action or test request, and a relevant download/repository link when applicable.
+- Before sending a reply, perform a final consistency check: if the message says `TLDR` but the body is not genuinely TLDR, shorten the body before sending it.
+- If the user explicitly asks for a detailed explanation, either omit the `TLDR` label or give a genuinely short TLDR first and then the requested detail. Do not use `TLDR` as the first word for a response whose main body is long by default.
+
 ### Mandatory per-software continuity file
 
 Every current and future GitHub software project maintained under the `karpuzikov` account must have an up-to-date `CONTINUITY.md` file that allows a new ChatGPT conversation or developer to continue the work without relying on chat memory.
