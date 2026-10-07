@@ -1,6 +1,6 @@
 # Duplicate Edition Analyzer Lightweight
 
-Version: **0.2.6 - Under construction ⚠️**
+Version: **0.2.7 - Under construction ⚠️**
 
 Branch: `dea-lightweight-modern`
 
@@ -41,6 +41,16 @@ The lightweight build preserves the regular DEA feature surface, including:
 - path openers, logging, settings and Undo.
 
 The failed `native-light` prototype is not the reference.
+
+## 0.2.7
+
+- Fixed the startup failure where the window could appear but `getState` never became available and Windows reported **Not Responding**.
+- Removed the reflective `js_api=bridge` binding path entirely.
+- Main UI now explicitly exposes each required Python method with pywebview's documented `window.expose(...)` API before the GUI loop starts.
+- Release Map uses the same explicit method exposure.
+- JavaScript still waits for the exact requested method, so a map window created during the running GUI loop is safe as well.
+- Added an executable self-test that verifies the explicit bridge exposes `getState` and other methods by their correct names.
+- v0.2.6's private WebView2 session / old-profile cleanup remains in place.
 
 ## 0.2.6
 

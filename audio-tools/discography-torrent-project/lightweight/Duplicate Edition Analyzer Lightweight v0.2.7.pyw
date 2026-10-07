@@ -33,7 +33,7 @@ from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Set, Tuple
 
 APP_NAME = "Duplicate / Edition Analyzer Lightweight"
-APP_VERSION = "0.2.6"
+APP_VERSION = "0.2.7"
 PROGRAM_DATA_DIR_NAME = "Duplicate Edition Analyzer"
 PYWEBVIEW_VERSION = "6.2.1"
 WEBVIEW_PRIVATE_MODE = True
@@ -7863,6 +7863,27 @@ def _light_emit(window, function_name: str, payload: str) -> None:
         pass
 
 
+def _expose_bridge_methods(window, bridge, required: Iterable[str]) -> Tuple[str, ...]:
+    required_names = tuple(str(name) for name in required)
+    functions = []
+    exposed_names = []
+
+    for name in required_names:
+        value = getattr(bridge, name, None)
+        if not callable(value):
+            raise RuntimeError(f"Desktop bridge method is missing in Python: {name}")
+        functions.append(value)
+        exposed_names.append(name)
+
+    if not functions:
+        raise RuntimeError("Desktop bridge has no methods to expose.")
+
+    # Explicit function exposure avoids relying on js_api object's reflective
+    # method discovery. It is supported before load and at runtime by pywebview.
+    window.expose(*functions)
+    return tuple(exposed_names)
+
+
 def _webview_release_map_html() -> str:
     html = r"""<!doctype html>
 <html>
@@ -9673,7 +9694,6 @@ def launch_webview_release_map(session: Dict[str, object]) -> Dict[str, object]:
     window = webview.create_window(
         f"{APP_NAME} {APP_VERSION} - Release Map",
         html=_webview_release_map_html(),
-        js_api=bridge,
         width=1500,
         height=920,
         min_size=(1050, 680),
@@ -9682,6 +9702,20 @@ def launch_webview_release_map(session: Dict[str, object]) -> Dict[str, object]:
         zoomable=True,
     )
     bridge.window = window
+    _expose_bridge_methods(
+        window,
+        bridge,
+        (
+            "getState",
+            "toggleTrack",
+            "toggleRelease",
+            "reanalyze",
+            "openFolder",
+            "copyPath",
+            "apply",
+            "closeMap",
+        ),
+    )
 
     def _closed():
         if bridge.result_payload is None:
@@ -11188,7 +11222,6 @@ def _webview_main_app() -> int:
     window = webview.create_window(
         f"{APP_NAME} {APP_VERSION}",
         html=_webview_main_html(),
-        js_api=bridge,
         width=1040,
         height=760,
         min_size=(880, 640),
@@ -11198,6 +11231,28 @@ def _webview_main_app() -> int:
     )
     bridge.window = window
     bridge.webview = webview
+    _expose_bridge_methods(
+        window,
+        bridge,
+        (
+            "getState",
+            "setPaths",
+            "browseFolder",
+            "setOption",
+            "getPersonalPicks",
+            "savePersonalPicks",
+            "copyText",
+            "openLogsFolder",
+            "openPath",
+            "closeApp",
+            "startAnalyze",
+            "submitPatternReview",
+            "cancelReview",
+            "submitManualReview",
+            "openReleaseMap",
+            "undoLastRun",
+        ),
+    )
 
     def _closed():
         try:
@@ -11221,6 +11276,30 @@ def _webview_main_app() -> int:
 
 
 def _ui_contract_self_test() -> None:
+    class _BridgeExposeProbe:
+        def __init__(self):
+            self.exposed = []
+
+        def expose(self, *functions):
+            self.exposed.extend(getattr(func, "__name__", "") for func in functions)
+
+    class _BridgeMethodProbe:
+        def getState(self):
+            return "{}"
+
+        def browseFolder(self, kind):
+            return kind
+
+    _probe_window = _BridgeExposeProbe()
+    _probe_bridge = _BridgeMethodProbe()
+    _probe_names = _expose_bridge_methods(
+        _probe_window,
+        _probe_bridge,
+        ("getState", "browseFolder"),
+    )
+    if _probe_names != ("getState", "browseFolder") or _probe_window.exposed != ["getState", "browseFolder"]:
+        raise RuntimeError("Explicit WebView2 bridge exposure self-test failed.")
+
     if WEBVIEW_PRIVATE_MODE is not True:
         raise RuntimeError(
             "Lightweight WebView2 restart self-test failed: browser profile persistence must remain disabled."
