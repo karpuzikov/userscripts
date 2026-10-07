@@ -43,6 +43,9 @@ jobs:
           import py_compile
           py_compile.compile(r"${{ steps.latest.outputs.path }}", doraise=True)
 
+      - name: Run UI regression self-test
+        run: python "${{ steps.latest.outputs.path }}" --ui-self-test
+
       - name: Check undefined names
         run: |
           python -m pip install --disable-pip-version-check --quiet ruff
@@ -123,8 +126,8 @@ jobs:
           if missing_perf:
               raise SystemExit("Release Map performance contract failed: " + " | ".join(missing_perf))
           grouping_contract = [
-              "const cleaned=cleanReleaseLabel(n.name)",
-              "sketch\\s*book",
+              "displayGroupKey",
+              "displayGroupTitle",
           ]
           missing_group = [x for x in grouping_contract if x not in release]
           if missing_group:

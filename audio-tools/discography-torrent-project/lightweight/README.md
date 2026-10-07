@@ -1,6 +1,6 @@
 # Duplicate Edition Analyzer Lightweight
 
-Version: **0.2.4 - Under construction ⚠️**
+Version: **0.2.5 - Under construction ⚠️**
 
 Branch: `dea-lightweight-modern`
 
@@ -41,6 +41,15 @@ The lightweight build preserves the regular DEA feature surface, including:
 - path openers, logging, settings and Undo.
 
 The failed `native-light` prototype is not the reference.
+
+## 0.2.5
+
+- Fixed the remaining Album grouping failures seen in the Avril Lavigne test run.
+- Root cause: folder bookkeeping after the catalog block (for example `CD 1` and `-clean-`) prevented the old browser-side cleanup from reaching the actual album title.
+- Release Map grouping is now prepared in Python before rendering, with explicit handling for year prefixes, catalog/source blocks, Clean/Explicit folder suffixes and CD/Disc/Disk suffixes.
+- Arbitrary parenthetical variants such as **Let Go (Sketch Book)** and **Head Above Water (Instrumentals)** join the plain album only when that plain base title actually exists in the same column.
+- Added executable regression tests using the exact Let Go, The Best Damn Thing, Avril Lavigne and Head Above Water folder patterns from the failing run.
+- Analyzer/optimizer semantics are still untouched; this remains display-only grouping.
 
 ## 0.2.4
 

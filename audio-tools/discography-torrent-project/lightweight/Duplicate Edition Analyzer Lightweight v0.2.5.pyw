@@ -33,7 +33,7 @@ from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Set, Tuple
 
 APP_NAME = "Duplicate / Edition Analyzer Lightweight"
-APP_VERSION = "0.2.4"
+APP_VERSION = "0.2.5"
 PROGRAM_DATA_DIR_NAME = "Duplicate Edition Analyzer"
 PYWEBVIEW_VERSION = "6.2.1"
 AUDIO_EXTS = {".m4a", ".flac", ".wav", ".ape", ".wv", ".mp3", ".aac", ".ogg", ".opus"}
@@ -8357,23 +8357,20 @@ function releaseColumnKind(n) {
 function cleanReleaseLabel(name) {
   let s=String(name||"").trim();
   s=s.replace(/^\s*\d{4}(?:-\d{2}-\d{2})?\s*-\s*/,"");
-  s=s.replace(/\s*\[[^\]]+\]\s*$/,"").trim();
-  let prev="";
-  while(prev!==s){
-    prev=s;
-    s=s.replace(/\s*\((?:[^)]*\b(?:deluxe|limited|special|expanded|bonus|exclusive|tour|edition|version|remaster(?:ed)?|anniversary|sketch\s*book)\b[^)]*)\)\s*$/i,"").trim();
-  }
   return s||String(name||"").trim();
 }
 function groupKeyForNode(n) {
-  // UI grouping is intentionally display-oriented. The backend family is used
-  // only as a fallback so an edition label cannot split one visible release family.
-  const cleaned=cleanReleaseLabel(n.name).toLowerCase().replace(/[^a-z0-9]+/g," ").trim();
-  if(cleaned) return cleaned;
-  const family=String(n.family||"").trim().toLowerCase();
-  return family||String(n.id);
+  return String(n.displayGroupKey||"").trim().toLowerCase()
+    ||String(n.family||"").trim().toLowerCase()
+    ||cleanReleaseLabel(n.name).toLowerCase().replace(/[^a-z0-9]+/g," ").trim()
+    ||String(n.id);
 }
 function groupTitleForNodes(items) {
+  const prepared=items.map(function(n){return String(n.displayGroupTitle||"").trim();}).filter(Boolean);
+  if(prepared.length){
+    prepared.sort(function(a,b){return a.length-b.length||a.localeCompare(b,undefined,{sensitivity:"base"});});
+    return prepared[0];
+  }
   const candidates=items.map(function(n){return cleanReleaseLabel(n.name);}).filter(Boolean);
   if(!candidates.length) return "Other";
   candidates.sort(function(a,b){return a.length-b.length||a.localeCompare(b,undefined,{sensitivity:"base"});});
@@ -8892,6 +8889,93 @@ def _release_map_plan_counts(
     }
 
 
+def _release_map_visual_title(name: str) -> str:
+    """Return the human album/EP/single title without folder bookkeeping."""
+    value = normalize_space(str(name or ""))
+    value = re.sub(r"^\s*\d{4}(?:-\d{2}-\d{2})?\s*-\s*", "", value).strip()
+
+    previous = None
+    while value != previous:
+        previous = value
+        # Folder-only advisory suffixes such as "... [CAT] -clean-".
+        value = re.sub(
+            r"\s*(?:-\s*)?(?:clean|explicit)(?:\s*-)?\s*$",
+            "",
+            value,
+            flags=re.I,
+        ).strip()
+        # Multi-disc physical folder suffixes may appear after the catalog block.
+        value = re.sub(
+            r"\s+(?:cd|disc|disk)\s*\d+(?:\s*(?:of|/)\s*\d+)?\s*$",
+            "",
+            value,
+            flags=re.I,
+        ).strip()
+        # Region/catalog/source block.
+        value = re.sub(r"\s*\[[^\]]+\]\s*$", "", value).strip()
+    return value
+
+
+_RELEASE_MAP_EDITION_SUFFIX_RE = re.compile(
+    r"\s*\((?:[^)]*\b(?:deluxe|limited|special|expanded|bonus|exclusive|tour|"
+    r"edition|version|remaster(?:ed)?|anniversary)\b[^)]*)\)\s*$",
+    re.I,
+)
+
+
+def _release_map_known_edition_base(title: str) -> str:
+    value = normalize_space(title)
+    previous = None
+    while value != previous:
+        previous = value
+        value = _RELEASE_MAP_EDITION_SUFFIX_RE.sub("", value).strip()
+    return value
+
+
+def _assign_release_map_display_groups(nodes: List[Dict[str, object]]) -> None:
+    """Assign display-only release-family keys without touching optimizer semantics."""
+    by_kind: Dict[str, List[Dict[str, object]]] = defaultdict(list)
+    for node in nodes:
+        release_type = str(node.get("releaseType", "") or "").lower()
+        if release_type == "ep":
+            kind = "ep"
+        elif release_type == "single":
+            kind = "single"
+        else:
+            kind = "album"
+        by_kind[kind].append(node)
+
+    for rows in by_kind.values():
+        visual_titles = {
+            int(row.get("id", -1)): _release_map_visual_title(str(row.get("name", "")))
+            for row in rows
+        }
+        exact_titles = {
+            normalize_title(title)
+            for title in visual_titles.values()
+            if normalize_title(title)
+        }
+
+        for row in rows:
+            rid = int(row.get("id", -1))
+            title = visual_titles.get(rid, "")
+            base = _release_map_known_edition_base(title)
+
+            # For arbitrary parenthetical variants (Sketch Book, Instrumentals,
+            # etc.), fold into the plain base only when that plain release exists
+            # in the same Albums / EPs / Singles column. This avoids broad guessing.
+            if base == title:
+                match = re.match(r"^(.*?)\s*\([^()]+\)\s*$", title)
+                if match:
+                    candidate = normalize_space(match.group(1))
+                    if normalize_title(candidate) in exact_titles:
+                        base = candidate
+
+            group_key = normalize_title(base) or normalize_title(title) or str(rid)
+            row["displayGroupKey"] = group_key
+            row["displayGroupTitle"] = base or title or str(row.get("name", ""))
+
+
 def _release_map_state_for_ui(
     snapshots: List[Dict[str, object]],
     tracks: Optional[List[Track]],
@@ -9155,6 +9239,8 @@ def _release_map_state_for_ui(
                 "reason": str(item.get("reason", "")),
                 "releaseType": str(item.get("release_type", "") or "").lower(),
                 "family": str(item.get("family", "") or ""),
+                "displayGroupKey": "",
+                "displayGroupTitle": "",
                 "includedTracks": int(item.get("included_tracks", 0) or 0),
                 "uniqueCount": unique_count,
                 "isGem": bool(gem_titles),
@@ -9162,6 +9248,8 @@ def _release_map_state_for_ui(
                 "tracks": ui_tracks,
             }
         )
+
+    _assign_release_map_display_groups(nodes)
 
     duplicate_links: List[Dict[str, int]] = []
     seen_links: Set[Tuple[int, int]] = set()
@@ -11191,9 +11279,9 @@ def _ui_contract_self_test() -> None:
             "Release Map same-release-family grouping is missing.",
         ),
         (
-            'sketch\\s*book' in map_html
-            and 'const cleaned=cleanReleaseLabel(n.name)' in map_html,
-            "Release Map display grouping must merge edition-label variants such as Let Go Sketch Book / Exclusive Edition.",
+            'displayGroupKey' in map_html
+            and 'displayGroupTitle' in map_html,
+            "Release Map must consume backend-prepared display grouping fields.",
         ),
         (
             'function addCurveBatch(svg,d,color,width,opacity,dash)' in map_html
@@ -11248,6 +11336,38 @@ def _ui_contract_self_test() -> None:
             "WebView2 bridge readiness must wait for the requested method; api-object-only readiness causes dead buttons.",
         ),
     ]
+    grouping_probe = [
+        {"id": 1, "releaseType": "album", "name": "2002 - Let Go (Japan Tour Special Limited Version) [JP - BVCA-21138 - 2005]"},
+        {"id": 2, "releaseType": "album", "name": "2002 - Let Go (Limited Edition) [AU - 82876-52937-2] CD 1"},
+        {"id": 3, "releaseType": "album", "name": "2002 - Let Go (Sketch Book) [US - ARCD-4740]"},
+        {"id": 4, "releaseType": "album", "name": "2002 - Let Go (Special Bonus Edition) [JP - BVCA-27031 - 2004]"},
+        {"id": 5, "releaseType": "album", "name": "2002 - Let Go [EU - 74321962052]"},
+        {"id": 6, "releaseType": "album", "name": "2007 - The Best Damn Thing (Limited Edition) [TW - 88697-20338-2] -clean-"},
+        {"id": 7, "releaseType": "album", "name": "2007 - The Best Damn Thing [EU - 83697 03774 2] -clean-"},
+        {"id": 8, "releaseType": "album", "name": "2007 - The Best Damn Thing [JP - BVCP-28105 - 2008]"},
+        {"id": 9, "releaseType": "album", "name": "2013 - Avril Lavigne (Exclusive Edition) [US - 888837 7198 2]"},
+        {"id": 10, "releaseType": "album", "name": "2013 - Avril Lavigne [JP - EICP-1588]"},
+        {"id": 11, "releaseType": "album", "name": "2019 - Head Above Water (Instrumentals) [WEB]"},
+        {"id": 12, "releaseType": "album", "name": "2019 - Head Above Water [WEB]"},
+    ]
+    _assign_release_map_display_groups(grouping_probe)
+
+    def _probe_keys(ids: Set[int]) -> Set[str]:
+        return {
+            str(row.get("displayGroupKey", ""))
+            for row in grouping_probe
+            if int(row.get("id", -1)) in ids
+        }
+
+    if len(_probe_keys({1, 2, 3, 4, 5})) != 1:
+        raise RuntimeError("Release Map grouping self-test failed: Let Go editions split.")
+    if len(_probe_keys({6, 7, 8})) != 1:
+        raise RuntimeError("Release Map grouping self-test failed: The Best Damn Thing clean/limited editions split.")
+    if len(_probe_keys({9, 10})) != 1:
+        raise RuntimeError("Release Map grouping self-test failed: Avril Lavigne editions split.")
+    if len(_probe_keys({11, 12})) != 1:
+        raise RuntimeError("Release Map grouping self-test failed: Head Above Water instrumental/base editions split.")
+
     failed_ui_checks = [message for ok, message in ui_checks if not ok]
     if failed_ui_checks:
         raise RuntimeError("Global UI compliance self-test failed: " + " | ".join(failed_ui_checks))
