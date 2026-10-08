@@ -1268,10 +1268,17 @@ def launch_gui():
             self.result_tree.pack(side="left", fill="x", expand=True)
             ry.pack(side="left", fill="y")
             self.bind_open_column(self.result_tree)
+            review_buttons = tk.Frame(outer, bg=BG)
+            review_buttons.pack(anchor="w", pady=(1, 5))
             self.preview_btn = self._ascii_button(
-                outer, "[ Preview Selected Image ]", self.preview_selected_image
+                review_buttons, "[ Preview Selected Image ]", self.preview_selected_image
             )
-            self.preview_btn.pack(anchor="w", pady=(1, 5))
+            self.preview_btn.pack(side="left")
+            self.mark_btn = self._ascii_button(
+                review_buttons, "[ Confirm Selected Visual Damage ]",
+                self.confirm_visual_damage, state="disabled"
+            )
+            self.mark_btn.pack(side="left", padx=(10, 0))
             self._ascii_label(
                 outer,
                 text="Visual anomalies are warnings only; review the image before deciding.",
@@ -1348,6 +1355,52 @@ def launch_gui():
             except Exception as exc:
                 messagebox.showerror(APP_NAME, f"Cannot preview image: {exc}")
 
+        def confirm_visual_damage(self):
+            """User confirmation promotes visual warnings, never an automatic decision."""
+            if not self.scan_completed or self.running or self.undo_running:
+                return
+            chosen = []
+            for iid in self.result_tree.selection():
+                finding = self.review_by_iid.get(iid)
+                if finding and finding["status"] == "warning" and finding["reason"].startswith(
+                    "VISUAL DAMAGE SUSPECTED"
+                ):
+                    chosen.append((iid, finding))
+            if not chosen:
+                messagebox.showinfo(
+                    APP_NAME, "Select one or more VISUAL DAMAGE SUSPECTED rows first."
+                )
+                return
+            if not messagebox.askyesno(
+                APP_NAME,
+                f"Confirm visible damage in {len(chosen)} selected image(s)?\n\n"
+                "These images passed standard JPEG decoding. This manual confirmation "
+                "makes them eligible for a SEPARATE Move Confirmed Corrupt action. "
+                "No files will move now."
+            ):
+                return
+            for iid, finding in chosen:
+                self.review_candidates.append({
+                    "path": finding["path"],
+                    "source": finding["source"],
+                    "size": finding["size"],
+                    "mtime": finding["mtime"],
+                    "iid": iid,
+                    "manual_confirmed": True,
+                })
+                self.review_by_iid[iid]["status"] = "manual_confirmed"
+                self.result_tree.set(iid, "status", "CONFIRMED CORRUPT (MANUAL)")
+                self.warning -= 1
+                self.corrupt += 1
+                self.log_path("[USER CONFIRMED VISUAL DAMAGE] ", finding["path"], "warning")
+            self.stats_vars["Confirmed"].set(f"{self.corrupt:,}")
+            self.stats_vars["Warnings"].set(f"{self.warning:,}")
+            self.status_var.set(
+                f"{len(chosen):,} visual suspect(s) confirmed by user. "
+                "Review and select Move Confirmed Corrupt to quarantine."
+            )
+            self.refresh_move_button()
+
         def bind_open_column(self, tree):
             def mouse_open(ev):
                 if tree.identify_region(ev.x, ev.y) == "cell" and tree.identify_column(ev.x) == "#1":
@@ -1395,11 +1448,21 @@ def launch_gui():
                     self.result_tree.delete(iid)
             if hasattr(self, "move_btn"):
                 self.move_btn.configure(state="disabled")
+            if hasattr(self, "mark_btn"):
+                self.mark_btn.configure(state="disabled")
 
         def refresh_move_button(self):
             eligible = self.scan_completed and bool(self.review_candidates)
             self.move_btn.configure(state="normal" if eligible and not (
                 self.running or self.undo_running) else "disabled")
+            visual_warnings = self.scan_completed and any(
+                f["status"] == "warning" and f["reason"].startswith("VISUAL DAMAGE SUSPECTED")
+                for f in self.review_by_iid.values()
+            )
+            self.mark_btn.configure(
+                state="normal" if visual_warnings and not (
+                    self.running or self.undo_running) else "disabled"
+            )
 
         def update_progress_detail(self):
             elapsed = max(0.0, time.monotonic() - self.start_time) if self.start_time else 0.0
@@ -1683,7 +1746,12 @@ def launch_gui():
                         ):
                             raise OSError("Image changed since scan - left in place; scan again")
                         status, new_reason = verify_image(p)
-                        if status != "corrupt":
+                        user_confirmed_suspect = (
+                            candidate.get("manual_confirmed")
+                            and status == "warning"
+                            and new_reason.startswith("VISUAL DAMAGE SUSPECTED")
+                        )
+                        if status != "corrupt" and not user_confirmed_suspect:
                             raise OSError(f"Recheck is {status.upper()}: {new_reason}")
                         moved_to = move_preserving_structure(
                             source_root, p, run_id=run_id, sources=sources,
@@ -1811,6 +1879,11 @@ def launch_gui():
                             iid = self.result_tree.insert(
                                 "", "end", values=("[DIR]", state, str(p), reason)
                             )
+                            if size is not None and mtime is not None:
+                                self.review_by_iid[iid] = {
+                                    "path": p, "source": source_root, "size": size,
+                                    "mtime": mtime, "status": status, "reason": reason
+                                }
                             if status == "corrupt" and size is not None and mtime is not None:
                                 self.review_candidates.append({
                                     "path": p, "source": source_root, "size": size,
