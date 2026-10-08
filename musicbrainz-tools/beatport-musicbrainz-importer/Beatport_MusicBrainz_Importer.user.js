@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Beatport - MusicBrainz Importer
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.2.16
+// @version      1.2.17
 // @description  Import Beatport and BPTopTracker releases into MusicBrainz, with BPTopTracker 500-page redirect, Beatport enrichment, ISRC matching, and release-source handling.
 // @author       karpuzikov
 // @match        https://www.beatport.com/*
@@ -2390,143 +2390,274 @@ function __bpMbGmXmlhttpRequest(details) {
         }
     }
 
-    function makeButton(text, primary = false) {
-        const selector = primary
-            ? 'button[class*="Button_primary__"]'
-            : 'button[class*="Button_text__"]';
+    // Release-detail UI: do not rely on Beatport's unstable CSS-module hashes.
+    // This block only adds its own controls; it never changes artwork or covers.
+    const IMPORTER_STYLE_ID = 'beatport-mb-importer-styles';
+    const importerMeta = {barcode: '', artists: '', status: ''};
 
-        const nativeButton = document.querySelector(selector);
+    function installImporterStyles() {
+        if (document.getElementById(IMPORTER_STYLE_ID)) return;
+        const style = document.createElement('style');
+        style.id = IMPORTER_STYLE_ID;
+        style.textContent = `
+            #beatport-musicbrainz-importer {
+                box-sizing: border-box !important;
+                display: block !important;
+                position: relative !important;
+                clear: both !important;
+                flex: 0 1 100% !important;
+                width: 100% !important;
+                min-width: 0 !important;
+                max-width: 620px !important;
+                height: auto !important;
+                margin: 12px 0 !important;
+                padding: 12px !important;
+                background: #222 !important;
+                color: #f4f4f4 !important;
+                border: 1px solid #454545 !important;
+                border-radius: 7px !important;
+                font: 12px/1.4 "Segoe UI", Arial, sans-serif !important;
+                text-align: left !important;
+                overflow: visible !important;
+                z-index: auto !important;
+            }
+            #beatport-musicbrainz-importer,
+            #beatport-musicbrainz-importer * {
+                box-sizing: border-box !important;
+            }
+            #beatport-musicbrainz-importer .beatport-mb-heading {
+                display: block !important;
+                margin: 0 0 8px !important;
+                padding: 0 !important;
+                color: #fff !important;
+                font: 700 13px/1.4 "Segoe UI", Arial, sans-serif !important;
+            }
+            #beatport-musicbrainz-importer .beatport-mb-details {
+                display: grid !important;
+                gap: 3px !important;
+                margin: 0 0 9px !important;
+                min-width: 0 !important;
+            }
+            #beatport-musicbrainz-importer .beatport-mb-detail-row {
+                display: flex !important;
+                flex-wrap: wrap !important;
+                gap: 4px 8px !important;
+                min-width: 0 !important;
+                overflow-wrap: anywhere !important;
+            }
+            #beatport-musicbrainz-importer .beatport-mb-detail-label {
+                color: #b7b7b7 !important;
+                font-weight: 600 !important;
+            }
+            #beatport-musicbrainz-importer .beatport-mb-detail-value {
+                color: #fff !important;
+            }
+            #beatport-musicbrainz-importer .beatport-mb-detail-row--status {
+                color: #d0fce9 !important;
+            }
+            #beatport-musicbrainz-importer .beatport-mb-detail-row--status .beatport-mb-detail-value {
+                color: inherit !important;
+            }
+            #beatport-musicbrainz-importer .beatport-mb-actions {
+                display: flex !important;
+                flex-direction: row !important;
+                flex-wrap: wrap !important;
+                align-items: center !important;
+                justify-content: flex-start !important;
+                gap: 8px !important;
+                width: 100% !important;
+                min-width: 0 !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+            #beatport-musicbrainz-importer button.beatport-mb-action {
+                appearance: none !important;
+                display: inline-flex !important;
+                position: static !important;
+                flex: 0 1 auto !important;
+                align-items: center !important;
+                justify-content: center !important;
+                width: auto !important;
+                min-width: 0 !important;
+                max-width: 100% !important;
+                min-height: 34px !important;
+                height: auto !important;
+                margin: 0 !important;
+                padding: 7px 10px !important;
+                border: 1px solid #666 !important;
+                border-radius: 4px !important;
+                background: #333 !important;
+                color: #fff !important;
+                cursor: pointer !important;
+                white-space: normal !important;
+                overflow-wrap: anywhere !important;
+                font: 600 12px/1.35 "Segoe UI", Arial, sans-serif !important;
+                text-transform: none !important;
+                text-shadow: none !important;
+                box-shadow: none !important;
+                transform: none !important;
+            }
+            #beatport-musicbrainz-importer button.beatport-mb-action--primary {
+                background: #00e59b !important;
+                border-color: #00e59b !important;
+                color: #111 !important;
+            }
+            #beatport-musicbrainz-importer button.beatport-mb-action:hover:not(:disabled) {
+                filter: brightness(1.15) !important;
+            }
+            #beatport-musicbrainz-importer button.beatport-mb-action:focus-visible {
+                outline: 2px solid #fff !important;
+                outline-offset: 2px !important;
+            }
+            #beatport-musicbrainz-importer button.beatport-mb-action:disabled {
+                opacity: .55 !important;
+                cursor: not-allowed !important;
+            }
+            @media (max-width: 480px) {
+                #beatport-musicbrainz-importer .beatport-mb-actions button {
+                    flex-grow: 1 !important;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+
+    function makeButton(text, primary = false) {
         const button = document.createElement('button');
         button.type = 'button';
+        button.className = 'beatport-mb-action' +
+            (primary ? ' beatport-mb-action--primary' : '');
         button.textContent = text;
-
-        if (nativeButton?.className && typeof nativeButton.className === 'string') {
-            button.className = nativeButton.className;
-        } else {
-            // Current Beatport CSS-module fallbacks; visual styling still comes
-            // from Beatport's own stylesheet rather than custom importer CSS.
-            button.className = primary
-                ? 'Button_button__exqP_ Button_primary__DEC_1'
-                : 'Button_button__exqP_ Button_text__bvVGC';
-        }
-
         return button;
     }
 
-    function findUiAnchor() {
-        const controls = document.querySelector('div[class^="ReleaseDetailCard-style__Controls"]');
-        const infoArea = document.querySelector('div[class^="ReleaseDetailCard-style__Info"]')?.parentElement;
-        return controls || infoArea || null;
-    }
-
     function removeImporterMetadata() {
-        document.getElementById('beatport-mb-barcode-row')?.remove();
-        document.getElementById('beatport-mb-release-artist-row')?.remove();
-        document.getElementById('beatport-mb-status-row')?.remove();
+        for (const id of [
+            'beatport-mb-barcode-row',
+            'beatport-mb-release-artist-row',
+            'beatport-mb-status-row',
+        ]) {
+            document.getElementById(id)?.remove();
+        }
+        importerMeta.barcode = '';
+        importerMeta.artists = '';
+        importerMeta.status = '';
     }
 
-    function releaseMetaElements() {
-        const meta = document.querySelector('div[class^="ReleaseDetailCard-style__Meta"]');
-        if (!meta) return null;
+    function renderImporterMetadata() {
+        const container = document.querySelector(
+            '#beatport-musicbrainz-importer .beatport-mb-details'
+        );
+        if (!container) return;
+        container.replaceChildren();
 
-        const template = meta.querySelector('div[class^="ReleaseDetailCard-style__Info"]');
-        const controls = meta.querySelector('div[class^="ReleaseDetailCard-style__Controls"]');
-        if (!template || !controls) return null;
+        function addRow(label, value, status = false) {
+            if (!value) return;
+            const row = document.createElement('div');
+            row.className = 'beatport-mb-detail-row' +
+                (status ? ' beatport-mb-detail-row--status' : '');
+            if (status) {
+                row.setAttribute('role', 'status');
+                row.setAttribute('aria-live', 'polite');
+            }
 
-        return {meta, template, controls};
-    }
+            const name = document.createElement('span');
+            name.className = 'beatport-mb-detail-label';
+            name.textContent = label;
 
-    function makeNativeInfoRow(id, label, value) {
-        const parts = releaseMetaElements();
-        if (!parts || !value) return null;
+            const content = document.createElement('span');
+            content.className = 'beatport-mb-detail-value';
+            content.textContent = value;
 
-        document.getElementById(id)?.remove();
+            row.append(name, content);
+            container.appendChild(row);
+        }
 
-        const row = document.createElement('div');
-        row.id = id;
-        row.className = parts.template.className;
-
-        const labelElement = document.createElement('p');
-        labelElement.textContent = label;
-
-        const valueElement = document.createElement('span');
-        valueElement.textContent = value;
-
-        row.append(labelElement, valueElement);
-        parts.controls.insertAdjacentElement('beforebegin', row);
-        return row;
+        addRow('Barcode:', importerMeta.barcode);
+        addRow('Release Artist:', importerMeta.artists);
+        addRow('Status:', importerMeta.status, true);
+        container.hidden = container.childElementCount === 0;
     }
 
     function displayReleaseMetadata(release, tracks) {
-        document.getElementById('beatport-mb-barcode-row')?.remove();
-        document.getElementById('beatport-mb-release-artist-row')?.remove();
-
-        const barcode = normalizeSpace(release?.upc);
-        const releaseArtists = determineReleaseArtists(release, tracks)
+        // Clean up obsolete native rows from earlier versions on SPA navigation.
+        for (const id of [
+            'beatport-mb-barcode-row',
+            'beatport-mb-release-artist-row',
+        ]) {
+            document.getElementById(id)?.remove();
+        }
+        importerMeta.barcode = normalizeSpace(release?.upc);
+        importerMeta.artists = determineReleaseArtists(release, tracks)
             .map(credit => normalizeSpace(credit.credited_name || credit.artist_name))
             .filter(Boolean)
             .join(', ');
-
-        if (barcode) {
-            makeNativeInfoRow('beatport-mb-barcode-row', 'Barcode', barcode);
-        }
-
-        if (releaseArtists) {
-            makeNativeInfoRow(
-                'beatport-mb-release-artist-row',
-                'Release Artist',
-                releaseArtists
-            );
-        }
+        renderImporterMetadata();
     }
 
     function setNativeStatus(text) {
-        const value = normalizeSpace(text);
-        if (!value) {
-            document.getElementById('beatport-mb-status-row')?.remove();
-            return;
+        document.getElementById('beatport-mb-status-row')?.remove();
+        importerMeta.status = normalizeSpace(text);
+        renderImporterMetadata();
+    }
+
+    function insertImporterBesideRelease(box) {
+        const heading = findBeatportReleaseHeading();
+        if (!heading || !heading.isConnected) return false;
+
+        // Prefer the metadata column containing the heading, catalog and date.
+        // Never append to the outer <main> grid: it scatters the action buttons.
+        let node = heading.parentElement;
+        for (let depth = 0; node && depth < 5; depth++, node = node.parentElement) {
+            if (node.matches('main, body') || node.querySelector('table')) break;
+            const summary = normalizeSpace(node.textContent).slice(0, 3000);
+            const hasReleaseMetadata = /release\s*date/i.test(summary) &&
+                /\bcatalog\b/i.test(summary);
+            if (hasReleaseMetadata && !node.querySelector('img')) {
+                node.appendChild(box);
+                return true;
+            }
         }
-        makeNativeInfoRow('beatport-mb-status-row', 'MusicBrainz', value);
+
+        // Stable structural fallback: under this release's heading, never in
+        // the sidebar, page root, track table, or recommendation grid.
+        const headingBlock = heading.parentElement || heading;
+        headingBlock.insertAdjacentElement('afterend', box);
+        return true;
     }
 
     function makeUiBox() {
         document.getElementById(UI_ID)?.remove();
+        installImporterStyles();
 
-        const box = document.createElement('div');
+        const box = document.createElement('section');
         box.id = UI_ID;
         box.setAttribute('role', 'group');
         box.setAttribute('aria-label', 'MusicBrainz tools');
-        Object.assign(box.style, {
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            flexWrap: 'wrap',
-            marginTop: '8px',
-            font: 'inherit',
-            color: 'inherit',
-        });
 
-        const anchor = findUiAnchor();
-        if (anchor) {
-            // Keep the importer inside Beatport's own release controls instead
-            // of drawing a separate custom panel.
-            if (anchor.matches('div[class^="ReleaseDetailCard-style__Controls"]')) {
-                anchor.appendChild(box);
-            } else if (anchor.parentElement) {
-                anchor.insertAdjacentElement('afterend', box);
-            } else {
-                anchor.appendChild(box);
-            }
-        } else {
-            const main = document.querySelector('main') || document.body;
-            main.prepend(box);
+        const title = document.createElement('div');
+        title.className = 'beatport-mb-heading';
+        title.textContent = 'MusicBrainz';
+
+        const details = document.createElement('div');
+        details.className = 'beatport-mb-details';
+
+        const actions = document.createElement('div');
+        actions.className = 'beatport-mb-actions';
+
+        box.append(title, details, actions);
+        if (!insertImporterBesideRelease(box)) {
+            // On incomplete/transitioning SPA pages we retry after the heading
+            // exists instead of breaking the outer page layout.
+            return null;
         }
-
-        return box;
+        renderImporterMetadata();
+        return actions;
     }
 
     function installIdleUi(release, trackResults, serial) {
         const box = makeUiBox();
+        if (!box) return; // SPA heading not mounted yet; refresh will retry.
         const previewTracks = orderTracks(release, trackResults);
         const allIsrcs = trackResults.map(track => normalizeIsrc(track?.isrc)).filter(Boolean);
         const baseImportData = buildImport(release, previewTracks, []);
@@ -2660,10 +2791,25 @@ function __bpMbGmXmlhttpRequest(details) {
     }
 
     let lastUrl = '';
+    let lastUiRepairAt = 0;
     const refresh = () => {
-        if (location.href === lastUrl) return;
-        lastUrl = location.href;
-        void processBeatportRelease();
+        if (location.href !== lastUrl) {
+            lastUrl = location.href;
+            lastUiRepairAt = Date.now();
+            void processBeatportRelease();
+            return;
+        }
+        // Beatport's SPA can remount the release details without changing URL.
+        // Only repair a missing panel, and throttle retries during transitions.
+        if (
+            releasePathParts() &&
+            !document.getElementById(UI_ID) &&
+            findBeatportReleaseHeading() &&
+            Date.now() - lastUiRepairAt >= 8000
+        ) {
+            lastUiRepairAt = Date.now();
+            void processBeatportRelease();
+        }
     };
 
     window.addEventListener('focus', refreshMissingMusicBrainzReleaseIndicator);
