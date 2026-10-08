@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Apple Music works credits -> MusicBrainz
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      2.3.13
+// @version      2.3.14
 // @description  Resolve the correct Apple Music release and import supported Apple Music credits to the proper MusicBrainz Recording, Work, or Release relationships.
 // @author       karpuzikov
 // @license      MIT
@@ -125,7 +125,7 @@ function __amMbGmXmlhttpRequest(details) {
     'use strict';
 
     const PAGE = typeof unsafeWindow !== 'undefined' ? unsafeWindow : window;
-    const SCRIPT_VERSION = '2.3.13';
+    const SCRIPT_VERSION = '2.3.14';
     let MB = PAGE.MB;
     const APPLE_API_BASE = 'https://amp-api.music.apple.com/v1';
     const APPLE_TOKEN_BOOTSTRAP_URL = 'https://music.apple.com/us/browse';
@@ -1874,6 +1874,19 @@ function __amMbGmXmlhttpRequest(details) {
             (work.name || title);
     }
 
+    function autoCandidateIndex(person) {
+        const preferred = person.preferredMbid
+            ? person.candidates.findIndex(candidate => candidate.mbid === person.preferredMbid)
+            : -1;
+        if (preferred >= 0) return preferred;
+        const exact = exactCandidateIndexes(person.name, person.candidates);
+        return exact.length === 1 ? exact[0] : -1;
+    }
+
+    function autoMatchedPeopleCount() {
+        return [...state.people.values()].filter(person => autoCandidateIndex(person) >= 0).length;
+    }
+
     function selectedMbid(person) {
         const row = document.querySelector(`[data-person-key="${CSS.escape(person.key)}"]`);
         if (!row) return '';
@@ -1977,7 +1990,7 @@ function __amMbGmXmlhttpRequest(details) {
 
         const rows = [...state.people.values()].map(person => {
             const candidateOptions = [
-                '<option value="">-- choose MusicBrainz artist --</option>',
+                '<option value="">Skip this credit (no verified artist)</option>',
                 ...person.candidates.map(candidate => {
                     const details = [
                         candidate.contextReason,
@@ -1993,19 +2006,13 @@ function __amMbGmXmlhttpRequest(details) {
                 }),
             ];
 
-            const exact = exactCandidateIndexes(person.name, person.candidates);
-            const preferredIndex = person.preferredMbid
-                ? person.candidates.findIndex(candidate => candidate.mbid === person.preferredMbid)
-                : -1;
-            const autoIndex = preferredIndex >= 0
-                ? preferredIndex
-                : (exact.length === 1 ? exact[0] : -1);
-            const autoLabel = preferredIndex >= 0
-                ? `Auto: ${person.preferredReason}`
-                : (autoIndex >= 0 ? 'Exact name/alias match' : 'Review required');
+            const autoIndex = autoCandidateIndex(person);
+            const autoLabel = autoIndex >= 0
+                ? (person.preferredMbid ? `Auto: ${person.preferredReason}` : 'Auto: unique exact name/alias')
+                : (person.candidates.length ? 'Skipped: ambiguous/no exact artist' : 'Skipped: not found');
 
             return `
-                <tr data-person-key="${escapeHtml(person.key)}">
+                <tr data-person-key="${escapeHtml(person.key)}" data-mapping="${autoIndex >= 0 ? 'auto' : 'skipped'}">
                     <td><strong>${escapeHtml(person.name)}</strong></td>
                     <td>${escapeHtml([...person.roles].join(', '))}</td>
                     <td>
@@ -2026,12 +2033,14 @@ function __amMbGmXmlhttpRequest(details) {
         }).join('');
 
         container.innerHTML = `
-            <h3>Artist mapping</h3>
+            <h3>Artist mapping - optional</h3>
             <p class="am2mb-hint">
                 Artist matching uses four priority circles: credited artists, their aliases, their artist relationships, then aliases of those related artists. Global search is only a fallback.
                 Recording credits go to Recordings, songwriting/composition to Works, and mastering to the Release.
-                When you manually map a different Apple credit name, a MusicBrainz artist alias is added for future matching.
+                Unmatched or ambiguous names are skipped automatically; no artist lookup is required from you. Optional manual selection/MBID remains available. Manually mapped alternative names may create artist aliases.
             </p>
+            <details id="am2mb-mapping-details">
+                <summary>${autoMatchedPeopleCount()} matched automatically; ${state.people.size - autoMatchedPeopleCount()} skipped. Optional artist mappings</summary>
             <div class="am2mb-scroll">
                 <table class="tbl">
                     <thead>
@@ -2046,9 +2055,10 @@ function __amMbGmXmlhttpRequest(details) {
                     <tbody>${rows}</tbody>
                 </table>
             </div>
+            </details>
             <p>
                 <button type="button" id="am2mb-apply" class="positive">
-                    Apply supported credits
+                    Apply matched credits
                 </button>
             </p>
         `;
@@ -2241,7 +2251,9 @@ function __amMbGmXmlhttpRequest(details) {
             );
 
             setStatus(
-                `Loaded ${appleTracks.length} Apple Music tracks. ${importableCount} relationship credit(s) are ready for review.`,
+                `Loaded ${appleTracks.length} Apple Music track(s), ${importableCount} eligible credit(s). ` +
+                `${autoMatchedPeopleCount()} artist name(s) auto-matched; ` +
+                `${state.people.size - autoMatchedPeopleCount()} skipped by default. Ready to apply matched credits.`,
                 'ok'
             );
         } catch (error) {
@@ -2262,11 +2274,18 @@ function __amMbGmXmlhttpRequest(details) {
 
             const entityCache = new Map();
             const mapping = new Map();
+            let skippedArtists = 0;
 
             for (const person of state.people.values()) {
+                const personRow = document.querySelector(`[data-person-key="${CSS.escape(person.key)}"]`);
+                const manualValue = String(personRow?.querySelector('.am2mb-manual')?.value || '').trim();
                 const mbid = selectedMbid(person);
+                if (manualValue && !extractMbid(manualValue)) {
+                    throw new Error(`Invalid manual MusicBrainz artist MBID for "${person.name}". Clear it to skip.`);
+                }
                 if (!mbid) {
-                    throw new Error(`Choose a MusicBrainz artist for "${person.name}".`);
+                    skippedArtists++;
+                    continue;
                 }
                 if (!isMbid(mbid)) {
                     throw new Error(`Invalid MusicBrainz artist MBID for "${person.name}".`);
@@ -2279,6 +2298,15 @@ function __amMbGmXmlhttpRequest(details) {
                 }
 
                 mapping.set(person.key, entityCache.get(mbid));
+            }
+
+            if (!mapping.size) {
+                setStatus(
+                    `No credits staged: ${skippedArtists} Apple Music artist name(s) were skipped. ` +
+                    'Optional mappings are available under Artist mapping.',
+                    'warn'
+                );
+                return;
             }
 
             for (const person of state.people.values()) {
@@ -2297,6 +2325,7 @@ function __amMbGmXmlhttpRequest(details) {
             let addedRelease = 0;
             let skippedExisting = 0;
             let skippedUnavailable = 0;
+            let skippedUnmapped = 0;
             const created = new Set();
 
             for (const row of state.rows) {
@@ -2312,7 +2341,10 @@ function __amMbGmXmlhttpRequest(details) {
                     }
 
                     const artist = mapping.get(normalizeText(credit.appleName));
-                    if (!artist) continue;
+                    if (!artist) {
+                        skippedUnmapped++;
+                        continue;
+                    }
 
                     const sourceId = sourceEntity.gid || sourceEntity.id || sourceEntity.name;
                     const artistId = artist.gid || artist.id || artist.name;
@@ -2343,8 +2375,9 @@ function __amMbGmXmlhttpRequest(details) {
 
             setStatus(
                 `Applied ${added} relationship(s): ${addedRecording} Recording, ${addedWork} Work, ${addedRelease} Release. ` +
-                `${skippedExisting} existing/duplicate relationship(s) skipped, ${skippedUnavailable} unavailable target(s) skipped. ` +
-                `${state.aliasEdits} artist alias edit(s) entered. Review the green relationship edits, then submit normally.`,
+                `${skippedExisting} existing/duplicate(s), ${skippedUnavailable} unavailable target(s); ` +
+                `${skippedUnmapped} credit(s) skipped for ${skippedArtists} unmapped artist name(s). ` +
+                `${state.aliasEdits} artist alias edit(s). Review staged changes, then submit normally.`,
                 'ok'
             );
         } catch (error) {
@@ -2399,6 +2432,17 @@ function __amMbGmXmlhttpRequest(details) {
                 #am2mb-panel button:focus-visible { outline: 3px solid #8cc7ff; outline-offset: 2px; }
                 #am2mb-panel input[type="url"] { flex: 1 1 320px; min-width: 0; max-width: 700px; }
                 #am2mb-panel label { font-weight: 600; }
+                #am2mb-panel details {
+                    margin-top: 8px; border: 1px solid #50627a;
+                    border-radius: 5px; padding: 8px 10px;
+                }
+                #am2mb-panel details summary { cursor: pointer; font-weight: 600; }
+                #am2mb-panel details summary:focus-visible {
+                    outline: 3px solid #8cc7ff; outline-offset: 2px;
+                }
+                #am2mb-panel tr[data-mapping="skipped"] .am2mb-auto { color: #f8cf7d; }
+                #am2mb-panel tr[data-mapping="auto"] .am2mb-auto { color: #80e5a8; }
+                #am2mb-panel #am2mb-status[data-kind="warn"] { color: #f8cf7d; }
                 #am2mb-panel h2,
                 #am2mb-panel h3 {
                     margin-top: 0;
