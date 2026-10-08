@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Apple Music works credits -> MusicBrainz
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      2.3.15
+// @version      2.3.16
 // @description  Resolve the correct Apple Music release and import supported Apple Music credits to the proper MusicBrainz Recording, Work, or Release relationships.
 // @author       karpuzikov
 // @license      MIT
@@ -61,17 +61,27 @@ function __amMbRawHeader(rawHeaders, name) {
     return '';
 }
 
-async function __amMbFetch(input, init) {
+async function __amMbFetch(input, init, retryCallbacks = {}) {
     if (!__amMbIsMusicBrainzUrl(input)) {
         return __amMbNativeFetch(input, init);
     }
+    let retryCount = 0;
     for (;;) {
         const response = await __amMbNativeFetch(input, init);
-        if (response.status !== 503) return response;
-        await __amMbSleep(Math.max(
-            5000,
+        if (response.status !== 503) {
+            if (retryCount) retryCallbacks.onRecovered?.(retryCount);
+            return response;
+        }
+        // MusicBrainz requires retrying 503 indefinitely. Back off instead of
+        // hammering the server; keep the status panel and diagnostic bridge
+        // informed so the operation never appears frozen.
+        retryCount++;
+        const delay = Math.max(
+            Math.min(60000, 5000 * (2 ** Math.min(retryCount - 1, 4))),
             __amMbRetryAfterMs(response.headers?.get?.('Retry-After'))
-        ));
+        );
+        retryCallbacks.onRetry?.(retryCount, delay);
+        await __amMbSleep(delay);
     }
 }
 
@@ -125,7 +135,7 @@ function __amMbGmXmlhttpRequest(details) {
     'use strict';
 
     const PAGE = typeof unsafeWindow !== 'undefined' ? unsafeWindow : window;
-    const SCRIPT_VERSION = '2.3.15';
+    const SCRIPT_VERSION = '2.3.16';
     let MB = PAGE.MB;
     const APPLE_API_BASE = 'https://amp-api.music.apple.com/v1';
     const APPLE_TOKEN_BOOTSTRAP_URL = 'https://music.apple.com/us/browse';
@@ -135,7 +145,7 @@ function __amMbGmXmlhttpRequest(details) {
     const FALLBACK_STOREFRONTS = ['us', 'gb', 'de', 'fr', 'ca', 'au', 'jp', 'ua'];
     let appleToken = '';
 
-    const MB_WS_MIN_INTERVAL = 1200;
+    const MB_WS_MIN_INTERVAL = 1700;
     const MB_WS_MAX_RETRIES = 5;
     let mbWsLastRequestAt = 0;
     let mbWsQueue = Promise.resolve();
@@ -264,6 +274,14 @@ function __amMbGmXmlhttpRequest(details) {
                 response = await __amMbFetch(url, {
                     credentials: 'same-origin',
                     headers: { Accept: 'application/json' },
+                }, {
+                    onRetry: (count, delay) => setStatus(
+                        `${label}: HTTP 503; retry ${count} in ${Math.ceil(delay / 1000)}s...`,
+                        'warn'
+                    ),
+                    onRecovered: count => setStatus(
+                        `${label}: recovered after ${count} HTTP 503 retry(s).`
+                    ),
                 });
             } catch (error) {
                 lastError = error;
@@ -1462,7 +1480,7 @@ function __amMbGmXmlhttpRequest(details) {
     }
 
     const workAuthorResolutionCache = new Map();
-    const worksByArtistCache = new Map();
+    const worksByAuthorTitleCache = new Map();
 
     async function resolveAppleAuthorForWork(name) {
         const key = normalizeText(name);
@@ -1495,41 +1513,53 @@ function __amMbGmXmlhttpRequest(details) {
         return resolved;
     }
 
-    async function browseWorksByArtistMbid(mbid) {
-        if (worksByArtistCache.has(mbid)) {
-            return worksByArtistCache.get(mbid);
+    async function searchWorksByAuthorAndTitle(mbid, title) {
+        const cacheKey = `${mbid}:${normalizeText(title)}`;
+        if (worksByAuthorTitleCache.has(cacheKey)) {
+            return worksByAuthorTitleCache.get(cacheKey);
         }
 
-        const allWorks = [];
+        // MusicBrainz WorkSearch supports arid + work fields. Fetch only the
+        // relevant title for this credited author, rather than traversing that
+        // artist's entire (possibly thousands-long) Work catalogue.
+        const query = `work:"${escapeLucene(title)}" AND arid:${mbid}`;
+        const works = [];
         const limit = 100;
         let offset = 0;
-        let total = Infinity;
 
-        while (offset < total) {
-            const url =
-                `/ws/2/work?artist=${encodeURIComponent(mbid)}&fmt=json&limit=${limit}&offset=${offset}`;
+        while (true) {
+            const url = `/ws/2/work/?query=${encodeURIComponent(query)}&fmt=json&limit=${limit}&offset=${offset}`;
             const json = await musicBrainzWsJson(
                 url,
-                `MusicBrainz Works for artist ${mbid}`,
-                `work-browse-by-artist:${mbid}:${offset}`
+                `MusicBrainz Works for "${title}" / author ${mbid}`,
+                `work-author-title:${cacheKey}:${offset}`
             );
-
             const batch = Array.isArray(json.works) ? json.works : [];
-            allWorks.push(...batch.map(work => ({
+            const count = Number(json['work-count'] ?? (offset + batch.length));
+            if (!Number.isFinite(count) || count < 0) {
+                throw new Error(`Invalid Work search count for "${title}".`);
+            }
+
+            works.push(...batch.filter(work =>
+                normalizeText(work.title || '') === normalizeText(title)
+            ).map(work => ({
                 mbid: work.id,
                 title: work.title || '',
                 type: work.type || '',
                 disambiguation: work.disambiguation || '',
             })));
 
-            total = Number(json['work-count'] ?? allWorks.length);
             offset += batch.length;
-
-            if (!batch.length || batch.length < limit) break;
+            if (offset >= count) break;
+            if (!batch.length || batch.length < limit) {
+                // A partial search result must NEVER be mistaken for proof that
+                // the Work does not already exist (which could create a duplicate).
+                throw new Error(`Incomplete Work search for "${title}" (fetched ${offset}/${count}).`);
+            }
         }
 
-        worksByArtistCache.set(mbid, allWorks);
-        return allWorks;
+        worksByAuthorTitleCache.set(cacheKey, works);
+        return works;
     }
 
     function isWorkAuthorCredit(credit) {
@@ -1588,12 +1618,11 @@ function __amMbGmXmlhttpRequest(details) {
 
         const matches = new Map();
 
-        // Artist first, title last:
-        // 1. browse every credited composer's/songwriter's Works;
-        // 2. only then compare the Work title with this recording title.
+        // Keep the author-first lookup contract, but ask the WorkSearch index
+        // for the author's exact title instead of downloading every Work.
         for (const author of authors) {
             for (const mbid of author.mbids) {
-                const works = await browseWorksByArtistMbid(mbid);
+                const works = await searchWorksByAuthorAndTitle(mbid, title);
 
                 for (const work of works) {
                     if (normalizeText(work.title) !== normalizeText(title)) continue;
