@@ -1000,7 +1000,7 @@ def launch_gui():
             self.root.after(50, lambda: enable_dark_title_bar(self.root))
             self.root.after(100, self.process_queue)
 
-def configure_styles(self):
+        def configure_styles(self):
             """Compact native-control layout inspired by ReNamer's workflow."""
             style = self.style
             base = ("Segoe UI", 9)
