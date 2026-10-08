@@ -46,6 +46,15 @@ jobs:
       - name: Run UI regression self-test
         run: python "${{ steps.latest.outputs.path }}" --ui-self-test
 
+      - name: Validate ASCII terminal feature contract
+        run: python "${{ steps.latest.outputs.path }}" --ascii-self-test
+
+      - name: Install native terminal test dependency
+        run: python -m pip install --disable-pip-version-check --quiet "textual>=1.0,<9"
+
+      - name: Mouse and keyboard TUI smoke test
+        run: python "${{ steps.latest.outputs.path }}" --ascii-pilot-test
+
       - name: Check undefined names
         run: |
           python -m pip install --disable-pip-version-check --quiet ruff
