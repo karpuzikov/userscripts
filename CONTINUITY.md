@@ -2,7 +2,7 @@
 
 ## Product and state
 - Product: Karpuzikov Picard Scripts, a Picard 3.x Git-updatable MusicBrainz metadata plugin.
-- Current version: 1.5.17 - Under construction ⚠️ (not yet verified inside user Picard).
+- Current version: 1.5.18 - Under construction ⚠️ (not yet verified inside user Picard).
 - Git repository and active branch: `karpuzikov/userscripts`, `main`.
 - There is no additional project-specific `RULES.md` currently; the canonical repository root `SOFTWARE_RULES.md` governs this project.
 
@@ -120,3 +120,12 @@
 - Confirmed partial-name issue: when MB provides artists [A, AB] but an earlier step reduces `artist` to the exact credited name AB, the old `$in(AB,A)` would wrongly keep A and synthesize `A & AB`.
 - Standalone Format Multiple Artists v1.0.2 and embedded plugin script now use `$inmulti(%artists%,%artist%)` / `$inmulti(%albumartists%,%albumartist%)` to recognize when the display credit is exactly an entry in the original multi-valued list. For this exact-one-artist case only, selection uses `$eq` instead of substring `$in`. For all other multi-artist credits, preserve existing substring matching and join behavior (no loss of custom MB joinphrase handling).
 - Added Picard runtime regression covering both track and album artist A/AB-style collisions and repeated runs. Fixed script is distributed as `Format_Multiple_Artists_v1.0.2.txt`; older v1.0.1 remains historical. Full general substring ambiguity involving composite credits remains a documented limitation; Picard interactive QA is outstanding. v1.5.17 - Under construction ⚠️.
+
+## Barcode toolbar shutdown and XE-to-EU display preference (2026-10-09; v1.5.18)
+
+- User reports a small taskbar window labeled Barcode left behind when closing Picard. Likely native QToolBar made floating by Qt during main-window close; not yet confirmed by in-app screenshot/runtime test.
+- Stop the 4-second barcode toolbar watcher immediately on the main window Close event, detach its QAction from **every** relevant toolbar (current, replaced child toolbars, floating top-level toolbars), and hide floating toolbars containing that action. Handle main-window Hide and QApplication.aboutToQuit as additional shutdown opportunities, and guard queued refreshes against reattaching the action while closing.
+- If Picard rejects Close (e.g. unsaved user changes), restart watcher and restore the button on the still-visible main window. On normal plugin disable, remove QAction from all toolbars and disconnect the aboutToQuit signal; do not arbitrarily hide unrelated toolbars while Picard remains open.
+- New Qt-independent regression checks cover detached/obsolete floating toolbar action cleanup, other toolbars unaffected, and static verification of close/cancel/quit guards. Windows taskbar exit test in Picard 3 remains pending.
+- User explicitly wants `releasecountry=XE` stored as `EU` when a capitalization tool is enabled. MusicBrainz XE is Europe (not identical to EU political membership); the mapping is user-preferred output only. The *language-aware Python* capitalization handlers normalize exact XE in the releasecountry tag (scalar or multi-value) without touching unrelated region codes and tags; the *English Title Capitalization* standalone/embedded script appends an equivalent $if/$map mapping outside its English-only title branch, so even non-English release titles preserve country preferences.
+- Published `picard-tools/scripts/English_Title_Capitalization_v1.1.4.txt` and synced stable manual script and embedded source; bumped plugin to `1.5.18 - Under construction ⚠️`; README and test parity updated. Verify auto-update in Picard, Close/Cancel Close, and XE/EU/idempotence in Picard's actual ScriptParser before marking tested.
