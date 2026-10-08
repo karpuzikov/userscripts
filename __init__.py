@@ -5,7 +5,7 @@ import re
 
 from PyQt6 import QtCore, QtGui, QtWidgets
 
-from picard.plugin3.api import OptionsPage, ScriptParser
+from picard.plugin3.api import BaseAction, OptionsPage, ScriptParser
 
 from .current_artist_names import (
     normalize_album_artist_names,
@@ -20,6 +20,7 @@ from .musicbrainz_title_capitalization import (
 PLUGIN_PRIORITY = -10000
 
 _BARCODE_TOOLBAR_ACTION = None
+_BARCODE_TOOLBAR_WATCHER = None
 _LOOKUP_API = None
 _PENDING_BARCODE_TASKS = []
 
@@ -583,52 +584,129 @@ def _make_barcode_icon(widget):
     return QtGui.QIcon(pixmap)
 
 
-def _install_barcode_lookup_button(api):
-    global _BARCODE_TOOLBAR_ACTION, _LOOKUP_API
+class BarcodeLookupToolsAction(BaseAction):
+    """Persistent Picard 3 Tools menu fallback for the toolbar shortcut."""
 
-    if _BARCODE_TOOLBAR_ACTION is not None:
-        return
+    TITLE = "Barcode / UPC Lookup"
 
-    _LOOKUP_API = api
+    def callback(self, objects):
+        _barcode_only_lookup(self.api, objects)
 
-    window = api.tagger.window
-    action = QtGui.QAction(
-        _make_barcode_icon(window),
-        "Barcode / UPC Lookup",
-        window,
-    )
-    action.setIconText("Barcode Lookup")
-    action.setToolTip("Match by exact Barcode/UPC, then disc count and track number")
-    action.setStatusTip("Match by exact Barcode/UPC, then disc count and track number")
-    action.triggered.connect(lambda _checked=False: _run_barcode_lookup_button(api))
 
-    toolbar_actions = window.toolbar.actions()
+def _place_barcode_action(toolbar, action):
+    """Reinsert exactly once, ideally next to native Lookup."""
+    actions = toolbar.actions()
+    if action in actions:
+        return False
+
     native_lookup = next(
         (
-            existing
-            for existing in toolbar_actions
+            existing for existing in actions
             if existing.text().replace("&", "").strip() == "Lookup"
         ),
         None,
     )
-
-    if native_lookup is not None:
-        index = toolbar_actions.index(native_lookup)
-        if index + 1 < len(toolbar_actions):
-            window.toolbar.insertAction(toolbar_actions[index + 1], action)
-        else:
-            window.toolbar.addAction(action)
+    if native_lookup is None:
+        toolbar.addAction(action)
     else:
-        window.toolbar.addAction(action)
+        index = actions.index(native_lookup)
+        if index + 1 < len(actions):
+            toolbar.insertAction(actions[index + 1], action)
+        else:
+            toolbar.addAction(action)
+    return True
 
-    _BARCODE_TOOLBAR_ACTION = action
-    api.logger.info("Strict Barcode / UPC Lookup toolbar button enabled")
+
+def _install_barcode_lookup_button(api):
+    """Keep the shortcut on the CURRENT Picard toolbar after it is rebuilt."""
+    global _BARCODE_TOOLBAR_ACTION, _LOOKUP_API
+
+    if _LOOKUP_API is not api:
+        return False
+    window = getattr(api.tagger, "window", None)
+    toolbar = getattr(window, "toolbar", None) if window is not None else None
+    if toolbar is None:
+        return False
+
+    if _BARCODE_TOOLBAR_ACTION is None:
+        action = QtGui.QAction(
+            _make_barcode_icon(window),
+            "Barcode / UPC Lookup",
+            window,
+        )
+        action.setObjectName("karpuzikov_barcode_upc_lookup")
+        action.setIconText("Barcode Lookup")
+        action.setToolTip("Match by exact Barcode/UPC, then disc count and track number")
+        action.setStatusTip("Match by exact Barcode/UPC, then disc count and track number")
+        action.triggered.connect(lambda _checked=False: _run_barcode_lookup_button(api))
+        _BARCODE_TOOLBAR_ACTION = action
+
+    inserted = _place_barcode_action(toolbar, _BARCODE_TOOLBAR_ACTION)
+    if inserted:
+        api.logger.info("Barcode / UPC Lookup restored on Picard Actions toolbar")
+    return True
+
+
+class _BarcodeToolbarWatcher(QtCore.QObject):
+    """Notice Picard 3's full toolbar replacement after Options > Toolbar."""
+
+    def __init__(self, api):
+        window = api.tagger.window
+        super().__init__(window)
+        self.api = api
+        self.window = window
+        self.pending = False
+        self.window.installEventFilter(self)
+
+        # Also repairs a toolbar cleared in place (no ChildAdded event).
+        self.check_timer = QtCore.QTimer(self)
+        self.check_timer.setInterval(4000)
+        self.check_timer.timeout.connect(self.refresh)
+        self.check_timer.start()
+        self.schedule()
+
+    def eventFilter(self, watched, event):
+        if watched is self.window and event.type() in (
+            QtCore.QEvent.Type.ChildAdded,
+            QtCore.QEvent.Type.WindowActivate,
+        ):
+            # ChildAdded fires before Picard assigns its new toolbar field.
+            self.schedule()
+        return False
+
+    def schedule(self):
+        if not self.pending:
+            self.pending = True
+            QtCore.QTimer.singleShot(0, self.refresh)
+
+    def refresh(self):
+        self.pending = False
+        if _LOOKUP_API is not self.api:
+            return
+        try:
+            _install_barcode_lookup_button(self.api)
+        except (AttributeError, RuntimeError) as exc:
+            # Picard can be replacing the toolbar during this event.
+            self.api.logger.warning("Barcode Lookup toolbar temporarily unavailable: %s", exc)
+
+    def stop(self):
+        self.check_timer.stop()
+        self.window.removeEventFilter(self)
 
 
 def disable():
-    global _BARCODE_TOOLBAR_ACTION, _LOOKUP_API
+    global _BARCODE_TOOLBAR_ACTION, _BARCODE_TOOLBAR_WATCHER, _LOOKUP_API
 
     api = _LOOKUP_API
+    _LOOKUP_API = None  # Block queued reattachment callbacks after disable.
+
+    if _BARCODE_TOOLBAR_WATCHER is not None:
+        try:
+            _BARCODE_TOOLBAR_WATCHER.stop()
+            _BARCODE_TOOLBAR_WATCHER.deleteLater()
+        except RuntimeError:
+            pass
+        _BARCODE_TOOLBAR_WATCHER = None
 
     if api is not None:
         for task in list(_PENDING_BARCODE_TASKS):
@@ -640,13 +718,14 @@ def disable():
 
         if _BARCODE_TOOLBAR_ACTION is not None:
             try:
-                api.tagger.window.toolbar.removeAction(_BARCODE_TOOLBAR_ACTION)
+                toolbar = getattr(api.tagger.window, "toolbar", None)
+                if toolbar is not None:
+                    toolbar.removeAction(_BARCODE_TOOLBAR_ACTION)
                 _BARCODE_TOOLBAR_ACTION.deleteLater()
-            except Exception:
+            except RuntimeError:
                 pass
 
     _BARCODE_TOOLBAR_ACTION = None
-    _LOOKUP_API = None
 
 
 FEATURES = (
@@ -743,4 +822,8 @@ def enable(api):
     api.register_options_page(ScriptsOptionsPage)
     api.register_album_metadata_processor(process_album, priority=PLUGIN_PRIORITY)
     api.register_track_metadata_processor(process_track, priority=PLUGIN_PRIORITY)
+    global _LOOKUP_API, _BARCODE_TOOLBAR_WATCHER
+    _LOOKUP_API = api
+    api.register_tools_menu_action(BarcodeLookupToolsAction)
+    _BARCODE_TOOLBAR_WATCHER = _BarcodeToolbarWatcher(api)
     _install_barcode_lookup_button(api)
