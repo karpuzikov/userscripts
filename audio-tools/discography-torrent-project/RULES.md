@@ -1035,6 +1035,17 @@ This section supersedes older featured-remix, contextual-remix, and generic Edit
 - Strong structural conflicts such as Radio vs Extended or Acoustic vs Instrumental remain eligible for semantic pre-blocking unless exact identical Chromaprint overrides the wording.
 
 
+## v0.4.0 experimental ASCII terminal branch - test-only requirements
+
+- `dea-lightweight-ascii-ui-test` is strictly isolated from `dea-lightweight-modern`, and remains `0.4.0 - Under construction ⚠️` until separately approved.
+- Real ASCII terminal UI must use native mouse and keyboard terminal event handling, not WebView2/HTML/CSS disguised as ASCII. Textual provides mouse-clickable fields, tree navigation, release and track rows, progress, logging and scroll.
+- The same Python discovery/classification/fingerprinting/optimizer/copy/undo functions must remain the sole source of decision correctness.
+- Full Map lists every scanned release in Album, EP and Single columns. Changes lists only relevant NEW additions/replacements and OLD removals; SKIP remains accessible through Full Map. Row click gives details, track click shows acoustic carriers, and related release rows navigate.
+- Keep separate reviewed OLD+NEW and NEW-only non-destructive copy flows. Disable copy after manual Ignore/Restore until Re-Analyze passes.
+- Provide folder/open-location controls before displayed source, destination and release file paths; allow typed input and a mouse-driven terminal folder tree.
+- Limitations: SVG relationship curves are not drawable in a normal terminal. Provide clickable relations, retain ability to compare/reference WebView build, and never claim exact pixel-level interface parity.
+- A repeatable Textual pilot test must validate mouse button actions, data rendering, main modal navigation, and disabled export in read-only map mode. Production parity still needs full Windows Skrillex validation.
+
 ## v0.3.9 Release Map excluded-only visibility - authoritative
 
 - **Every analyzed release** must remain inspectable in **Full Map**, including zero-wanted-track releases excluded at the first classification stage. Never use membership in an acoustic recording group as a prerequisite for showing an analyzed release.
