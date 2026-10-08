@@ -1,9 +1,9 @@
 # ArchiveMedia continuity
 
 ## TLDR / current checkpoint (2026-10-08)
-- Product: Archive Media Compressor. **Current development build v6.1.0 - Under construction ⚠️**, branch `archivemedia-rclone`; main's last prior build is v6.0.13.
+- Product: Archive Media Compressor. **Current development build v6.1.1 - Under construction ⚠️**, branch `archivemedia-rclone`; main's last prior build is v6.0.13.
 - Product root: `archive-media-compressor/` inside `karpuzikov/userscripts`.
-- Downloadable single-file build: `archive-media-compressor/ArchiveMedia v6.1.0.bat` on the development branch.
+- Downloadable single-file build: `archive-media-compressor/ArchiveMedia v6.1.1.bat` on the development branch.
 - Editable embedded source: `archive-media-compressor/source/ArchiveMedia.ps1`.
 - Documentation: `archive-media-compressor/README.md`; GitHub index: monorepo root `README.md`.
 - Standard: canonical root `SOFTWARE_RULES.md` applies. Re-read it and current UXDT guidelines before further UI work; no separate project RULES.md currently exists.
@@ -35,13 +35,13 @@
 - BAT startup bootstraps WinGet when missing and loops packages `Microsoft.PowerShell`, `Gyan.FFmpeg`, `ImageMagick.ImageMagick`, `Rclone.Rclone`, updating installed software.
 - BAT includes base64 UTF-8 PowerShell source, decodes to a per-run temporary script, uses PowerShell parser to fail fast on syntax problems, launches in STA PowerShell 7, removes bootstrap temp after exit.
 - Source from `source/ArchiveMedia.ps1` must exactly match embedded BAT payload for each code revision.
-- Avoid the v6.0.13 architecture that rewrote damaged source at runtime. v6.1.0 includes a clean repaired source, notably `foreach ($entry in $img.Palette.Entries)`.
+- Avoid the v6.0.13 architecture that rewrote damaged source at runtime. v6.1.1 includes a clean repaired source, notably `foreach ($entry in $img.Palette.Entries)`.
 
 ## Validation performed in this chat
 - Read original v6.0.13 BAT; decoded embedded ZIP and extracted original ~63KB PowerShell engine; applied previous runtime patches directly to editable source before new backend work.
 - JS-based static brace/bracket scan of edited PS1 reported zero mismatches/unclosed delimiters; **not a substitute for the real Windows PowerShell parser**.
-- Verified v6.1.0 BAT's decoded UTF-8 PowerShell payload is **byte-for-byte identical** to `source/ArchiveMedia.ps1`, 77,367 bytes.
-- README and root GitHub version/download row point to v6.1.0 **development branch**, not main.
+- Verified v6.1.1 BAT's decoded UTF-8 PowerShell payload is **byte-for-byte identical** to `source/ArchiveMedia.ps1`, 77,367 bytes.
+- README and root GitHub version/download row point to v6.1.1 **development branch**, not main.
 - **Not tested**: PowerShell parser/runtime on Windows, WinGet rclone install/update, real `yandex:` transfer, upload MD5 behavior, resume after interruption, >limit files, collision and error paths. No user data touched.
 
 ## Known caveats / blockers
@@ -57,8 +57,17 @@
 - No GitHub Actions workflows created. Do not add routine userscript validation workflows.
 
 ## Next actions
-1. Run BAT `ArchiveMedia v6.1.0.bat` under PowerShell 7/Windows 11; confirm WinGet/rclone bootstrap, parser and input prompts.
+1. Run BAT `ArchiveMedia v6.1.1.bat` under PowerShell 7/Windows 11; confirm WinGet/rclone bootstrap, parser and input prompts.
 2. Test Yandex->local, local->Yandex, Yandex->Yandex against a **small disposable** test folder with JPG, PNG alpha, video, and unknown file. Confirm exact format and same relative path outputs, MD5 and completion journal.
 3. Interrupt transfers mid-copy and after upload but before journal; rerun and verify no corrupted output and no unnecessary re-encoding.
 4. Fix any failures. Add collision output-name handling, empty directories, higher optional cloud concurrency while respecting bounded cache and four-encode ceiling if needed.
 5. Audit whole-product software rules, UXDT checklist and test status, then update the BAT, README and this file in the same checkpoint; merge only after tests complete; remove **Under construction ⚠️** only after user explicitly says tested/done.
+
+## 2026-10-08 GPT-6 review checkpoint
+- Development build raised to **6.1.1 - Under construction ⚠️** on `archivemedia-rclone`. The previous v6.1.0 build remains only as an older snapshot.
+- Confirmed from rclone's official documentation that `moveto` overwrites destination files by default; added `--immutable` to final remote move, with a pre-move destination check and post-move hash verification. This is still not a tested atomic create-if-absent guarantee on Yandex; cross-process races remain a limitation.
+- Fixed cloud output basename collisions: sort input files with the original JPEG/MP4 priority; reserve verified target names; append `[source-extension]` and numbered suffixes when needed, including after resume.
+- Reject Windows drive-relative paths such as `D:Pictures` rather than interpreting them as a cloud remote.
+- Regenerated the self-contained `ArchiveMedia v6.1.1.bat` from the changed PowerShell source. Decoded embedded UTF-8 payload matched source byte-for-byte (79,688 bytes). JS lexical bracket/string balance check passed. Real PowerShell 7 parsing and Yandex integration were **not executed** here.
+- Remaining blockers: no real Windows/Yandex live test; cloud encoding serial (below desired 4); interrupted in-flight transfers may repeat work; over-limit files fail closed; cloud empty directories not retained; potential remote race before move, no verified atomic no-replace guarantee; full UXDT/user-rules audit needs live review.
+- Next: run Windows smoke tests on disposable local/Yandex files, check collisions/resume, optimize 4-concurrent cloud processing with cache budget, and only then mark ready for merging.
