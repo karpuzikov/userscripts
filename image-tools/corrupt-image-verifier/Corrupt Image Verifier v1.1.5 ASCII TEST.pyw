@@ -197,8 +197,14 @@ def record_undo_move(run_id, sources, original, moved_to):
         path = undo_manifest_path()
         data = load_undo_manifest()
         if not data or data.get("run_id") != run_id:
+            if data and data.get("moves"):
+                history = path.parent / "history"
+                history.mkdir(parents=True, exist_ok=True)
+                past_id = "".join(ch for ch in str(data.get("run_id", "previous"))
+                                  if ch.isalnum() or ch in "-_.")
+                _atomic_write_json(history / (past_id + ".json"), data)
             data = {
-                "version": 1,
+                "version": 2,
                 "run_id": run_id,
                 "created_at": datetime.now().astimezone().isoformat(timespec="seconds"),
                 "sources": [str(p) for p in sources],
@@ -209,6 +215,24 @@ def record_undo_move(run_id, sources, original, moved_to):
             "moved_to": str(moved_to),
         })
         _atomic_write_json(path, data)
+
+
+def retract_undo_move(original, moved_to):
+    """Discard a pending move record if the original was never removed."""
+    with UNDO_LOCK:
+        path = undo_manifest_path()
+        data = load_undo_manifest()
+        if not data:
+            return
+        data["moves"] = [
+            m for m in data["moves"]
+            if not (m.get("original") == str(original)
+                    and m.get("moved_to") == str(moved_to))
+        ]
+        if data["moves"]:
+            _atomic_write_json(path, data)
+        else:
+            path.unlink(missing_ok=True)
 
 
 def save_remaining_undo_moves(data, remaining):
@@ -520,6 +544,8 @@ def move_preserving_structure(source_root, file_path, run_id=None, sources=None,
         # In case original remains, do not leave an unrecorded destination.
         if original.exists():
             dest.unlink(missing_ok=True)
+            if run_id is not None:
+                retract_undo_move(original, dest)
         raise
     return dest
 
@@ -575,6 +601,8 @@ def collect_images(source_root):
                     continue
             except OSError:
                 pass
+            if d.upper().endswith("_CORRUPTED"):
+                continue
             kept_dirs.append(d)
         dirs[:] = kept_dirs
 
@@ -1306,6 +1334,9 @@ def launch_gui():
             if not path.is_dir():
                 messagebox.showerror(APP_NAME, "The selected source folder does not exist.")
                 return
+            if path.name.upper().endswith("_CORRUPTED"):
+                messagebox.showerror(APP_NAME, "Quarantine folders cannot be added as scan sources.")
+                return
 
             # Avoid duplicate or nested scans. If a broader parent is added, replace
             # any already-listed child sources with that parent.
@@ -1795,6 +1826,7 @@ def launch_gui():
 
                     elif kind == "undo_finished":
                         _, restored, failed = item
+                        self.clear_scan_review()
                         self.set_controls()
                         self.stage_var.set("STAGE: UNDO FINISHED")
                         self.progress_var.set(100 if restored or failed else 0)
