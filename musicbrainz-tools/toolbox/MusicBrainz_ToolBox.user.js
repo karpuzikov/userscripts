@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MusicBrainz ToolBox
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.0.56
+// @version      1.0.57
 // @description  Combined MusicBrainz release-editor, recording, barcode, Spotify/Apple Music linking, search, cover-art, Disc ID, and duplicate-edit tools.
 // @author       karpuzikov
 // @license      MIT
@@ -2955,7 +2955,7 @@
     // Recording Data to Tracks
     // Source merged from: musicbrainz-tools/recording-artist-credits-to-tracks/MusicBrainz_Recording_Artist_Credits_to_Tracks.user.js
     // ============================================================================
-    if (__mbToolBoxShouldRun(["https://musicbrainz.org/release/add*","https://musicbrainz.org/release/*/edit*","https://beta.musicbrainz.org/release/add*","https://beta.musicbrainz.org/release/*/edit*"], [])) {
+    if (__mbToolBoxShouldRun(["https://musicbrainz.org/release/add*","https://musicbrainz.org/release/*/edit*","https://beta.musicbrainz.org/release/add*","https://beta.musicbrainz.org/release/*/edit*"], ["https://musicbrainz.org/release/*/edit-relationships*","https://beta.musicbrainz.org/release/*/edit-relationships*"])) {
     (() => {
         'use strict';
     
