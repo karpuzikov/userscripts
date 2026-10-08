@@ -1,5 +1,5 @@
 @echo off
-setlocal
+setlocal EnableExtensions EnableDelayedExpansion
 chcp 65001 >nul
 title Duplicate Edition Analyzer Lightweight ASCII v0.4.0
 cd /d "%~dp0"
@@ -12,13 +12,13 @@ if not exist "%DEA_SCRIPT%" (
 where py >nul 2>&1
 if %errorlevel% equ 0 (
   py -3 "%DEA_SCRIPT%" --ascii-ui
-  set "RET=%errorlevel%"
+  set "RET=!errorlevel!"
   goto :end
 )
 where python >nul 2>&1
 if %errorlevel% equ 0 (
   python "%DEA_SCRIPT%" --ascii-ui
-  set "RET=%errorlevel%"
+  set "RET=!errorlevel!"
   goto :end
 )
 echo ERROR: No working Python command found. Install Python 3.11 or newer.
