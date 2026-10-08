@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MusicBrainz ToolBox
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.0.58
+// @version      1.0.59
 // @description  Combined MusicBrainz release-editor, recording, barcode, Spotify/Apple Music linking, search, cover-art, Disc ID, and duplicate-edit tools.
 // @author       karpuzikov
 // @license      MIT
@@ -17086,52 +17086,99 @@ Leave empty to use the default (${srcName} name, or MB's most-frequent existing 
 
       // Toolbox policy: a new Work may only be staged after a full and
       // successful title search. Other recordings may already use that Work.
-      let toolboxWorkRequestAt = 0;
-      async function toolboxVerifyMissingWork(sourceTitle) {
-        const norm = x => String(x || "").normalize("NFKD")
-            .replace(/[\u0300-\u036f]/g, "").toLowerCase()
-            .replace(/[^\p{L}\p{N}]+/gu, " ").trim();
-        const originalTitle = String(sourceTitle || "").trim();
-        const withoutFeaturing = originalTitle.replace(/\s*[([]\s*(?:feat(?:uring)?|ft)\.?\s+[^\])]+[)\]]/gi, "").trim();
-        const titles = [...new Map([originalTitle, withoutFeaturing]
-            .filter(Boolean).map(t => [norm(t), t])).values()];
-        if (!titles.length) {
-            log.warn("Cannot create unnamed Work; review manually.");
-            return false;
-        }
-        for (const title of titles) {
-            const escaped = title.replace(/([+\-!(){}\[\]^"~*?:\\/]|&&|\|\|)/g, "\\$1");
-            const url = "/ws/2/work?query=" + encodeURIComponent('work:"' + escaped + '"') + "&fmt=json&limit=100";
-            const waitMs = Math.max(0, 1700 - (Date.now() - toolboxWorkRequestAt));
-            if (waitMs) await __mbToolBoxSleep(waitMs);
-            toolboxWorkRequestAt = Date.now();
-            let json;
-            try {
-                const res = await __mbToolBoxFetch(url, {credentials: "same-origin", headers: {Accept: "application/json"}});
-                if (!res.ok) throw Error("HTTP " + res.status);
-                json = await res.json();
-            } catch (e) {
-                log.warn('Skipped creating "' + title + '": existing Works could not be verified (' + e.message + ').');
-                return false;
-            }
-            const count = Number(json?.["work-count"]);
-            if (!Number.isSafeInteger(count) || count < 0 || !Array.isArray(json.works)) {
-                log.warn('Skipped creating "' + title + '": invalid Work search.');
-                return false;
-            }
-            if (count > json.works.length) {
-                log.warn('Skipped creating "' + title + '": incomplete Work search; review manually.');
-                return false;
-            }
-            const exact = json.works.filter(w => norm(w.title) === norm(title));
-            if (exact.length) {
-                log.warn('Skipped creating "' + title + '": ' + exact.length + ' existing same-title Work(s); review manually.');
-                return false;
-            }
-        }
-        return true;
-      }
 
+      let toolboxWorkRequestAt = 0;
+      const toolboxStagedTitles = new Set();
+      const toolboxWorkQueryCache = new Map();
+      const toolboxNormalizeTitle = x => String(x || "").normalize("NFKD")
+        .replace(/[\u0300-\u036f]/g, "").toLowerCase()
+        .replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+      const toolboxLucene = x => String(x).replace(/([+\-!(){}\[\]^"~*?:\\/]|&&|\|\|)/g, "\\$1");
+      async function toolboxWorkJson(url) {
+        const waitMs = Math.max(0, 1700 - (Date.now() - toolboxWorkRequestAt));
+        if (waitMs) await __mbToolBoxSleep(waitMs);
+        toolboxWorkRequestAt = Date.now();
+        const response = await __mbToolBoxFetch(url, {
+          credentials: "same-origin", headers: {Accept: "application/json"}
+        });
+        if (!response.ok) throw Error("MusicBrainz Work search HTTP " + response.status);
+        return response.json();
+      }
+      async function toolboxSearchAllWorks(query, label) {
+        const matches = [];
+        const limit = 100;
+        let offset = 0;
+        for (;;) {
+          const url = "/ws/2/work?query=" + encodeURIComponent(query) +
+            "&fmt=json&limit=" + limit + "&offset=" + offset;
+          const json = await toolboxWorkJson(url);
+          const count = Number(json?.["work-count"]);
+          if (!Number.isSafeInteger(count) || count < 0 || !Array.isArray(json.works)) {
+            throw Error("Invalid Work search result for " + label);
+          }
+          matches.push(...json.works);
+          offset += json.works.length;
+          if (offset >= count) return matches;
+          if (!json.works.length || json.works.length < limit) {
+            throw Error("Incomplete Work search for " + label + " (" + offset + "/" + count + ")");
+          }
+        }
+      }
+      async function toolboxResolveWork(workTitle, creditedNames) {
+        const title = String(workTitle || "").trim();
+        if (!title) return {status:"review", reason:"Missing Work title"};
+        const key = toolboxNormalizeTitle(title);
+        if (toolboxStagedTitles.has(key)) {
+          return {status:"review", reason:"A Work with this title is already staged"};
+        }
+        const names = [...new Map((creditedNames || []).map(x => String(x || "").trim())
+          .filter(Boolean).map(x => [toolboxNormalizeTitle(x), x])).values()];
+        try {
+          let works = toolboxWorkQueryCache.get(key);
+          if (!works) {
+            works = (await toolboxSearchAllWorks('work:"' + toolboxLucene(title) + '"', title))
+              .filter(w => w.id && toolboxNormalizeTitle(w.title) === key);
+            toolboxWorkQueryCache.set(key,works);
+          }
+          if (!works.length) return {status:"new"};
+          if (!names.length) return {
+            status:"review",reason: works.length+" same-title Works; no credited author names to verify"
+          };
+          let candidates = works;
+          if (works.length > 8) {
+            const query = 'work:"' + toolboxLucene(title) + '" AND (' +
+              names.map(name => 'artist:"' + toolboxLucene(name) + '"').join(" OR ") + ')';
+            const found = await toolboxSearchAllWorks(query,title+" + authors");
+            const allowed = new Set(works.map(w => w.id));
+            const matched = new Set(found.filter(w => allowed.has(w.id) &&
+              toolboxNormalizeTitle(w.title) === key).map(w => w.id));
+            candidates = works.filter(w => matched.has(w.id));
+          }
+          if (!candidates.length || candidates.length > 8) {
+            return {status:"review",reason:works.length+" same-title Works; authors ambiguous"};
+          }
+          const possible = [];
+          const known = new Set(names.map(toolboxNormalizeTitle));
+          for (const candidate of candidates) {
+            const details = await toolboxWorkJson("/ws/2/work/" + encodeURIComponent(candidate.id) +
+              "?inc=artist-rels&fmt=json");
+            const matches = (details.relations || []).some(rel =>
+              rel.artist && ["writer","composer","lyricist","librettist"].includes(
+                toolboxNormalizeTitle(rel.type)
+              ) && [rel.artist.name,rel["target-credit"],rel["source-credit"]]
+                .some(name => name && known.has(toolboxNormalizeTitle(name)))
+            );
+            if (matches) possible.push(candidate);
+          }
+          if (possible.length === 1) {
+            return {status:"existing", mbid:possible[0].id, title:possible[0].title};
+          }
+          return {status:"review",reason:works.length+
+            " same-title Works; "+possible.length+" have matching author credits"};
+        } catch(error) {
+          return {status:"review",reason:"MusicBrainz Work verification failed: "+error.message};
+        }
+      }
       if (createWorksMode === "off") {
         const workOnly = [...tracklistRels || [], ...artistRoles || []].filter((r) => WORK_ONLY_ARTIST_RELS.includes(r.linkType));
         if (workOnly.length) log.skip(`"Use works" is off \u2014 skipped ${workOnly.length} work-level credit(s) (${[...new Set(workOnly.map((r) => r.linkType))].join(", ")})`);
@@ -17193,7 +17240,7 @@ Leave empty to use the default (${srcName} name, or MB's most-frequent existing 
       const createdWorkRecGids = /* @__PURE__ */ new Set();
       for (const [recGid, entries] of workOnlyByGid) {
         const recEntity = entries[0]?.recEntity ?? recordingByGid.get(recGid);
-        const trackTitle = entries[0]?.role.track.title || recEntity?.name || recGid;
+        const trackTitle = recEntity?.name || entries[0]?.role.track.title || recGid;
         const trackPos = entries[0]?.role.track.position ?? "";
         if (!recEntity) continue;
         const hasExistingWork = editorWorkByRecGid.has(recGid);
@@ -17213,12 +17260,32 @@ Leave empty to use the default (${srcName} name, or MB's most-frequent existing 
           continue;
         }
         if (!workEntity) {
-          if (!(await toolboxVerifyMissingWork(trackTitle))) continue;
-          if (createdWorkRecGids.has(recGid)) {
+          const writerNames = entries.filter(e => ["writer", "composer", "lyricist", "librettist"].some(
+            type => String(e.role.linkType || "").toLowerCase().includes(type)
+          )).map(e => e.role.artist?.name).filter(Boolean);
+          const resolution = await toolboxResolveWork(trackTitle, writerNames);
+          if (resolution.status === "review") {
+            log.warn('Track ' + trackPos + ' "' + trackTitle + '": ' +
+              resolution.reason + '. No duplicate Work staged.');
+            continue;
+          }
+          if (resolution.status === "existing") {
+            try {
+              workEntity = await fetchMBEntity(resolution.mbid);
+              if (workEntity?.entityType !== "work") throw Error("Expected a Work entity");
+              dispatchRelationship(re, recEntity, workEntity, recordingOfLinkTypeId, "", null, trackPos);
+              log.info('Track ' + trackPos + ': linked existing Work "' + resolution.title + '".');
+            } catch(error) {
+              log.warn('Track ' + trackPos + ': could not stage verified existing Work: ' + error.message);
+              continue;
+            }
+          }
+          if (!workEntity && createdWorkRecGids.has(recGid)) {
             log.error(`Track ${trackPos} "${trackTitle}": a work was already created for this recording in this run \u2014 skipping to avoid a duplicate work`);
             failed++;
             continue;
           }
+          if (!workEntity) {
           const newWorkId = re.getRelationshipStateId();
           workEntity = {
             _fromBatchCreateWorksDialog: true,
@@ -17231,7 +17298,7 @@ Leave empty to use the default (${srcName} name, or MB's most-frequent existing 
             iswcs: [],
             languages: [],
             name: trackTitle,
-            typeID: null
+            typeID: 17
           };
           if (MB2.mergeLinkedEntities) {
             MB2.mergeLinkedEntities({ work: { [newWorkId]: workEntity } });
@@ -17266,6 +17333,8 @@ Leave empty to use the default (${srcName} name, or MB's most-frequent existing 
           added++;
           tickProgress();
           workEntity = getWorkFromEditorState(recEntity) || workEntity;
+          toolboxStagedTitles.add(toolboxNormalizeTitle(trackTitle));
+          }
         }
         for (const { role } of entries) {
           const mbUrl = confirmedMbUrl(role.artist);
