@@ -609,6 +609,12 @@ $enumOptions.IgnoreInaccessible = $true
 $enumOptions.ReturnSpecialDirectories = $false
 $enumOptions.AttributesToSkip = [IO.FileAttributes]0
 
+$allFiles = if ($ArchiveBatch) {
+    if (-not (Test-Path -LiteralPath $env:ARCHIVEMEDIA_BATCH_FILE -PathType Leaf)) {
+        throw "Batch input file is missing: $env:ARCHIVEMEDIA_BATCH_FILE"
+    }
+    @([IO.FileInfo]::new($env:ARCHIVEMEDIA_BATCH_FILE))
+} else {
 $allFiles = @(
     [IO.Directory]::EnumerateFiles($InputRoot, "*", $enumOptions) |
     Where-Object {
@@ -632,12 +638,15 @@ $allFiles = @(
         @{ Expression = { $_.Extension.ToLowerInvariant() }; Ascending = $true }
 )
 
+
+}
+
 if ($allFiles.Count -eq 0) {
     throw "No files found under: $InputRoot"
 }
 
 # Re-create directory tree, including empty folders.
-if ($OperationMode -eq "Copy") {
+if ($OperationMode -eq "Copy" -and -not $ArchiveBatch) {
     foreach ($dirPath in [IO.Directory]::EnumerateDirectories($InputRoot, "*", $enumOptions)) {
         if ($dirPath.StartsWith($outputPrefix, [StringComparison]::OrdinalIgnoreCase)) { continue }
         $relDir = Get-RelativePathSafe $InputRoot $dirPath
@@ -1759,6 +1768,17 @@ elseif ($terminated -or $pendingTasks.Count -gt 0) {
 else {
     Write-Host ""
     Write-Host "All $($successes.Count) files completed successfully in $OperationMode mode." -ForegroundColor Green
+}
+
+if ($ArchiveBatch) {
+    $payload = [pscustomobject]@{
+        Success = (-not $terminated -and @($failures).Count -eq 0 -and @($successes).Count -eq @($tasks).Count)
+        Results = @($results)
+        Error = [string]$processingException
+    }
+    $payload | ConvertTo-Json -Depth 7 | Set-Content -LiteralPath $env:ARCHIVEMEDIA_BATCH_RESULT -Encoding UTF8
+    if (-not $payload.Success) { exit 1 }
+    exit 0
 }
 
 # Keep the final result visible when ArchiveMedia is launched by double-click.
