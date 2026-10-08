@@ -183,20 +183,20 @@ class PicardAlbumRegressions(unittest.TestCase):
             "Add_EP_Single_Suffix.txt",
         )
         arity = {
-            "replace": {3}, "rreplace": {3}, "rsearch": {2},
+            "replace": {3}, "rreplace": {3}, "rsearch": {2, 3},
             "map": {2, 3}, "foreach": {2, 3},
             "set": {2}, "setmulti": {2, 3}, "if": {2, 3},
         }
         for filename in script_files:
             source = (REPO / "picard-tools" / "scripts" / filename).read_text(encoding="utf-8")
-            for match in re.finditer(r"\\$([a-z_]+)\\(", source):
+            for match in re.finditer(r"\$([a-z_]+)\(", source):
                 name = match.group(1)
                 if name not in arity:
                     continue
                 index, nesting, args = match.end(), 1, 1
                 while index < len(source) and nesting:
                     char = source[index]
-                    if char == "\\\\":
+                    if char == "\\":
                         index += 2
                         continue
                     if char == "(":
