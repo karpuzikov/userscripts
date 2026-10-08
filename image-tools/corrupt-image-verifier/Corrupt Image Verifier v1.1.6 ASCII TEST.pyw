@@ -1186,23 +1186,29 @@ def launch_gui():
             self.remove_btn.pack(side="left", padx=(8, 0))
             self.clear_btn = self._ascii_button(source_buttons, "[ Clear ]", self.clear_sources)
             self.clear_btn.pack(side="left", padx=(8, 0))
-            self._ascii_label(source_buttons, textvariable=self.plan_var, size=9, fg=MUTED).pack(
-                side="right", padx=(12, 0)
+            self._ascii_label(outer, textvariable=self.plan_var, size=9, fg=MUTED).pack(
+                anchor="w", pady=(6, 0)
             )
 
             # Actions ----------------------------------------------------------------
             action_frame = tk.Frame(outer, bg=BG)
             action_frame.pack(fill="x", pady=(18, 15))
-            self.start_btn = self._ascii_button(action_frame, "[ Scan Images ]", self.start)
+            top_actions = tk.Frame(action_frame, bg=BG)
+            top_actions.pack(fill="x")
+            self.start_btn = self._ascii_button(top_actions, "[ Scan Images ]", self.start)
             self.start_btn.pack(side="left")
-            self.move_btn = self._ascii_button(action_frame, "[ Move Confirmed Corrupt ]",
-                                               self.start_move, state="disabled")
-            self.move_btn.pack(side="left", padx=(10, 0))
-            self.stop_btn = self._ascii_button(action_frame, "[ Stop ]", self.stop, state="disabled")
+            self.stop_btn = self._ascii_button(top_actions, "[ Stop ]", self.stop, state="disabled")
             self.stop_btn.pack(side="left", padx=(10, 0))
-            self.undo_btn = self._ascii_button(action_frame, "[ Undo Last Run ]", self.start_undo)
+            self.undo_btn = self._ascii_button(top_actions, "[ Undo Last Run ]", self.start_undo)
             self.undo_btn.pack(side="left", padx=(10, 0))
-            self._ascii_label(action_frame, text=APP_STATUS, size=9, fg=MUTED).pack(side="right")
+            bottom_actions = tk.Frame(action_frame, bg=BG)
+            bottom_actions.pack(fill="x", pady=(8, 0))
+            self.move_btn = self._ascii_button(bottom_actions, "[ Move Confirmed Corrupt ]",
+                                               self.start_move, state="disabled")
+            self.move_btn.pack(side="left")
+            self._ascii_label(bottom_actions, text=APP_STATUS, size=9, fg=MUTED).pack(
+                side="left", padx=(12, 0)
+            )
 
             # Progress ---------------------------------------------------------------
             self._ascii_label(outer, text="PROGRESS", size=11).pack(anchor="w", pady=(0, 5))
@@ -1239,10 +1245,10 @@ def launch_gui():
                     padx=16,
                     pady=8,
                 )
-                cell.grid(row=0, column=i, sticky="nsew", padx=(0, 0))
+                cell.grid(row=i // 4, column=i % 4, sticky="nsew", pady=(0, 5))
                 self._ascii_label(cell, text=label.upper(), size=9, fg=MUTED).pack(anchor="w")
                 self._ascii_label(cell, textvariable=var, size=12).pack(anchor="w", pady=(2, 0))
-                stats.columnconfigure(i, weight=1)
+                stats.columnconfigure(i % 4, weight=1)
 
             # Review findings before any state-changing operation.
             self._ascii_label(outer, text="SCAN RESULTS - REVIEW BEFORE MOVING", size=11).pack(
