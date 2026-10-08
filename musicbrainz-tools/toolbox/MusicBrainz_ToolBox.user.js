@@ -54,6 +54,8 @@
         }
     }
 
+    const __mbToolBoxStagedWorkTitles = new Set();
+
     const __mbToolBoxMusicBrainzIconSvg =
         '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 25 28" aria-hidden="true">' +
         '<polygon fill="#ba478f" points="12 0 0 7 0 21 12 28 12 0"/>' +
@@ -17100,7 +17102,7 @@ Leave empty to use the default (${srcName} name, or MB's most-frequent existing 
       // successful title search. Other recordings may already use that Work.
 
       let toolboxWorkRequestAt = 0;
-      const toolboxStagedTitles = new Set();
+      const toolboxStagedTitles = __mbToolBoxStagedWorkTitles;
       const toolboxWorkQueryCache = new Map();
       const toolboxNormalizeTitle = x => String(x || "").normalize("NFKD")
         .replace(/[\u0300-\u036f]/g, "").toLowerCase()
@@ -19312,7 +19314,7 @@ Leave empty to use the default (${srcName} name, or MB's most-frequent existing 
       b._icon = ORIG_ICON[s.name] || SRC_ICON[s.name] || s.name;
       b.innerHTML = b._icon;
       b.dataset.src = s.name;
-      b.title = s.url ? `Import credits from ${s.name}  \xB7  right-click to open the ${s.name} page` : "Import remixer credits derived from the track titles";
+      b.title = s.name === "Apple" ? "Import Apple Music credits. Use the optional song URL for a single track, or leave blank for the album/barcode." : s.url ? `Import credits from ${s.name}  \xB7  right-click to open the ${s.name} page` : "Import remixer credits derived from the track titles";
       b.addEventListener("click", () => {
         if (importing) {
           if (b.classList.contains("importing")) cancelRun();
@@ -19339,7 +19341,7 @@ Leave empty to use the default (${srcName} name, or MB's most-frequent existing 
     toolboxSongInput.inputMode = "url";
     toolboxSongInput.autocomplete = "off";
     toolboxSongInput.placeholder = "https://music.apple.com/us/song/title/1685732274";
-    toolboxSongInput.title = "Paste a song URL and select the Apple icon to import only that song. Leave blank for an album.";
+    toolboxSongInput.title = "Paste a song URL and select the Apple icon to import only that song. Leave blank for an album. Select create needed under Use works to stage missing Works.";
     toolboxSongInput.style.cssText = "flex:1 1 220px;max-width:350px;min-width:160px;padding:6px;border:1px solid var(--mbu-border);border-radius:4px;background:var(--mbu-bg);color:inherit;";
     toolboxSongInput.addEventListener("input", () => toolboxSongInput.setCustomValidity(""));
     toolboxSongInput.addEventListener("change", () => {
