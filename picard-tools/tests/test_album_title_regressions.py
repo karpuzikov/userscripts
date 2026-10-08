@@ -20,6 +20,7 @@ from musicbrainz_title_capitalization import (  # noqa: E402
     capitalize_release_title,
     capitalize_track_title,
     normalize_europe_release_country,
+    _is_digital_release,
     musicbrainz_english_title_case,
 )
 
@@ -223,6 +224,82 @@ class PicardAlbumRegressions(unittest.TestCase):
         self.assertLess(order.index("format_multiple_artists"), order.index("unicode_to_ascii"))
         self.assertLess(order.index("unicode_to_ascii"), order.index("add_ep_single_suffix"))
 
+    def test_digital_release_deletes_country_without_changing_physical(self):
+        for medium, expected in (
+            ("Digital Media", None),
+            ("digital media", None),
+            ("2×Digital Media", None),
+            ("2x Digital Media", None),
+            ("CD", "EU"),
+            ("Vinyl", "EU"),
+            ("CD + Digital Media", "EU"),
+            ("(unknown)", "EU"),
+            ("", "EU"),
+        ):
+            with self.subTest(medium=medium):
+                metadata = {"media": medium, "releasecountry": "XE",
+                            "album": "Sample", "title": "Sample", "language": "eng"}
+                node = {"title": "Sample", "text-representation": {"language": "eng"}}
+                capitalize_release_title(_API(), metadata, node)
+                capitalize_track_title(_API(), metadata, {}, node)
+                self.assertEqual(metadata.get("releasecountry"), expected)
+
+    def test_release_node_uses_all_medium_formats(self):
+        sample = {"media": "Digital Media", "releasecountry": "US"}
+        both_digital = {"media": [{"format": "Digital Media"},
+                                  {"format": "Digital Media"}]}
+        mixed = {"media": [{"format": "Digital Media"},
+                           {"format": "CD"}]}
+        missing = {"media": [{"format": "Digital Media"}, {}]}
+        self.assertTrue(_is_digital_release(sample, both_digital))
+        self.assertFalse(_is_digital_release(sample, mixed))
+        self.assertFalse(_is_digital_release(sample, missing))
+        normalize_europe_release_country(sample, mixed)
+        self.assertEqual(sample["releasecountry"], "US")
+        normalize_europe_release_country(sample, both_digital)
+        self.assertNotIn("releasecountry", sample)
+
+    def test_digital_file_country_is_marked_for_deletion(self):
+        class TrackedMetadata(dict):
+            def __init__(self, values):
+                super().__init__(values)
+                self.deleted_tags = []
+
+            def delete(self, name):
+                self.deleted_tags.append(name)
+                self.pop(name, None)
+
+        metadata = TrackedMetadata({"media": "Digital Media", "releasecountry": "XE"})
+        normalize_europe_release_country(metadata)
+        self.assertEqual(metadata.deleted_tags, ["releasecountry"])
+        self.assertNotIn("releasecountry", metadata)
+        # Picard must still mark old file tags for deletion when the value was
+        # previously removed from metadata by another tagging step.
+        normalize_europe_release_country(metadata)
+        self.assertEqual(metadata.deleted_tags, ["releasecountry", "releasecountry"])
+
+    def test_digital_release_clears_country_in_picard_runtime(self):
+        try:
+            from picard.metadata import Metadata
+            from picard.script import ScriptParser
+        except ImportError:
+            self.skipTest("Picard runtime unavailable; run inside Picard's Python environment")
+        source = (REPO / "picard-tools" / "scripts" /
+                  "English_Title_Capitalization.txt").read_text(encoding="utf-8")
+        for media, expected in (("Digital Media", ""), ("2×Digital Media", ""),
+                                ("CD", "EU"), ("Vinyl", "EU")):
+            with self.subTest(media=media):
+                metadata = Metadata()
+                metadata["media"] = media
+                metadata["releasecountry"] = "XE"
+                metadata["album"] = "Sample"
+                metadata["title"] = "Sample"
+                metadata["language"] = "eng"
+                ScriptParser().eval(source, metadata)
+                self.assertEqual(metadata.get("releasecountry", ""), expected)
+                ScriptParser().eval(source, metadata)
+                self.assertEqual(metadata.get("releasecountry", ""), expected)
+
     def test_region_code_europe_display_preference(self):
         # Only exact XE in releasecountry becomes EU; do not modify other tags.
         for source, wanted in (("XE", "EU"), ("EU", "EU"),
@@ -244,6 +321,8 @@ class PicardAlbumRegressions(unittest.TestCase):
                   "English_Title_Capitalization.txt").read_text(encoding="utf-8")
         self.assertIn("$eq(%releasecountry%,XE),$set(releasecountry,EU)", source)
         self.assertIn("$is_multi(%releasecountry%)", source)
+        self.assertIn("$delete(releasecountry)", source)
+        self.assertIn("$rsearch($lower(%media%),", source)
 
     def test_region_code_in_picard_scripting_runtime(self):
         try:
@@ -266,7 +345,7 @@ class PicardAlbumRegressions(unittest.TestCase):
     def test_published_script_versions_match_stable_sources(self):
         for stable, versioned in (
             ("Unicode_to_ASCII.txt", "Unicode_to_ASCII_v1.0.1.txt"),
-            ("English_Title_Capitalization.txt", "English_Title_Capitalization_v1.1.4.txt"),
+            ("English_Title_Capitalization.txt", "English_Title_Capitalization_v1.1.5.txt"),
             ("Add_EP_Single_Suffix.txt", "Add_EP_Single_Suffix_v1.0.2.txt"),
             ("Format_Multiple_Artists.txt", "Format_Multiple_Artists_v1.0.2.txt"),
             ("Move_Featured_Artists_to_Title.txt", "Move_Featured_Artists_to_Title_v1.0.1.txt"),
