@@ -42,7 +42,11 @@ New toolbar/menu action: **Check File** (Ctrl+F). Directly verifies a selected i
 
 New evidence: user reports *zero detected change* from v1.1.6 for two previous uploaded JPGs. Isolated reproduction of v1.1.6's exact detector against both real image files yielded visual warnings for BOTH (severe horizontal seams and saturation shifts); Pillow's verify and full load both pass. The GUI-level cause remains UNPROVEN. Do not assert this specific issue is resolved until Check File and a complete folder scan on the user's Windows system reproduce the warnings.
 
+Visual heuristic sensitivity was adjusted from seam 32/color-shift 0.48/max-saturation 0.74 to seam 30/color-shift 0.40/max-saturation 0.65. An isolated detector check continued to flag both supplied JPEGs without flagging six independent normal reference photos. More varied real-world false-positive testing is still required. The full in-app classifier/run was not executed against real Windows files.
+
 A native-style Tkinter layout prototype was instantiated at 1000x660 and 750x440 under Xvfb, but this is NOT a successful startup test of the full v1.1.7 code. The GitHub source received a structural delimiter/indent validation and a detected indentation issue was corrected. Full py_compile and real Windows GUI tests remain unverified. The isolated detector flagged both sample JPEGs and six independent normal reference photos were not flagged; neither result proves absence of false positives generally.
+
+- Column sorting, context menu and DPI-responsive toolbar layout were added after the initial checkpoint.
 
 ## Dependencies and persistent storage
 Pillow is required; pillow-heif and tifffile are optional decoders. Missing Python packages are installed using pip --target into the per-application dependencies folder, not global site-packages. winget is checked for availability; automatic missing-winget repair/installation remains incomplete. winget has no direct equivalent to the Python wheel packages.
