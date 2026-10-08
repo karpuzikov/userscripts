@@ -2,10 +2,10 @@
 
 ## Project and status
 - Purpose: Tampermonkey script for importing supported Apple Music song credits as MusicBrainz Recording, Work, and Release relationships in the MusicBrainz release relationship editor.
-- Current version: **2.3.15 - Under construction ⚠️**. Runtime testing in the target browser is still required.
+- Current version: **2.3.16 - Under construction ⚠️**. Runtime testing in the target browser is still required.
 - Repository: `karpuzikov/userscripts`, default branch `main`.
 - Canonical source: `musicbrainz-tools/apple-music-composition-lyrics-importer/MusicBrainz_Apple_Music_Composition_Lyrics_Importer.user.js`.
-- Userscript metadata: `@version 2.3.15`, matching in-panel `SCRIPT_VERSION = '2.3.15'`.
+- Userscript metadata: `@version 2.3.16`, matching in-panel `SCRIPT_VERSION = '2.3.16'`.
 - Read the root `SOFTWARE_RULES.md` and current relevant UXDT guidance before modifying the UI. No separate project RULES.md was present at the 2026-10-08 preflight.
 
 ## Host, architecture, dependencies
@@ -70,3 +70,13 @@
 - Validation: syntax parse passed; mocked tests passed for 8 Work scenarios (existing, unique Work, new Work, unresolved author with no matching title, title duplicate, ambiguous, partial authors, incomplete query). Additional isolated tests passed for actual unique candidate linking and exact-title response filtering. Immutable pinned script verified with metadata version 2.3.15 and README install link updated.
 - NOT verified in a live MusicBrainz relationship editor; browser test required for a full release: selected Work dialog, relationships applied/staged, correct author credits, page zoom/reflow.
 - Next action: In Tampermonkey, Check for userscript updates, reload a release edit-relationships page, import Apple Music credits, observe Work-status text in the track list, and verify the resulting staged Works and author relationships after Apply matched credits before submitting.
+
+## 2026-10-08 - v2.3.16 browser-bridge diagnosis and optimization
+- User provided v0.1.0 Browser Debug Bridge capture for MusicBrainz release `598011bd-7dc8-493a-9ece-0d465752137b` (FAST X soundtrack). At 15:02:22Z the process was **still checking existing Works for "The End of the Road Begins (intro)"**, with "Load Apple Music credits" disabled, no Work result rows yet, and seven HTTP 503 responses since monitoring began. This was an incomplete run, not proof of 0 new Works.
+- MusicBrainz official API docs: Web Service clients should stay at <=1 request/s; 503 can mean per-IP or global rate limits. WorkSearch supports `arid` (related artist MBID) and `work` (title) fields; combine them for targeted lookup.
+- v2.3.15 fetched *all* Works for every resolved credited author and filtered by track title locally, which scales poorly for prolific authors. v2.3.16 uses `work:"<escaped title>" AND arid:<artist MBID>`, pages all matches, filters exact normalized titles, caches by artist/title, and aborts creation if WorkSearch result coverage is incomplete. Preserve author-first matching, strict unambiguous reuse, no guessing or duplicate staging.
+- Increase MusicBrainz Web Service minimum request interval from 1200ms to 1700ms; retain centralized queue and 503 retry forever. On repeated 503 use 5s, 10s, 20s, 40s, then 60s backoff (or a longer Retry-After response), displaying the attempt number, delay, and recovery in the script status area and consequently Browser Debug Bridge diagnostics.
+- Version/source: `MusicBrainz_Apple_Music_Composition_Lyrics_Importer.user.js` now `@version 2.3.16` and matching `SCRIPT_VERSION`. Keep full-album/single-track, mappings, relationship staging, no autosubmit, and native Tampermonkey update URLs unchanged.
+- Source parse passed. Isolated tests passed for exact author/title query, cached result, genuine empty result, incomplete search blocking, pagination + exact filtering, two sequential 503 retries/recovery, and Retry-After precedence. Tests used mocks, not live MusicBrainz requests.
+- Known unknown: the uploaded capture was taken mid-import. It cannot establish whether work creation finishes later; need a *final-state* capture on v2.3.16 (success/error, tracks Work statuses, staged relationships), and a real Chrome browser run. Keep **Under construction ⚠️**.
+- Next action: Tampermonkey -> Check for userscript updates; reload the MusicBrainz edit-relationships page, start Browser Debug Bridge, click Load Apple Music credits, wait for a final result, then export a new report and screenshot. If Work search has incomplete results or unresolved authors, report the precise per-track reason rather than guessing.
