@@ -14233,6 +14233,7 @@ def _run_ascii_ui(test_mode: bool = False) -> int:
             self.start_track_skips = {
                 i: bool(t.manual_skip_rule) for i, t in enumerate(self.tracks or [])
             }
+            self._state_stale = True
 
         def compose(self):
             with Horizontal(id="map-header"):
@@ -14287,7 +14288,9 @@ def _run_ascii_ui(test_mode: bool = False) -> int:
             )
 
         def refresh_board(self):
-            self.state = self.ui_state()
+            if self._state_stale or not hasattr(self, "state"):
+                self.state = self.ui_state()
+                self._state_stale = False
             nodes = self.state["nodes"]
             retained = sum(1 for n in nodes if n["action"] in ("KEEP", "ADD", "REPLACE"))
             added = sum(1 for n in nodes if n["action"] in ("ADD", "REPLACE") and n["rootKind"] == "recycle")
@@ -14310,6 +14313,7 @@ def _run_ascii_ui(test_mode: bool = False) -> int:
             )}
             for view in views.values():
                 view.clear()
+            batches = {name: [] for name in views}
 
             for n in nodes:
                 action = n["action"]
@@ -14327,13 +14331,16 @@ def _run_ascii_ui(test_mode: bool = False) -> int:
                 item = ListItem(Label(title), name=f"r-{rid}", classes=classes)
                 column = n["releaseType"]
                 col_id = "eps" if column == "ep" else ("singles" if column == "single" else "albums")
-                views[col_id].append(item)
+                batches[col_id].append(item)
                 if n["rootKind"] == "existing" and action == "REMOVE":
                     is_change = True
                 else:
                     is_change = n["rootKind"] == "recycle" and action in ("ADD", "REPLACE")
                 if is_change and (change_filter == "all" or change_filter == action):
-                    views["changes-list"].append(ListItem(Label(title), name=f"c-{rid}", classes=classes))
+                    batches["changes-list"].append(ListItem(Label(title), name=f"c-{rid}", classes=classes))
+            for name, rows in batches.items():
+                if rows:
+                    views[name].extend(rows)
             if self.current_release is not None:
                 self.update_details()
 
@@ -14387,6 +14394,31 @@ def _run_ascii_ui(test_mode: bool = False) -> int:
                 self.current_track = int(item.name.split("-", 1)[1])
                 if self.current_track < 0:
                     self.current_track = None
+                else:
+                    match = next(
+                        (t for n in self.state["nodes"] if n["id"] == self.current_release
+                         for t in n.get("tracks", []) if t.get("index") == self.current_track),
+                        None,
+                    )
+                    if match is not None:
+                        companions = [
+                            n["name"] for n in self.state["nodes"]
+                            if n["id"] != self.current_release
+                            and any(
+                                t.get("groupId", -1) >= 0
+                                and t.get("groupId") == match.get("groupId")
+                                for t in n.get("tracks", [])
+                            )
+                        ]
+                        lines = [
+                            "TRACK | " + str(match.get("title", "")),
+                            "Group: " + str(match.get("groupId")),
+                            "Included: " + str(match.get("included")),
+                            "Remix: " + str(match.get("isRemix")),
+                            "Live: " + str(match.get("isLive")),
+                            "Other releases with identical recording:",
+                        ] + (companions[:8] or ["None found"])
+                        self.query_one("#map-detail", Static).update(Text("\n".join(lines)))
 
         @on(Input.Changed, "#map-search")
         def search_changed(self, event):
@@ -14451,6 +14483,7 @@ def _run_ascii_ui(test_mode: bool = False) -> int:
             else:
                 self.blocked.add(rid)
             self.dirty = True
+            self._state_stale = True
             self.reason_cache = "Release ignore/restore changed"
             self.refresh_board()
 
@@ -14465,6 +14498,7 @@ def _run_ascii_ui(test_mode: bool = False) -> int:
             else:
                 add_persistent_track_skip(track, self.tracks)
             self.dirty = True
+            self._state_stale = True
             self.reason_cache = "Track ignore/restore changed"
             self.refresh_board()
 
@@ -14503,6 +14537,7 @@ def _run_ascii_ui(test_mode: bool = False) -> int:
                 "selected": selected, "decisions": decisions, "snapshots": snapshots,
                 "blocked_release_ids": self.blocked,
             })
+            self._state_stale = True
             self.refresh_board()
             self.notify("Re-Analyze complete. Review changes before copying.")
 
