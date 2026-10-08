@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Browser Debug Bridge</title>
+<link rel="stylesheet" href="popup.css">
+</head>
+<body>
+<main>
+<header><h1>Browser Debug Bridge <small>v0.1.0</small></h1><p id="state" role="status" aria-live="polite">Checking...</p></header>
+<section aria-labelledby="session-heading">
+<h2 id="session-heading">MusicBrainz session</h2>
+<div class="buttons"><button id="start">Start observing current tab</button><button id="stop" class="secondary">Stop</button></div>
+<div class="buttons"><button id="snapshot" class="secondary">Capture state</button><button id="screenshot" class="secondary">Capture screenshot</button></div>
+<p class="hint">Only musicbrainz.org tabs can be monitored. Screenshots capture visible page content.</p>
+</section>
+<section aria-labelledby="connection-heading">
+<h2 id="connection-heading">Private GitHub diagnostics</h2>
+<label for="repo">Private repository (owner/name)</label><input id="repo" autocomplete="off" placeholder="karpuzikov/browser-debug-private">
+<label for="token">Fine-grained GitHub token</label><input id="token" type="password" autocomplete="off" placeholder="Repository Contents: read/write">
+<div class="checks"><label><input id="autosync" type="checkbox"> Sync diagnostics every minute</label>
+<label><input id="remote" type="checkbox"> Permit approved remote test clicks / reloads</label></div>
+<div class="buttons"><button id="save" class="secondary">Save connection</button><button id="sync">Sync now</button></div>
+<p class="hint">Use a private repo and repository-scoped token. The token stays in Chrome extension storage; only report data is uploaded. Remote commands cannot submit MusicBrainz edits.</p>
+</section>
+<section><h2>Activity</h2><p id="activity" role="status" aria-live="polite">Ready.</p></section>
+</main>
+<script src="popup.js"></script>
+</body>
+</html>
