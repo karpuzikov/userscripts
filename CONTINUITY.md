@@ -2,7 +2,7 @@
 
 ## Product and state
 - Product: Karpuzikov Picard Scripts, a Picard 3.x Git-updatable MusicBrainz metadata plugin.
-- Current version: 1.5.21 - Under construction ⚠️ (not yet verified inside user Picard).
+- Current version: 1.5.22 - Under construction ⚠️ (not yet verified inside user Picard).
 - Git repository and active branch: `karpuzikov/userscripts`, `main`.
 - There is no additional project-specific `RULES.md` currently; the canonical repository root `SOFTWARE_RULES.md` governs this project.
 
@@ -152,3 +152,12 @@
 - The installed Windows Picard/PyQt6 environment was not accessible from this chat. Until interactive validation, keep 1.5.21 - Under construction ⚠️. Do not mark tested/stable.
 
 - Final regex review corrected the new Python `vs.` normalization to use single regex escapes in the raw Python string (`\\b` and `\\.` represent *one* backslash in source regex syntax), so matching uses a word boundary and a literal full stop instead of escaped-backslash text. Preserve this distinction from the double escapes required in the Picard `$rreplace` scripting language.
+
+## Persistent Barcode taskbar window after closing Picard (2026-10-09; v1.5.22)
+
+- User provided screenshot of a separate tiny Picard taskbar window containing the Barcode QAction that remains after the main window closes, despite the old shutdown cleanup in v1.5.18-v1.5.19.
+- Root-cause investigation: current upstream Picard `MainWindow.create_action_toolbar()` calls `self.toolbar.clear()` then `self.removeToolBar(self.toolbar)` and creates a new parentless `QtWidgets.QToolBar("Actions")` with object name `main_toolbar`. The removed QToolBar is not explicitly destroyed in that code path and may survive as a detached top-level window. Our former helper `_detach_barcode_action` only detected toolbars **still holding the Barcode QAction**, missing old toolbars after Picard clears their actions; and QApplication.aboutToQuit may never fire if that orphaned top-level window keeps the event loop alive.
+- v1.5.22 adds `_retire_obsolete_picard_toolbars(window)` to identify QToolBar objects with `objectName()=="main_toolbar"` but different from the live `window.toolbar`, using the existing current/child/app-top-level widget enumeration. Detaches Barcode QAction when present, hides the obsolete toolbar immediately, and schedules `deleteLater()`. Never touches the current toolbar, Search/player toolbars, or unrelated plugin toolbars. Handles RuntimeError when Qt has already deleted a toolbar.
+- Execute orphan retirement on watcher refresh (normal Picard toolbar customization; every 4s fallback), ChildRemoved events, main-window Close *before* checking actions, QApplication.aboutToQuit, and plugin disable. The older close-cancel restore logic for *current* floating toolbar remains intact, and stays separate from obsolete toolbar disposal.
+- Tests cover an orphan without any QAction (key v1.5.19 regression), an orphan with the action, unrelated floating toolbar safety, replacement timing, and close/quit/disable hook coverage. No change to barcode lookup/matching, other tagging scripts, user toolbar configuration, or file paths.
+- **Under construction ⚠️** until Picard on user's Windows PC is tested: update plugin, customize Options > User Interface > Toolbar several times, close/reopen Picard, verify *no* extra taskbar window and Barcode button still works at both normal and narrow widths; test canceling Exit while unsaved changes exist. Keep root GitHub rules, standard MANIFEST/plugin version, and user settings unchanged.
