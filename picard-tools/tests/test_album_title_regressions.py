@@ -161,6 +161,20 @@ class PicardAlbumRegressions(unittest.TestCase):
         self.assertIn("la noche|vai sentando", legacy)
 
 
+
+    def test_artist_format_runs_before_unicode_normalization(self):
+        module = ast.parse((REPO / "__init__.py").read_text(encoding="utf-8"))
+        order = []
+        for statement in module.body:
+            if isinstance(statement, ast.Assign) and any(
+                isinstance(target, ast.Name) and target.id == "SCRIPTS"
+                for target in statement.targets
+            ):
+                order = [entry.elts[0].value for entry in statement.value.elts]
+        self.assertLess(order.index("move_featured_artists"), order.index("format_multiple_artists"))
+        self.assertLess(order.index("format_multiple_artists"), order.index("unicode_to_ascii"))
+        self.assertLess(order.index("unicode_to_ascii"), order.index("add_ep_single_suffix"))
+
     def test_published_script_versions_match_stable_sources(self):
         for stable, versioned in (
             ("Unicode_to_ASCII.txt", "Unicode_to_ASCII_v1.0.1.txt"),
