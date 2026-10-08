@@ -1,7 +1,7 @@
 # RuTracker Digital Release Linker - Continuity
 
 ## Product
-- Version: 1.1.21 - Under construction ⚠️ (needs user testing in Tampermonkey).
+- Version: 1.1.22 - Under construction ⚠️ (needs user testing in Tampermonkey).
 - Repository: `karpuzikov/userscripts`, branch `main`.
 - Main file: `browser-tools/rutracker-digital-release-linker/RuTracker_Digital_Release_Linker.user.js`.
 - Applicable rules: repository-root `SOFTWARE_RULES.md`. No project-specific `RULES.md` currently exists.
@@ -17,9 +17,9 @@
 ## Important contracts
 - Recognize both old source BBCode formats and unfilled `CD/WEB|[url=ссылкаНаИсточник]Источник[/url]` placeholders.
 - Convert confirmed matches to `WEB|[url=<exact page>]Deezer[/url]` or `WEB|[url=<exact page>]Beatport[/url]`. Unverified or unmatched releases retain their original data.
-- For matched Deezer albums, fill an unfilled `[img=right]ссылка[/img]` cover with the Deezer API cover URL if available; never overwrite actual existing image links. Beatport-only cover lookup is not implemented; leave placeholders untouched rather than inventing an image.
+- **Mandatory no-artwork invariant:** This script must NEVER fetch, inspect, normalize, replace, insert, remove, or otherwise modify artwork, image URLs, or BBCode `[img]...[/img]` tags, in either button mode, including placeholder `[img=right]ссылка[/img]`. Do not reintroduce any artwork functionality without an explicit future user request. Historical v1.1.19-1.1.21 cover edits were unauthorized and their code was removed in v1.1.22.
 - Preserve spoiler titles, tracklists, timestamps, existing concrete source URLs, unrelated BBCode and nested-spoiler boundaries.
-- Rerunning either button must be idempotent. Report linked and artwork counts, and show unresolved release titles.
+- Rerunning either button must be idempotent. Report release-link counts and unresolved release titles; never report or manipulate artwork.
 - Second button exactly `Force link all web releases` searches Deezer for every spoiler whose media label is `WEB` (plain or `[url=...]WEB[/url]`) or placeholder `CD/WEB`, including already linked releases. Exclude `CD`-only entries.
 - In force mode, search UPC and catalog via the existing validated resolver; ignore Beatport-only resolutions. If there is no identifier, make a conservative Deezer album search using topic artist, release title, exact track count, year and first track; reject ambiguous matches. If no confirmed Deezer result, do not modify the source.
 - In force mode, replace the entire media/source portion of every resolved WEB entry with `WEB|[url=<verified Deezer album URL>]Deezer[/url]`; do not retain old redacted/tracker/source text or link the `WEB` label. This intentionally overrides the pre-1.1.21 forced source preservation rule; it does not change normal mode. For unresolved entries, keep the original entire source line untouched. CD-only entries remain excluded. For entries already linked to a Deezer album URL on `WEB`, if lookup returns no candidate, reuse that same validated Deezer album URL and normalize it to the source side without inventing a different album. Keep `[hr]` and all other BBCode.
@@ -48,6 +48,15 @@
 - Entire updated JavaScript successfully compiled and mocked regression checks passed. No browser-side user testing or live Deezer verification yet.
 - Keep native Tampermonkey updates and version status. No added files, API permissions or UI elements.
 
+## v1.1.22 - Unauthorized cover handling removed (2026-10-09)
+- User expressly required immediate removal of all artwork features.
+- Deleted `deezerCoverForReleaseUrl` (Deezer album cover lookup), `findCoverPlaceholder`, automatic cover lookup in the resolver, cover-source replacements in post BBCode, and cover-related counters/status labels.
+- No changes to `@grant`/`@connect`, provider matching, force Deezer normalization, tracklist parsing, country flags, or Tampermonkey native update mechanism.
+- Mocked both buttons with multiple releases including a real-looking image URL, `[img=right]ссылка[/img]`, existing Deezer WEB link, unresolved WEB, and CD-only. Both modes preserved every `[img]` tag byte-for-byte and still updated verified source links. Confirmed repeated-run idempotence, Undo availability and intact tracklist BBCode. Full script JavaScript compilation passed.
+- All prior v1.1.19-1.1.21 cover-related test claims describe historical behavior ONLY, which is now explicitly prohibited. It must not be restored through other features/refactors.
+- This update does not retroactively restore artwork already changed in a user's textarea by an earlier version. If a prior Undo snapshot is still available it may restore the previous text; otherwise original values require restoring from an earlier saved copy.
+- Live RuTracker/Tampermonkey testing has not been performed. Status remains Under construction ⚠️.
+
 ## Release process
 - Bump `@version` every change; keep `@name`, `@namespace`, `@updateURL` and `@downloadURL` stable.
 - Commit updated script, fetch it at the resulting immutable commit SHA and verify content, update root README version/status and its commit-pinned install URL in a separate commit; do not use GitHub Actions.
@@ -55,5 +64,5 @@
 
 ## Next QA
 - In RuTracker editpost mode, test both 'Link digital release pages' and 'Force link all web releases' on the full Skrillex discography.
-- Verify both requested placeholder entries, remaining placeholder entries, source/cover accuracy, and absence of unintended changes.
+- Verify placeholder entries, Deezer/source accuracy, and absolutely no changes to any existing or placeholder artwork BBCode.
 - Check one repeated click yields no new changes. Keep status Under construction until user confirms.
