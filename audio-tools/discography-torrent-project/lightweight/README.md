@@ -1,6 +1,6 @@
 # Duplicate Edition Analyzer Lightweight
 
-Version: **0.3.7 - Under construction ⚠️**
+Version: **0.3.8 - Under construction ⚠️**
 
 Branch: `dea-lightweight-modern`
 
@@ -41,6 +41,16 @@ The lightweight build preserves the regular DEA feature surface, including:
 - path openers, logging, settings and Undo.
 
 The failed `native-light` prototype is not the reference.
+
+## 0.3.8
+
+- Fixes a real Skrillex false-retention: **2014-12-14 - Dirty Vibe (Remixes) [075679931368]** and the corresponding NEW Dirty Vibe (Remixes) edition each had three known remixes correctly excluded but one **Jack Beats Re-work** incorrectly treated as wanted audio.
+- Named `Re-work`, `Rework`, and `Reworked` descriptors enclosed in parentheses/brackets or added as a trailing separated title variant are now classified as remixes in the **first classification pass**, before fingerprints, Personal Picks and optimization.
+- Plain song titles containing the words "rework"/"reworked" are not automatically marked as remixes.
+- Extended remix-base-title matching and remix-specific featured-artist handling to understand Re-work, without weakening the genuinely remix-added feature exception.
+- Added runtime `--ui-self-test` regressions for the exact OLD/NEW Dirty Vibe title shapes, Save Remixes OFF and ON, Personal Picks not resurrecting excluded remixes, full remix-only EP exclusion, and remix-added feature survival.
+- GitHub Actions source validation passed for v0.3.8: [workflow 37812280044](https://github.com/karpuzikov/userscripts/actions/runs/37812280044).
+- Real Skrillex OLD/NEW rerun remains necessary to validate the resulting Release Map and optimizer behavior in Windows.
 
 ## 0.3.7
 
