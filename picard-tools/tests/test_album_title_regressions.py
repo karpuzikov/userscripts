@@ -165,6 +165,26 @@ class PicardAlbumRegressions(unittest.TestCase):
 
 
 
+
+    def test_single_credited_name_does_not_match_shorter_partial_name(self):
+        try:
+            from picard.metadata import Metadata
+            from picard.script import ScriptParser
+        except ImportError:
+            self.skipTest("Picard runtime unavailable; run inside Picard's Python environment")
+        source = (REPO / "picard-tools" / "scripts" / "Format_Multiple_Artists.txt").read_text(encoding="utf-8")
+        metadata = Metadata()
+        metadata["artists"] = ["A", "AB"]
+        metadata["artist"] = "AB"
+        metadata["albumartists"] = ["DJ", "DJ B"]
+        metadata["albumartist"] = "DJ B"
+        ScriptParser().eval(source, metadata)
+        self.assertEqual(metadata["artist"], "AB")
+        self.assertEqual(metadata["albumartist"], "DJ B")
+        ScriptParser().eval(source, metadata)
+        self.assertEqual(metadata["artist"], "AB")
+        self.assertEqual(metadata["albumartist"], "DJ B")
+
     def test_move_featured_credit_does_not_duplicate_existing_title_credit(self):
         try:
             from picard.metadata import Metadata
@@ -206,7 +226,7 @@ class PicardAlbumRegressions(unittest.TestCase):
             ("Unicode_to_ASCII.txt", "Unicode_to_ASCII_v1.0.1.txt"),
             ("English_Title_Capitalization.txt", "English_Title_Capitalization_v1.1.3.txt"),
             ("Add_EP_Single_Suffix.txt", "Add_EP_Single_Suffix_v1.0.2.txt"),
-            ("Format_Multiple_Artists.txt", "Format_Multiple_Artists_v1.0.1.txt"),
+            ("Format_Multiple_Artists.txt", "Format_Multiple_Artists_v1.0.2.txt"),
             ("Move_Featured_Artists_to_Title.txt", "Move_Featured_Artists_to_Title_v1.0.1.txt"),
         ):
             with self.subTest(stable=stable):
