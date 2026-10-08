@@ -2,10 +2,10 @@
 
 ## Project and status
 - Purpose: Tampermonkey script for importing supported Apple Music song credits as MusicBrainz Recording, Work, and Release relationships in the MusicBrainz release relationship editor.
-- Current version: **2.3.14 - Under construction ⚠️**. Runtime testing in the target browser is still required.
+- Current version: **2.3.15 - Under construction ⚠️**. Runtime testing in the target browser is still required.
 - Repository: `karpuzikov/userscripts`, default branch `main`.
 - Canonical source: `musicbrainz-tools/apple-music-composition-lyrics-importer/MusicBrainz_Apple_Music_Composition_Lyrics_Importer.user.js`.
-- Userscript metadata: `@version 2.3.14`, matching in-panel `SCRIPT_VERSION = '2.3.14'`.
+- Userscript metadata: `@version 2.3.15`, matching in-panel `SCRIPT_VERSION = '2.3.15'`.
 - Read the root `SOFTWARE_RULES.md` and current relevant UXDT guidance before modifying the UI. No separate project RULES.md was present at the 2026-10-08 preflight.
 
 ## Host, architecture, dependencies
@@ -21,12 +21,12 @@
 3. Manual song URL validation accepts only `https://music.apple.com/<two-letter-storefront>/song/<slug>/<numeric-id>`. Resolve the exact song ID from Apple HTML; if track metadata is absent, use the Apple songs-by-ID catalog API. Reject redirect to a different song ID.
 4. Match a song to the currently open MusicBrainz release by normalized title, ignoring trailing featured-artist suffixes. If more than one title match exists, use disc and track position **only** if exactly one match shares the position. Block ambiguous or mismatched songs; never import to a guessed recording.
 5. Convert supported Apple Music credits to MusicBrainz relation types. Songwriter/composer/lyricist credits target Work; performer/producer/mixer/etc. target Recording; mastering targets Release. Unsupported roles are shown but skipped.
-6. Resolve existing linked Work and search for credited-author Works before staging new Works; when creating new Works use the MusicBrainz Work type Song with user-selected lyrics language.
+6. Existing linked Works are reused. Search credited authors for exact-title Works; link a single unambiguous Work automatically through MusicBrainz's recording-of relationship type 278 rather than creating a duplicate. If none is found and all authors are resolved, stage a new Work. If some authors are unresolved, additionally perform a complete MusicBrainz exact-title Work search: create only when that search returns no matches. If multiple/ambiguous/partial Work matches exist, block automatic Work creation. Use Work type Song, with user-selected lyrics language. Matched writer/lyricist credits are staged when the user clicks Apply matched credits; unmatched artists remain skipped.
 7. Artist matching prioritizes release/track credited artists, aliases and related artists; global MusicBrainz artist search is fallback. Unique exact name/alias matches and unique preferred context results are selected automatically. **Unresolved or ambiguous artist names are skipped by default and never block other relationships.** A user may optionally map a skipped name with a candidate or valid manual MBID. Explicitly malformed manual MBIDs still fail validation. Preserve existing relationship edits/edit notes, append source/script attribution, and do not auto-submit the MusicBrainz edit.
 8. Skip duplicates/already existing relationships. MusicBrainz HTTP 503 requests must retry indefinitely with applicable retry delays.
 
 ## UI and usability
-- Inline panel above the existing MusicBrainz relationship editor form; dark theme, keyboard-focusable controls, explicit song URL label and help, ARIA live status.
+- Inline panel above the existing MusicBrainz relationship editor form; dark theme, keyboard-focusable controls, explicit song URL label and help, ARIA live status. The Apple Music song URL label is on its own full-width row, input and button reflow/wrap, and hints have positive margins; **do not restore the former -4px negative-margin overlap**.
 - Both song and album workflows share tracks/credits, optional artist mapping and the **Apply matched credits** button. The artist-mapping table is collapsed inside a keyboard-operable `<details>` element by default, with auto-matched/skipped artist counts. Default option on every artist row is **Skip this credit (no verified artist)**. Unresolved people never require a choice; skipped relationship counts appear after applying.
 - Status shows current network/lookup stage and final counts. Show mismatches visibly and block unsafe writes.
 - Preserve role mapping, work-resolution review and the existing user-facing wording unless needed for clarity.
@@ -58,3 +58,15 @@
 - Keep the automatically selected mapping policy limited to preferred context choices or exactly one precise name/alias match; ambiguous/fuzzy candidates remain unselected.
 - Repository distribution uses immutable commit-pinned README link and clean main-branch `@updateURL`/`@downloadURL`. Users should update via Tampermonkey rather than click an installer link when installed version is unknown.
 - Follow-up browser regression: verify optional mapping table, Apply button while all artists unmatched, accessibility and narrow viewport; check artist alias edits remain correct and do not become mandatory.
+
+## 2026-10-08 - v2.3.15 Work resolution and UI checkpoint
+- User asked why Works were not created with credits after reporting overlapping controls.
+- Root causes in v2.3.14: unresolved songwriter blocked `ensureWorkForRow`; any author-matched Work candidate blocked both reuse and creation; created Works obtained author relationships only later when Apply matched credits ran. Screenshot showed load at track 13/21, before Work resolution starts.
+- v2.3.15 links a uniquely author-matched existing Work to the recording (type 278) and reuses it for writer credits. No duplicate Work is staged for ambiguous matches.
+- If authors are unresolved and no author-matched Works are found, use `searchExistingWorksByExactTitle` via MusicBrainz work search; stage a new Song Work only on an exhaustive empty exact-title result. If the title search has matching Works or incomplete result pagination, do not create a duplicate.
+- `getTrackWorks` recognizes Work relationships pointing to either the source or target endpoint.
+- Work creation remains part of the **Load Apple Music credits** phase (after all track credits have loaded). Writer/lyricist relationships are staged on the subsequent **Apply matched credits** action for artists with verified mapping; names without verified MusicBrainz artists are intentionally skipped, not fabricated.
+- UI: song-URL label takes a full flex row, input/button can wrap, help text margin is nonnegative.
+- Validation: syntax parse passed; mocked tests passed for 8 Work scenarios (existing, unique Work, new Work, unresolved author with no matching title, title duplicate, ambiguous, partial authors, incomplete query). Additional isolated tests passed for actual unique candidate linking and exact-title response filtering. Immutable pinned script verified with metadata version 2.3.15 and README install link updated.
+- NOT verified in a live MusicBrainz relationship editor; browser test required for a full release: selected Work dialog, relationships applied/staged, correct author credits, page zoom/reflow.
+- Next action: In Tampermonkey, Check for userscript updates, reload a release edit-relationships page, import Apple Music credits, observe Work-status text in the track list, and verify the resulting staged Works and author relationships after Apply matched credits before submitting.
