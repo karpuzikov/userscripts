@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         RuTracker Digital Release Linker
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.1.20
+// @version      1.1.21
 // @description  Links exact digital release pages in RuTracker BBCode, falls back from Deezer to MusicBrainz-linked Beatport releases, and adds country flag emoji.
 // @author       karpuzikov
 // @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/browser-tools/rutracker-digital-release-linker/RuTracker_Digital_Release_Linker.user.js
@@ -115,7 +115,7 @@
                 retries: 2,
                 retry503: true,
                 headers: {
-                    'User-Agent': `${SCRIPT_NAME}/1.1.20 (Tampermonkey userscript)`,
+                    'User-Agent': `${SCRIPT_NAME}/1.1.21 (Tampermonkey userscript)`,
                 },
             });
         });
@@ -140,7 +140,7 @@
                         url,
                         headers: {
                             Accept: 'text/html',
-                            'User-Agent': `${SCRIPT_NAME}/1.1.20 (Tampermonkey userscript)`,
+                            'User-Agent': `${SCRIPT_NAME}/1.1.21 (Tampermonkey userscript)`,
                         },
                         timeout: 20000,
                         onload(response) {
@@ -1190,16 +1190,9 @@
         },
         resolve: resolveForceDeezer,
         makeLinkedSource(match, resolution) {
-            const line = match[2];
-            const pipe = line.indexOf('|');
-            const source = pipe < 0 ? '' : line.slice(pipe + 1);
-            const clean = source.trim();
-            if (/^(?:Deezer|\[url=(?:"[^"]+"|[^\]]+)\]Deezer\[\/url\])$/i.test(clean) ||
-                /^(?:Источник|\[url=(?:"[^"]+"|[^\]]+)\]Источник\[\/url\])$/i.test(clean)) {
-                return match[1] + 'WEB|[url=' + resolution.url + ']Deezer[/url]' + (match[3] || '');
-            }
-            return match[1] + '[url=' + resolution.url + ']WEB[/url]' +
-                (pipe < 0 ? '' : '|' + source) + (match[3] || '');
+            // Forced mode replaces the previous source credit with Deezer.
+            return match[1] + 'WEB|[url=' + resolution.url + ']Deezer[/url]' +
+                (match[3] || '');
         },
     };
 
@@ -1311,7 +1304,7 @@
         forceButton.value = 'Force link all web releases';
         forceButton.className = 'btn';
         forceButton.style.cursor = 'pointer';
-        forceButton.title = 'Find Deezer links for all WEB releases even when a source exists; skip CD-only releases.';
+        forceButton.title = 'Search all WEB releases and replace existing source credits with the matching Deezer release. CD-only entries are skipped; Undo is available.';
 
         const undoButton = document.createElement('input');
         undoButton.type = 'button';
@@ -1437,6 +1430,20 @@
                 } catch (caught) {
                     error = caught;
                     console.error(`[${SCRIPT_NAME}]`, candidate.meta.spoilerTitle, caught);
+                }
+
+                // Reuse an existing Deezer album URL if no lookup match was found.
+                // Only normalize that URL; do not invent a replacement release.
+                if (forceWeb && !resolution?.url) {
+                    const existing = candidate.currentUrl.match(
+                        /^https?:\/\/(?:www\.)?deezer\.com\/(?:[^/]+\/)?album\/(\d+)(?:[/?#]|$)/i,
+                    );
+                    if (existing) {
+                        resolution = {
+                            kind: 'deezer',
+                            url: `https://www.deezer.com/album/${existing[1]}`,
+                        };
+                    }
                 }
 
                 finished += 1;
