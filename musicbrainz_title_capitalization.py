@@ -382,7 +382,7 @@ def musicbrainz_english_title_case(title: str) -> str:
     for token, original in protected.items():
         result = result.replace(token, original)
 
-    return result
+    return _lowercase_vs_abbreviation(result)
 
 
 def _has_cased_letters(text: str) -> bool:
@@ -490,6 +490,11 @@ def _apple_eti_case(title: str) -> str:
     return re.sub(r"\(([^()]*)\)", rewrite, title)
 
 
+def _lowercase_vs_abbreviation(title: str) -> str:
+    """The abbreviated comparison marker 'vs.' remains lowercase everywhere."""
+    return re.sub(r"(?i)\\bvs\\.", "vs.", title)
+
+
 def standardize_title_case(
     title: str,
     mode: str,
@@ -498,21 +503,19 @@ def standardize_title_case(
         return title
 
     if mode == "english":
-        return musicbrainz_english_title_case(title)
+        result = musicbrainz_english_title_case(title)
+    elif mode == "french":
+        result = _french_title_case(title)
+    elif mode == "sentence":
+        result = _apple_eti_case(_sentence_case_title(title))
+    elif _is_all_caps_title(title):
+        # Unknown language: preserve normally styled text; normalize the
+        # usual all-caps fallback conservatively.
+        result = _apple_eti_case(_sentence_case_title(title))
+    else:
+        result = title
 
-    if mode == "french":
-        return _french_title_case(title)
-
-    if mode == "sentence":
-        return _apple_eti_case(_sentence_case_title(title))
-
-    # Unknown language: do not rewrite normal mixed-case titles. But ALL CAPS
-    # is explicitly considered a typesetting choice by MusicBrainz, so apply a
-    # conservative sentence-case fallback instead of leaving it untouched.
-    if _is_all_caps_title(title):
-        return _apple_eti_case(_sentence_case_title(title))
-
-    return title
+    return _lowercase_vs_abbreviation(result)
 
 
 def _canonical_release_suffix(title: str) -> str:
@@ -538,7 +541,7 @@ def _set_single_value(metadata: Any, tag: str, value: str) -> None:
         metadata[tag] = [value]
 
 
-_DIGITAL_MEDIUM_RE = re.compile(r"^(?:[0-9]+\\s*[x×]\\s*)?digital media$", re.I)
+_DIGITAL_MEDIUM_RE = re.compile(r"^(?:[0-9]+\s*[x×]\s*)?digital media$", re.I)
 
 
 def _is_digital_medium(value: Any) -> bool:
