@@ -488,7 +488,7 @@ function Invoke-ArchiveCloud([string]$src, [string]$dst) {
                     throw "Remote staging checksum mismatch: $remoteTemp"
                 }
                 if (Cloud-Stat $rclone $target) { throw "Destination appeared during transfer: $target" }
-                Cloud-Transfer $rclone @('moveto',$remoteTemp,$target)
+                Cloud-Transfer $rclone @('moveto',$remoteTemp,$target,'--immutable')
             } else {
                 Write-Section ("Save local {0}/{1}: {2}" -f ($success+$resumed+1),$ordered.Count,$relativeOut)
                 New-Item -ItemType Directory -Path ([IO.Path]::GetDirectoryName($target)) -Force | Out-Null
@@ -511,6 +511,7 @@ function Invoke-ArchiveCloud([string]$src, [string]$dst) {
                 Source=$file.Source; FinishedUtc=[DateTime]::UtcNow.ToString('o')
             }
             Add-Content -LiteralPath $journal -Value ($entry | ConvertTo-Json -Compress) -Encoding UTF8
+            [void]$occupied.Add($target)
             Remove-Item -LiteralPath $job -Recurse -Force
             $success++
             Write-Host ("[VERIFIED] {0} ({1}/{2}, elapsed {3})" -f $file.Rel,($success+$resumed),$ordered.Count,$clock.Elapsed) -ForegroundColor Green
