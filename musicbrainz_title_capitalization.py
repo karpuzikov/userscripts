@@ -492,7 +492,7 @@ def _apple_eti_case(title: str) -> str:
 
 def _lowercase_vs_abbreviation(title: str) -> str:
     """The abbreviated comparison marker 'vs.' remains lowercase everywhere."""
-    return re.sub(r"(?i)\\bvs\\.", "vs.", title)
+    return re.sub(r"(?i)\bvs\.", "vs.", title)
 
 
 def standardize_title_case(
