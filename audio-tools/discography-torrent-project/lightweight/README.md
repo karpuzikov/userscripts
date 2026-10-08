@@ -47,7 +47,7 @@ The failed `native-light` prototype is not the reference.
 - Fixed Release Map losing acoustic recording group ID **0** (the first valid group) in four backend conversions.
 - `↔ Replaced` now requires a full wanted-recording coverage match from one NEW release in the same release family. Partial overlap stays an ordinary add/remove with coverage details.
 - Cached replacement-pair indexing per map state; invalidate on state updates instead of rescanning all links for every row and filter.
-- CD/physical source preservation and comparable 80+ log-score class are now source requirements inside the exact cover solver, before minimizing retained tracks and releases. The old post-solve additive CD pass has been removed.
+- CD/physical source preservation and comparable 80+ log-score class are now encoded in each recording group's existing exact-cover requirement (no extra constraint graph), before minimizing retained tracks and releases. The old post-solve additive CD pass has been removed.
 - Prevented early equivalent-edition dominance from discarding the better-source copy and prevented better-log CD swaps from increasing physical track count.
 - Added final optimizer coverage/source/album-completeness assertions and regression checks for acoustic group 0 and minimal CD+WEB plans.
 - **Verification:** Source static checks passed. Windows/WebView2 parity and exact Skrillex OLD/NEW dataset still require runtime retesting. No parity-complete EXE claim.
