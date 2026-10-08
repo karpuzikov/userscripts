@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MusicBrainz ToolBox
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.0.55
+// @version      1.0.56
 // @description  Combined MusicBrainz release-editor, recording, barcode, Spotify/Apple Music linking, search, cover-art, Disc ID, and duplicate-edit tools.
 // @author       karpuzikov
 // @license      MIT
@@ -5534,51 +5534,47 @@
     
         function makeEditNote(correction) {
             const lines = [];
+            const actions = correction.linkActions || [];
+            const evidence = correction.evidence || [];
     
-            for (const action of correction.linkActions || []) {
-                if (action.type === 'replace-wrong-link') {
-                    lines.push(
-                        `Removed a wrongly linked ${action.provider} release URL and added the barcode-matched replacement: ${action.replacementUrl}`
+            for (const action of actions) {
+                if (['replace-wrong-link', 'remove-duplicate-wrong-link', 'move-out'].includes(action.type)) {
+                    // Cite the provider barcode that was actually read for THIS linked URL.
+                    // The fact that another MusicBrainz release also has the URL is not
+                    // the reason for removing the mismatching relationship.
+                    const check = evidence.find(item =>
+                        item.gtin && item.sourceUrl &&
+                        providerEntityKey(item.sourceUrl) === providerEntityKey(action.url)
                     );
-                } else if (action.type === 'remove-duplicate-wrong-link') {
-                    lines.push(
-                        `Removed a wrongly linked ${action.provider} release URL. The same URL is already correctly linked to: ${action.targetReleaseUrl}`
-                    );
-                } else if (action.type === 'move-out') {
-                    lines.push(
-                        `Moved a wrongly linked ${action.provider} release URL to the correct MusicBrainz release: ${action.targetReleaseUrl}`
-                    );
+                    if (check && correction.oldBarcode && !equalGtin(check.gtin, correction.oldBarcode)) {
+                        lines.push(
+                            `Barcode mismatch with ${action.provider} (MusicBrainz: ${correction.oldBarcode}; ${action.provider}: ${check.gtin}).`
+                        );
+                    } else {
+                        // Never claim a barcode mismatch without readable provider evidence.
+                        lines.push(`Removed ${action.provider} release link (provider barcode evidence unavailable).`);
+                    }
                 } else if (action.type === 'move-in') {
-                    lines.push(
-                        `Added a ${action.provider} release URL that was wrongly linked to another MusicBrainz release: ${action.sourceReleaseUrl}`
-                    );
+                    lines.push(`Added ${action.provider} release link matching barcode ${correction.oldBarcode}.`);
                 }
             }
     
             if (correction.newBarcode) {
-                lines.push(
-                    `Corrected barcode from ${correction.oldBarcode} to ${correction.newBarcode} based on matching linked release metadata.`
-                );
+                lines.push(`MusicBrainz barcode corrected: ${correction.oldBarcode} -> ${correction.newBarcode}.`);
             }
     
-            if (correction.addLinks.length && !(correction.linkActions || []).some(action => action.type === 'move-in')) {
-                lines.push(
-                    `Added ${correction.addLinks.length} provider release link(s) found from barcode ${correction.oldBarcode}.`
-                );
+            if (correction.addLinks.length && !actions.some(action =>
+                action.type === 'replace-wrong-link' || action.type === 'move-in'
+            )) {
+                lines.push(`Added ${correction.addLinks.length} provider release link(s) for barcode ${correction.oldBarcode}.`);
             }
     
-            if (!lines.length) {
-                lines.push('Checked the Digital Media release barcode against linked provider release pages.');
+            const distinct = [...new Set(lines)];
+            if (!distinct.length) {
+                distinct.push('Checked the Digital Media release barcode against linked provider release pages.');
             }
     
-            lines.push(
-                '',
-                `Script: ${SCRIPT_URL}`,
-                'Harmony: https://github.com/kellnerd/harmony',
-                'Apple Music barcode method: https://github.com/ToadKing/apple-music-barcode-isrc',
-            );
-    
-            return lines.join('\n');
+            return [...distinct, '', `Script: ${SCRIPT_URL}`].join('\n');
         }
     
         function flattenSeedLinks(links) {
