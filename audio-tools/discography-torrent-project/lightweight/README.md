@@ -1,6 +1,6 @@
 # Duplicate Edition Analyzer Lightweight
 
-Version: **0.3.6 - Under construction ⚠️**
+Version: **0.3.7 - Under construction ⚠️**
 
 Branch: `dea-lightweight-modern`
 
@@ -41,6 +41,16 @@ The lightweight build preserves the regular DEA feature surface, including:
 - path openers, logging, settings and Undo.
 
 The failed `native-light` prototype is not the reference.
+
+## 0.3.7
+
+- Fixed real Skrillex analysis failure on v0.3.6: `Optimizer lost a most-complete album edition after quality tie-breaks`.
+- Identical physical OLD EP / NEW Album containers (same actual release family, physical track count, wanted acoustic groups and order) may both satisfy the same maximum-completeness album obligation, despite conflicting provider release-type metadata. The solver now resolves that equivalence before selection, avoiding pointless OLD -> NEW churn.
+- Non-equivalent, incomplete singles/EPs still cannot substitute for any album's most-complete edition.
+- Late Existing-copy preference checks every album requirement before substituting; CD/source class is also preserved.
+- If a later CD/Existing/DR tie-break unexpectedly invalidates recording, source, or album constraints, the exact optimized selection is restored and an explanatory diagnostic is retained rather than failing the whole scan.
+- Added regression based on the logged Scary Monsters case (11 physical tracks, seven included acoustic matches, four excluded tracks).
+- Source-level CI and the exact-folder Windows run are tracked separately. The user must retest the unchanged Skrillex OLD/NEW paths before marking stable.
 
 ## 0.3.6
 
