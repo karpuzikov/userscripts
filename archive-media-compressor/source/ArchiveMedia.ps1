@@ -373,6 +373,9 @@ function Invoke-ArchiveCloud([string]$src, [string]$dst) {
     $clock = [Diagnostics.Stopwatch]::StartNew()
     Write-Host ("Files: {0}. Cache limit: {1}. Pipeline: download > process > upload > verify." -f $ordered.Count,(Format-Bytes $cap))
     foreach ($file in $ordered) {
+        if (-not (Test-RclonePath $src)) {
+            $file.MD5 = (Get-FileHash -LiteralPath $file.Source -Algorithm MD5).Hash.ToLowerInvariant()
+        }
         $key = Cloud-Id ("$src|$dst|$($file.Rel)|$($file.Size)|$($file.Modified)|$($file.MD5)")
         try {
             $old = $finished[$key]
@@ -420,7 +423,8 @@ function Invoke-ArchiveCloud([string]$src, [string]$dst) {
             $env:ARCHIVEMEDIA_BATCH_OUTPUT = $outRoot
             $env:ARCHIVEMEDIA_BATCH_RESULT = $report
             try {
-                & (Get-Process -Id $PID).Path -NoLogo -NoProfile -STA -ExecutionPolicy Bypass -File $PSCommandPath
+                $pwshExecutable = (Get-Process -Id $PID).Path
+                & $pwshExecutable -NoLogo -NoProfile -STA -ExecutionPolicy Bypass -File $PSCommandPath
                 $childExit = $LASTEXITCODE
             } finally {
                 Remove-Item Env:ARCHIVEMEDIA_BATCH_FILE,Env:ARCHIVEMEDIA_BATCH_INPUT,Env:ARCHIVEMEDIA_BATCH_OUTPUT,Env:ARCHIVEMEDIA_BATCH_RESULT -ErrorAction SilentlyContinue
@@ -609,11 +613,11 @@ $enumOptions.IgnoreInaccessible = $true
 $enumOptions.ReturnSpecialDirectories = $false
 $enumOptions.AttributesToSkip = [IO.FileAttributes]0
 
-$allFiles = if ($ArchiveBatch) {
+if ($ArchiveBatch) {
     if (-not (Test-Path -LiteralPath $env:ARCHIVEMEDIA_BATCH_FILE -PathType Leaf)) {
         throw "Batch input file is missing: $env:ARCHIVEMEDIA_BATCH_FILE"
     }
-    @([IO.FileInfo]::new($env:ARCHIVEMEDIA_BATCH_FILE))
+    $allFiles = @([IO.FileInfo]::new($env:ARCHIVEMEDIA_BATCH_FILE))
 } else {
 $allFiles = @(
     [IO.Directory]::EnumerateFiles($InputRoot, "*", $enumOptions) |
