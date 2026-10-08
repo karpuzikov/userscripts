@@ -1340,7 +1340,7 @@ def launch_gui():
                 else:
                     subprocess.Popen(["xdg-open", str(target if target.is_dir() else target.parent)])
             except Exception as exc:
-                messagebox.showerror(APP_NAME, f"Cannot open selected location: {exc}")
+                messagebox.showerror(APP_NAME, "Unable to open the selected location. Check filesystem access.")
 
         def preview_selected_image(self):
             selection = self.result_tree.selection()
@@ -1359,7 +1359,7 @@ def launch_gui():
                 else:
                     subprocess.Popen(["xdg-open", str(path)])
             except Exception as exc:
-                messagebox.showerror(APP_NAME, f"Cannot preview image: {exc}")
+                messagebox.showerror(APP_NAME, "Unable to preview the selected image. Check its file association and access.")
 
         def confirm_visual_damage(self):
             """User confirmation promotes visual warnings, never an automatic decision."""
@@ -1982,7 +1982,10 @@ def launch_gui():
                         else:
                             self.log_path("[UNDO SKIPPED] ", original, "warning")
                             self.log_path("  From: ", moved_to, "muted")
-                            self.log_line(f"  Reason: {reason}", "muted")
+                            safe_reason = str(reason).replace(str(original), "[original]").replace(
+                                str(moved_to), "[quarantine]"
+                            )
+                            self.log_line(f"  Reason: {safe_reason}", "muted")
                         self.status_var.set(
                             f"Undoing last run: {index:,}/{total:,} ({pct:.1f}%)"
                         )
