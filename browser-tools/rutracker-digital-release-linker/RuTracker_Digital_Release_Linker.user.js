@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         RuTracker Digital Release Linker
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.1.21
+// @version      1.1.22
 // @description  Links exact digital release pages in RuTracker BBCode, falls back from Deezer to MusicBrainz-linked Beatport releases, and adds country flag emoji.
 // @author       karpuzikov
 // @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/browser-tools/rutracker-digital-release-linker/RuTracker_Digital_Release_Linker.user.js
@@ -115,7 +115,7 @@
                 retries: 2,
                 retry503: true,
                 headers: {
-                    'User-Agent': `${SCRIPT_NAME}/1.1.21 (Tampermonkey userscript)`,
+                    'User-Agent': `${SCRIPT_NAME}/1.1.22 (Tampermonkey userscript)`,
                 },
             });
         });
@@ -140,7 +140,7 @@
                         url,
                         headers: {
                             Accept: 'text/html',
-                            'User-Agent': `${SCRIPT_NAME}/1.1.21 (Tampermonkey userscript)`,
+                            'User-Agent': `${SCRIPT_NAME}/1.1.22 (Tampermonkey userscript)`,
                         },
                         timeout: 20000,
                         onload(response) {
@@ -583,25 +583,6 @@
 
         caches.deezerAlbum.set(key, promise);
         return promise;
-    }
-
-    async function deezerCoverForReleaseUrl(url) {
-        const match = String(url || '').match(/deezer\.com\/(?:[^/]+\/)?album\/(\d+)(?:[/?#]|$)/i);
-        if (!match) return '';
-        const album = await deezerAlbumById(match[1]);
-        for (const candidate of [album?.cover_medium, album?.cover_big, album?.cover_xl]) {
-            if (!candidate) continue;
-            try {
-                const parsed = new URL(candidate);
-                if (parsed.protocol === 'https:' &&
-                    /(?:^|\.)dzcdn\.net$/i.test(parsed.hostname)) {
-                    return parsed.href;
-                }
-            } catch {
-                // Ignore invalid image URLs.
-            }
-        }
-        return '';
     }
 
     function barcodeLookupVariants(value) {
@@ -1260,10 +1241,6 @@
         return spoilers.sort((a, b) => a.start - b.start || a.end - b.end);
     }
 
-    function findCoverPlaceholder(blockText) {
-        return blockText.match(/\[img(?:=right)?\]\s*(?:ссылка|ссылкаНаОбложку)\s*\[\/img\]/i);
-    }
-
     function findProviderMatch(blockText) {
         for (const provider of PROVIDERS) {
             const match = blockText.match(provider.sourceRegex);
@@ -1423,10 +1400,6 @@
                         topicArtist,
                         blockText: candidate.spoiler.fullText,
                     });
-                    if (resolution?.kind === 'deezer' &&
-                        findCoverPlaceholder(candidate.spoiler.ownText)) {
-                        resolution.coverUrl = await deezerCoverForReleaseUrl(resolution.url);
-                    }
                 } catch (caught) {
                     error = caught;
                     console.error(`[${SCRIPT_NAME}]`, candidate.meta.spoilerTitle, caught);
@@ -1455,7 +1428,6 @@
             const notFoundTitles = [];
             let linked = 0;
             let alreadyCorrect = 0;
-            let coversLinked = 0;
             let beatportFallbacks = 0;
 
             for (const result of results) {
@@ -1484,16 +1456,6 @@
                 } else if (forceWeb) {
                     alreadyCorrect += 1;
                 }
-                const coverMatch = findCoverPlaceholder(candidate.spoiler.ownText);
-                if (coverMatch && result.resolution.coverUrl) {
-                    const coverStart = candidate.spoiler.start + coverMatch.index;
-                    replacements.push({
-                        start: coverStart,
-                        end: coverStart + coverMatch[0].length,
-                        text: `[img=right]${result.resolution.coverUrl}[/img]`,
-                    });
-                    coversLinked += 1;
-                }
             }
 
             replacements.sort((a, b) => b.start - a.start);
@@ -1507,7 +1469,6 @@
             const parts = [`${forceWeb ? 'Deezer links updated' : 'Linked'}: ${linked}`];
             if (forceWeb) parts.push(`checked: ${candidates.length}`);
             if (alreadyCorrect) parts.push(`already correct: ${alreadyCorrect}`);
-            if (coversLinked) parts.push(`covers: ${coversLinked}`);
             if (beatportFallbacks) parts.push(`Beatport fallback: ${beatportFallbacks}`);
             if (countryResult.changed) parts.push(`country flags: ${countryResult.changed}`);
             if (alreadyLinked) parts.push(`already linked: ${alreadyLinked}`);
