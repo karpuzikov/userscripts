@@ -981,6 +981,7 @@ def launch_gui():
             self.worker_count = 0
             self.drive_count = 0
             self.review_by_iid = {}
+            self.sort_desc = {}
             self.visual_checked = 0
             self.visual_suspects = 0
 
@@ -1161,7 +1162,8 @@ def launch_gui():
                 ("type", "Type", 75),
                 ("workers", "Workers", 75),
             ):
-                self.source_tree.heading(key, text=title)
+                self.source_tree.heading(key, text=title,
+                    command=lambda c=key: self.sort_tree(self.source_tree, c))
                 self.source_tree.column(key, width=width, minwidth=56 if key == "open" else 66,
                                          stretch=key == "path",
                                          anchor="center" if key != "path" else "w")
@@ -1170,6 +1172,7 @@ def launch_gui():
             self.source_tree.pack(side="left", fill="both", expand=True)
             sy.pack(side="right", fill="y")
             self.bind_open_column(self.source_tree)
+            self.source_tree.bind("<Delete>", lambda _e: self.remove_selected_sources())
 
             lower = ttk.Frame(self.panes)
             self.panes.add(lower, weight=5)
@@ -1204,7 +1207,8 @@ def launch_gui():
                 ("path", "File", 340),
                 ("reason", "Details", 440),
             ):
-                self.result_tree.heading(key, text=title)
+                self.result_tree.heading(key, text=title,
+                    command=lambda c=key: self.sort_tree(self.result_tree, c))
                 self.result_tree.column(key, width=width,
                                         minwidth=55 if key == "open" else 120,
                                         stretch=key in {"path", "reason"},
@@ -1220,6 +1224,8 @@ def launch_gui():
             result_frame.rowconfigure(0, weight=1)
             result_frame.columnconfigure(0, weight=1)
             self.bind_open_column(self.result_tree)
+            self.result_tree.bind("<Control-a>", lambda _e: self.select_all_results())
+            self.result_tree.bind("<Button-3>", self.result_context_menu)
 
             activity_frame = ttk.Frame(self.activity_tab)
             activity_frame.pack(fill="both", expand=True)
@@ -1238,6 +1244,41 @@ def launch_gui():
             self.log.pack(side="left", fill="both", expand=True)
             ly.pack(side="right", fill="y")
 
+
+        def sort_tree(self, tree, column):
+            key = (str(tree), column)
+            descending = not self.sort_desc.get(key, False)
+            self.sort_desc[key] = descending
+            rows = [(tree.set(iid, column).casefold(), iid) for iid in tree.get_children("")]
+            rows.sort(reverse=descending)
+            for position, (_value, iid) in enumerate(rows):
+                tree.move(iid, "", position)
+
+        def select_all_results(self):
+            self.result_tree.selection_set(self.result_tree.get_children())
+            return "break"
+
+        def result_context_menu(self, event):
+            item = self.result_tree.identify_row(event.y)
+            if not item:
+                return
+            self.result_tree.selection_set(item)
+            menu = tk.Menu(self.root, tearoff=False)
+            menu.add_command(label="Preview selected", command=self.preview_selected_image)
+            menu.add_command(label="Open file location",
+                             command=lambda: self.open_location(self.result_tree.set(item, "path")))
+            menu.add_command(label="Copy file path",
+                             command=lambda: self.copy_file_path(self.result_tree.set(item, "path")))
+            menu.add_separator()
+            menu.add_command(label="Confirm visual damage", command=self.confirm_visual_damage,
+                             state="normal" if self.scan_completed else "disabled")
+            menu.tk_popup(event.x_root, event.y_root)
+            menu.grab_release()
+
+        def copy_file_path(self, path):
+            self.root.clipboard_clear()
+            self.root.clipboard_append(str(path))
+            self.root.update_idletasks()
 
         def open_location(self, path):
             target = Path(path)
