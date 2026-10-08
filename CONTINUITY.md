@@ -2,7 +2,7 @@
 
 ## Product and state
 - Product: Karpuzikov Picard Scripts, a Picard 3.x Git-updatable MusicBrainz metadata plugin.
-- Current version: 1.5.12 - Under construction ⚠️ (not yet verified inside user Picard).
+- Current version: 1.5.13 - Under construction ⚠️ (not yet verified inside user Picard).
 - Git repository and active branch: `karpuzikov/userscripts`, `main`.
 - There is no additional project-specific `RULES.md` currently; the canonical repository root `SOFTWARE_RULES.md` governs this project.
 
@@ -89,3 +89,12 @@
 - Suffix duplication fix in v1.5.12 and toolbar placement in v1.5.11 are pending user-environment verification. Leave the product Under construction ⚠️ until Picard confirms behavior.
 - The prior manual script version 1.0.0 did not write `albumartist`; the embedded copy had the same omission. Version 1.0.1/1.5.8 adds album-artist formatting.
 - Next action: update Picard plugin to v1.5.12, verify Gypsyhook and repeated EP/Single suffix processing, then test Barcode toolbar placement at narrow and maximized window sizes and the Tools-menu fallback; then run `python -m unittest discover -s picard-tools/tests` in a Python 3.9+ environment, validate the embedded Picard ScriptParser output for suffixes, then test the four linked Skrillex releases in Picard 3. Verify results are stable after a second reload and that existing ETI removal remains unchanged. Test the earlier Format Multiple Artists scenarios separately.
+
+## Standalone Picard script audit (2026-10-09; plugin v1.5.13)
+
+- Manual `Unicode_to_ASCII.txt` and versioned `Unicode_to_ASCII_v1.0.1.txt`: former `$replace` incorrectly supplied dozens of search/replacement pairs even though Picard supports exactly 3 parameters. Replaced with valid, separate 3-argument functions for 31 grouped or individual transformations. In particular U+2010/U+2011/U+2012/U+2013/U+2014/U+2015/U+2212 become ASCII hyphen-minus U+002D; unchanged ASCII hyphens stay untouched.
+- Unicode converter only edits present tags in the original scope (title, album, artist/albumartist, sort fields, composer/credit and other previously listed fields); preserves multi-valued tags via `$map` and `$setmulti` instead of collapsing them with `$set`. It normalizes punctuation, not accented Latin or other writing systems. WARNING: Picard's map/setmulti string transport might split a literal '; ' inside a multi-value element; validate on rare multi-value tags with embedded semicolons before considering runtime QA complete.
+- Manual `English_Title_Capitalization.txt` and versioned `English_Title_Capitalization_v1.1.3.txt`: replaced ten invalid many-pair `$replace` expressions with 169 valid ordered `$replace(text,search,replace)` calls. Existing linguistic rules, fallback behavior, and guard against obvious Spanish/Portuguese titles were retained; do NOT enable the legacy capitalization together with the language-aware plugin capitalization.
+- Updated identical embedded script sources in root `__init__.py`, plugin manifest to 1.5.13, README versions/download links, and related regression tests. Version 1.0.0 Unicode and 1.1.2 English should be regarded as historical and defective.
+- Inspected `Add_EP_Single_Suffix.txt`, `Format_Multiple_Artists.txt`, `Move_Featured_Artists_to_Title.txt` against Picard's scripting function signatures. No equivalent multi-pair `$replace` defect found; current behavior remains unchanged to avoid unverified artist-credit corruption. Known concern: `Format Multiple Artists` uses substring presence rather than token-safe membership when filtering source artist names; a full solution must preserve legitimate punctuation in artist names and nonstandard MB join phrases. Featured-artist parser should be tested with parenthesized and nonparenthesized feat. credits.
+- Static checks are not equivalent to Picard 3 interactive runtime validation. Manual QA must cover G‐DRAGON -> G-DRAGON, proper Unicode quote/punctuation conversion, repeated runs/idempotence, preservation of non-ASCII letters, multi-artist/composer tagging, original format and suffix regression samples, and embedded/standalone script parity. Keep 1.5.13 - Under construction ⚠️ until confirmed.
