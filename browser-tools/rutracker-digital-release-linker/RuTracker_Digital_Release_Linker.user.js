@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         RuTracker Digital Release Linker
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.1.18
+// @version      1.1.19
 // @description  Links exact digital release pages in RuTracker BBCode, falls back from Deezer to MusicBrainz-linked Beatport releases, and adds country flag emoji.
 // @author       karpuzikov
 // @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/browser-tools/rutracker-digital-release-linker/RuTracker_Digital_Release_Linker.user.js
@@ -36,6 +36,14 @@
 
     const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+    function musicBrainz503Delay(response) {
+        const headers = String(response?.responseHeaders || '');
+        const value = headers.match(/(?:^|\r?\n)Retry-After:\s*([^\r\n]+)/i)?.[1]?.trim() || '';
+        const seconds = /^\d+(?:\.\d+)?$/.test(value) ? Number(value) : NaN;
+        const requested = Number.isFinite(seconds) ? seconds * 1000 : Date.parse(value) - Date.now();
+        return Number.isFinite(requested) ? Math.max(5000, Math.ceil(requested)) : 5000;
+    }
+
     function gmJson(url, options = {}) {
         const retries = options.retries ?? 2;
         const headers = options.headers ?? {};
@@ -53,6 +61,10 @@
                     timeout: 20000,
                     onload(response) {
                         const status = response.status || 0;
+                        if (status === 503 && options.retry503) {
+                            setTimeout(() => attempt(number), musicBrainz503Delay(response));
+                            return;
+                        }
                         if ((status === 429 || status >= 500) && number < retries) {
                             setTimeout(() => attempt(number + 1), 1000 * (number + 1));
                             return;
@@ -101,8 +113,9 @@
             lastMbRequestAt = Date.now();
             return gmJson(url, {
                 retries: 2,
+                retry503: true,
                 headers: {
-                    'User-Agent': `${SCRIPT_NAME}/1.1.17 (Tampermonkey userscript)`,
+                    'User-Agent': `${SCRIPT_NAME}/1.1.19 (Tampermonkey userscript)`,
                 },
             });
         });
@@ -127,11 +140,15 @@
                         url,
                         headers: {
                             Accept: 'text/html',
-                            'User-Agent': `${SCRIPT_NAME}/1.1.17 (Tampermonkey userscript)`,
+                            'User-Agent': `${SCRIPT_NAME}/1.1.19 (Tampermonkey userscript)`,
                         },
                         timeout: 20000,
                         onload(response) {
                             const status = response.status || 0;
+                            if (status === 503) {
+                                setTimeout(() => attempt(number), musicBrainz503Delay(response));
+                                return;
+                            }
                             if ((status === 429 || status >= 500) && number < 2) {
                                 setTimeout(() => attempt(number + 1), 1000 * (number + 1));
                                 return;
@@ -547,7 +564,7 @@
 
     function isResolvedDigitalReleaseUrl(url) {
         const value = String(url || '').trim();
-        if (!value) return false;
+        if (!value || /^(?:ссылка|ссылкаНаИсточник|Источник)$/i.test(value)) return false;
 
         if (isDeezerAlbumUrl(value) || isBeatportReleaseUrl(value)) return true;
 
@@ -566,6 +583,25 @@
 
         caches.deezerAlbum.set(key, promise);
         return promise;
+    }
+
+    async function deezerCoverForReleaseUrl(url) {
+        const match = String(url || '').match(/deezer\.com\/(?:[^/]+\/)?album\/(\d+)(?:[/?#]|$)/i);
+        if (!match) return '';
+        const album = await deezerAlbumById(match[1]);
+        for (const candidate of [album?.cover_medium, album?.cover_big, album?.cover_xl]) {
+            if (!candidate) continue;
+            try {
+                const parsed = new URL(candidate);
+                if (parsed.protocol === 'https:' &&
+                    /(?:^|\.)dzcdn\.net$/i.test(parsed.hostname)) {
+                    return parsed.href;
+                }
+            } catch {
+                // Ignore invalid image URLs.
+            }
+        }
+        return '';
     }
 
     function barcodeLookupVariants(value) {
@@ -1081,6 +1117,18 @@
 
     const PROVIDERS = [
         {
+            key: 'unfilled-digital-release',
+            label: 'Unfilled digital release',
+            sourceRegex: /(\[b\]Носитель\|Источник\[\/b\]\s*:\s*)CD\s*\/\s*WEB\s*\|\s*\[url=(?:"[^"]+"|[^\]]+)\]Источник\[\/url\](\[hr\])?/i,
+            isReleaseUrl: () => false,
+            resolve: resolveDeezer,
+            getCurrentUrl: () => '',
+            makeLinkedSource(match, resolution) {
+                const name = resolution.kind === 'beatport' ? 'Beatport' : 'Deezer';
+                return `${match[1]}WEB|[url=${resolution.url}]${name}[/url]${match[2] || ''}`;
+            },
+        },
+        {
             key: 'digital-release',
             label: 'Digital release',
             sourceRegex: /(\[b\]Носитель\|Источник\[\/b\]\s*:\s*)(?:(WEB)\|(?:Deezer|\[url=(?:"([^"]+)"|([^\]]+))\]Deezer\[\/url\]|(redacted\.(?:sh|ch)))|\[url=(?:"([^"]+)"|([^\]]+))\]WEB\[\/url\]\|(redacted\.(?:sh|ch)))(\[hr\])?/i,
@@ -1154,6 +1202,10 @@
         }
 
         return spoilers.sort((a, b) => a.start - b.start || a.end - b.end);
+    }
+
+    function findCoverPlaceholder(blockText) {
+        return blockText.match(/\[img(?:=right)?\]\s*(?:ссылка|ссылкаНаОбложку)\s*\[\/img\]/i);
     }
 
     function findProviderMatch(blockText) {
@@ -1286,6 +1338,10 @@
                         topicArtist,
                         blockText: candidate.spoiler.fullText,
                     });
+                    if (resolution?.kind === 'deezer' &&
+                        findCoverPlaceholder(candidate.spoiler.ownText)) {
+                        resolution.coverUrl = await deezerCoverForReleaseUrl(resolution.url);
+                    }
                 } catch (caught) {
                     error = caught;
                     console.error(`[${SCRIPT_NAME}]`, candidate.meta.spoilerTitle, caught);
@@ -1299,6 +1355,7 @@
             const replacements = [];
             const notFoundTitles = [];
             let linked = 0;
+            let coversLinked = 0;
             let beatportFallbacks = 0;
 
             for (const result of results) {
@@ -1325,6 +1382,16 @@
                     linked += 1;
                     if (result.resolution.kind === 'beatport') beatportFallbacks += 1;
                 }
+                const coverMatch = findCoverPlaceholder(candidate.spoiler.ownText);
+                if (coverMatch && result.resolution.coverUrl) {
+                    const coverStart = candidate.spoiler.start + coverMatch.index;
+                    replacements.push({
+                        start: coverStart,
+                        end: coverStart + coverMatch[0].length,
+                        text: `[img=right]${result.resolution.coverUrl}[/img]`,
+                    });
+                    coversLinked += 1;
+                }
             }
 
             replacements.sort((a, b) => b.start - a.start);
@@ -1340,6 +1407,7 @@
             }
 
             const parts = [`Linked: ${linked}`];
+            if (coversLinked) parts.push(`covers: ${coversLinked}`);
             if (beatportFallbacks) parts.push(`Beatport fallback: ${beatportFallbacks}`);
             if (countryResult.changed) parts.push(`country flags: ${countryResult.changed}`);
             if (alreadyLinked) parts.push(`already linked: ${alreadyLinked}`);
