@@ -44,6 +44,12 @@ class FakeToolbar:
     def removeAction(self, action):
         self.items.remove(action)
 
+    def isFloating(self):
+        return getattr(self, 'floating', False)
+
+    def hide(self):
+        self.hidden = True
+
 
 class ToolbarLifecycleTests(unittest.TestCase):
     def test_first_action_avoids_right_edge_overflow(self):
@@ -114,6 +120,42 @@ class ToolbarLifecycleTests(unittest.TestCase):
         self.assertIn("self.window.removeEventFilter(self)", watcher_source)
         menu = next(n for n in TREE.body if isinstance(n, ast.ClassDef) and n.name == "BarcodeLookupToolsAction")
         self.assertIn("_barcode_only_lookup(self.api, objects)", ast.unparse(menu))
+
+    def test_shutdown_detaches_all_old_and_floating_barcode_actions(self):
+        action = FakeAction("Barcode / UPC Lookup")
+        current = FakeToolbar(FakeAction("Lookup"), action)
+        older = FakeToolbar(action)
+        older.floating = True
+        unrelated = FakeToolbar(FakeAction("Other plugin"))
+        helpers = {
+            "_BARCODE_TOOLBAR_ACTION": action,
+            "_barcode_toolbars": lambda window: [current, older, unrelated],
+        }
+        exec(source_function("_detach_barcode_action"), helpers)
+        exec(source_function("_hide_floating_barcode_toolbars"), helpers)
+        affected = helpers["_detach_barcode_action"](object())
+        self.assertEqual(affected, [current, older])
+        self.assertNotIn(action, current.actions())
+        self.assertNotIn(action, older.actions())
+        self.assertEqual(unrelated.actions()[0].text(), "Other plugin")
+        helpers["_hide_floating_barcode_toolbars"](affected)
+        self.assertTrue(older.hidden)
+        self.assertFalse(getattr(current, "hidden", False))
+
+    def test_close_event_never_reinstalls_toolbar_during_exit(self):
+        watcher = next(node for node in TREE.body
+                       if isinstance(node, ast.ClassDef) and node.name == "_BarcodeToolbarWatcher")
+        body = ast.unparse(watcher)
+        self.assertIn("QEvent.Type.Close", body)
+        self.assertIn("QEvent.Type.Hide", body)
+        self.assertIn("self.app.aboutToQuit.connect(self.on_quit)", body)
+        self.assertIn("_detach_barcode_action(self.window)", body)
+        self.assertIn("if self.closing or _LOOKUP_API is not self.api:", body)
+        self.assertIn("resume_if_close_cancelled", body)
+        self.assertIn("self.window.isVisible()", body)
+        installer = source_function("_install_barcode_lookup_button")
+        self.assertIn("_BARCODE_TOOLBAR_WATCHER.closing", installer)
+        self.assertIn("_detach_barcode_action(api.tagger.window)", source_function("disable"))
 
     def test_barcode_matcher_retained(self):
         for name in ("_barcode_forms", "_barcodes_match", "_start_barcode_batch_lookup", "_barcode_only_lookup"):
