@@ -629,11 +629,23 @@ def _detach_barcode_action(window):
 
 
 def _hide_floating_barcode_toolbars(toolbars):
-    """Close only affected floating toolbars, preserving normal native docking."""
+    """Return ONLY toolbar windows actually hidden by us during shutdown."""
+    hidden = []
     for toolbar in toolbars:
         try:
-            if toolbar.isFloating():
+            if toolbar.isFloating() and toolbar.isVisible():
                 toolbar.hide()
+                hidden.append(toolbar)
+        except RuntimeError:
+            continue
+    return hidden
+
+
+def _restore_hidden_barcode_toolbars(toolbars):
+    """Restore native toolbar visibility if Picard cancels its Close event."""
+    for toolbar in toolbars:
+        try:
+            toolbar.show()
         except RuntimeError:
             continue
 
@@ -697,6 +709,7 @@ class _BarcodeToolbarWatcher(QtCore.QObject):
         self.pending = False
         self.closing = False
         self.close_toolbars = []
+        self.hidden_toolbars = []
         self.window.installEventFilter(self)
         self.app = QtWidgets.QApplication.instance()
         if self.app is not None:
@@ -718,11 +731,13 @@ class _BarcodeToolbarWatcher(QtCore.QObject):
             self.closing = True
             self.check_timer.stop()
             self.close_toolbars = _detach_barcode_action(self.window)
-            _hide_floating_barcode_toolbars(self.close_toolbars)
+            self.hidden_toolbars = _hide_floating_barcode_toolbars(self.close_toolbars)
             # Closing Picard may be cancelled. Restore the button if so.
             QtCore.QTimer.singleShot(0, self.resume_if_close_cancelled)
         elif event_type == QtCore.QEvent.Type.Hide and self.closing:
-            _hide_floating_barcode_toolbars(self.close_toolbars)
+            self.hidden_toolbars.extend(
+                _hide_floating_barcode_toolbars(self.close_toolbars)
+            )
         elif not self.closing and event_type in (
             QtCore.QEvent.Type.ChildAdded,
             QtCore.QEvent.Type.WindowActivate,
@@ -736,12 +751,16 @@ class _BarcodeToolbarWatcher(QtCore.QObject):
         except RuntimeError:
             return
         if not still_open:
-            _hide_floating_barcode_toolbars(self.close_toolbars)
+            self.hidden_toolbars.extend(
+                _hide_floating_barcode_toolbars(self.close_toolbars)
+            )
             return
         if _LOOKUP_API is not self.api or not self.closing:
             return
+        _restore_hidden_barcode_toolbars(self.hidden_toolbars)
         self.closing = False
         self.close_toolbars = []
+        self.hidden_toolbars = []
         self.check_timer.start()
         self.refresh()
 
@@ -749,7 +768,9 @@ class _BarcodeToolbarWatcher(QtCore.QObject):
         self.closing = True
         self.check_timer.stop()
         self.close_toolbars.extend(_detach_barcode_action(self.window))
-        _hide_floating_barcode_toolbars(self.close_toolbars)
+        self.hidden_toolbars.extend(
+            _hide_floating_barcode_toolbars(self.close_toolbars)
+        )
 
     def schedule(self):
         if not self.closing and not self.pending:
