@@ -370,7 +370,16 @@ function Invoke-ArchiveCloud([string]$src, [string]$dst) {
             })
         }
     }
-    $ordered = @($all | Sort-Object Rel)
+    # Keep original policy: prestandardized JPEG/MP4 claim the unsuffixed name first.
+    $ordered = @($all | Sort-Object -Property @(
+        @{ Expression = { [IO.Path]::GetDirectoryName($_.Rel.Replace('/', '\')) }; Ascending = $true },
+        @{ Expression = { [IO.Path]::GetFileNameWithoutExtension($_.Rel.Replace('/', '\')) }; Ascending = $true },
+        @{ Expression = { switch ([IO.Path]::GetExtension($_.Rel).ToLowerInvariant()) {
+            '.jpg' { 0 } '.mp4' { 0 } '.jpeg' { 1 } default { 2 }
+        } }; Ascending = $true },
+        @{ Expression = { [IO.Path]::GetExtension($_.Rel).ToLowerInvariant() }; Ascending = $true }
+    ))
+    $occupied = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
     $success = 0; $resumed = 0; $failed = 0
     $clock = [Diagnostics.Stopwatch]::StartNew()
     Write-Host ("Files: {0}. Cache limit: {1}. Pipeline: download > process > upload > verify." -f $ordered.Count,(Format-Bytes $cap))
