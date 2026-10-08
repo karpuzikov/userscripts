@@ -2,10 +2,10 @@
 
 ## Project and status
 - Purpose: Tampermonkey script for importing supported Apple Music song credits as MusicBrainz Recording, Work, and Release relationships in the MusicBrainz release relationship editor.
-- Current version: **2.3.18 - Under construction ⚠️**. Runtime testing in the target browser is still required.
+- Current version: **2.3.19 - Under construction ⚠️**. Runtime testing in the target browser is still required.
 - Repository: `karpuzikov/userscripts`, default branch `main`.
 - Canonical source: `musicbrainz-tools/apple-music-composition-lyrics-importer/MusicBrainz_Apple_Music_Composition_Lyrics_Importer.user.js`.
-- Userscript metadata: `@version 2.3.18`, matching in-panel `SCRIPT_VERSION = '2.3.18'`.
+- Userscript metadata: `@version 2.3.19`, matching in-panel `SCRIPT_VERSION = '2.3.19'`.
 - Read the root `SOFTWARE_RULES.md` and current relevant UXDT guidance before modifying the UI. No separate project RULES.md was present at the 2026-10-08 preflight.
 
 ## Host, architecture, dependencies
@@ -92,3 +92,13 @@
 - v2.3.17 tested eight isolated mock scenarios: no-title-match with unresolved writer -> new Work, unique verified author -> reuse, ambiguous same-title -> blocked, linked Work -> reused, search failure -> no creation, cached title search, author relationship verification, >8 candidates -> manual. v2.3.18 parsed successfully and passed additional guard checks for staged same-title repeat and cache reset. These are *mocked/source tests*, not end-to-end Chrome tests.
 - Distribution target version: **2.3.18 - Under construction ⚠️**; preserve @name, @namespace, @updateURL, @downloadURL and grants. Update the README immutable pinned version link to this source revision. No custom updater.
 - Next test: Tampermonkey -> Check for userscript updates. On the same FAST X MusicBrainz edit-relationships page, start the Browser Debug Bridge, trigger Load Apple Music credits, wait for a final state (or capture partial status after 3 minutes), and export JSON/screenshot. Inspect all 21 track rows, staged Song Works, Work author-credit relationships after Apply, and remaining 503 errors. Do **not** claim the issue fixed until this live test completes. Keep v2.3.18 Under construction.
+
+## 2026-10-08 - v2.3.19 - Automatic Work creation without modal
+
+- **User-confirmed blocker:** FAST X screenshot and Browser Debug Bridge report for v2.3.18 show the native **Batch-add new works** modal open during import of track 1. Script status: `Choose the lyrics language once for this album, then click Done.` User explicitly confirmed the run stalled there, not merely progressing. Prior assistant diagnosis was wrong.
+- **Verified root cause:** v2.3.18 `createWorkForRecording` deliberately clicked `button.batch-create-works`, opened `#batch-create-works-dialog`, and waited as long as 10 minutes for the user to close it. It treated a lyrics language as mandatory and would copy that language to every song in the soundtrack; this is inaccurate for multilingual releases.
+- Verified 2026-10-08 against upstream `metabrainz/musicbrainz-server` `root/static/scripts/release/components/BatchCreateWorksDialog.js` and `ReleaseRelationshipEditor.js`: the dialog ultimately dispatches `accept-batch-create-works-dialog`. Its reducer creates a temporary Song Work and recording-of relation for each selected recording, using `action.languages.map(...)`, so an empty `languages: []` is valid and does not guess lyrics language. Official MusicBrainz Work editing docs describe the lyrics language field as optional and advise leaving it blank when unknown.
+- v2.3.19 removes the modal workflow and directly dispatches the native action for exactly one verified recording at a time, `workType: 17` (Song), `languages: []`, restoring the user's recording selection afterwards. Explicitly verify selection before dispatch, confirm that a temporary Work appears, check Work type, and stop with a visible error if it is not staged. **Do not auto-submit edits**; all relationships remain in MusicBrainz editor for review.
+- No album-wide assumption for lyrics language. Users may add verified language(s) later, per Work. Preserve safety constraints: complete title search, existing-Work reuse, no duplicates, no guessed artist matches, no automatic Work creation on search failures. Keep the source and metadata name/namespace/update URLs unchanged.
+- Source-level tests (10) passed: Work action, unspecified language, Song type, selection restoration, wrong-selection guard, wrong-type guard, confirmation guard, no blocking dialog, syntax parsing, and optional credit-application preservation. They are **mocked tests** and do not prove a live browser success.
+- Current version `2.3.19 - Under construction ⚠️`. Next: Tampermonkey native **Check for userscript updates**, **cancel the old open modal and reload MusicBrainz** (do not continue old instance), run a new Work import, and send new Bridge JSON and screenshot at the final state. Verify temporary Works appear for eligible tracks without any modal, work credit attachments stage after Apply matched credits, and changes are only submitted on user's own MusicBrainz submit action. If not, inspect exported diagnostics; do not claim fixed without live verification.
