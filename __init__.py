@@ -594,26 +594,18 @@ class BarcodeLookupToolsAction(BaseAction):
 
 
 def _place_barcode_action(toolbar, action):
-    """Reinsert exactly once, ideally next to native Lookup."""
+    """Keep Barcode Lookup first, before actions that may overflow at narrow widths."""
     actions = toolbar.actions()
-    if action in actions:
+    if actions and actions[0] == action:
         return False
-
-    native_lookup = next(
-        (
-            existing for existing in actions
-            if existing.text().replace("&", "").strip() == "Lookup"
-        ),
-        None,
-    )
-    if native_lookup is None:
-        toolbar.addAction(action)
+    if action in actions:
+        # Promote any action previously inserted after native Lookup.
+        toolbar.removeAction(action)
+        actions = toolbar.actions()
+    if actions:
+        toolbar.insertAction(actions[0], action)
     else:
-        index = actions.index(native_lookup)
-        if index + 1 < len(actions):
-            toolbar.insertAction(actions[index + 1], action)
-        else:
-            toolbar.addAction(action)
+        toolbar.addAction(action)
     return True
 
 
@@ -635,7 +627,7 @@ def _install_barcode_lookup_button(api):
             window,
         )
         action.setObjectName("karpuzikov_barcode_upc_lookup")
-        action.setIconText("Barcode Lookup")
+        action.setIconText("Barcode")
         action.setToolTip("Match by exact Barcode/UPC, then disc count and track number")
         action.setStatusTip("Match by exact Barcode/UPC, then disc count and track number")
         action.triggered.connect(lambda _checked=False: _run_barcode_lookup_button(api))
