@@ -954,7 +954,7 @@ def launch_gui():
     class App:
         def __init__(self, root):
             self.root = root
-            self.root.title(f"{APP_NAME} v{APP_VERSION}")
+            self.root.title(f"{APP_NAME} v{APP_VERSION} - {APP_STATUS}")
             self.root.geometry("1040x720")
             self.root.minsize(900, 620)
             self.root.configure(bg=BG)
@@ -1397,6 +1397,7 @@ def launch_gui():
             image_path = Path(filename)
             self.clear_scan_review()
             self.mode = "quick"
+            self.good = self.warning = self.corrupt = self.moved = self.unsupported = self.errors = 0
             self.progress_var.set(0)
             self.start_time = time.monotonic()
             self.total, self.done = 1, 0
@@ -1415,6 +1416,8 @@ def launch_gui():
             threading.Thread(target=check, daemon=True).start()
 
         def add_source(self):
+            if self.running or self.undo_running:
+                return
             folder = filedialog.askdirectory(title="Add source image folder")
             if not folder:
                 return
@@ -1452,6 +1455,8 @@ def launch_gui():
             self.recalculate_worker_plan()
 
         def remove_selected_sources(self):
+            if self.running or self.undo_running:
+                return
             selected = set(self.source_tree.selection())
             if not selected:
                 return
@@ -1462,6 +1467,8 @@ def launch_gui():
             self.recalculate_worker_plan()
 
         def clear_sources(self):
+            if self.running or self.undo_running:
+                return
             for iid in self.source_tree.get_children():
                 self.source_tree.delete(iid)
             self.sources.clear()
@@ -1507,6 +1514,8 @@ def launch_gui():
             self.refresh_move_button()
 
         def start(self):
+            if self.running or self.undo_running:
+                return
             if not self.sources:
                 messagebox.showerror(APP_NAME, "Add at least one source folder first.")
                 return
@@ -1807,6 +1816,7 @@ def launch_gui():
                             "File was not moved. For quarantine, add its folder and scan."
                         )
                         self.stats_vars["Checked"].set("1")
+                        self.stats_vars["Moved"].set("0")
                         for key in ("Good", "Warnings", "Confirmed", "Unsupported", "Errors"):
                             self.stats_vars[key].set("1" if
                                 (key == "Good" and status == "good") or
