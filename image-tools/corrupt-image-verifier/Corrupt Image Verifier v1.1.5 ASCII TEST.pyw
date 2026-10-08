@@ -1207,9 +1207,52 @@ def launch_gui():
             log_frame.rowconfigure(0, weight=1)
             log_frame.columnconfigure(0, weight=1)
 
+
+        def open_location(self, path):
+            target = Path(path)
+            try:
+                if os.name == "nt":
+                    if target.is_dir():
+                        os.startfile(str(target))
+                    else:
+                        subprocess.Popen(["explorer.exe", "/select,", str(target)])
+                elif sys.platform == "darwin":
+                    subprocess.Popen(["open", str(target if target.is_dir() else target.parent)])
+                else:
+                    subprocess.Popen(["xdg-open", str(target if target.is_dir() else target.parent)])
+            except Exception as exc:
+                messagebox.showerror(APP_NAME, f"Cannot open selected location: {exc}")
+
+        def bind_open_column(self, tree):
+            def mouse_open(ev):
+                if tree.identify_region(ev.x, ev.y) == "cell" and tree.identify_column(ev.x) == "#1":
+                    iid = tree.identify_row(ev.y)
+                    if iid:
+                        self.open_location(tree.set(iid, "path"))
+            def keyboard_open(_ev):
+                selected = tree.selection()
+                if selected:
+                    self.open_location(tree.set(selected[0], "path"))
+                    return "break"
+            tree.bind("<ButtonRelease-1>", mouse_open)
+            tree.bind("<Return>", keyboard_open)
+            tree.bind("<space>", keyboard_open)
+
         def log_line(self, text, tag=None):
             self.log.configure(state="normal")
             self.log.insert("end", text + "\n", tag or ())
+            self.log.see("end")
+            self.log.configure(state="disabled")
+
+        def log_path(self, label, path, tag=None):
+            """Shared clickable open control adjacent to every log filesystem path."""
+            self.log.configure(state="normal")
+            self.log.insert("end", label, tag or ())
+            name = f"location_{len(self.log.tag_names())}_{self.log.index('end-1c').replace('.', '_')}"
+            self.log.insert("end", "[DIR] ", (name,))
+            self.log.tag_configure(name, foreground=FG, underline=1)
+            self.log.tag_bind(name, "<Button-1>", lambda _e, p=str(path): self.open_location(p))
+            self.log.insert("end", str(path) + "\n", tag or ())
             self.log.see("end")
             self.log.configure(state="disabled")
 
@@ -1217,6 +1260,30 @@ def launch_gui():
             self.log.configure(state="normal")
             self.log.delete("1.0", "end")
             self.log.configure(state="disabled")
+
+        def clear_scan_review(self):
+            self.review_candidates.clear()
+            self.scan_completed = False
+            self.review_by_iid.clear()
+            if hasattr(self, "result_tree"):
+                for iid in self.result_tree.get_children():
+                    self.result_tree.delete(iid)
+            if hasattr(self, "move_btn"):
+                self.move_btn.configure(state="disabled")
+
+        def refresh_move_button(self):
+            eligible = self.scan_completed and bool(self.review_candidates)
+            self.move_btn.configure(state="normal" if eligible and not (
+                self.running or self.undo_running) else "disabled")
+
+        def update_progress_detail(self):
+            elapsed = max(0.0, time.monotonic() - self.start_time) if self.start_time else 0.0
+            rate = self.done / elapsed if elapsed > 0 else 0.0
+            self.detail_progress_var.set(
+                f"Discovered: {self.discovered:,} | Checked: {self.done:,}/{self.total:,} | "
+                f"Elapsed: {format_elapsed(elapsed)} | {rate:.1f} files/s | "
+                f"{self.worker_count} workers / {self.drive_count} drives"
+            )
 
         def add_source(self):
             folder = filedialog.askdirectory(title="Add source image folder")
@@ -1236,8 +1303,8 @@ def launch_gui():
                 if is_same_or_child(path, item["path"]):
                     messagebox.showinfo(
                         APP_NAME,
-                        "That folder is already covered by an existing source:\n\n"
-                        f"{item['path']}",
+                        "That folder is already covered by an existing source. "
+                        "Select its row and use OPEN to inspect it.",
                     )
                     return
 
@@ -1247,7 +1314,8 @@ def launch_gui():
                 self.sources.remove(item)
 
             info = detect_drive_info(path)
-            iid = self.source_tree.insert("", "end", values=(str(path), info["drive"], info["storage_type"], "..."))
+            self.clear_scan_review()
+            iid = self.source_tree.insert("", "end", values=("[DIR]", str(path), info["drive"], info["storage_type"], "..."))
             self.sources.append({"path": path, "info": info, "iid": iid})
             self.recalculate_worker_plan()
 
@@ -1256,6 +1324,7 @@ def launch_gui():
             if not selected:
                 return
             self.sources = [item for item in self.sources if item["iid"] not in selected]
+            self.clear_scan_review()
             for iid in selected:
                 self.source_tree.delete(iid)
             self.recalculate_worker_plan()
@@ -1264,6 +1333,7 @@ def launch_gui():
             for iid in self.source_tree.get_children():
                 self.source_tree.delete(iid)
             self.sources.clear()
+            self.clear_scan_review()
             self.recalculate_worker_plan()
 
         def recalculate_worker_plan(self):
@@ -1275,7 +1345,7 @@ def launch_gui():
                 workers = self.worker_plan.get(item["info"]["disk_key"], 0)
                 self.source_tree.item(
                     item["iid"],
-                    values=(str(item["path"]), item["info"]["drive"], item["info"]["storage_type"], workers),
+                    values=("[DIR]", str(item["path"]), item["info"]["drive"], item["info"]["storage_type"], workers),
                 )
 
             if not self.sources:
@@ -1301,6 +1371,8 @@ def launch_gui():
             self.clear_btn.configure(state=normal_state)
             self.stop_btn.configure(state="normal" if running else "disabled")
             self.refresh_undo_button()
+            self.refresh_move_button()
+            self.refresh_move_button()
 
         def start(self):
             if not self.sources:
@@ -1309,7 +1381,8 @@ def launch_gui():
 
             missing = [item["path"] for item in self.sources if not item["path"].is_dir()]
             if missing:
-                messagebox.showerror(APP_NAME, f"Source folder no longer exists:\n\n{missing[0]}")
+                messagebox.showerror(APP_NAME, "A source folder no longer exists. "
+                                     "Select its row and use OPEN to inspect it.")
                 return
 
             self.recalculate_worker_plan()
@@ -1325,7 +1398,14 @@ def launch_gui():
                 var.set("0")
             self.clear_log()
 
-            self.status_var.set("Scanning source folders across drives...")
+            self.mode = "scan"
+            self.clear_scan_review()
+            self.discovered = 0
+            self.worker_count = sum(self.worker_plan.values())
+            self.drive_count = len(self.worker_plan)
+            self.stage_var.set("STAGE: DISCOVERING IMAGES")
+            self.update_progress_detail()
+            self.status_var.set("Discovering images across physical drives...")
             source_snapshot = [
                 {"path": item["path"], "info": dict(item["info"])} for item in self.sources
             ]
