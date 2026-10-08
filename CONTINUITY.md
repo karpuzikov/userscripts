@@ -2,7 +2,7 @@
 
 ## Product and state
 - Product: Karpuzikov Picard Scripts, a Picard 3.x Git-updatable MusicBrainz metadata plugin.
-- Current version: 1.5.15 - Under construction ⚠️ (not yet verified inside user Picard).
+- Current version: 1.5.16 - Under construction ⚠️ (not yet verified inside user Picard).
 - Git repository and active branch: `karpuzikov/userscripts`, `main`.
 - There is no additional project-specific `RULES.md` currently; the canonical repository root `SOFTWARE_RULES.md` governs this project.
 
@@ -109,3 +109,8 @@
 
 - The existing Move Featured Artists script appended `(ft. Guest)` even if `title` already contained `(feat. Guest)` or `(ft. Guest)` and `artist` still carried the featured credit. Fixed by normalizing only the title-inspection copy from `feat.` to `ft.`, then appending only when the equivalent credit is absent. Existing artist/albumartist removal regex and captured credit spelling/casing are preserved. Temporary `_feat_title` is unset at end.
 - Published `picard-tools/scripts/Move_Featured_Artists_to_Title_v1.0.1.txt`, mirrored to stable .txt and embedded plugin source. Added versioned README link and runtime regression cases covering no credit, already-`ft.`, and already-`feat.` titles. Tests requiring Picard are pending execution inside Picard 3; keep v1.5.15 - Under construction ⚠️.
+
+## Format Multiple Artists source parity (2026-10-09; plugin v1.5.16)
+
+- Whole-script parity audit found the embedded Format Multiple Artists code was missing the stable source's final newline. Regenerated the embedded literal from the canonical `Format_Multiple_Artists.txt` exactly (no behavior change); added it to the source-parity test. All five current standalone Picard scripts must have byte-identical embedded decoded script sources and matching latest versioned standalone downloads.
+- v1.5.16 - Under construction ⚠️. No change to Format Multiple Artists selection/join semantics. Interactive Picard runtime validation and potential partial-name false-match investigation remain outstanding; do not mark stable without the applicable tests.
