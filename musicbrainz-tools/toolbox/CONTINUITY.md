@@ -1,7 +1,7 @@
 # MusicBrainz ToolBox - Continuity
 
 Last reviewed: 2026-10-08
-Current version: 1.0.56 - Under construction ⚠️ (pending browser verification)
+Current version: 1.0.57 - Under construction ⚠️ (pending browser verification)
 Repository: `karpuzikov/userscripts`, branch `main`
 Global rules: `/SOFTWARE_RULES.md`; no separate ToolBox `RULES.md` exists.
 
@@ -26,3 +26,11 @@ Global rules: `/SOFTWARE_RULES.md`; no separate ToolBox `RULES.md` exists.
 - Validate that both `.user.js` and `.meta.js` have identical version/identity/update URLs, that the README immutable installer points to that version, and that other ToolBox modules remain unchanged.
 - Source-level regression tests: mismatched Deezer duplicate removal; matching provider replacement; move-out/move-in; no GTIN evidence fallback; barcode correction; no duplicate attribution/add lines; non-destructive behavior for ambiguous links.
 - Browser validation is still needed on real MusicBrainz release-group and release-editor pages, including multi-release and barcode mismatch cases. User should run Tampermonkey **Check for userscript updates**, test notes, and report results. Keep `Under construction ⚠️` until confirmed.
+
+## 2026-10-08 - v1.0.57 Recording data visibility fix
+- User requests that the "Recording data" panel, including "Copy recording titles to tracks" and "Copy recording artist credits to tracks", **never appears** on `https://musicbrainz.org/release/*/edit-relationships` or the beta equivalent. This is a page-visibility issue, not a request to remove either function from release creation/editing.
+- Root cause in v1.0.56: the Recording Data to Tracks module used the wide `/release/*/edit*` URL gate, which also matches `/edit-relationships`. The block inserted into an unrelated `#tracklist` element.
+- v1.0.57 adds explicit exclusion URL patterns for standard and beta `/release/*/edit-relationships*` to **only the Recording Data to Tracks module gate**. Existing regular release `/edit` and `/add` page behavior remains unchanged. Avoid touching the adjacent Duplicate Edit Checker and all other ToolBox modules.
+- The source version and `.meta.js` manifest are both 1.0.57. Native `@updateURL` and `@downloadURL` are unchanged. README needs an immutable pinned raw link containing this update.
+- Automated validation: 10 mocked URL-routing cases passed (normal/beta relationship page, relationship query, normal/beta regular release edit, edit query, normal/beta add, unrelated release/release-group). JavaScript syntax passed; adjacent modules and userscript identity/update URLs remained unchanged. Browser runtime/UI still needs user verification.
+- Next: Tampermonkey > Check for userscript updates. Refresh the relationship edit page and confirm no "Recording data" panel or copy buttons. Confirm both buttons still show on a normal `/release/<MBID>/edit` page. Retain "Under construction ⚠️" until tested.
