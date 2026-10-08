@@ -5588,7 +5588,10 @@ def _album_requirement_provider_ids(
         for anchor in anchors
     ]
     for rel in releases:
-        if rel.rid in providers or rel.release_type not in {"ep", "single"} or rel.excluded_only:
+        # Even two-track Album-tagged editions may fall into separate audio
+        # clusters (the broader overlap heuristic requires at least 5 groups).
+        # A fully identical physical container can still fulfill either.
+        if rel.rid in providers or rel.release_type not in {"album", "ep", "single"} or rel.excluded_only:
             continue
         normalized_rel = normalize_title(_release_map_family_base(rel.title, rel.release_type))
         if not normalized_rel:
