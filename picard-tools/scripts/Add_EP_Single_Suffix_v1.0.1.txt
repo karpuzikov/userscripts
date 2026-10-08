@@ -1,0 +1,8 @@
+$if($eq($lower(%_primaryreleasetype%),ep),
+$while($endswith($lower($trim(%album%)), - ep),
+$set(album,$left($trim(%album%),$sub($len($trim(%album%)),5))))
+$if($trim(%album%),$set(album,$trim(%album%) - EP)))
+$if($eq($lower(%_primaryreleasetype%),single),
+$while($endswith($lower($trim(%album%)), - single),
+$set(album,$left($trim(%album%),$sub($len($trim(%album%)),9))))
+$if($trim(%album%),$set(album,$trim(%album%) - Single)))
