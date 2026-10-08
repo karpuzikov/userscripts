@@ -85,6 +85,47 @@ class PicardAlbumRegressions(unittest.TestCase):
                     expected,
                 )
 
+    def test_suffix_script_handles_bare_endings_and_versioned_parity(self):
+        source = (REPO / "picard-tools" / "scripts" / "Add_EP_Single_Suffix.txt").read_text(encoding="utf-8")
+        versioned = (REPO / "picard-tools" / "scripts" / "Add_EP_Single_Suffix_v1.0.2.txt").read_text(encoding="utf-8")
+        self.assertEqual(source, versioned)
+        for kind, n in (("ep", 3), ("single", 7)):
+            with self.subTest(kind=kind):
+                self.assertIn(f"$endswith($lower($trim(%album%)), - {kind})", source)
+                self.assertIn(f"$endswith($lower($trim(%album%)), {kind})", source)
+                self.assertIn(f"$sub($len($trim(%album%)),{n})", source)
+                self.assertIn(f"$ne($lower($trim(%album%)),{kind})", source)
+
+    def test_suffix_script_in_picard_runtime(self):
+        try:
+            from picard.metadata import Metadata
+            from picard.script import ScriptParser
+        except ImportError:
+            self.skipTest("Picard runtime unavailable; run inside Picard's Python environment")
+        source = (REPO / "picard-tools" / "scripts" / "Add_EP_Single_Suffix.txt").read_text(encoding="utf-8")
+        examples = (
+            ("ep", "Gypsyhook EP", "Gypsyhook - EP"),
+            ("ep", "Gypsyhook - EP", "Gypsyhook - EP"),
+            ("ep", "Gypsyhook EP - EP", "Gypsyhook - EP"),
+            ("ep", "Gypsyhook - EP - EP", "Gypsyhook - EP"),
+            ("ep", "Gypsyhook - ep", "Gypsyhook - EP"),
+            ("ep", "EP", "EP"),
+            ("single", "Song Single", "Song - Single"),
+            ("single", "Song Single - Single", "Song - Single"),
+            ("single", "Song - Single", "Song - Single"),
+            ("single", "Single", "Single"),
+            ("album", "Gypsyhook EP", "Gypsyhook EP"),
+        )
+        for kind, input_title, expected in examples:
+            with self.subTest(kind=kind, title=input_title):
+                metadata = Metadata()
+                metadata["album"] = input_title
+                metadata["~primaryreleasetype"] = kind
+                ScriptParser().eval(source, metadata)
+                self.assertEqual(metadata["album"], expected)
+                ScriptParser().eval(source, metadata)
+                self.assertEqual(metadata["album"], expected)
+
     def test_ambiguous_english_title_not_reclassified(self):
         node = {"title": "La La Land", "text-representation": {"language": "eng"}}
         self.assertEqual(_language_mode({"album": "La La Land"}, node), "english")
