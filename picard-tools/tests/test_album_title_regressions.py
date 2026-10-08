@@ -148,6 +148,7 @@ class PicardAlbumRegressions(unittest.TestCase):
             ("english_title_capitalization", "English_Title_Capitalization.txt"),
             ("unicode_to_ascii", "Unicode_to_ASCII.txt"),
             ("move_featured_artists", "Move_Featured_Artists_to_Title.txt"),
+            ("format_multiple_artists", "Format_Multiple_Artists.txt"),
         ):
             self.assertIn(key, values)
             text = (REPO / "picard-tools" / "scripts" / filename).read_text(encoding="utf-8")
