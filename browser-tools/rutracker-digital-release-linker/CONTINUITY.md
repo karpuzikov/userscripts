@@ -1,7 +1,7 @@
 # RuTracker Digital Release Linker - Continuity
 
 ## Product
-- Version: 1.1.22 - Under construction ⚠️ (needs user testing in Tampermonkey).
+- Version: 1.1.23 - Under construction ⚠️ (needs user testing in Tampermonkey).
 - Repository: `karpuzikov/userscripts`, branch `main`.
 - Main file: `browser-tools/rutracker-digital-release-linker/RuTracker_Digital_Release_Linker.user.js`.
 - Applicable rules: repository-root `SOFTWARE_RULES.md`. No project-specific `RULES.md` currently exists.
@@ -21,7 +21,7 @@
 - Preserve spoiler titles, tracklists, timestamps, existing concrete source URLs, unrelated BBCode and nested-spoiler boundaries.
 - Rerunning either button must be idempotent. Report release-link counts and unresolved release titles; never report or manipulate artwork.
 - Second button exactly `Force link all web releases` searches Deezer for every spoiler whose media label is `WEB` (plain or `[url=...]WEB[/url]`) or placeholder `CD/WEB`, including already linked releases. Exclude `CD`-only entries.
-- In force mode, search UPC and catalog via the existing validated resolver; ignore Beatport-only resolutions. If there is no identifier, make a conservative Deezer album search using topic artist, release title, exact track count, year and first track; reject ambiguous matches. If no confirmed Deezer result, do not modify the source.
+- **Mandatory permanent forced-mode search rule (user wording):** The script in forced mode should search Deezer for all WEB releases, even when they already have sources. Every WEB (including a Beatport-linked WEB, Deezer-linked WEB, tracker/redacted source, or unlinked WEB) must be included in the force scan. First try exact Deezer UPC/catalog/MusicBrainz resolution, and if no Deezer result, **always perform Deezer title-and-artist album search even when a barcode/catalog number exists**. Search candidates conservatively against title, primary artist, track count, date/year and first track; reject ambiguous results rather than guess. Never let an existing source or metadata identifier suppress the Deezer search. Force mode never substitutes Beatport for Deezer. CD-only items are excluded. On an unresolved match, leave the source unchanged.
 - In force mode, replace the entire media/source portion of every resolved WEB entry with `WEB|[url=<verified Deezer album URL>]Deezer[/url]`; do not retain old redacted/tracker/source text or link the `WEB` label. This intentionally overrides the pre-1.1.21 forced source preservation rule; it does not change normal mode. For unresolved entries, keep the original entire source line untouched. CD-only entries remain excluded. For entries already linked to a Deezer album URL on `WEB`, if lookup returns no candidate, reuse that same validated Deezer album URL and normalize it to the source side without inventing a different album. Keep `[hr]` and all other BBCode.
 - A hidden-by-default `Undo last link changes` button appears after changes, saving the exact previous textarea contents in memory, and restores it until another successful edit overwrites the snapshot. When a run makes no changes, preserve the previous undo snapshot.
 - Both action buttons are disabled during an active scan; progress names the active mode and shows completed/total and final counts. The result text has screen-reader status semantics; both buttons are native keyboard-operable inputs.
@@ -56,6 +56,12 @@
 - All prior v1.1.19-1.1.21 cover-related test claims describe historical behavior ONLY, which is now explicitly prohibited. It must not be restored through other features/refactors.
 - This update does not retroactively restore artwork already changed in a user's textarea by an earlier version. If a prior Undo snapshot is still available it may restore the previous text; otherwise original values require restoring from an earlier saved copy.
 - Live RuTracker/Tampermonkey testing has not been performed. Status remains Under construction ⚠️.
+
+## Regression coverage in v1.1.23 (2026-10-09)
+- Fixed a branch that previously returned early when a release had a barcode or catalog but exact Deezer lookup failed. This prevented Deezer album-text searches for existing Beatport-linked WEB releases. Force-mode exact resolution now omits unnecessary Beatport fallback, and failure of the UPC/catalog path always proceeds to Deezer album metadata lookup.
+- Verified with a fully compiled userscript and mocked Deezer responses: all 10 WEB releases (existing Beatport, existing Deezer, and existing tracker sources, all with catalog identifiers) triggered album searches, including unsuccessful ones. Two exact metadata matches linked to Deezer; unmatched existing sources retained; CD-only excluded; every BBCode image preserved byte-for-byte; original linking mode unchanged; UI displays WEB searched count; repeated runs idempotent; Undo retained.
+- Do not generalize to all real Deezer catalog data: actual availability, result ranking, and live RuTracker UI still require user tests.
+- The force button remains manual. Do not reintroduce image or cover operations.
 
 ## Release process
 - Bump `@version` every change; keep `@name`, `@namespace`, `@updateURL` and `@downloadURL` stable.
