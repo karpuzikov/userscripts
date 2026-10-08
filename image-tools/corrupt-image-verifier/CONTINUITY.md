@@ -1,18 +1,18 @@
 # Corrupt Image Verifier - Continuity
 
 ## Current version, status, links
-- **Development version:** 1.1.6
-- **Internal build:** 1.1.6-ASCII-TEST
-- **Status:** **1.1.6 - Under construction ⚠️**
+- **Development version:** 1.1.7
+- **Internal build:** 1.1.7-NATIVE-TEST
+- **Status:** **1.1.7 - Under construction ⚠️**
 - **Branch:** main of karpuzikov/userscripts
-- **Source:** image-tools/corrupt-image-verifier/Corrupt Image Verifier v1.1.6 ASCII TEST.pyw
-- **Download:** https://raw.githubusercontent.com/karpuzikov/userscripts/main/image-tools/corrupt-image-verifier/Corrupt%20Image%20Verifier%20v1.1.6%20ASCII%20TEST.pyw
+- **Source:** image-tools/corrupt-image-verifier/Corrupt Image Verifier v1.1.7 NATIVE TEST.pyw
+- **Download:** https://raw.githubusercontent.com/karpuzikov/userscripts/main/image-tools/corrupt-image-verifier/Corrupt%20Image%20Verifier%20v1.1.7%20NATIVE%20TEST.pyw
 - v1.1.4 and v1.0.2 remain as historical sources. Keep README linked to the current versioned source.
 
 ## Purpose and architecture
-Single-file Python/Tkinter desktop verifier with requested ASCII/terminal dark UI, background per-physical-disk thread pools, queue-based GUI results, multiple folder sources, persistent Undo and heuristically flagged visual anomalies. Group multiple source folders on one physical drive under one worker allocation; different physical drives can scan concurrently. The canonical rules are repository-root SOFTWARE_RULES.md. No project-specific RULES.md was present during this update.
+Single-file Python/Tkinter desktop verifier with a compact dark UI inspired by ReNamer 7.10, background per-physical-disk thread pools, queue-based GUI results, multiple folder sources, persistent Undo and heuristically flagged visual anomalies. Group multiple source folders on one physical drive under one worker allocation; different physical drives can scan concurrently. The canonical rules are repository-root SOFTWARE_RULES.md. No project-specific RULES.md was present during this update.
 
-## v1.1.6 safety workflow
+## Current safety workflow
 1. Scan Images is read-only. Discovered image files are verified and categorized, then non-GOOD results are listed in a reviewable table.
 2. Exactly five classification states: GOOD; WARNING - LEFT IN PLACE (including suspected JPEG visual anomalies); UNSUPPORTED - LEFT IN PLACE; ERROR - LEFT IN PLACE; CONFIRMED CORRUPT.
 3. Only objective invalid-signature evidence after identification failure, or a zero-byte image, can currently produce CONFIRMED CORRUPT. TIFF decoder failures alone never prove corruption. Missing JPEG EOI, valid-looking but ambiguously truncated images, decoder errors and huge decompression-bomb warnings must stay in place.
@@ -31,6 +31,18 @@ User submitted two JPEG files:
 New detector is a bounded (160 px across, max 384 px high) Pillow RGB heuristic measuring full-width abrupt row differences plus large saturation changes in image regions; no new package dependency. It is only run on successfully decoded JPEG-family files. Flagged files appear as WARNING - LEFT IN PLACE with the diagnostic reason and a Preview Selected Image action. The user may explicitly Confirm Selected Visual Damage after reviewing the image; this changes the selected result to CONFIRMED CORRUPT (MANUAL), making it eligible for a separate, confirmed Move Confirmed Corrupt action. Before moving, the candidate is checked for changed size/mtime and visual anomaly is recomputed; no auto-move on heuristic alone. It cannot establish whether damage is unintentional: deliberate glitch art and collage graphics can trigger it. **Never move an image just from this heuristic without user confirmation.**
 
 Independent local detector regression on the two submitted files: BOTH FLAGGED. Six scikit-image reference photographs (astronaut, coffee, chelsea, rocket, cat, hubble_deep_field) were NOT flagged. Synthetic split-color graphic deliberately flags, documenting false-positive risk. This was a detector-level run, NOT an end-to-end execution of the GitHub .pyw app.
+
+## v1.1.7 ReNamer-inspired UI and detection diagnostics
+
+Reference supplied 2026-10-09: renamer-7.10.zip containing the ReNamer 7.10 portable Windows executable. Its bundled Copyrights.txt lists Virtual Treeview, SMComponents and other Pascal components. The app's interface has native toolbars, menus, file tables, status bars, and a split workflow layout. These specific Pascal/Delphi components cannot be dropped into Python Tkinter as-is. Use lightweight themed ttk equivalents, and do not copy the executable or icons.
+
+v1.1.7 replaces the ASCII test UI (new user request overrides the older visual preference). It uses Segoe UI 9, dark ttk Treeview panes, drag-adjustable vertical splitter, a compact toolbar, native menu, Results/Activity tabs, real progress bar, and a fixed bottom status/stats area. Paths still have adjacent Open columns or clickable log controls.
+
+New toolbar/menu action: **Check File** (Ctrl+F). Directly verifies a selected image in a background thread and always displays a result row, INCLUDING GOOD. This makes it possible to identify whether a file was skipped by folder discovery versus classified GOOD. Scanning remains read-only; only non-GOOD findings are in batch result rows for scalability. Scan logs show how many JPEGs were visually evaluated and how many were suspicious. Menu shortcuts are guarded against operations during active jobs.
+
+New evidence: user reports *zero detected change* from v1.1.6 for two previous uploaded JPGs. Isolated reproduction of v1.1.6's exact detector against both real image files yielded visual warnings for BOTH (severe horizontal seams and saturation shifts); Pillow's verify and full load both pass. The GUI-level cause remains UNPROVEN. Do not assert this specific issue is resolved until Check File and a complete folder scan on the user's Windows system reproduce the warnings.
+
+A native-style Tkinter layout prototype was instantiated at 1000x660 and 750x440 under Xvfb, but this is NOT a successful startup test of the full v1.1.7 code. The GitHub source received a structural delimiter/indent validation and a detected indentation issue was corrected. Full py_compile and real Windows GUI tests remain unverified. The isolated detector flagged both sample JPEGs and six independent normal reference photos were not flagged; neither result proves absence of false positives generally.
 
 ## Dependencies and persistent storage
 Pillow is required; pillow-heif and tifffile are optional decoders. Missing Python packages are installed using pip --target into the per-application dependencies folder, not global site-packages. winget is checked for availability; automatic missing-winget repair/installation remains incomplete. winget has no direct equivalent to the Python wheel packages.
@@ -54,17 +66,17 @@ The following are required expected classifications; **v1.1.6 has NOT yet been e
 - Scan must NEVER move files; move only candidates still confirmed corrupt at execution.
 - Same-drive sources share worker pool, different-drive groups run concurrently.
 - Move and Undo never overwrite an existing destination/original, even on interrupted operations; Undo restores exact bytes and retains conflicts. Manually confirmed visual suspects require TWO confirmations (manual promotion and explicit move) and rescanning must drop stale confirmation.
-- Check stopping scan, stopping move, concurrent drive reads, path controls, UI focus and keyboard traversal.
+- Check stopping scan, stopping move, concurrent drive reads, path controls, UI focus and keyboard traversal. Check File must show explicit GOOD or flagged result even when image passes decoding.
 
 ## Mandatory UI / rule review
 - Full UXDT guidelines at https://www.uxdt.nic.in/guidelines/ are mandatory. Relevant navigation, visual accessibility, accessibility testing, implementation and UX audit pages were consulted 2026-10-09.
-- Retain user-requested ASCII skin and dark theme.
+- Latest user request supersedes ASCII test skin: mimic ReNamer's compact, dark native-style interface. Reuse lightweight Tk/ttk equivalents of native controls, without embedding ReNamer's proprietary compiled components.
 - Every displayed filesystem path must have an adjacent open-location control, including source/result rows, logs, errors, Undo, moved paths, dialogs and diagnostics.
 - Read and apply all current SOFTWARE_RULES.md; pre-existing violations are not grandfathered.
 - Version must appear alongside Under construction ⚠️; maintain status until user confirms testing.
 
 ## Test status and known blockers
-v1.1.6 implementation and README were committed to GitHub, but Windows tests and release certification remain **incomplete**:
+v1.1.7 implementation and README were committed to GitHub, but Windows tests and release certification remain **incomplete**:
 - Remote source was inspected/modified through the GitHub connector; container network cannot reach raw.githubusercontent.com. The visual-anomaly helper was executed locally, but Python py_compile on the full remote .pyw and direct Windows execution remain unverified.
 - Not verified: Tk GUI startup, 100/125/150/200% DPI, minimum-size layout, mouse/keyboard path open/preview/confirmation controls, all known real-image samples through the full application, collision/undo/interruption and worker scheduling regression tests.
 - Whole-product/global UXDT and winget/bootstrap audit not yet complete; no claim of compliance.
@@ -75,11 +87,11 @@ v1.1.6 implementation and README were committed to GitHub, but Windows tests and
 - Do not move missing-EOI but visually intact JPEGs.
 - Do not overwrite originals or existing quarantine destinations.
 - Do not silently couple scan and file modification.
-- Do not remove Undo or replace the ASCII UI without request.
+- Do not remove Undo. The user's new ReNamer-style GUI instruction explicitly replaces the earlier ASCII UI requirement.
 - Do not hide software version behind its development status.
 
 ## Exact next action
-1. Download current 1.1.6 file and run Python syntax compilation; fix any errors immediately.
+1. Download current 1.1.7 file and run Python syntax compilation; fix any errors immediately.
 2. Execute listed image fixtures including both nannerl_lee JPEGs through the application (expected WARNING with visual-anomaly reasons), and all copy/Undo collision and partial-interruption tests.
-3. Exercise Windows UI at 100/125/150/200% DPI, keyboard-only, window minimum, multi-drive workloads; complete missing-winget behavior.
+3. Run Check File on both user JPEGs, then Scan Images on their parent folder; verify visual warnings, Preview, user confirmation, Move, Undo and conflict behavior. Exercise Windows UI at 100/125/150/200% DPI, keyboard-only, window minimum, multi-drive workloads; complete missing-winget behavior.
 4. Update source, README and this CONTINUITY.md together; mark stable only after user test confirmation.
