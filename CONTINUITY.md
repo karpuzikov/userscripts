@@ -2,7 +2,7 @@
 
 ## Product and state
 - Product: Karpuzikov Picard Scripts, a Picard 3.x Git-updatable MusicBrainz metadata plugin.
-- Current version: 1.5.19 - Under construction ⚠️ (not yet verified inside user Picard).
+- Current version: 1.5.20 - Under construction ⚠️ (not yet verified inside user Picard).
 - Git repository and active branch: `karpuzikov/userscripts`, `main`.
 - There is no additional project-specific `RULES.md` currently; the canonical repository root `SOFTWARE_RULES.md` governs this project.
 
@@ -133,3 +133,11 @@
 ## Cancelled Picard shutdown visibility recovery (2026-10-09; v1.5.19)
 
 - During exit, record exactly which floating Barcode-containing Qt toolbars were visible and hidden by the plugin. On a rejected/cancelled main window Close event, restore visibility only for those specific toolbars, then reactivate the 4s watcher and reinstall the Barcode QAction. Toolbars that were hidden before Close remain hidden; docked native toolbars are never arbitrarily shown. Added pure-Python regression test for float-only hide/restore and static watcher check. Qt interactive Windows 11 runtime QA still pending. v1.5.19 - Under construction ⚠️.
+
+## Digital-media releasecountry removal (2026-10-09; plugin v1.5.20)
+
+- User rule: remove the `releasecountry` audio tag on MusicBrainz Digital Media releases; preserve the previous `XE` -> `EU` mapping on other releases. Do not infer digital release from MP3/FLAC/ALAC file codec, online purchase, or release title.
+- Language-aware capitalization plugin: `normalize_europe_release_country(metadata, release_node)` now checks the source MusicBrainz `release_node['media']` when available, requiring *every* medium's format to be explicitly Digital Media. If missing, uses Picard's `media` tag and supports literal `Digital Media`, optional `2x`/`2×` count prefixes. Unknown or mixed physical/digital formats preserve releasecountry. Calls Picard `Metadata.delete('releasecountry')` to remove even a previously existing tag when saving; the fallback `dict.pop` exists only for non-Picard test dictionaries.
+- Standalone/embedded English Title Capitalization v1.1.5: adds `$if($rsearch($lower(%media%),^[0-9]*[x×]?[ ]*digital media$),$delete(releasecountry),...)` *outside* the English-only title capitalization guard. This retains the XE->EU transformation on non-digital releases and removes the actual saved audio tag using `$delete` rather than `$unset`. Per-medium standalone scripts cannot inspect all formats of a mixed release; when a single track's media is Digital Media within a hybrid release, the standalone script treats it as digital. The language-aware plugin prefers the full release node to avoid this ambiguity.
+- Regression test coverage: Digital Media (single, case insensitive, 2× count), CD, vinyl, unknown, hybrid release nodes, missing media formats, idempotence, and actual deletion marking. The script and its embedded counterpart must remain identical. Updated README and versioned standalone script download `English_Title_Capitalization_v1.1.5.txt`.
+- Existing Barcode/UPC toolbar and all other scripts unchanged. Picard 3 interactive QA remains mandatory, especially verifying that the tag is actually removed from previously tagged MP3/FLAC/MP4 files after Save, and that physical CD/vinyl release countries remain intact. Keep v1.5.20 - Under construction ⚠️ until verified.
