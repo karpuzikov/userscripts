@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Apple Music works credits -> MusicBrainz
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      2.3.20
+// @version      2.3.21
 // @description  Resolve the correct Apple Music release and import supported Apple Music credits to the proper MusicBrainz Recording, Work, or Release relationships.
 // @author       karpuzikov
 // @license      MIT
@@ -135,7 +135,7 @@ function __amMbGmXmlhttpRequest(details) {
     'use strict';
 
     const PAGE = typeof unsafeWindow !== 'undefined' ? unsafeWindow : window;
-    const SCRIPT_VERSION = '2.3.20';
+    const SCRIPT_VERSION = '2.3.21';
     let MB = PAGE.MB;
     const APPLE_API_BASE = 'https://amp-api.music.apple.com/v1';
     const APPLE_TOKEN_BOOTSTRAP_URL = 'https://music.apple.com/us/browse';
@@ -1613,7 +1613,9 @@ function __amMbGmXmlhttpRequest(details) {
             // Its reducer accepts an empty lyrics-language list.
             setStatus(`Staging Work for "${recording.name}" (lyrics language unspecified)...`);
             MB.relationshipEditor.dispatch({
-                attributes: null,
+                // The native dialog submits a weight-balanced-tree for link
+                // attributes. Passing null can break relationship updates.
+                attributes: {size: 0, left: null, right: null, value: null},
                 begin_date: null,
                 end_date: null,
                 ended: false,
