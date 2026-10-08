@@ -43,7 +43,7 @@
 
 - Picard 3 `MainWindow.create_action_toolbar()` clears and replaces `window.toolbar` when Actions toolbar customization changes. The previous plugin added a QAction once and retained a non-null global pointer, so it never inserted the button into the recreated toolbar. The Barcode/UPC batch matching code was NOT the cause and remains unchanged.
 - v1.5.10 introduces an idempotent `_place_barcode_action`, checks membership in the CURRENT toolbar rather than trusting a global action pointer, and adds a `_BarcodeToolbarWatcher` that schedules reattachment on child-added/window-activation events and checks every 4 seconds for a toolbar cleared in place.
-- Also registers `BarcodeLookupToolsAction` with Picard 3's supported `register_tools_menu_action` (Tools > Plugins). It uses the same `_barcode_only_lookup` selection handler.
+- Also registers `BarcodeLookupToolsAction` with Picard 3's supported `register_tools_menu_action` (top-level Plugin Tools menu). It uses the same `_barcode_only_lookup` selection handler.
 - `disable()` must stop/disconnect the watcher, invalidate queued callbacks, remove the current toolbar action and delete the QAction exactly once. Plugin settings and all Barcode/UPC comparison and disc/track matching semantics remain unchanged.
 - Added seven standard-library unit tests in `picard-tools/tests/test_barcode_toolbar_regressions.py`: placement, idempotence, toolbar re-creation, no native button, lifecycle, monitor/menu and untouched matching API.
 - GitHub source-level checks performed; full Picard 3 UI/runtime validation still pending. Do not claim visual verification until the user confirms the button survives Options > User Interface > Toolbar changes and plugin updates.
