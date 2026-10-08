@@ -538,8 +538,45 @@ def _set_single_value(metadata: Any, tag: str, value: str) -> None:
         metadata[tag] = [value]
 
 
-def normalize_europe_release_country(metadata: Any) -> None:
-    """Prefer EU over MusicBrainz's XE region code only in releasecountry."""
+_DIGITAL_MEDIUM_RE = re.compile(r"^(?:[0-9]+\\s*[x×]\\s*)?digital media$", re.I)
+
+
+def _is_digital_medium(value: Any) -> bool:
+    return isinstance(value, str) and bool(_DIGITAL_MEDIUM_RE.fullmatch(value.strip()))
+
+
+def _is_digital_release(metadata: Any, release_node: Any = None) -> bool:
+    """Classify only proven all-digital releases; never infer from file codecs."""
+    if isinstance(release_node, dict):
+        mediums = release_node.get("media")
+        if isinstance(mediums, (list, tuple)) and mediums:
+            return all(
+                isinstance(medium, dict) and _is_digital_medium(medium.get("format"))
+                for medium in mediums
+            )
+
+    # Picard's per-track media tag is the MusicBrainz medium format.
+    try:
+        media = metadata.getall("media")
+    except AttributeError:
+        media = metadata.get("media")
+    if isinstance(media, (list, tuple)):
+        return bool(media) and all(_is_digital_medium(value) for value in media)
+    return _is_digital_medium(media)
+
+
+def normalize_europe_release_country(metadata: Any, release_node: Any = None) -> None:
+    """Remove digital release countries; otherwise write EU instead of XE."""
+    if _is_digital_release(metadata, release_node):
+        # Picard Metadata.delete marks an existing file tag for actual deletion;
+        # deleting a key from a plain dict is used only by regression tests.
+        delete = getattr(metadata, "delete", None)
+        if callable(delete):
+            delete("releasecountry")
+        else:
+            metadata.pop("releasecountry", None)
+        return
+
     try:
         values = metadata.getall("releasecountry")
     except AttributeError:
@@ -556,7 +593,7 @@ def normalize_europe_release_country(metadata: Any) -> None:
 
 
 def capitalize_release_title(api: Any, metadata: Any, release_node: Any) -> None:
-    normalize_europe_release_country(metadata)
+    normalize_europe_release_country(metadata, release_node)
     try:
         original = metadata.get("album")
     except Exception:
@@ -586,7 +623,7 @@ def capitalize_track_title(
     track_node: Any,
     release_node: Any = None,
 ) -> None:
-    normalize_europe_release_country(metadata)
+    normalize_europe_release_country(metadata, release_node)
     try:
         original = metadata.get("title")
     except Exception:
