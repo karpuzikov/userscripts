@@ -14071,12 +14071,12 @@ def _run_ascii_ui(test_mode: bool = False) -> int:
             view = self.query_one("#picks-list", ListView)
             view.clear()
             for i, row in enumerate(self.picks):
-                view.append(ListItem(Label(f"[{row.get('mode', 'contains')}] {row.get('value', '')}"), id=f"p-{i}"))
+                view.append(ListItem(Label(f"[{row.get('mode', 'contains')}] {row.get('value', '')}"), name=f"p-{i}"))
 
         @on(ListView.Selected, "#picks-list")
         def select(self, event):
             item = event.item
-            self.selected = int(item.id.split("-", 1)[1]) if item and item.id else -1
+            self.selected = int(item.name.split("-", 1)[1]) if item and item.name else -1
 
         @on(Button.Pressed)
         def buttons(self, event):
@@ -14305,7 +14305,7 @@ def _run_ascii_ui(test_mode: bool = False) -> int:
                     "skipped" if action == "SKIP" else "retained"
                 )
                 title = f"{_button_title(action):<10} {n['name']}"
-                item = ListItem(Label(title), id=f"r-{rid}", classes=classes)
+                item = ListItem(Label(title), name=f"r-{rid}", classes=classes)
                 column = n["releaseType"]
                 col_id = "eps" if column == "ep" else ("singles" if column == "single" else "albums")
                 views[col_id].append(item)
@@ -14314,7 +14314,7 @@ def _run_ascii_ui(test_mode: bool = False) -> int:
                 else:
                     is_change = n["rootKind"] == "recycle" and action in ("ADD", "REPLACE")
                 if is_change and (change_filter == "all" or change_filter == action):
-                    views["changes-list"].append(ListItem(Label(title), id=f"c-{rid}", classes=classes))
+                    views["changes-list"].append(ListItem(Label(title), name=f"c-{rid}", classes=classes))
             if self.current_release is not None:
                 self.update_details()
 
@@ -14340,7 +14340,7 @@ def _run_ascii_ui(test_mode: bool = False) -> int:
                 gid = t["groupId"]
                 marker = "x" if t["excluded"] else ("+" if t["unique"] else "=")
                 title = f"{marker} {t['number']}. {t['title']}"
-                track_view.append(ListItem(Label(title), id=f"t-{t['index']}" if t["index"] >= 0 else None))
+                track_view.append(ListItem(Label(title), name=f"t-{t['index']}" if t["index"] >= 0 else None))
             related = n.get("upgradeFrom", []) or []
             for rel in related:
                 track_view.append(ListItem(Label("LINK: " + str(rel.get("name", "")))))
@@ -14353,19 +14353,19 @@ def _run_ascii_ui(test_mode: bool = False) -> int:
                     )
                     for t in n["tracks"]
                 ):
-                    track_view.append(ListItem(Label(f"RELATED: {other['name']}"), id=f"j-{other['id']}"))
+                    track_view.append(ListItem(Label(f"RELATED: {other['name']}"), name=f"j-{other['id']}"))
 
         @on(ListView.Selected)
         def on_list_view_selected(self, event):
             item = event.item
-            if item is None or not item.id:
+            if item is None or not item.name:
                 return
-            if item.id.startswith(("r-", "c-", "j-")):
-                self.current_release = int(item.id.split("-", 1)[1])
+            if item.name.startswith(("r-", "c-", "j-")):
+                self.current_release = int(item.name.split("-", 1)[1])
                 self.current_track = None
                 self.update_details()
-            elif item.id.startswith("t-"):
-                self.current_track = int(item.id.split("-", 1)[1])
+            elif item.name.startswith("t-"):
+                self.current_track = int(item.name.split("-", 1)[1])
                 if self.current_track < 0:
                     self.current_track = None
 
@@ -14954,7 +14954,7 @@ def _run_ascii_ui(test_mode: bool = False) -> int:
                     raise RuntimeError("ASCII smoke test: Changes button failed.")
                 await pilot.click("#close-map")
                 await pilot.pause()
-                if application.screen is not application._screen_stack[0]:
+                if isinstance(application.screen, ReleaseBoard):
                     raise RuntimeError("ASCII smoke test: Close Map button failed.")
             print("DEA ASCII Textual mouse/UI smoke test passed.")
 
