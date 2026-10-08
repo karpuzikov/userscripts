@@ -1,10 +1,28 @@
 # Duplicate Edition Analyzer Lightweight
 
-Version: **0.3.9 - Under construction ⚠️**
+Version: **0.4.0 - Under construction ⚠️** (ASCII terminal UI test)
 
-Branch: `dea-lightweight-modern`
+Branch: `dea-lightweight-ascii-ui-test`
 
 This is the new lightweight/fast DEA implementation. It preserves the production DEA 0.22.12 analysis/optimization core and replaces the heavyweight Qt/PySide6 UI runtime with the Microsoft Edge WebView2 runtime already present on normal Windows 11 systems.
+
+## Real ASCII terminal interface - experimental branch
+
+This isolated test branch adds a **genuine mouse-enabled Windows terminal UI**, not an HTML page made to look like ASCII. The original WebView2 interface and Python engine remain available for comparison; the main `dea-lightweight-modern` branch is unchanged.
+
+**Run on Windows:** download both files into the same directory and double-click the launcher.
+
+- `Duplicate Edition Analyzer Lightweight ASCII v0.4.0.bat` - opens the terminal and runs Python with `--ascii-ui`.
+- `Duplicate Edition Analyzer Lightweight v0.4.0.pyw` - complete one-file analysis engine and Textual terminal UI, installed on demand into `Documents\Karpuzikov Tools\Duplicate Edition Analyzer\dependencies\...`.
+
+The ASCII interface includes mouse interaction (clickable rows and controls, folder tree, wheel scrolling), keyboard shortcuts, persistent settings/Personal Picks, preflight pattern review, manual acoustic review, classification, progress, scan logs, Changes-first/Full Map with Album/EP/Single columns, typed search, clickable recording carriers, release/track Ignore/Restore, Re-Analyze, separate OLD+NEW and NEW-only exports, and Undo. Export uses the same non-destructive `copy_retained_plan` engine as the graphical interface.
+
+**Important limitation:** terminals cannot draw the existing SVG relationship curves. The ASCII test exposes clickable RELATED-release rows and per-track carrier details instead. Full visual and interaction parity with production is **not yet established**; this is an experiment, not a replacement for v0.3.9.
+
+**Validation commands:**
+- `py -3 "Duplicate Edition Analyzer Lightweight v0.4.0.pyw" --ascii-self-test`
+- `py -3 "Duplicate Edition Analyzer Lightweight v0.4.0.pyw" --ascii-pilot-test` (requires Textual; installed by the launcher on first use)
+- Full Windows Skrillex OLD/NEW scan, map review and copy remain for user testing.
 
 ## Architecture
 
