@@ -1,10 +1,10 @@
 # Archive Media Compressor
 
-**ArchiveMedia v6.1.0 - Under construction ⚠️** (Windows/Yandex integration needs testing).
+**ArchiveMedia v6.1.1 - Under construction ⚠️** (Windows/Yandex integration needs testing).
 
 ## Download (development branch)
 
-[Download ArchiveMedia v6.1.0.bat](https://raw.githubusercontent.com/karpuzikov/userscripts/archivemedia-rclone/archive-media-compressor/ArchiveMedia%20v6.1.0.bat)
+[Download ArchiveMedia v6.1.1.bat](https://raw.githubusercontent.com/karpuzikov/userscripts/archivemedia-rclone/archive-media-compressor/ArchiveMedia%20v6.1.1.bat)
 
 The BAT is the single-file launcher. Double-click it, choose **Copy** or **Replace**, and enter the source and destination. Type local paths or any configured rclone remote (for example `yandex:Pictures`); leave the path blank to browse local folders.
 
@@ -52,3 +52,10 @@ The editable PowerShell engine is in [source/ArchiveMedia.ps1](https://github.co
 ## License
 
 MIT
+
+### v6.1.1 audit notes
+
+- + Deterministic cloud filename collision suffixes, consistent with existing JPEG/MP4 precedence.
+- + rclone final move uses an immutable guard and verifies the destination after writing.
+- + Windows drive-relative inputs (for example `D:Photos`) are rejected.
+- Cloud processing remains sequential. This build has **not** been run on the user's Windows/Yandex account; do not use it as a finished release.
