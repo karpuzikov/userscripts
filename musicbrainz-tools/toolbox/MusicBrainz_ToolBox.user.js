@@ -19396,8 +19396,14 @@ Leave empty to use the default (${srcName} name, or MB's most-frequent existing 
     progressPct.style.cssText = "display:none; margin-left:0.5rem; font-size:0.85rem; color:var(--mbu-warn); font-weight:bold; min-width:3.5rem;";
     row1.appendChild(importLabel);
     row1.appendChild(srcIcons);
-    row1.appendChild(toolboxSongLabel);
-    row1.appendChild(toolboxSongInput);
+    const toolboxAppleOptions = document.createElement("details");
+    toolboxAppleOptions.className = "toolbox-apple-options";
+    toolboxAppleOptions.style.cssText = "min-width:180px;max-width:350px;flex:0 1 270px;";
+    const toolboxAppleSummary = document.createElement("summary");
+    toolboxAppleSummary.textContent = "Apple Music: single song";
+    toolboxAppleSummary.style.cssText = "cursor:pointer;font-size:0.8rem;padding:5px 0;";
+    toolboxAppleOptions.append(toolboxAppleSummary,toolboxSongLabel,toolboxSongInput);
+    row1.appendChild(toolboxAppleOptions);
     row1.appendChild(progressPct);
     const actionSlot = document.createElement("div");
     actionSlot.className = "discogs-bar-action";
