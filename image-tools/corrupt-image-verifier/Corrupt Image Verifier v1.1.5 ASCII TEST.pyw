@@ -1630,6 +1630,7 @@ def launch_gui():
             save_remaining_undo_moves(manifest, remaining_ordered)
             self.q.put(("undo_finished", restored, failed))
 
+
         def process_queue(self):
             try:
                 while True:
@@ -1638,93 +1639,126 @@ def launch_gui():
 
                     if kind == "drive_scan_ready":
                         _, info, count, workers = item
+                        self.discovered += count
                         self.log_line(
                             f"[DRIVE] {info['drive']} | {info['storage_type']} | "
-                            f"{workers} worker(s) | {count:,} image(s)",
-                            "muted",
+                            f"{workers} worker(s) | {count:,} discovered", "muted"
                         )
+                        self.update_progress_detail()
 
                     elif kind == "scan_ready":
                         self.total = item[1]
-                        self.status_var.set(f"Found {self.total:,} image file(s). Verifying across drives...")
+                        self.stage_var.set("STAGE: VERIFYING IMAGES (READ ONLY)")
+                        self.status_var.set(
+                            f"Discovered {self.total:,} image(s). No files are moved during scanning."
+                        )
 
                     elif kind == "result":
-                        _, source_root, p, size, status, reason, moved_to, move_error, key = item
+                        _, source_root, p, size, mtime, status, reason, key = item
                         self.done += 1
-                        self.bytes_scanned += size
-
+                        self.bytes_scanned += size or 0
+                        labels = {
+                            "corrupt": "CONFIRMED CORRUPT",
+                            "warning": "WARNING - LEFT IN PLACE",
+                            "unsupported": "UNSUPPORTED - LEFT IN PLACE",
+                            "error": "ERROR - LEFT IN PLACE",
+                        }
                         if status == "good":
                             self.good += 1
                         elif status == "corrupt":
                             self.corrupt += 1
-                            if moved_to is not None:
-                                self.moved += 1
-                                self.bytes_moved += size
-                                self.log_line(f"[CORRUPTED -> MOVED] {p}", "corrupt")
-                                self.log_line(f"  Reason: {reason}", "muted")
-                                self.log_line(f"  To:     {moved_to}", "muted")
-                            else:
-                                self.errors += 1
-                                self.log_line(f"[CORRUPTED -> MOVE FAILED] {p}", "corrupt")
-                                self.log_line(f"  Reason: {reason}", "muted")
-                                self.log_line(f"  Error:  {move_error}", "corrupt")
+                        elif status == "warning":
+                            self.warning += 1
                         elif status == "unsupported":
                             self.unsupported += 1
-                            self.log_line(f"[UNSUPPORTED - LEFT IN PLACE] {p}", "warning")
-                            self.log_line(f"  Reason: {reason}", "muted")
                         else:
+                            status = "error"
                             self.errors += 1
-                            self.log_line(f"[ERROR - LEFT IN PLACE] {p}", "corrupt")
+                        if status != "good":
+                            state = labels.get(status, "ERROR - LEFT IN PLACE")
+                            iid = self.result_tree.insert(
+                                "", "end", values=("[DIR]", state, str(p), reason)
+                            )
+                            if status == "corrupt" and size is not None and mtime is not None:
+                                self.review_candidates.append({
+                                    "path": p, "source": source_root, "size": size,
+                                    "mtime": mtime, "iid": iid,
+                                })
+                            self.log_path(f"[{state}] ", p, "corrupt" if status == "corrupt" else "warning")
                             self.log_line(f"  Reason: {reason}", "muted")
-
-                        pct = (self.done / self.total * 100) if self.total else 0
+                        pct = self.done / self.total * 100 if self.total else 0
                         self.progress_var.set(pct)
-                        elapsed = time.monotonic() - self.start_time if self.start_time else 0
-                        rate = self.done / elapsed if elapsed > 0 else 0
-                        self.status_var.set(
-                            f"Checked {self.done:,}/{self.total:,} ({pct:.1f}%) | "
-                            f"{rate:.1f} files/s | {human_bytes(self.bytes_scanned)} read"
-                        )
+                        self.update_progress_detail()
                         self.stats_vars["Checked"].set(f"{self.done:,}")
                         self.stats_vars["Good"].set(f"{self.good:,}")
-                        self.stats_vars["Corrupted"].set(f"{self.corrupt:,}")
+                        self.stats_vars["Confirmed"].set(f"{self.corrupt:,}")
+                        self.stats_vars["Warnings"].set(f"{self.warning:,}")
                         self.stats_vars["Moved"].set(f"{self.moved:,}")
                         self.stats_vars["Unsupported"].set(f"{self.unsupported:,}")
                         self.stats_vars["Errors"].set(f"{self.errors:,}")
+                        self.status_var.set(
+                            f"Verified {self.done:,}/{self.total:,} | {self.corrupt:,} candidate(s)"
+                        )
 
-                    elif kind == "finished":
-                        _, sources, stopped = item
+                    elif kind == "scan_finished":
+                        stopped = item[1]
+                        self.scan_completed = not stopped
                         self.set_controls()
                         elapsed = time.monotonic() - self.start_time if self.start_time else 0
                         if stopped:
-                            self.status_var.set(
-                                f"Stopped. Checked {self.done:,}/{self.total:,}. "
-                                f"Moved {self.moved:,} corrupted file(s)."
-                            )
+                            self.stage_var.set("STAGE: SCAN STOPPED")
+                            self.status_var.set("Scan stopped. Run Scan Images again before moving.")
                         else:
+                            self.stage_var.set("STAGE: REVIEW RESULTS")
                             self.progress_var.set(100 if self.total else 0)
                             self.status_var.set(
-                                f"Finished in {format_elapsed(elapsed)}. "
-                                f"Checked {self.done:,}; corrupted {self.corrupt:,}; moved {self.moved:,}."
+                                f"Scan complete in {format_elapsed(elapsed)}. "
+                                f"{self.corrupt:,} confirmed, {self.warning:,} warning(s), "
+                                f"{self.unsupported:,} unsupported. "
+                                "Review findings, then choose Move Confirmed Corrupt."
                             )
-                            destinations = [src.parent / f"{src.name}_CORRUPTED" for src in sources]
-                            shown = "\n".join(str(p) for p in destinations[:6])
-                            if len(destinations) > 6:
-                                shown += f"\n... and {len(destinations) - 6} more"
-                            messagebox.showinfo(
-                                APP_NAME,
-                                "Verification complete.\n\n"
-                                f"Checked: {self.done:,}\n"
-                                f"Good: {self.good:,}\n"
-                                f"Corrupted: {self.corrupt:,}\n"
-                                f"Moved: {self.moved:,}\n"
-                                f"Unsupported: {self.unsupported:,}\n"
-                                f"Errors: {self.errors:,}\n"
-                                f"Data checked: {human_bytes(self.bytes_scanned)}\n"
-                                f"Corrupt data moved: {human_bytes(self.bytes_moved)}\n"
-                                f"Elapsed: {format_elapsed(elapsed)}\n\n"
-                                f"Corrupted folder(s):\n{shown}",
-                            )
+                        self.refresh_move_button()
+
+                    elif kind == "move_result":
+                        _, candidate, moved_to, reason = item
+                        self.done += 1
+                        iid = candidate["iid"]
+                        self.review_candidates = [
+                            c for c in self.review_candidates if c["iid"] != iid
+                        ]
+                        if moved_to is not None:
+                            self.moved += 1
+                            self.bytes_moved += candidate["size"]
+                            self.result_tree.item(iid, values=(
+                                "[DIR]", "MOVED - UNDO AVAILABLE", str(moved_to), reason
+                            ))
+                            self.log_path("[MOVED] ", moved_to, "success")
+                        else:
+                            self.errors += 1
+                            self.result_tree.item(iid, values=(
+                                "[DIR]", "MOVE SKIPPED - LEFT IN PLACE",
+                                str(candidate["path"]), reason
+                            ))
+                            self.log_path("[MOVE SKIPPED] ", candidate["path"], "warning")
+                            self.log_line(f"  Reason: {reason}", "muted")
+                        pct = self.done / self.total * 100 if self.total else 0
+                        self.progress_var.set(pct)
+                        self.stats_vars["Moved"].set(f"{self.moved:,}")
+                        self.stats_vars["Errors"].set(f"{self.errors:,}")
+                        self.status_var.set(
+                            f"Move/recheck {self.done:,}/{self.total:,} | moved {self.moved:,}"
+                        )
+                        self.update_progress_detail()
+
+                    elif kind == "move_finished":
+                        stopped = item[1]
+                        self.scan_completed = False
+                        self.set_controls()
+                        self.stage_var.set("STAGE: MOVE STOPPED" if stopped else "STAGE: MOVE FINISHED")
+                        self.status_var.set(
+                            f"Moved {self.moved:,}; not moved {self.done - self.moved:,}. "
+                            "Run Scan Images again to recheck remaining files."
+                        )
                         self.refresh_undo_button()
 
                     elif kind == "undo_result":
@@ -1732,39 +1766,45 @@ def launch_gui():
                         pct = index / total * 100 if total else 0
                         self.progress_var.set(pct)
                         if ok:
-                            self.log_line(f"[RESTORED] {original}", "success")
+                            self.log_path("[RESTORED] ", original, "success")
                         else:
-                            self.log_line(f"[UNDO SKIPPED] {original}", "warning")
-                            self.log_line(f"  From:   {moved_to}", "muted")
+                            self.log_path("[UNDO SKIPPED] ", original, "warning")
+                            self.log_path("  From: ", moved_to, "muted")
                             self.log_line(f"  Reason: {reason}", "muted")
-                        self.status_var.set(f"Undoing last run: {index:,}/{total:,} ({pct:.1f}%)")
+                        self.status_var.set(
+                            f"Undoing last run: {index:,}/{total:,} ({pct:.1f}%)"
+                        )
 
                     elif kind == "undo_finished":
                         _, restored, failed = item
                         self.set_controls()
+                        self.stage_var.set("STAGE: UNDO FINISHED")
                         self.progress_var.set(100 if restored or failed else 0)
-                        self.status_var.set(f"Undo complete. Restored {restored:,}; unresolved {failed:,}.")
-                        self.refresh_undo_button()
-                        messagebox.showinfo(
-                            APP_NAME,
-                            "Undo complete.\n\n"
-                            f"Restored: {restored:,}\n"
-                            f"Unresolved: {failed:,}",
+                        self.status_var.set(
+                            f"Undo complete. Restored {restored:,}; unresolved {failed:,}."
                         )
+                        self.refresh_undo_button()
 
                     elif kind == "fatal":
                         _, error, tb = item
                         self.set_controls()
-                        self.status_var.set("Failed.")
-                        self.log_line("[FATAL ERROR]", "corrupt")
-                        self.log_line(tb, "muted")
+                        self.stage_var.set("STAGE: ERROR")
+                        self.status_var.set("Failed. See the diagnostic log.")
+                        log_path = _write_startup_error_log(tb)
+                        if log_path:
+                            self.log_path("[DIAGNOSTIC LOG] ", log_path, "warning")
+                        self.log_line(f"[ERROR] {error}", "corrupt")
                         self.refresh_undo_button()
-                        messagebox.showerror(APP_NAME, error)
-
+                        messagebox.showerror(APP_NAME, "Operation failed. See the diagnostic log.")
             except queue.Empty:
                 pass
-
-            self.root.after(100, self.process_queue)
+            except Exception:
+                _write_startup_error_log(traceback.format_exc())
+                self.stage_var.set("STAGE: ERROR")
+                self.status_var.set("Internal UI error; see startup-error.log in app logs.")
+            finally:
+                self.update_progress_detail()
+                self.root.after(100, self.process_queue)
 
     root = tk.Tk()
     App(root)
