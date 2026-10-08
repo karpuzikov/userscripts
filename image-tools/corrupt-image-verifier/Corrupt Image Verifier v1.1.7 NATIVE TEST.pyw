@@ -422,11 +422,11 @@ def detect_visual_anomaly(im):
     start, end = round(h * 0.18), round(h * 0.82)
     for boundary in sorted(range(start, end), key=lambda y: jumps[y], reverse=True):
         seam = jumps[boundary]
-        if seam < 32:
+        if seam < 30:
             break
         before = sum(sat_by_row[:boundary]) / boundary
         after = sum(sat_by_row[boundary:]) / (h - boundary)
-        if abs(before - after) < 0.48 or max(before, after) < 0.74:
+        if abs(before - after) < 0.40 or max(before, after) < 0.65:
             continue
         return (
             "VISUAL DAMAGE SUSPECTED - abrupt horizontal band "
@@ -1247,9 +1247,12 @@ def launch_gui():
 
         def sort_tree(self, tree, column):
             key = (str(tree), column)
-            descending = not self.sort_desc.get(key, False)
-            self.sort_desc[key] = descending
-            rows = [(tree.set(iid, column).casefold(), iid) for iid in tree.get_children("")]
+            descending = self.sort_desc.get(key, False)
+            self.sort_desc[key] = not descending
+            def sort_value(iid):
+                value = tree.set(iid, column)
+                return (0, int(value)) if column == "workers" and value.isdigit() else (1, value.casefold())
+            rows = [(sort_value(iid), iid) for iid in tree.get_children("")]
             rows.sort(reverse=descending)
             for position, (_value, iid) in enumerate(rows):
                 tree.move(iid, "", position)
