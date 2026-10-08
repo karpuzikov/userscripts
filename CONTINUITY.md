@@ -2,7 +2,7 @@
 
 ## Product and state
 - Product: Karpuzikov Picard Scripts, a Picard 3.x Git-updatable MusicBrainz metadata plugin.
-- Current version: 1.5.18 - Under construction ⚠️ (not yet verified inside user Picard).
+- Current version: 1.5.19 - Under construction ⚠️ (not yet verified inside user Picard).
 - Git repository and active branch: `karpuzikov/userscripts`, `main`.
 - There is no additional project-specific `RULES.md` currently; the canonical repository root `SOFTWARE_RULES.md` governs this project.
 
@@ -129,3 +129,7 @@
 - New Qt-independent regression checks cover detached/obsolete floating toolbar action cleanup, other toolbars unaffected, and static verification of close/cancel/quit guards. Windows taskbar exit test in Picard 3 remains pending.
 - User explicitly wants `releasecountry=XE` stored as `EU` when a capitalization tool is enabled. MusicBrainz XE is Europe (not identical to EU political membership); the mapping is user-preferred output only. The *language-aware Python* capitalization handlers normalize exact XE in the releasecountry tag (scalar or multi-value) without touching unrelated region codes and tags; the *English Title Capitalization* standalone/embedded script appends an equivalent $if/$map mapping outside its English-only title branch, so even non-English release titles preserve country preferences.
 - Published `picard-tools/scripts/English_Title_Capitalization_v1.1.4.txt` and synced stable manual script and embedded source; bumped plugin to `1.5.18 - Under construction ⚠️`; README and test parity updated. Verify auto-update in Picard, Close/Cancel Close, and XE/EU/idempotence in Picard's actual ScriptParser before marking tested.
+
+## Cancelled Picard shutdown visibility recovery (2026-10-09; v1.5.19)
+
+- During exit, record exactly which floating Barcode-containing Qt toolbars were visible and hidden by the plugin. On a rejected/cancelled main window Close event, restore visibility only for those specific toolbars, then reactivate the 4s watcher and reinstall the Barcode QAction. Toolbars that were hidden before Close remain hidden; docked native toolbars are never arbitrarily shown. Added pure-Python regression test for float-only hide/restore and static watcher check. Qt interactive Windows 11 runtime QA still pending. v1.5.19 - Under construction ⚠️.
