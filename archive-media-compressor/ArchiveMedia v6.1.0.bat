@@ -72,7 +72,7 @@ if errorlevel 1 (
     pause
     exit /b 1
 )
-"%PWSH%" -NoLogo -NoProfile -ExecutionPolicy Bypass -Command "$t=$null; $e=$null; [System.Management.Automation.Language.Parser]::ParseFile($env:ARCHIVEMEDIA_PS1,[ref]$t,[ref]$e) ^| Out-Null; if($e.Count -gt 0){$e ^| ForEach-Object { Write-Host ('Parse error line {0}: {1}' -f $_.Extent.StartLineNumber,$_.Message) }; exit 1}"
+"%PWSH%" -NoLogo -NoProfile -ExecutionPolicy Bypass -Command "$t=$null; $e=$null; [void][System.Management.Automation.Language.Parser]::ParseFile($env:ARCHIVEMEDIA_PS1,[ref]$t,[ref]$e); if($e.Count -gt 0){foreach($err in $e){Write-Host ('Parse error line {0}: {1}' -f $err.Extent.StartLineNumber,$err.Message)}; exit 1}"
 if errorlevel 1 (
     echo ERROR: ArchiveMedia PowerShell syntax validation failed.
     pause
