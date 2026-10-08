@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Apple Music works credits -> MusicBrainz
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      2.3.18
+// @version      2.3.19
 // @description  Resolve the correct Apple Music release and import supported Apple Music credits to the proper MusicBrainz Recording, Work, or Release relationships.
 // @author       karpuzikov
 // @license      MIT
@@ -135,7 +135,7 @@ function __amMbGmXmlhttpRequest(details) {
     'use strict';
 
     const PAGE = typeof unsafeWindow !== 'undefined' ? unsafeWindow : window;
-    const SCRIPT_VERSION = '2.3.18';
+    const SCRIPT_VERSION = '2.3.19';
     let MB = PAGE.MB;
     const APPLE_API_BASE = 'https://amp-api.music.apple.com/v1';
     const APPLE_TOKEN_BOOTSTRAP_URL = 'https://music.apple.com/us/browse';
@@ -216,7 +216,6 @@ function __amMbGmXmlhttpRequest(details) {
         rows: [],
         people: new Map(),
         creditedArtists: [],
-        workLanguages: null,
         aliasEdits: 0,
         applied: false,
     };
@@ -1550,25 +1549,6 @@ function __amMbGmXmlhttpRequest(details) {
         return selected;
     }
 
-    async function waitForDom(selector, timeout = 10000) {
-        const started = Date.now();
-        while (Date.now() - started < timeout) {
-            const element = document.querySelector(selector);
-            if (element) return element;
-            await wait(100);
-        }
-        throw new Error(`Timed out waiting for MusicBrainz UI: ${selector}`);
-    }
-
-    function setNativeSelectValue(select, value) {
-        const descriptor = Object.getOwnPropertyDescriptor(
-            HTMLSelectElement.prototype,
-            'value'
-        );
-        descriptor.set.call(select, String(value));
-        select.dispatchEvent(new Event('change', { bubbles: true }));
-    }
-
     async function restoreRecordingSelection(recording, previousSelection) {
         MB.relationshipEditor.dispatch({
             isSelected: false,
@@ -1587,14 +1567,15 @@ function __amMbGmXmlhttpRequest(details) {
         await wait(50);
     }
 
-    async function createWorkWithSavedLanguage(recording) {
+    async function createWorkForRecording(recording) {
+        // MusicBrainz supports an optional lyrics language. This soundtrack
+        // includes songs in different languages; assigning one album-wide
+        // language is incorrect. Leave it unspecified until verified per Work.
         const previousSelection = selectedRecordingsSnapshot();
-
         MB.relationshipEditor.dispatch({
             isSelected: false,
             type: 'toggle-select-all-recordings',
         });
-
         MB.relationshipEditor.dispatch({
             isSelected: true,
             recording,
@@ -1602,120 +1583,48 @@ function __amMbGmXmlhttpRequest(details) {
         });
 
         try {
+            const selected = selectedRecordingsSnapshot();
+            if (
+                selected.length !== 1 ||
+                String(selected[0].gid || selected[0].id) !== String(recording.gid || recording.id)
+            ) {
+                throw new Error(
+                    `Work creation selection failed for "${recording.name}". No Work was created.`
+                );
+            }
+
+            // Native action used by MusicBrainz's Batch-create Works dialog:
+            // the dialog itself is not needed. This stages a Song Work and a
+            // recording-of relationship in the editor, but does NOT submit.
+            // Its reducer accepts an empty lyrics-language list.
+            setStatus(`Staging Work for "${recording.name}" (lyrics language unspecified)...`);
             MB.relationshipEditor.dispatch({
                 attributes: null,
                 begin_date: null,
                 end_date: null,
                 ended: false,
-                languages: state.workLanguages,
+                languages: [],
                 linkType: null,
                 type: 'accept-batch-create-works-dialog',
                 workType: WORK_TYPE_SONG_ID,
             });
 
-            await wait(100);
-
-            const created = findTemporaryCreatedWork(recording.name);
-            if (!created) {
-                throw new Error(
-                    `MusicBrainz did not stage a new Work for "${recording.name}".`
-                );
-            }
-
-            return created;
-        } finally {
-            await restoreRecordingSelection(recording, previousSelection);
-        }
-    }
-
-    async function createWorkForRecording(recording) {
-        if (Array.isArray(state.workLanguages) && state.workLanguages.length) {
-            return createWorkWithSavedLanguage(recording);
-        }
-
-        const previousSelection = selectedRecordingsSnapshot();
-
-        MB.relationshipEditor.dispatch({
-            isSelected: false,
-            type: 'toggle-select-all-recordings',
-        });
-
-        MB.relationshipEditor.dispatch({
-            isSelected: true,
-            recording,
-            type: 'toggle-select-recording',
-        });
-
-        try {
-            let button = null;
             const started = Date.now();
-
-            while (Date.now() - started < 10000) {
-                button = document.querySelector('button.batch-create-works');
-                if (button && !button.disabled) break;
+            while (Date.now() - started < 5000) {
+                MB = PAGE.MB || MB;
+                const created = findTemporaryCreatedWork(recording.name);
+                if (created) {
+                    if (Number(created.typeID) !== WORK_TYPE_SONG_ID) {
+                        throw new Error(`Staged Work "${recording.name}" is not type Song.`);
+                    }
+                    return created;
+                }
                 await wait(100);
             }
 
-            if (!button || button.disabled) {
-                throw new Error(
-                    'MusicBrainz "Batch-add new works" button did not become available.'
-                );
-            }
-
-            button.click();
-
-            const dialog = await waitForDom('#batch-create-works-dialog', 10000);
-            const workType = await waitForDom(
-                '#batch-create-works-dialog #work-type',
-                10000
+            throw new Error(
+                `MusicBrainz did not confirm a staged Work for "${recording.name}" within 5 seconds.`
             );
-
-            setNativeSelectValue(workType, WORK_TYPE_SONG_ID);
-
-            setStatus(
-                'Choose the lyrics language once for this album, then click Done. The same language will be reused for all new Works.',
-                'warn'
-            );
-
-            const dialogStarted = Date.now();
-            while (Date.now() - dialogStarted < 10 * 60 * 1000) {
-                if (!document.body.contains(dialog)) break;
-                await wait(200);
-            }
-
-            if (document.body.contains(dialog)) {
-                throw new Error(
-                    'Timed out waiting for the album lyrics language selection.'
-                );
-            }
-
-            await wait(100);
-
-            const created = findTemporaryCreatedWork(recording.name);
-            if (!created) {
-                throw new Error(
-                    `Work creation for "${recording.name}" was cancelled or not accepted.`
-                );
-            }
-
-            if (Number(created.typeID) !== WORK_TYPE_SONG_ID) {
-                throw new Error(
-                    `The new Work "${recording.name}" was not created with Work type Song.`
-                );
-            }
-
-            const chosenLanguages = (created.languages || [])
-                .map(item => item?.language)
-                .filter(Boolean);
-
-            if (!chosenLanguages.length) {
-                throw new Error(
-                    'No lyrics language was selected for the album.'
-                );
-            }
-
-            state.workLanguages = chosenLanguages;
-            return created;
         } finally {
             await restoreRecordingSelection(recording, previousSelection);
         }
@@ -2023,7 +1932,6 @@ function __amMbGmXmlhttpRequest(details) {
             state.rows = [];
             state.people.clear();
             state.creditedArtists = [];
-            state.workLanguages = null;
             state.aliasEdits = 0;
             state.applied = false;
             // A second Load on this page must not trust cached negative
