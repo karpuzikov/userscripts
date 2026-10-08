@@ -1035,6 +1035,16 @@ This section supersedes older featured-remix, contextual-remix, and generic Edit
 - Strong structural conflicts such as Radio vs Extended or Acoustic vs Instrumental remain eligible for semantic pre-blocking unless exact identical Chromaprint overrides the wording.
 
 
+## v0.3.6 source-safe optimization and Release Map correctness - authoritative
+
+- For each included wanted acoustic recording group, the exact optimization model must select at least one best-source-class carrier (CD/physical above WEB; comparable CD-rip acceptability 80+ is evaluated in the source floor). Numeric CD log quality differences within the same class remain late tie-breakers.
+- Source preservation is a hard coverage constraint **before** minimizing total retained physical tracks and retained release count. Never add higher-source copies after exact minimization as an unoptimized repair pass.
+- Equivalent-edition pre-pruning must not remove the only better-source carrier. CD-log/DR late substitutions must not increase physical track count or violate recording, source-floor or maximum-completeness album constraints.
+- The Release Map must preserve valid acoustic group ID `0` in all visible nodes, relationship links and alternate-version catalogs.
+- A coverage/duplicate link does not prove a replacement. Show `↔ Replaced` only if one NEW release completely covers the included wanted acoustic groups of a removed OLD release and both are recognized as the same release family; otherwise report separate add/remove with actual partial coverage.
+- Cache Release Map replacement pairing per state and invalidate it after updates. Do not rebuild every pair for every displayed row or filter.
+- v0.3.6 remains `Under construction ⚠️` until exact Skrillex and Windows/WebView2 runtime testing pass.
+
 ## v0.3.5 source preservation and Release Map delta correction - authoritative
 
 This section supersedes older optimization wording wherever it allowed collection-size minimization to erase a better source for recordings that are already available at higher quality.
