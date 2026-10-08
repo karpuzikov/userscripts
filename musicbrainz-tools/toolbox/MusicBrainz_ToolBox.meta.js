@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MusicBrainz ToolBox
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.0.57
+// @version      1.0.58
 // @description  Combined MusicBrainz release-editor, recording, barcode, Spotify/Apple Music linking, search, cover-art, Disc ID, and duplicate-edit tools.
 // @author       karpuzikov
 // @license      MIT
@@ -9,6 +9,9 @@
 // @match        https://beta.musicbrainz.org/*
 // @match        https://open.spotify.com/*
 // @match        https://music.apple.com/*
+// @match        https://www.metal-archives.com/albums/*
+// @match        https://listen.tidal.com/album/*
+// @match        https://tidal.com/album/*
 // @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/toolbox/MusicBrainz_ToolBox.user.js
 // @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/toolbox/MusicBrainz_ToolBox.meta.js
 // @supportURL   https://github.com/karpuzikov/userscripts
@@ -16,10 +19,22 @@
 // @grant        GM_setValue
 // @grant        GM_xmlhttpRequest
 // @grant        unsafeWindow
+// @grant        GM_removeValueChangeListener
+// @grant        GM_addValueChangeListener
+// @grant        GM_deleteValue
+// @grant        GM_openInTab
+// @grant        GM_info
 // @connect      api.github.com
 // @connect      musicbrainz.org
 // @connect      harmony.pulsewidth.org.uk
 // @connect      music.apple.com
 // @connect      amp-api.music.apple.com
+// @connect      tidal.com
+// @connect      music.youtube.com
+// @connect      www.metal-archives.com
+// @connect      www.deezer.com
+// @connect      deezer.com
+// @connect      www.qobuz.com
+// @connect      qobuz.com
 // @run-at       document-idle
 // ==/UserScript==
