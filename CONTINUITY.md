@@ -2,7 +2,7 @@
 
 ## Product and state
 - Product: Karpuzikov Picard Scripts, a Picard 3.x Git-updatable MusicBrainz metadata plugin.
-- Current version: 1.5.13 - Under construction ⚠️ (not yet verified inside user Picard).
+- Current version: 1.5.14 - Under construction ⚠️ (not yet verified inside user Picard).
 - Git repository and active branch: `karpuzikov/userscripts`, `main`.
 - There is no additional project-specific `RULES.md` currently; the canonical repository root `SOFTWARE_RULES.md` governs this project.
 
@@ -98,3 +98,9 @@
 - Updated identical embedded script sources in root `__init__.py`, plugin manifest to 1.5.13, README versions/download links, and related regression tests. Version 1.0.0 Unicode and 1.1.2 English should be regarded as historical and defective.
 - Inspected `Add_EP_Single_Suffix.txt`, `Format_Multiple_Artists.txt`, `Move_Featured_Artists_to_Title.txt` against Picard's scripting function signatures. No equivalent multi-pair `$replace` defect found; current behavior remains unchanged to avoid unverified artist-credit corruption. Known concern: `Format Multiple Artists` uses substring presence rather than token-safe membership when filtering source artist names; a full solution must preserve legitimate punctuation in artist names and nonstandard MB join phrases. Featured-artist parser should be tested with parenthesized and nonparenthesized feat. credits.
 - Static checks are not equivalent to Picard 3 interactive runtime validation. Manual QA must cover G‐DRAGON -> G-DRAGON, proper Unicode quote/punctuation conversion, repeated runs/idempotence, preservation of non-ASCII letters, multi-artist/composer tagging, original format and suffix regression samples, and embedded/standalone script parity. Keep 1.5.13 - Under construction ⚠️ until confirmed.
+
+## Artist processing order regression (2026-10-09; plugin v1.5.14)
+
+- Confirmed cross-script hazard: Unicode normalization changes `artist`/`albumartist`, but `Format Multiple Artists` compares those fields to MusicBrainz's original multi-valued `artists`/`albumartists`. If Unicode conversion happens first, e.g. `G‐DRAGON` becomes `G-DRAGON` only on one side and Format can incorrectly remove the artist.
+- Fixed embedded `SCRIPTS` execution order (and matching options order) to: Move Featured Artists -> Format Multiple Artists -> Unicode to ASCII -> Add EP/Single Suffix -> English Title Capitalization. When using standalone scripts in Picard's Options > Scripting, the user must arrange Format above Unicode; embedded plugin order is enforced automatically. Reordered README rows to reflect this dependency.
+- `Format Multiple Artists` itself was not redesigned; original artist/albumartist eligibility and 1/2/3+ joining logic remain unchanged to protect nonstandard join phrases. Known partial-name false-match risk remains documented. New order regression test added; plugin 1.5.14 remains Under construction ⚠️ pending Picard 3 runtime validation.
