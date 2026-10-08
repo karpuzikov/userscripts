@@ -1378,6 +1378,38 @@ def configure_styles(self):
                 f"{self.worker_count} workers / {self.drive_count} drives"
             )
 
+
+        def quick_check_file(self):
+            """Direct check of one user-chosen file; always shows result including GOOD."""
+            if self.running or self.undo_running:
+                return
+            filename = filedialog.askopenfilename(
+                title="Check one image file",
+                filetypes=[("Image files", "*.jpg *.jpeg *.jpe *.jfif *.png *.tif *.tiff *.heic *.heif *.webp *.bmp *.gif *.avif"),
+                           ("All files", "*.*")]
+            )
+            if not filename:
+                return
+            image_path = Path(filename)
+            self.clear_scan_review()
+            self.mode = "quick"
+            self.progress_var.set(0)
+            self.start_time = time.monotonic()
+            self.total, self.done = 1, 0
+            self.discovered = 1
+            self.worker_count = 1
+            self.drive_count = 1
+            self.stage_var.set("CHECK FILE")
+            self.status_var.set("Checking the selected image, including visible artifacts...")
+            self.set_controls(running=True)
+            def check():
+                try:
+                    status, reason = verify_image(image_path)
+                except Exception as exc:
+                    status, reason = "error", exc.__class__.__name__
+                self.q.put(("quick_result", image_path, status, reason))
+            threading.Thread(target=check, daemon=True).start()
+
         def add_source(self):
             folder = filedialog.askdirectory(title="Add source image folder")
             if not folder:
@@ -1466,6 +1498,7 @@ def configure_styles(self):
             self.remove_btn.configure(state=normal_state)
             self.clear_btn.configure(state=normal_state)
             self.stop_btn.configure(state="normal" if running else "disabled")
+            self.check_btn.configure(state=normal_state)
             self.refresh_undo_button()
             self.refresh_move_button()
 
@@ -1741,7 +1774,44 @@ def configure_styles(self):
                     item = self.q.get_nowait()
                     kind = item[0]
 
-                    if kind == "drive_scan_ready":
+                    if kind == "quick_result":
+                        _, path, status, reason = item
+                        self.done = 1
+                        self.progress_var.set(100)
+                        states = {
+                            "good": "GOOD",
+                            "warning": "WARNING - LEFT IN PLACE",
+                            "unsupported": "UNSUPPORTED - LEFT IN PLACE",
+                            "error": "ERROR - LEFT IN PLACE",
+                            "corrupt": "CONFIRMED CORRUPT",
+                        }
+                        self.set_controls()
+                        state = states.get(status, "ERROR - LEFT IN PLACE")
+                        reason = str(reason).replace(str(path), "[this image]")
+                        iid = self.result_tree.insert(
+                            "", "end", values=("[DIR]", state, str(path), reason)
+                        )
+                        self.result_tree.selection_set(iid)
+                        self.result_tree.see(iid)
+                        self.notebook.select(self.results_tab)
+                        self.stage_var.set("CHECK COMPLETE")
+                        self.status_var.set(
+                            f"Individual-file check: {state}. "
+                            "File was not moved. For quarantine, add its folder and scan."
+                        )
+                        self.stats_vars["Checked"].set("1")
+                        for key in ("Good", "Warnings", "Confirmed", "Unsupported", "Errors"):
+                            self.stats_vars[key].set("1" if
+                                (key == "Good" and status == "good") or
+                                (key == "Warnings" and status == "warning") or
+                                (key == "Confirmed" and status == "corrupt") or
+                                (key == "Unsupported" and status == "unsupported") or
+                                (key == "Errors" and status == "error")
+                                else "0")
+                        self.log_path(f"[{state}] ", path, "muted")
+                        self.log_line(f"  Reason: {reason or 'Full decode and visual checks passed'}", "muted")
+
+                    elif kind == "drive_scan_ready":
                         _, info, count, workers = item
                         self.discovered += count
                         self.log_line(
@@ -1824,8 +1894,7 @@ def configure_styles(self):
                             self.status_var.set(
                                 f"Scan complete in {format_elapsed(elapsed)}. "
                                 f"{self.corrupt:,} confirmed, {self.warning:,} warning(s), "
-                                f"{self.unsupported:,} unsupported. "
-                                "Review findings, then choose Move Confirmed Corrupt."
+                                f"{self.unsupported:,} unsupported. Review results."
                             )
                         self.refresh_move_button()
 
