@@ -354,10 +354,10 @@ def _jpeg_missing_eoi(path):
     """Recognizable JPEG with a missing terminal FF D9 marker."""
     try:
         with path.open("rb") as handle:
-            if handle.read(2) != b"\\xff\\xd8":
+            if handle.read(2) != b"\xff\xd8":
                 return False
             handle.seek(-2, os.SEEK_END)
-            return handle.read(2) != b"\\xff\\xd9"
+            return handle.read(2) != b"\xff\xd9"
     except (OSError, ValueError):
         return False
 
@@ -384,11 +384,6 @@ def verify_image(path):
     ext = path.suffix.lower()
     if ext in {".heic", ".heif"} and not HEIF_READY:
         return "unsupported", "HEIC/HEIF decoder is unavailable"
-    if ext in {".tif", ".tiff"} and _signature_issue(path) is None:
-        # Pillow's valid TIFF coverage is incomplete, particularly 5-channel CMYK.
-        # If Pillow fails below, use tifffile independently.
-        pass
-
     missing_eoi = ext in {".jpg", ".jpeg", ".jpe", ".jfif"} and _jpeg_missing_eoi(path)
     try:
         with warnings.catch_warnings():
@@ -1362,7 +1357,6 @@ def launch_gui():
             self.clear_btn.configure(state=normal_state)
             self.stop_btn.configure(state="normal" if running else "disabled")
             self.refresh_undo_button()
-            self.refresh_move_button()
             self.refresh_move_button()
 
         def start(self):
