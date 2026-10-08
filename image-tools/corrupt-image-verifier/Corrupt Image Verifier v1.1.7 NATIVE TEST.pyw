@@ -981,6 +981,8 @@ def launch_gui():
             self.worker_count = 0
             self.drive_count = 0
             self.review_by_iid = {}
+            self.visual_checked = 0
+            self.visual_suspects = 0
 
             self.status_var = tk.StringVar(value="Ready")
             self.progress_var = tk.DoubleVar(value=0)
@@ -1351,6 +1353,8 @@ def configure_styles(self):
             if hasattr(self, "result_tree"):
                 for iid in self.result_tree.get_children():
                     self.result_tree.delete(iid)
+            if hasattr(self, "notebook"):
+                self.notebook.tab(self.results_tab, text="Scan results")
             if hasattr(self, "move_btn"):
                 self.move_btn.configure(state="disabled")
             if hasattr(self, "mark_btn"):
@@ -1528,6 +1532,8 @@ def configure_styles(self):
 
             self.mode = "scan"
             self.clear_scan_review()
+            self.visual_checked = 0
+            self.visual_suspects = 0
             self.discovered = 0
             self.worker_count = sum(self.worker_plan.values())
             self.drive_count = len(self.worker_plan)
@@ -1794,6 +1800,7 @@ def configure_styles(self):
                         self.result_tree.selection_set(iid)
                         self.result_tree.see(iid)
                         self.notebook.select(self.results_tab)
+                        self.notebook.tab(self.results_tab, text="File check result (1)")
                         self.stage_var.set("CHECK COMPLETE")
                         self.status_var.set(
                             f"Individual-file check: {state}. "
@@ -1830,6 +1837,10 @@ def configure_styles(self):
                     elif kind == "result":
                         _, source_root, p, size, mtime, status, reason, key = item
                         self.done += 1
+                        if p.suffix.lower() in {".jpg", ".jpeg", ".jpe", ".jfif"} and status in {"good", "warning", "corrupt"}:
+                            self.visual_checked += 1
+                        if str(reason).startswith("VISUAL DAMAGE SUSPECTED"):
+                            self.visual_suspects += 1
                         self.bytes_scanned += size or 0
                         labels = {
                             "corrupt": "CONFIRMED CORRUPT",
@@ -1894,8 +1905,14 @@ def configure_styles(self):
                             self.status_var.set(
                                 f"Scan complete in {format_elapsed(elapsed)}. "
                                 f"{self.corrupt:,} confirmed, {self.warning:,} warning(s), "
-                                f"{self.unsupported:,} unsupported. Review results."
+                                f"{self.unsupported:,} unsupported; "
+                                f"{self.visual_suspects:,} visual suspect(s)."
                             )
+                            self.log_line(
+                                f"[VISUAL JPEG AUDIT] {self.visual_checked:,} JPEGs checked; "
+                                f"{self.visual_suspects:,} visual suspect(s).", "muted"
+                            )
+                            self.notebook.tab(self.results_tab, text=f"Scan results ({len(self.result_tree.get_children()):,})")
                         self.refresh_move_button()
 
                     elif kind == "move_result":
