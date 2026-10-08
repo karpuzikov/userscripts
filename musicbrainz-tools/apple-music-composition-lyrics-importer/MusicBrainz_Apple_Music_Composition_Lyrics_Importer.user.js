@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Apple Music works credits -> MusicBrainz
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      2.3.22
+// @version      2.3.23
 // @description  Resolve the correct Apple Music release and import supported Apple Music credits to the proper MusicBrainz Recording, Work, or Release relationships.
 // @author       karpuzikov
 // @license      MIT
@@ -135,7 +135,7 @@ function __amMbGmXmlhttpRequest(details) {
     'use strict';
 
     const PAGE = typeof unsafeWindow !== 'undefined' ? unsafeWindow : window;
-    const SCRIPT_VERSION = '2.3.22';
+    const SCRIPT_VERSION = '2.3.23';
     let MB = PAGE.MB;
     const APPLE_API_BASE = 'https://amp-api.music.apple.com/v1';
     const APPLE_TOKEN_BOOTSTRAP_URL = 'https://music.apple.com/us/browse';
@@ -2488,5 +2488,28 @@ function __amMbGmXmlhttpRequest(details) {
         document.getElementById('am2mb-load').addEventListener('click', loadAppleCredits);
     }
 
-    injectUi();
+    // Compatibility with MusicBrainz ToolBox's consolidated Apple importer.
+    // The standalone script is retained as an independent fallback for users
+    // who do not have Toolbox installed; no duplicate Apple controls appear.
+    const ownerAttribute = 'data-karpuzikov-apple-import-owner';
+    const rootElement = document.documentElement;
+    function toolboxOwnsAppleImport() {
+        return rootElement.getAttribute(ownerAttribute) === 'toolbox';
+    }
+    function yieldToToolbox() {
+        if (!toolboxOwnsAppleImport()) return false;
+        const panel = document.getElementById('am2mb-panel');
+        const hasStagedResults = !!document.getElementById('am2mb-tracks')?.textContent?.trim();
+        if (panel && !document.getElementById('am2mb-load')?.disabled && !hasStagedResults) {
+            panel.remove();
+        }
+        return true;
+    }
+    // Toolbox executes at document-idle; wait briefly before mounting our
+    // fallback panel to avoid a transient double-button flash.
+    const ownerObserver = new MutationObserver(() => yieldToToolbox());
+    ownerObserver.observe(rootElement, {attributes: true, attributeFilter: [ownerAttribute]});
+    setTimeout(() => {
+        if (!yieldToToolbox()) injectUi();
+    }, 2000);
 })();
