@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         RuTracker Digital Release Linker
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.1.19
+// @version      1.1.20
 // @description  Links exact digital release pages in RuTracker BBCode, falls back from Deezer to MusicBrainz-linked Beatport releases, and adds country flag emoji.
 // @author       karpuzikov
 // @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/browser-tools/rutracker-digital-release-linker/RuTracker_Digital_Release_Linker.user.js
@@ -115,7 +115,7 @@
                 retries: 2,
                 retry503: true,
                 headers: {
-                    'User-Agent': `${SCRIPT_NAME}/1.1.19 (Tampermonkey userscript)`,
+                    'User-Agent': `${SCRIPT_NAME}/1.1.20 (Tampermonkey userscript)`,
                 },
             });
         });
@@ -140,7 +140,7 @@
                         url,
                         headers: {
                             Accept: 'text/html',
-                            'User-Agent': `${SCRIPT_NAME}/1.1.19 (Tampermonkey userscript)`,
+                            'User-Agent': `${SCRIPT_NAME}/1.1.20 (Tampermonkey userscript)`,
                         },
                         timeout: 20000,
                         onload(response) {
@@ -433,7 +433,7 @@
 
         let title = spoilerTitle.replace(/^\d{4}-\d{2}-\d{2}\s*-\s*/, '').trim();
         title = title.replace(/\s*\(by\s+[\s\S]*\)\s*$/i, '').trim();
-        if (identifier) {
+        if (identifier || /\[(?:none|n\/?a|unknown)\]\s*$/i.test(title)) {
             title = title.replace(/\s*\[[^\[\]]+\]\s*$/, '').trim();
         }
         title = title.replace(/\s*-\s*(?:single|ep|album)\s*$/i, '').trim();
@@ -509,7 +509,7 @@
         return null;
     }
     function getTopicArtist(postText) {
-        const heading = postText.match(/\[size=\d+\]\s*([^|\r\n\[]+?)\s*\|\s*(?:Дискография|Discography)\b/i);
+        const heading = postText.match(/\[size=\d+\]\s*([^|\r\n\[]+?)\s*\|\s*(?:Дискография|Discography)(?![\p{L}\p{N}])/iu);
         return heading ? heading[1].trim() : '';
     }
 
@@ -1151,6 +1151,69 @@
         },
     ];
 
+    // Manual force mode: Deezer only; never discard verified existing sources.
+    async function resolveForceDeezer(context) {
+        const primary = await resolveDeezer(context);
+        if (primary?.kind === 'deezer') return primary;
+        if (context.meta.identifier || !context.topicArtist) return null;
+
+        const { meta, topicArtist } = context;
+        const results = await deezerSearchAlbums(meta.title, topicArtist);
+        const candidates = results.filter((item) =>
+            normalizeText(item.title) === normalizeText(meta.title) &&
+            normalizeText(item.artist?.name) === normalizeText(topicArtist)
+        );
+        if (!candidates.length || candidates.length > 8) return null;
+
+        const matches = (await Promise.all(candidates.map((item) => deezerAlbumById(item.id))))
+            .filter((album) => album && normalizeText(album.title) === normalizeText(meta.title) &&
+                normalizeText(album.artist?.name) === normalizeText(topicArtist) &&
+                (!meta.trackCount || Number(album.nb_tracks) === meta.trackCount) &&
+                (!meta.date || !album.release_date ||
+                    album.release_date.slice(0, 4) === meta.date.slice(0, 4)) &&
+                (!meta.firstTrack || !album.tracks?.data?.[0]?.title ||
+                    normalizeText(cleanTrackTitle(album.tracks.data[0].title)) ===
+                    normalizeText(cleanTrackTitle(meta.firstTrack))));
+        return matches.length === 1
+            ? { kind: 'deezer', url: 'https://www.deezer.com/album/' + matches[0].id }
+            : null;
+    }
+
+    const FORCE_WEB_SOURCE_REGEX = /(\[b\]Носитель\|Источник\[\/b\]\s*:\s*)([^\r\n]*?)(\[hr\]|(?=\r?\n|$))/i;
+
+    const FORCE_WEB_PROVIDER = {
+        key: 'force-web',
+        isReleaseUrl: () => false,
+        getCurrentUrl(match) {
+            const found = match[2].match(/\[url=(?:"([^"]+)"|([^\]]+))\](?:WEB|Deezer)\[\/url\]/i);
+            return (found?.[1] || found?.[2] || '').trim();
+        },
+        resolve: resolveForceDeezer,
+        makeLinkedSource(match, resolution) {
+            const line = match[2];
+            const pipe = line.indexOf('|');
+            const source = pipe < 0 ? '' : line.slice(pipe + 1);
+            const clean = source.trim();
+            if (/^(?:Deezer|\[url=(?:"[^"]+"|[^\]]+)\]Deezer\[\/url\])$/i.test(clean) ||
+                /^(?:Источник|\[url=(?:"[^"]+"|[^\]]+)\]Источник\[\/url\])$/i.test(clean)) {
+                return match[1] + 'WEB|[url=' + resolution.url + ']Deezer[/url]' + (match[3] || '');
+            }
+            return match[1] + '[url=' + resolution.url + ']WEB[/url]' +
+                (pipe < 0 ? '' : '|' + source) + (match[3] || '');
+        },
+    };
+
+    function findForceWebMatch(text) {
+        const match = text.match(FORCE_WEB_SOURCE_REGEX);
+        if (!match) return null;
+        const media = match[2].split('|', 1)[0].trim()
+            .replace(/^\[url=(?:"[^"]+"|[^\]]+)\]([\s\S]*?)\[\/url\]$/i, '$1')
+            .replace(/\s+/g, '').toUpperCase();
+        return media === 'WEB' || media === 'CD/WEB'
+            ? { provider: FORCE_WEB_PROVIDER, match }
+            : null;
+    }
+
     function findSpoilers(text) {
         const spoilers = [];
         const stack = [];
@@ -1241,9 +1304,25 @@
         button.value = 'Link digital release pages';
         button.className = 'btn';
         button.style.cursor = 'pointer';
+        button.title = 'Only fill missing release links.';
+
+        const forceButton = document.createElement('input');
+        forceButton.type = 'button';
+        forceButton.value = 'Force link all web releases';
+        forceButton.className = 'btn';
+        forceButton.style.cursor = 'pointer';
+        forceButton.title = 'Find Deezer links for all WEB releases even when a source exists; skip CD-only releases.';
+
+        const undoButton = document.createElement('input');
+        undoButton.type = 'button';
+        undoButton.value = 'Undo last link changes';
+        undoButton.className = 'btn';
+        undoButton.style.cssText = 'cursor:pointer;display:none;';
 
         const status = document.createElement('span');
         status.style.cssText = 'font-size:11px;';
+        status.setAttribute('role', 'status');
+        status.setAttribute('aria-live', 'polite');
 
         const notFoundDetails = document.createElement('details');
         notFoundDetails.style.cssText = 'display:none;flex-basis:100%;margin-top:2px;font-size:11px;';
@@ -1256,9 +1335,10 @@
         notFoundList.style.cssText = 'white-space:pre-wrap;margin:4px 0 0 16px;line-height:1.4;';
 
         notFoundDetails.append(notFoundSummary, notFoundList);
-        wrapper.append(button, status, notFoundDetails);
+        wrapper.append(button, forceButton, undoButton, status, notFoundDetails);
         textarea.parentNode.insertBefore(wrapper, textarea);
-        return { wrapper, button, status, notFoundDetails, notFoundSummary, notFoundList };
+        return { wrapper, button, forceButton, undoButton, undoText: null,
+            status, notFoundDetails, notFoundSummary, notFoundList };
     }
 
     function setStatus(statusNode, text) {
@@ -1279,7 +1359,20 @@
         ui.notFoundDetails.open = true;
     }
 
-    async function runLinker(textarea, ui) {
+    function writePost(textarea, content) {
+        textarea.value = content;
+        textarea.dispatchEvent(new Event('input', { bubbles: true }));
+        textarea.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    function applyPostChange(textarea, ui, previous, next) {
+        if (previous === next) return;
+        ui.undoText = previous;
+        if (ui.undoButton) ui.undoButton.style.display = '';
+        writePost(textarea, next);
+    }
+
+    async function runLinker(textarea, ui, { forceWeb = false } = {}) {
         const originalText = textarea.value;
         showNotFound(ui, []);
         const countryResult = addCountryFlags(originalText);
@@ -1290,11 +1383,11 @@
         let alreadyLinked = 0;
 
         for (const spoiler of spoilers) {
-            const found = findProviderMatch(spoiler.ownText);
+            const found = forceWeb ? findForceWebMatch(spoiler.ownText) : findProviderMatch(spoiler.ownText);
             if (!found) continue;
 
             const currentUrl = found.provider.getCurrentUrl(found.match);
-            if (currentUrl && found.provider.isReleaseUrl(currentUrl)) {
+            if (!forceWeb && currentUrl && found.provider.isReleaseUrl(currentUrl)) {
                 alreadyLinked += 1;
                 continue;
             }
@@ -1309,22 +1402,21 @@
         }
 
         if (!candidates.length) {
-            if (workingText !== originalText) {
-                textarea.value = workingText;
-                textarea.dispatchEvent(new Event('input', { bubbles: true }));
-                textarea.dispatchEvent(new Event('change', { bubbles: true }));
-            }
+            applyPostChange(textarea, ui, originalText, workingText);
 
             const parts = [];
             if (countryResult.changed) parts.push(`country flags: ${countryResult.changed}`);
             if (alreadyLinked) parts.push(`already linked: ${alreadyLinked}`);
-            setStatus(ui.status, parts.length ? parts.join(' | ') : 'Nothing to link.');
+            setStatus(ui.status, parts.length ? parts.join(' | ') : (forceWeb ? 'No WEB releases found.' : 'Nothing to link.'));
             return;
         }
 
         ui.button.disabled = true;
+        if (ui.forceButton) ui.forceButton.disabled = true;
+        if (ui.undoButton) ui.undoButton.disabled = true;
         let finished = 0;
-        setStatus(ui.status, `Resolving 0/${candidates.length}...`);
+        const stage = forceWeb ? 'Checking WEB releases' : 'Resolving';
+        setStatus(ui.status, `${stage} 0/${candidates.length}...`);
 
         try {
             const results = await mapLimit(candidates, CONCURRENCY, async (candidate) => {
@@ -1348,13 +1440,14 @@
                 }
 
                 finished += 1;
-                setStatus(ui.status, `Resolving ${finished}/${candidates.length}...`);
+                setStatus(ui.status, `${stage} ${finished}/${candidates.length}...`);
                 return { candidate, resolution, error };
             });
 
             const replacements = [];
             const notFoundTitles = [];
             let linked = 0;
+            let alreadyCorrect = 0;
             let coversLinked = 0;
             let beatportFallbacks = 0;
 
@@ -1381,6 +1474,8 @@
                     });
                     linked += 1;
                     if (result.resolution.kind === 'beatport') beatportFallbacks += 1;
+                } else if (forceWeb) {
+                    alreadyCorrect += 1;
                 }
                 const coverMatch = findCoverPlaceholder(candidate.spoiler.ownText);
                 if (coverMatch && result.resolution.coverUrl) {
@@ -1400,13 +1495,11 @@
                 updatedText = updatedText.slice(0, replacement.start) + replacement.text + updatedText.slice(replacement.end);
             }
 
-            if (updatedText !== originalText) {
-                textarea.value = updatedText;
-                textarea.dispatchEvent(new Event('input', { bubbles: true }));
-                textarea.dispatchEvent(new Event('change', { bubbles: true }));
-            }
+            applyPostChange(textarea, ui, originalText, updatedText);
 
-            const parts = [`Linked: ${linked}`];
+            const parts = [`${forceWeb ? 'Deezer links updated' : 'Linked'}: ${linked}`];
+            if (forceWeb) parts.push(`checked: ${candidates.length}`);
+            if (alreadyCorrect) parts.push(`already correct: ${alreadyCorrect}`);
             if (coversLinked) parts.push(`covers: ${coversLinked}`);
             if (beatportFallbacks) parts.push(`Beatport fallback: ${beatportFallbacks}`);
             if (countryResult.changed) parts.push(`country flags: ${countryResult.changed}`);
@@ -1416,6 +1509,8 @@
             showNotFound(ui, notFoundTitles);
         } finally {
             ui.button.disabled = false;
+            if (ui.forceButton) ui.forceButton.disabled = false;
+            if (ui.undoButton) ui.undoButton.disabled = false;
         }
     }
 
@@ -1430,6 +1525,16 @@
         const ui = createUi(textarea);
         ui.wrapper.dataset.rutrackerDigitalReleaseLinker = '1';
         ui.button.addEventListener('click', () => runLinker(textarea, ui));
+        ui.forceButton.addEventListener('click', () => runLinker(textarea, ui, { forceWeb: true }));
+        ui.undoButton.addEventListener('click', () => {
+            if (ui.undoText === null) return;
+            const previous = ui.undoText;
+            ui.undoText = null;
+            ui.undoButton.style.display = 'none';
+            writePost(textarea, previous);
+            showNotFound(ui, []);
+            setStatus(ui.status, 'Last link changes restored.');
+        });
     }
 
     init();
