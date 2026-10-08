@@ -362,22 +362,6 @@ def _jpeg_missing_eoi(path):
         return False
 
 
-def _tolerant_jpeg_decode(path):
-    """A tolerant full decode establishes visibility, not integrity."""
-    if ImageFile is None:
-        return False
-    old = ImageFile.LOAD_TRUNCATED_IMAGES
-    try:
-        ImageFile.LOAD_TRUNCATED_IMAGES = True
-        with Image.open(path) as im:
-            im.load()
-        return True
-    except Exception:
-        return False
-    finally:
-        ImageFile.LOAD_TRUNCATED_IMAGES = old
-
-
 def verify_image(path):
     """Return good, warning, unsupported, error, or confirmed corrupt.
 
@@ -447,8 +431,8 @@ def verify_image(path):
     except OSError as exc:
         if ext in {".tif", ".tiff"} and _signature_issue(path) is None:
             return verify_tiff_with_tifffile(path)
-        if missing_eoi and _tolerant_jpeg_decode(path):
-            return "warning", "JPEG missing FF D9; tolerant decode succeeded"
+        if missing_eoi:
+            return "warning", "JPEG missing FF D9; image retained for manual review"
         return classify_exception(exc)
     except Exception as exc:
         if ext in {".tif", ".tiff"} and _signature_issue(path) is None:
@@ -473,16 +457,23 @@ def same_file_contents(a, b, chunk=4 * 1024 * 1024):
 
 
 def _copy_noclobber(src, dest):
-    """Copy and verify without replacing any pre-existing destination file."""
+    """Copy into a destination opened exclusively; never overwrite."""
     dest.parent.mkdir(parents=True, exist_ok=True)
-    with dest.open("xb") as out, src.open("rb") as inp:
-        shutil.copyfileobj(inp, out, length=4 * 1024 * 1024)
+    created = False
     try:
+        with dest.open("xb") as out:
+            created = True
+            with src.open("rb") as inp:
+                shutil.copyfileobj(inp, out, length=4 * 1024 * 1024)
         shutil.copystat(src, dest)
         if not same_file_contents(src, dest):
             raise OSError("Byte-for-byte destination verification failed")
     except Exception:
-        dest.unlink(missing_ok=True)
+        if created:
+            try:
+                dest.unlink(missing_ok=True)
+            except OSError:
+                pass
         raise
 
 
@@ -496,7 +487,7 @@ def move_preserving_structure(source_root, file_path, run_id=None, sources=None)
     dest_root = source_root.parent / f"{source_root.name}_CORRUPTED"
     dest = dest_root / rel
     if dest.exists() or dest.is_symlink():
-        raise FileExistsError(f"Destination already exists: {dest}")
+        raise FileExistsError("Destination collision - existing quarantined file left untouched")
     _copy_noclobber(original, dest)
     try:
         # Persist undo BEFORE unlinking the original to close the recovery gap.
@@ -1391,7 +1382,7 @@ def launch_gui():
             self.progress_var.set(0)
             self.start_time = time.monotonic()
             self.current_run_id = datetime.now().astimezone().strftime("%Y-%m-%dT%H-%M-%S.%f%z")
-            self.good = self.corrupt = self.moved = self.unsupported = self.errors = 0
+            self.good = self.warning = self.corrupt = self.moved = self.unsupported = self.errors = 0
             self.total = self.done = 0
             self.bytes_scanned = self.bytes_moved = 0
             for var in self.stats_vars.values():
@@ -1587,6 +1578,9 @@ def launch_gui():
             self.set_controls(undo_running=True)
             self.progress_var.set(0)
             self.clear_log()
+            self.stage_var.set("STAGE: RESTORING LAST RUN")
+            self.start_time = time.monotonic()
+            self.total, self.done = count, 0
             self.status_var.set(f"Undoing last run: 0/{count:,}...")
             threading.Thread(target=self.undo_worker, args=(manifest,), daemon=True).start()
 
@@ -1675,6 +1669,7 @@ def launch_gui():
                             status = "error"
                             self.errors += 1
                         if status != "good":
+                            reason = str(reason).replace(str(p), "[this image]")
                             state = labels.get(status, "ERROR - LEFT IN PLACE")
                             iid = self.result_tree.insert(
                                 "", "end", values=("[DIR]", state, str(p), reason)
@@ -1726,6 +1721,7 @@ def launch_gui():
                         self.review_candidates = [
                             c for c in self.review_candidates if c["iid"] != iid
                         ]
+                        reason = str(reason).replace(str(candidate["path"]), "[this image]")
                         if moved_to is not None:
                             self.moved += 1
                             self.bytes_moved += candidate["size"]
@@ -1793,7 +1789,7 @@ def launch_gui():
                         log_path = _write_startup_error_log(tb)
                         if log_path:
                             self.log_path("[DIAGNOSTIC LOG] ", log_path, "warning")
-                        self.log_line(f"[ERROR] {error}", "corrupt")
+                        self.log_line("[ERROR] Operation failed; see diagnostic log.", "corrupt")
                         self.refresh_undo_button()
                         messagebox.showerror(APP_NAME, "Operation failed. See the diagnostic log.")
             except queue.Empty:
@@ -1842,11 +1838,13 @@ def _show_startup_error(exc, tb):
         from tkinter import messagebox
         root = tk.Tk()
         root.withdraw()
-        extra = f"\n\nError log:\n{log_path}" if log_path else ""
-        messagebox.showerror(
-            APP_NAME,
-            f"The application could not start.\n\n{exc}{extra}",
-        )
+        if messagebox.askyesno(
+            APP_NAME, "The application could not start.\nOpen its diagnostic log location?"
+        ) and log_path:
+            if os.name == "nt":
+                subprocess.Popen(["explorer.exe", "/select,", str(log_path)])
+            else:
+                subprocess.Popen(["xdg-open", str(log_path.parent)])
         root.destroy()
     except Exception:
         pass
