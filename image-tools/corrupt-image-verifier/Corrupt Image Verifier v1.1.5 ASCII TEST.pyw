@@ -877,12 +877,21 @@ def launch_gui():
             self.sources = []
             self.worker_plan = {}
             self.current_run_id = None
+            self.review_candidates = []
+            self.scan_completed = False
+            self.mode = "idle"
+            self.discovered = 0
+            self.worker_count = 0
+            self.drive_count = 0
+            self.review_by_iid = {}
 
             self.status_var = tk.StringVar(value="Ready")
             self.progress_var = tk.DoubleVar(value=0)
             self.plan_var = tk.StringVar(value="Add one or more source folders.")
+            self.stage_var = tk.StringVar(value="STAGE: READY")
+            self.detail_progress_var = tk.StringVar(value="Discovered: 0 | Checked: 0/0 | Elapsed: 00:00 | 0.0 files/s | 0 workers / 0 drives")
 
-            self.good = self.corrupt = self.moved = self.unsupported = self.errors = 0
+            self.good = self.warning = self.corrupt = self.moved = self.unsupported = self.errors = 0
             self.total = self.done = 0
             self.bytes_scanned = 0
             self.bytes_moved = 0
@@ -975,7 +984,10 @@ def launch_gui():
                 disabledforeground="#7f8a93",
                 relief="solid",
                 bd=1,
-                highlightthickness=0,
+                highlightthickness=2,
+                highlightbackground=BG,
+                highlightcolor=FG,
+                takefocus=1,
                 padx=14,
                 pady=8,
                 cursor="hand2",
@@ -1008,10 +1020,19 @@ def launch_gui():
             # Palette deliberately mirrors the supplied terminal-style mockup:
             # one dark surface, white outlines, no gradients, no rounded controls.
             self.root.geometry("1100x780")
-            self.root.minsize(960, 680)
+            self.root.minsize(780, 510)
 
-            outer = tk.Frame(self.root, bg=BG, padx=9, pady=8)
-            outer.pack(fill="both", expand=True)
+            # Scrollable content prevents controls being clipped at small DPI-scaled windows.
+            canvas = tk.Canvas(self.root, bg=BG, highlightthickness=0, borderwidth=0)
+            outer_scroll = ttk.Scrollbar(self.root, orient="vertical", command=canvas.yview)
+            canvas.configure(yscrollcommand=outer_scroll.set)
+            canvas.pack(side="left", fill="both", expand=True)
+            outer_scroll.pack(side="right", fill="y")
+            outer = tk.Frame(canvas, bg=BG, padx=9, pady=8)
+            canvas_window = canvas.create_window((0, 0), window=outer, anchor="nw")
+            outer.bind("<Configure>", lambda _ev: canvas.configure(scrollregion=canvas.bbox("all")))
+            canvas.bind("<Configure>", lambda ev: canvas.itemconfigure(canvas_window, width=ev.width))
+            self.main_canvas = canvas
 
             # Header -----------------------------------------------------------------
             header = tk.Frame(outer, bg=BG)
@@ -1034,7 +1055,7 @@ def launch_gui():
 
             tree_frame = tk.Frame(source_box, bg=BG)
             tree_frame.pack(fill="x", padx=1, pady=1)
-            columns = ("path", "drive", "type", "workers")
+            columns = ("open", "path", "drive", "type", "workers")
             self.source_tree = ttk.Treeview(
                 tree_frame,
                 columns=columns,
@@ -1043,11 +1064,13 @@ def launch_gui():
                 selectmode="extended",
                 style="Ascii.Treeview",
             )
+            self.source_tree.heading("open", text="OPEN")
             self.source_tree.heading("path", text="SOURCE PATH")
             self.source_tree.heading("drive", text="DRIVE")
             self.source_tree.heading("type", text="TYPE")
             self.source_tree.heading("workers", text="WORKERS")
-            self.source_tree.column("path", width=690, minwidth=320, stretch=True)
+            self.source_tree.column("open", width=66, minwidth=66, stretch=False, anchor="center")
+            self.source_tree.column("path", width=600, minwidth=210, stretch=True)
             self.source_tree.column("drive", width=72, minwidth=60, stretch=False, anchor="center")
             self.source_tree.column("type", width=115, minwidth=90, stretch=False, anchor="center")
             self.source_tree.column("workers", width=92, minwidth=76, stretch=False, anchor="center")
@@ -1056,6 +1079,7 @@ def launch_gui():
             self.source_tree.configure(yscrollcommand=sy.set)
             self.source_tree.pack(side="left", fill="x", expand=True)
             sy.pack(side="left", fill="y")
+            self.bind_open_column(self.source_tree)
 
             source_buttons = tk.Frame(outer, bg=BG)
             source_buttons.pack(fill="x", pady=(9, 0))
@@ -1072,8 +1096,11 @@ def launch_gui():
             # Actions ----------------------------------------------------------------
             action_frame = tk.Frame(outer, bg=BG)
             action_frame.pack(fill="x", pady=(18, 15))
-            self.start_btn = self._ascii_button(action_frame, "[ Scan and Move ]", self.start)
+            self.start_btn = self._ascii_button(action_frame, "[ Scan Images ]", self.start)
             self.start_btn.pack(side="left")
+            self.move_btn = self._ascii_button(action_frame, "[ Move Confirmed Corrupt ]",
+                                               self.start_move, state="disabled")
+            self.move_btn.pack(side="left", padx=(10, 0))
             self.stop_btn = self._ascii_button(action_frame, "[ Stop ]", self.stop, state="disabled")
             self.stop_btn.pack(side="left", padx=(10, 0))
             self.undo_btn = self._ascii_button(action_frame, "[ Undo Last Run ]", self.start_undo)
@@ -1087,6 +1114,8 @@ def launch_gui():
             self.progress.pack(anchor="w")
             self.update_ascii_progress()
             self.progress_var.trace_add("write", self.update_ascii_progress)
+            self._ascii_label(outer, textvariable=self.stage_var, size=9, bold=True).pack(anchor="w", pady=(3, 1))
+            self._ascii_label(outer, textvariable=self.detail_progress_var, size=9, fg=MUTED).pack(anchor="w")
             self._ascii_label(outer, textvariable=self.status_var, size=10, fg=MUTED).pack(
                 anchor="w", pady=(4, 14)
             )
@@ -1095,7 +1124,8 @@ def launch_gui():
             self.stats_vars = {
                 "Checked": tk.StringVar(value="0"),
                 "Good": tk.StringVar(value="0"),
-                "Corrupted": tk.StringVar(value="0"),
+                "Confirmed": tk.StringVar(value="0"),
+                "Warnings": tk.StringVar(value="0"),
                 "Moved": tk.StringVar(value="0"),
                 "Unsupported": tk.StringVar(value="0"),
                 "Errors": tk.StringVar(value="0"),
@@ -1117,14 +1147,37 @@ def launch_gui():
                 self._ascii_label(cell, textvariable=var, size=12).pack(anchor="w", pady=(2, 0))
                 stats.columnconfigure(i, weight=1)
 
-            # Details ----------------------------------------------------------------
-            self._ascii_label(outer, text="DETAILS", size=11).pack(anchor="w", pady=(0, 5))
+            # Review findings before any state-changing operation.
+            self._ascii_label(outer, text="SCAN RESULTS - REVIEW BEFORE MOVING", size=11).pack(
+                anchor="w", pady=(0, 5)
+            )
+            results_frame = tk.Frame(outer, bg=BG)
+            results_frame.pack(fill="x", pady=(0, 6))
+            result_columns = ("open", "status", "path", "reason")
+            self.result_tree = ttk.Treeview(results_frame, columns=result_columns,
+                                            show="headings", height=5, style="Ascii.Treeview")
+            for name, heading, width in (
+                ("open", "OPEN", 66),
+                ("status", "CLASSIFICATION", 198),
+                ("path", "IMAGE PATH", 440),
+                ("reason", "REASON", 360),
+            ):
+                self.result_tree.heading(name, text=heading)
+                self.result_tree.column(name, width=width, minwidth=66 if name == "open" else 110,
+                                        anchor="center" if name == "open" else "w",
+                                        stretch=name in {"path", "reason"})
+            ry = ttk.Scrollbar(results_frame, orient="vertical", command=self.result_tree.yview)
+            self.result_tree.configure(yscrollcommand=ry.set)
+            self.result_tree.pack(side="left", fill="x", expand=True)
+            ry.pack(side="left", fill="y")
+            self.bind_open_column(self.result_tree)
+            self._ascii_label(outer, text="DETAILS / ACTIVITY", size=11).pack(anchor="w", pady=(0, 5))
             log_frame = tk.Frame(outer, bg=BG, highlightbackground=BORDER, highlightthickness=1, bd=0)
             log_frame.pack(fill="both", expand=True)
             self.log = tk.Text(
                 log_frame,
                 wrap="none",
-                height=14,
+                height=7,
                 state="disabled",
                 font=("Cascadia Mono", 10),
                 bg=BG,
@@ -1134,7 +1187,10 @@ def launch_gui():
                 selectforeground=BG,
                 relief="flat",
                 borderwidth=0,
-                highlightthickness=0,
+                highlightthickness=1,
+                highlightbackground=BORDER,
+                highlightcolor=FG,
+                takefocus=1,
                 padx=12,
                 pady=10,
             )
@@ -1589,10 +1645,6 @@ def launch_gui():
             self.root.after(100, self.process_queue)
 
     root = tk.Tk()
-    try:
-        root.call("tk", "scaling", 1.0)
-    except Exception:
-        pass
     App(root)
     root.mainloop()
 
