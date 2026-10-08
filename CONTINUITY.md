@@ -2,7 +2,7 @@
 
 ## Product and state
 - Product: Karpuzikov Picard Scripts, a Picard 3.x Git-updatable MusicBrainz metadata plugin.
-- Current version: 1.5.11 - Under construction ⚠️ (not yet verified inside user Picard).
+- Current version: 1.5.12 - Under construction ⚠️ (not yet verified inside user Picard).
 - Git repository and active branch: `karpuzikov/userscripts`, `main`.
 - There is no additional project-specific `RULES.md` currently; the canonical repository root `SOFTWARE_RULES.md` governs this project.
 
@@ -33,7 +33,7 @@
 - The source MusicBrainz releases `27aba838-503f-4e29-bd8e-5e51a32f166e`, `bff6492e-8a52-4b05-9e7b-8fa1e5069e0b`, `2c73d5ea-bb84-4078-a6de-10f8a7f72c68`, `3f013c5b-89a0-472f-b672-da5cb66a07a7` are regression references; the second and fourth are marked English although the title text is non-English.
 - Language detection applies conservative Spanish `la noche` and Portuguese `vai + gerund` evidence before honoring incorrect English release language metadata; do not globally force non-English titles to English title case.
 - Release capitalization canonicalizes an existing trailing `- Single` or `- EP`, removes duplicate repetitions of the same suffix and preserves the suffix's canonical casing. It does not strip `(Extended Mix)`: that modification comes from a separate, not-yet-identified Picard script or setting.
-- Manual `Add_EP_Single_Suffix_v1.0.1.txt`: trims and removes all repeated case-insensitive matching final suffixes before adding one canonical suffix. Runs must be idempotent.
+- Manual `Add_EP_Single_Suffix_v1.0.2.txt`: strips repeated bare or hyphenated case-insensitive trailing EP/Single suffixes before adding one canonical suffix. Runs must be idempotent.
 - Manual `English_Title_Capitalization_v1.1.2.txt`: English-only guard including obvious foreign-language title exceptions, plus "Bun Up" exception. It remains a legacy, English-only script; prefer the language-aware plugin for multilingual tags.
 - Stable `picard-tools/scripts/Add_EP_Single_Suffix.txt` and `English_Title_Capitalization.txt` remain identical to their versioned downloads. Both are mirrored exactly as the embedded tagging scripts in root `__init__.py`.
 - Automated regression source: `picard-tools/tests/test_album_title_regressions.py`, with seven tests covering all four user cases, suffix idempotence, ambiguous English titles and embedded/manual source parity. Tests are **added but not executed in this session**; no Picard runtime verification has been performed.
@@ -59,6 +59,20 @@
 - Pure Python placement simulation passed 5 tests in this session. Full Picard 3 visual QA is still pending: confirm narrow/maximized window, toolbar customization and normal barcode matching without user settings loss.
 - Do not change barcode query/matching semantics, artist formatting or capitalization while adjusting toolbar placement.
 
+## Gypsyhook EP suffix duplication (2026-10-09)
+
+- Regression: user saw `Gypsyhook - EP` change to `Gypsyhook EP - EP` in `album`.
+- MusicBrainz release `https://musicbrainz.org/release/a3f1838a-fbeb-4698-87e3-547230c744f5` is officially titled `Gypsyhook EP`, release type EP. Picard loads this bare suffix; previous Add EP/Single Suffix script recognized only ` - EP` and appended another ` - EP`.
+- Fixed in plugin v1.5.12 and manual suffix script v1.0.2: strip all terminal ` - EP` **and** bare ` EP` occurrences for EP releases, or corresponding ` - Single` / ` Single` tokens for Single releases, before adding exactly one canonical suffix.
+- Expected: `Gypsyhook EP`, `Gypsyhook - EP`, `Gypsyhook EP - EP`, `Gypsyhook - EP - EP` all normalize to `Gypsyhook - EP`. Subsequent processing must leave it unchanged.
+- Never append when title consists of `EP` only (or `Single` only). Never change album title if primary release type does not match EP/Single. Do not strip internal words/tokens.
+- Keep manual stable `picard-tools/scripts/Add_EP_Single_Suffix.txt`, versioned `picard-tools/scripts/Add_EP_Single_Suffix_v1.0.2.txt`, and embedded `SCRIPTS` string in root `__init__.py` identical in content.
+- Added tests in `picard-tools/tests/test_album_title_regressions.py`: source assertions, standalone parity, and Picard ScriptParser execution tests (the latter skip automatically outside a Picard runtime).
+- Existing v1.0.1 remains historical; README and download links reference v1.0.2.
+- No modification to Barcode Lookup, artist-name normalization, language-aware capitalization, or other unrelated features.
+- Runtime QA pending: update Picard native plugin to v1.5.12, reload Sonny's Gypsyhook release, confirm `album = Gypsyhook - EP` after first and second reload, and test Single-type counterpart.
+- If duplicates persist, inspect additional user-enabled scripts in Options > Scripting; the plugin cannot control other scripts outside its own options.
+
 ## Dependencies and persistent data
 - Requires MusicBrainz Picard 3.x, Python >=3.9 as embedded by Picard, and PyQt6 provided by Picard.
 - No separately installed Python packages or filesystem persistent data owned by this plugin. Picard manages plugin configuration, source updates and tagging lifecycle.
@@ -72,6 +86,6 @@
 - Recheck all final version strings, README URLs, syntax of the Python module, and the published versioned standalone download.
 
 ## Known limitations and next action
-- Toolbar placement in v1.5.11 is pending user-environment visual verification. Leave the product Under construction ⚠️ until Picard confirms behavior.
+- Suffix duplication fix in v1.5.12 and toolbar placement in v1.5.11 are pending user-environment verification. Leave the product Under construction ⚠️ until Picard confirms behavior.
 - The prior manual script version 1.0.0 did not write `albumartist`; the embedded copy had the same omission. Version 1.0.1/1.5.8 adds album-artist formatting.
-- Next action: update Picard plugin to v1.5.11 and test Barcode toolbar placement at narrow and maximized window sizes and the Tools-menu fallback; then run `python -m unittest discover -s picard-tools/tests` in a Python 3.9+ environment, validate the embedded Picard ScriptParser output for suffixes, then test the four linked Skrillex releases in Picard 3. Verify results are stable after a second reload and that existing ETI removal remains unchanged. Test the earlier Format Multiple Artists scenarios separately.
+- Next action: update Picard plugin to v1.5.12, verify Gypsyhook and repeated EP/Single suffix processing, then test Barcode toolbar placement at narrow and maximized window sizes and the Tools-menu fallback; then run `python -m unittest discover -s picard-tools/tests` in a Python 3.9+ environment, validate the embedded Picard ScriptParser output for suffixes, then test the four linked Skrillex releases in Picard 3. Verify results are stable after a second reload and that existing ETI removal remains unchanged. Test the earlier Format Multiple Artists scenarios separately.
