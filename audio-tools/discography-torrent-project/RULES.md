@@ -1035,6 +1035,15 @@ This section supersedes older featured-remix, contextual-remix, and generic Edit
 - Strong structural conflicts such as Radio vs Extended or Acoustic vs Instrumental remain eligible for semantic pre-blocking unless exact identical Chromaprint overrides the wording.
 
 
+## v0.3.8 Re-work remix classification - authoritative
+
+- A parenthesized, bracketed, or separated trailing remix descriptor written `Re-work`, `Rework`, `Reworked` (including a credited act such as `Jack Beats Re-work`) is Remix material, subject to **Save Remixes** in the very first classification stage. It must not reach the acoustic matcher or the optimizer when Save Remixes is OFF unless it has a genuinely remix-added featured artist.
+- A word appearing in an unrelated standalone song title such as `Rework Your Life` must NOT automatically be deemed a remix; identify descriptor syntax.
+- The only Save Remixes OFF exception continues to be a *feature added by the remix*, not an ordinary featured performer repeated on the normal song. Re-work credits use the same exception.
+- Personal Picks cannot resurrect excluded remixes. An EP containing only excluded remixes must not be retained merely because its album/folder name says `Remixes`.
+- Regression dataset: OLD `2014-12-14 - Dirty Vibe (Remixes) [075679931368]` (release 12) and NEW `2014-12-15 - Dirty Vibe (Remixes) [075679931351]` (release 74); their third tracks `Jack Beats re-work` were falsely classified as normal wanted audio in v0.3.7. With Save Remixes OFF and no remix-added feature, all four tracks of each must be excluded and neither release retained.
+- Keep Save Remixes ON behavior, metadata-independent audio identity for wanted material, and genuine remix-added feature exceptions intact.
+
 ## v0.3.7 album completeness and provider-type aliases - authoritative
 
 - Provider release-type labels (Album/EP/Single) are not proof that two physically identical, acoustically equivalent copies are different editions. An EP/Single-tagged OLD copy may fulfill a maximum-completeness Album obligation only when its release-family title matches and its entire physical track count, included acoustic group sequence and multiplicities match a maximum-completeness Album edition.
