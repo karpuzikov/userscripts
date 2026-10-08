@@ -13,6 +13,7 @@ import sys
 import threading
 import traceback
 import warnings
+import uuid
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from pathlib import Path
@@ -452,27 +453,45 @@ def same_file_contents(a, b, chunk=4 * 1024 * 1024):
 
 
 def _copy_noclobber(src, dest):
-    """Copy into a destination opened exclusively; never overwrite."""
+    """Verify a private staging copy and publish without overwriting anything."""
     dest.parent.mkdir(parents=True, exist_ok=True)
-    created = False
+    stage = dest.with_name(dest.name + ".stage-" + uuid.uuid4().hex)
     try:
-        with dest.open("xb") as out:
-            created = True
-            with src.open("rb") as inp:
-                shutil.copyfileobj(inp, out, length=4 * 1024 * 1024)
-        shutil.copystat(src, dest)
-        if not same_file_contents(src, dest):
-            raise OSError("Byte-for-byte destination verification failed")
-    except Exception:
-        if created:
+        with stage.open("xb") as out, src.open("rb") as inp:
+            shutil.copyfileobj(inp, out, length=4 * 1024 * 1024)
+        shutil.copystat(src, stage)
+        if not same_file_contents(src, stage):
+            raise OSError("Byte-for-byte staging verification failed")
+        try:
+            # Atomic, no-clobber publication when hardlinks are supported.
+            os.link(stage, dest)
+        except FileExistsError:
+            raise
+        except OSError:
+            if os.name == "nt":
+                # Windows rename rejects an existing destination and is atomic.
+                os.rename(stage, dest)
+                return
+            # Non-Windows unsupported-link fallback; create exclusively.
+            created = False
             try:
-                dest.unlink(missing_ok=True)
-            except OSError:
-                pass
-        raise
+                with dest.open("xb") as out, stage.open("rb") as inp:
+                    created = True
+                    shutil.copyfileobj(inp, out, length=4 * 1024 * 1024)
+                if not same_file_contents(stage, dest):
+                    raise OSError("Byte-for-byte publication verification failed")
+            except Exception:
+                if created:
+                    dest.unlink(missing_ok=True)
+                raise
+    finally:
+        try:
+            stage.unlink(missing_ok=True)
+        except OSError:
+            pass
 
 
-def move_preserving_structure(source_root, file_path, run_id=None, sources=None):
+def move_preserving_structure(source_root, file_path, run_id=None, sources=None, expected=None):
     source_root = Path(source_root).resolve()
     file_path = Path(file_path)
     if file_path.is_symlink():
@@ -483,8 +502,16 @@ def move_preserving_structure(source_root, file_path, run_id=None, sources=None)
     dest = dest_root / rel
     if dest.exists() or dest.is_symlink():
         raise FileExistsError("Destination collision - existing quarantined file left untouched")
+    if expected is not None:
+        now = original.stat()
+        if (now.st_size, now.st_mtime_ns) != expected:
+            raise OSError("Source changed since scan - left in place")
     _copy_noclobber(original, dest)
     try:
+        if expected is not None:
+            now = original.stat()
+            if (now.st_size, now.st_mtime_ns) != expected:
+                raise OSError("Source changed during copy - left in place")
         # Persist undo BEFORE unlinking the original to close the recovery gap.
         if run_id is not None:
             record_undo_move(run_id, sources or [source_root], original, dest)
@@ -1544,7 +1571,8 @@ def launch_gui():
                         if status != "corrupt":
                             raise OSError(f"Recheck is {status.upper()}: {new_reason}")
                         moved_to = move_preserving_structure(
-                            source_root, p, run_id=run_id, sources=sources
+                            source_root, p, run_id=run_id, sources=sources,
+                            expected=(candidate["size"], candidate["mtime"])
                         )
                         reason = new_reason
                     except Exception as exc:
@@ -1621,7 +1649,7 @@ def launch_gui():
 
         def process_queue(self):
             try:
-                while True:
+                for _ in range(250):
                     item = self.q.get_nowait()
                     kind = item[0]
 
