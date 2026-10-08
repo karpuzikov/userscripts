@@ -150,3 +150,5 @@
 - Additional audit of 1.5.20 detected a mistakenly double-escaped Python raw-regex whitespace atom (`\\s` rather than `\s`) in the `2x Digital Media` medium-format classifier. Corrected and added digital count-prefix tests; the existing country-removal rules remain unchanged otherwise.
 - Tests cover example Gypsyhook title, uppercase `VS.`, title-start/ETI contexts, multiple language modes, idempotence, unrelated abbreviations, embedded/download parity, optional Picard ScriptParser runtime tests, and Digital Media count prefixes.
 - The installed Windows Picard/PyQt6 environment was not accessible from this chat. Until interactive validation, keep 1.5.21 - Under construction ⚠️. Do not mark tested/stable.
+
+- Final regex review corrected the new Python `vs.` normalization to use single regex escapes in the raw Python string (`\\b` and `\\.` represent *one* backslash in source regex syntax), so matching uses a word boundary and a literal full stop instead of escaped-backslash text. Preserve this distinction from the double escapes required in the Picard `$rreplace` scripting language.
