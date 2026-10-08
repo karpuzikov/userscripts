@@ -13958,6 +13958,7 @@ def _run_ascii_ui(test_mode: bool = False) -> int:
                 yield Label("SELECT DIRECTORY  |  CLICK TO EXPAND OR TYPE FULL PATH")
                 yield DirectoryTree(str(Path(self.initial) if Path(self.initial).exists() else Path.home()))
                 with Horizontal(id="picker-controls"):
+                    yield Button("[DIR]", id="picker-open")
                     yield Input(value=self.initial, id="picker-path")
                     yield Button("Select", id="accept", variant="success")
                     yield Button("Cancel", id="cancel")
@@ -13971,6 +13972,10 @@ def _run_ascii_ui(test_mode: bool = False) -> int:
         def on_choose_button(self, event):
             if event.button.id == "cancel":
                 self.dismiss(None)
+            elif event.button.id == "picker-open":
+                target = self.query_one("#picker-path", Input).value.strip()
+                if Path(target).is_dir():
+                    _open_path_location(target)
             elif event.button.id == "accept":
                 folder = Path(self.query_one("#picker-path", Input).value.strip().strip('"')).expanduser()
                 if not folder.is_dir():
@@ -14115,7 +14120,9 @@ def _run_ascii_ui(test_mode: bool = False) -> int:
         CopyDestination { align: center middle; background: #070b0f 80%; }
         #copy-wrap { width: 80%; height: 14; border: ascii #8092a5;
           background: #101820; padding: 1; }
-        #copy-path { width: 1fr; }
+        #copy-path-row { height: 3; }
+        #copy-path-row Input { width: 1fr; }
+        #copy-path-row Button { margin-right: 1; }
         #copy-actions { height: 3; }
         #copy-actions Button { margin-right: 1; }
         """
@@ -14127,7 +14134,9 @@ def _run_ascii_ui(test_mode: bool = False) -> int:
             with Vertical(id="copy-wrap"):
                 yield Label("COPY " + ("OLD + NEW RETAINED RELEASES" if self.mode == "all" else "NEW RETAINED RELEASES"))
                 yield Static("Source folders are NOT moved, deleted or changed.")
-                yield Input(placeholder="Destination folder, e.g. D:\\Music\\Curated", id="copy-path")
+                with Horizontal(id="copy-path-row"):
+                    yield Button("[DIR]", id="copy-open")
+                    yield Input(placeholder="Destination folder, e.g. D:\\Music\\Curated", id="copy-path")
                 with Horizontal(id="copy-actions"):
                     yield Button("Browse folders", id="browse")
                     yield Button("Start copy", id="confirm", variant="success")
@@ -14145,6 +14154,10 @@ def _run_ascii_ui(test_mode: bool = False) -> int:
                     DirectoryChooser(self.query_one("#copy-path", Input).value or str(Path.home())),
                     self.path_selected,
                 )
+            elif action == "copy-open":
+                target = self.query_one("#copy-path", Input).value.strip()
+                if Path(target).is_dir():
+                    _open_path_location(target)
             elif action == "cancel":
                 self.dismiss(None)
             elif action == "confirm":
@@ -14183,7 +14196,10 @@ def _run_ascii_ui(test_mode: bool = False) -> int:
         .release-column Label { color: #b2cce0; text-align: center; }
         .release-column ListView { height: 1fr; }
         #map-right { width: 1fr; border: ascii #48576b; }
-        #map-detail { height: 15; overflow-y: auto; padding: 1; }
+        #map-detail { height: 14; overflow-y: auto; padding: 1; }
+        #release-path-row { height: 3; padding: 0 1; }
+        #release-path-row Input { width: 1fr; }
+        #release-path-row Button { margin-right: 1; }
         #track-list { height: 1fr; border-top: ascii #394d61; }
         #map-actions { height: 3; border-top: ascii #455769; padding: 0 1; }
         #map-actions Button { min-width: 14; margin-right: 1; }
@@ -14247,6 +14263,9 @@ def _run_ascii_ui(test_mode: bool = False) -> int:
                             yield ListView(id="singles")
                 with Vertical(id="map-right"):
                     yield Static("Click a release to inspect.", id="map-detail")
+                    with Horizontal(id="release-path-row"):
+                        yield Button("[DIR]", id="map-folder")
+                        yield Input(placeholder="Selected release path", id="release-path", disabled=True)
                     yield Label("TRACKS / RELATED RELEASES")
                     yield ListView(id="track-list")
             with Horizontal(id="map-actions"):
@@ -14329,11 +14348,11 @@ def _run_ascii_ui(test_mode: bool = False) -> int:
                 "Medium: " + str(n.get("sourceMedium", "")),
                 "Included tracks: " + str(n["includedTracks"]),
                 "Reason: " + str(n.get("reason", "")),
-                "Folder: " + str(n.get("path", "")),
                 "",
                 "Click a track for cross-release navigation.",
             ]
             self.query_one("#map-detail", Static).update(Text("\n".join(lines)))
+            self.query_one("#release-path", Input).value = str(n.get("path", ""))
             track_view = self.query_one("#track-list", ListView)
             track_view.clear()
             for t in n["tracks"]:
@@ -14389,6 +14408,7 @@ def _run_ascii_ui(test_mode: bool = False) -> int:
                 "re-analyze": self.action_reanalyze,
                 "copy-all": self.action_copy_all,
                 "copy-new": self.action_copy_new,
+                "map-folder": self.action_open_release,
             }
             fn = actions.get(event.button.id)
             if fn is not None:
@@ -14414,6 +14434,13 @@ def _run_ascii_ui(test_mode: bool = False) -> int:
 
         def action_search_focus(self):
             self.query_one("#map-search", Input).focus()
+
+        def action_open_release(self):
+            if self.current_release is None:
+                return
+            value = self.query_one("#release-path", Input).value
+            if value:
+                _open_path_location(value)
 
         def action_toggle_release(self):
             if not self.editable or self.current_release is None or self.busy:
@@ -14574,10 +14601,12 @@ def _run_ascii_ui(test_mode: bool = False) -> int:
             with Vertical(id="top"):
                 yield Label("EXISTING DISCOGRAPHY (optional)")
                 with Horizontal(classes="source-line"):
+                    yield Button("[DIR]", id="old-open")
                     yield Input(value=str(self.saved.get("existing_discography", "") or ""), id="old-path")
                     yield Button("Browse", id="old-browse")
                 yield Label("NEW / UPDATE RELEASES")
                 with Horizontal(classes="source-line"):
+                    yield Button("[DIR]", id="new-open")
                     yield Input(value=str(self.saved.get("recycle_update_folder", "") or ""), id="new-path")
                     yield Button("Browse", id="new-browse")
                 with Horizontal(id="options"):
@@ -14642,11 +14671,20 @@ def _run_ascii_ui(test_mode: bool = False) -> int:
                 self.query_one("#"+field, Input).value = path
                 self.save_settings()
 
+        def open_source_folder(self, field):
+            value = self.query_one("#" + field, Input).value.strip()
+            if Path(value).is_dir():
+                _open_path_location(value)
+            else:
+                self.notify("The chosen directory is not available.", severity="warning")
+
         @on(Button.Pressed)
         def on_button_pressed(self, event):
             actions = {
                 "old-browse": lambda: self.select_directory("old-path"),
                 "new-browse": lambda: self.select_directory("new-path"),
+                "old-open": lambda: self.open_source_folder("old-path"),
+                "new-open": lambda: self.open_source_folder("new-path"),
                 "analyze": self.action_analyze,
                 "personal": self.action_personal,
                 "release-map": self.open_map,
