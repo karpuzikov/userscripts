@@ -41,7 +41,9 @@ A collection of Tampermonkey userscripts, MusicBrainz/Picard helpers, Windows ut
 
 **Current Artist Names Everywhere**, **MusicBrainz Title Capitalization**, the five tagging scripts above, and the Barcode/UPC-first Lookup helper are available through the shared Picard 3 plugin. The five tagging scripts also remain available as individual **Manual .txt** downloads.
 
-**Barcode / UPC Lookup** appears beside Picard's native Lookup toolbar button and under **Tools > Plugins**. Picard rebuilds the Actions toolbar when its layout changes; v1.5.10 reattaches the action automatically without adding duplicates.\n\nFor automatic GitHub updates, install the shared **Karpuzikov Picard Scripts** plugin once:
+**Barcode / UPC Lookup** appears beside Picard's native Lookup toolbar button and in Picard's top-level **Plugin Tools** menu. Picard rebuilds the Actions toolbar when its layout changes; v1.5.10 reattaches the action automatically without adding duplicates.
+
+For automatic GitHub updates, install the shared **Karpuzikov Picard Scripts** plugin once:
 
 1. Open `Options -> Plugins -> Install Plugin -> URL`.
 2. Git URL: `https://github.com/karpuzikov/userscripts.git`
