@@ -47,8 +47,16 @@ class FakeToolbar:
     def isFloating(self):
         return getattr(self, 'floating', False)
 
+    def isVisible(self):
+        return getattr(self, 'visible', True)
+
     def hide(self):
+        self.visible = False
         self.hidden = True
+
+    def show(self):
+        self.visible = True
+        self.restored = True
 
 
 class ToolbarLifecycleTests(unittest.TestCase):
@@ -133,14 +141,20 @@ class ToolbarLifecycleTests(unittest.TestCase):
         }
         exec(source_function("_detach_barcode_action"), helpers)
         exec(source_function("_hide_floating_barcode_toolbars"), helpers)
+        exec(source_function("_restore_hidden_barcode_toolbars"), helpers)
         affected = helpers["_detach_barcode_action"](object())
         self.assertEqual(affected, [current, older])
         self.assertNotIn(action, current.actions())
         self.assertNotIn(action, older.actions())
         self.assertEqual(unrelated.actions()[0].text(), "Other plugin")
-        helpers["_hide_floating_barcode_toolbars"](affected)
+        hidden = helpers["_hide_floating_barcode_toolbars"](affected)
+        self.assertEqual(hidden, [older])
         self.assertTrue(older.hidden)
         self.assertFalse(getattr(current, "hidden", False))
+        helpers["_restore_hidden_barcode_toolbars"](hidden)
+        self.assertTrue(older.isVisible())
+        self.assertTrue(older.restored)
+        self.assertFalse(getattr(current, "restored", False))
 
     def test_close_event_never_reinstalls_toolbar_during_exit(self):
         watcher = next(node for node in TREE.body
@@ -153,6 +167,7 @@ class ToolbarLifecycleTests(unittest.TestCase):
         self.assertIn("if self.closing or _LOOKUP_API is not self.api:", body)
         self.assertIn("resume_if_close_cancelled", body)
         self.assertIn("self.window.isVisible()", body)
+        self.assertIn("_restore_hidden_barcode_toolbars(self.hidden_toolbars)", body)
         installer = source_function("_install_barcode_lookup_button")
         self.assertIn("_BARCODE_TOOLBAR_WATCHER.closing", installer)
         self.assertIn("_detach_barcode_action(api.tagger.window)", source_function("disable"))
