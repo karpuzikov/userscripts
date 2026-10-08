@@ -1037,7 +1037,7 @@ This section supersedes older featured-remix, contextual-remix, and generic Edit
 
 ## v0.3.6 source-safe optimization and Release Map correctness - authoritative
 
-- For each included wanted acoustic recording group, the exact optimization model must select at least one best-source-class carrier (CD/physical above WEB; comparable CD-rip acceptability 80+ is evaluated in the source floor). Numeric CD log quality differences within the same class remain late tie-breakers.
+- For each included wanted acoustic recording group, the exact optimization model must select at least one best-source-class carrier (CD/physical above WEB; comparable CD-rip acceptability 80+ is evaluated in the source floor). Restrict the existing group-coverage requirement to best-class providers; do not double the solver's requirement graph. Numeric CD log quality differences within the same class remain late tie-breakers.
 - Source preservation is a hard coverage constraint **before** minimizing total retained physical tracks and retained release count. Never add higher-source copies after exact minimization as an unoptimized repair pass.
 - Equivalent-edition pre-pruning must not remove the only better-source carrier. CD-log/DR late substitutions must not increase physical track count or violate recording, source-floor or maximum-completeness album constraints.
 - The Release Map must preserve valid acoustic group ID `0` in all visible nodes, relationship links and alternate-version catalogs.
