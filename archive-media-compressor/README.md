@@ -1,44 +1,53 @@
 # Archive Media Compressor
 
-Download and double-click `ArchiveMedia v6.0.13.bat`.
+**ArchiveMedia v6.1.0 - Under construction ⚠️** (Windows/Yandex integration needs testing).
 
-## Single-file design
+## Download (development branch)
 
-`ArchiveMedia v6.0.13.bat` is self-contained. It embeds the compressor PowerShell payload and extracts it only to a temporary folder while running. Temporary payload files are removed when the run finishes.
+[Download ArchiveMedia v6.1.0.bat](https://raw.githubusercontent.com/karpuzikov/userscripts/archivemedia-rclone/archive-media-compressor/ArchiveMedia%20v6.1.0.bat)
 
-On startup it:
+The BAT is the single-file launcher. Double-click it, choose **Copy** or **Replace**, and enter the source and destination. Type local paths or any configured rclone remote (for example `yandex:Pictures`); leave the path blank to browse local folders.
 
-- checks whether WinGet is installed and bootstraps it if needed;
-- installs or updates PowerShell 7;
-- installs or updates FFmpeg/FFprobe;
-- installs or updates ImageMagick;
-- extracts the embedded compressor payload to `%TEMP%`;
-- runs the compressor and cleans up the temporary payload.
+For Yandex, configure rclone once (`rclone config`), creating the remote `yandex:`. ArchiveMedia checks WinGet and updates/installs PowerShell 7, FFmpeg, ImageMagick, and rclone as needed.
 
-## What it does
+### Supported Copy routes
 
-- Asks for input and output folders.
-- Recursively preserves the source folder structure.
-- Detects NVIDIA, Intel, and AMD hardware encoding support.
-- Automatically chooses analysis and encode concurrency for the current PC and source storage.
-- Standardizes videos to MP4 and photos to JPG.
-- Uses bitrate/resolution rules to avoid unnecessary video re-encoding.
-- Reduces video above 1080p to a 1920x1080-equivalent size.
-- Copies already-suitable MP4/JPEG files unchanged when possible.
-- Limits converted photos to a 4096x2160-equivalent size.
-- Copies camera RAW and unrecognized files unchanged.
-- Reports file count and total size before/after.
-- Writes failed-file details to `ArchiveMedia_errors.txt`.
+- `yandex:Pictures` → `F:\Yandex Pictures Compressed`
+- `F:\Photos` → `yandex:Compressed/Photos`
+- `yandex:Pictures` → `yandex:Compressed/Pictures`
+- Local folder → local folder (previous behavior)
 
-## Download
+Cloud **Replace** is intentionally disabled while under construction. Use **Copy** to a different, non-overlapping output path. The original cloud data is not deleted.
 
-[Download ArchiveMedia v6.0.13.bat](https://raw.githubusercontent.com/karpuzikov/userscripts/main/archive-media-compressor/ArchiveMedia%20v6.0.13.bat)
+### Cloud pipeline
 
-## Important
+1. Inventory source paths with rclone, retaining relative folder structure.
+2. Stage one file locally under the user's Documents\Karpuzikov Tools\ArchiveMedia\temp directory; never download the whole library.
+3. Verify downloaded MD5 (cloud source) and invoke the **original** compressor/analysis pipeline for that file, retaining its media quality and naming rules.
+4. Upload output to a temporary remote name, verify MD5 and size, then move to the final name and verify again. Local outputs are also checksum-verified before final placement.
+5. Journal the verified result under Documents\Karpuzikov Tools\ArchiveMedia\logs. Only after journaling may the temporary files be cleared.
+6. On restart, completed files are verified against the journal and skipped; failed staging remains for recovery.
 
-JPEG conversion/resizing is not mathematically lossless. Existing JPEG files already within the configured size limit are copied unchanged.
+Default temporary-storage budget is **64 GiB**; available disk space is checked before processing each file. To choose another ceiling, set `ARCHIVEMEDIA_CACHE_GIB` before starting the BAT (minimum 3 GiB). Large individual files may require increasing the limit. Existing destination content with a different checksum is **never overwritten**.
 
-Verify the output before deleting the original archive.
+Cloud transfers retry automatically, and the console distinguishes **Download**, **Process**, **Upload**, and final **Verified** progress. Current cloud mode handles one file at a time; the original local engine retains its configured maximum of four concurrent FFmpeg encodes.
+
+## Existing media processing rules
+
+- Recursive source traversal and relative output layout.
+- Auto-select hardware encoding (NVIDIA/AMD/Intel) where supported.
+- Standardize videos to MP4, applying bitrate/resolution skip policy and reducing >1080p video to a 1080p-equivalent size.
+- Standardize non-transparent still photos to high-quality JPEG up to a 4096x2160-equivalent limit.
+- Copy compliant MP4/JPEG files and passthrough RAW/unsupported files unchanged where possible.
+- Report source/output sizes and failures. Ordinary local Replace mode keeps its existing behavior.
+
+JPEG conversion is not mathematically lossless. Verify outputs before choosing to delete the originals manually.
+
+## Source and test status
+
+The editable PowerShell engine is in [source/ArchiveMedia.ps1](https://github.com/karpuzikov/userscripts/blob/archivemedia-rclone/archive-media-compressor/source/ArchiveMedia.ps1). It is embedded directly in the downloadable BAT, not installed as a separate utility.
+
+**Unverified:** PowerShell parsing/execution on the user's Windows PC; real Yandex transfer/upload verification; cross-format filename collisions and large-file staging; interruption/resume behavior. Do not use cloud mode to modify irreplaceable originals. See [CONTINUITY.md](CONTINUITY.md).
 
 ## License
 
