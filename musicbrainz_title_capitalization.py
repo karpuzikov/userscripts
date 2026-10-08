@@ -538,7 +538,25 @@ def _set_single_value(metadata: Any, tag: str, value: str) -> None:
         metadata[tag] = [value]
 
 
+def normalize_europe_release_country(metadata: Any) -> None:
+    """Prefer EU over MusicBrainz's XE region code only in releasecountry."""
+    try:
+        values = metadata.getall("releasecountry")
+    except AttributeError:
+        values = metadata.get("releasecountry")
+    if values is None:
+        return
+    if isinstance(values, (list, tuple)):
+        if "XE" in values:
+            metadata["releasecountry"] = [
+                "EU" if value == "XE" else value for value in values
+            ]
+    elif values == "XE":
+        metadata["releasecountry"] = "EU"
+
+
 def capitalize_release_title(api: Any, metadata: Any, release_node: Any) -> None:
+    normalize_europe_release_country(metadata)
     try:
         original = metadata.get("album")
     except Exception:
@@ -568,6 +586,7 @@ def capitalize_track_title(
     track_node: Any,
     release_node: Any = None,
 ) -> None:
+    normalize_europe_release_country(metadata)
     try:
         original = metadata.get("title")
     except Exception:
