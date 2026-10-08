@@ -5885,23 +5885,17 @@ def exact_global_collection_minimize(
     for gid in sorted(all_groups):
         req = ("group", gid)
         carriers = [rel for rel in releases if gid in rel.groups]
-        providers = {rel.rid for rel in carriers}
-        requirement_providers[req] = providers
-        for rid in providers:
-            release_requirements[rid].add(req)
-
-        # Preserve the best source/CD-threshold class as a hard requirement.
-        # Do not add extra sources AFTER minimization: that can increase
-        # the number of releases despite an equally good smaller solution.
+        # One requirement per recording group: only best-source/CD-threshold
+        # class providers qualify. This simultaneously enforces coverage and
+        # source preservation without doubling the constraint graph.
         best_floor = max(_optimizer_quality_floor(rel) for rel in carriers)
-        source_req = ("source", gid)
-        source_providers = {
+        providers = {
             rel.rid for rel in carriers
             if _optimizer_quality_floor(rel) == best_floor
         }
-        requirement_providers[source_req] = source_providers
-        for rid in source_providers:
-            release_requirements[rid].add(source_req)
+        requirement_providers[req] = providers
+        for rid in providers:
+            release_requirements[rid].add(req)
 
     album_clusters = _album_clusters(
         [r for r in releases if r.release_type == "album" and not r.excluded_only]
@@ -12912,7 +12906,7 @@ def _ui_contract_self_test() -> None:
     cover_result, cover_stats = exact_global_collection_minimize(
         [cd_all, cd_half_a, cd_half_b, web_bonus], {web_bonus.rid},
     )
-    if cover_result != {cd_all.rid, web_bonus.rid} or cover_stats.get("source_floor_requirements") != 5:
+    if cover_result != {cd_all.rid, web_bonus.rid} or cover_stats.get("source_floor_requirements") != 5 or cover_stats.get("requirements") != 5:
         raise RuntimeError(
             f"Optimizer self-test failed: best-source minimum-release plan {sorted(cover_result)}."
         )
