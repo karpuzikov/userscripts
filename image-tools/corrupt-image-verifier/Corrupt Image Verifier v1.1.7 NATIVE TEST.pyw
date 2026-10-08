@@ -1082,25 +1082,36 @@ def launch_gui():
             self.root.bind_all("<F5>", lambda _e: self.start() if not self.running else None)
 
             # Single compact workflow toolbar; no decorative cards or oversized header.
-            bar = ttk.Frame(self.root, padding=(6, 6))
+            bar = ttk.Frame(self.root, padding=(6, 4))
             bar.pack(side="top", fill="x")
             self.add_btn = self._ascii_button(bar, "+ Add Folder", self.add_source)
-            self.add_btn.pack(side="left", padx=(0, 4))
             self.remove_btn = self._ascii_button(bar, "Remove", self.remove_selected_sources)
-            self.remove_btn.pack(side="left", padx=(0, 4))
             self.clear_btn = self._ascii_button(bar, "Clear", self.clear_sources)
-            self.clear_btn.pack(side="left", padx=(0, 12))
             self.check_btn = self._ascii_button(bar, "Check File", self.quick_check_file)
-            self.check_btn.pack(side="left", padx=(0, 4))
             self.start_btn = self._ascii_button(bar, "Scan", self.start)
-            self.start_btn.pack(side="left", padx=(0, 4))
             self.stop_btn = self._ascii_button(bar, "Stop", self.stop, state="disabled")
-            self.stop_btn.pack(side="left", padx=(0, 12))
             self.move_btn = self._ascii_button(bar, "Move Confirmed", self.start_move,
                                                state="disabled")
-            self.move_btn.pack(side="left", padx=(0, 4))
             self.undo_btn = self._ascii_button(bar, "Undo", self.start_undo)
-            self.undo_btn.pack(side="left")
+            toolbar_buttons = (
+                self.add_btn, self.remove_btn, self.clear_btn, self.check_btn,
+                self.start_btn, self.stop_btn, self.move_btn, self.undo_btn
+            )
+            toolbar_width = sum(btn.winfo_reqwidth() + 6 for btn in toolbar_buttons) + 12
+            self._toolbar_wrapped = None
+
+            def arrange_toolbar(event):
+                wrapped = event.width < toolbar_width
+                if wrapped == self._toolbar_wrapped:
+                    return
+                self._toolbar_wrapped = wrapped
+                columns = 6 if wrapped else 8
+                for i, btn in enumerate(toolbar_buttons):
+                    btn.grid(row=i // columns, column=i % columns,
+                             padx=(0, 6), pady=(0, 3) if wrapped else (0, 0),
+                             sticky="w")
+
+            bar.bind("<Configure>", arrange_toolbar)
 
             # Bottom status bar is always visible, independent of window resizing.
             footer = ttk.Frame(self.root, padding=(8, 3))
