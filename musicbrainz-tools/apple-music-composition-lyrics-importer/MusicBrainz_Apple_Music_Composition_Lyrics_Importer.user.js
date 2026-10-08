@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Apple Music works credits -> MusicBrainz
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      2.3.19
+// @version      2.3.20
 // @description  Resolve the correct Apple Music release and import supported Apple Music credits to the proper MusicBrainz Recording, Work, or Release relationships.
 // @author       karpuzikov
 // @license      MIT
@@ -135,7 +135,7 @@ function __amMbGmXmlhttpRequest(details) {
     'use strict';
 
     const PAGE = typeof unsafeWindow !== 'undefined' ? unsafeWindow : window;
-    const SCRIPT_VERSION = '2.3.19';
+    const SCRIPT_VERSION = '2.3.20';
     let MB = PAGE.MB;
     const APPLE_API_BASE = 'https://amp-api.music.apple.com/v1';
     const APPLE_TOKEN_BOOTSTRAP_URL = 'https://music.apple.com/us/browse';
@@ -346,20 +346,13 @@ function __amMbGmXmlhttpRequest(details) {
     }
 
     function normalizeTrackTitleForMatch(value) {
-        let title = String(value || '').trim();
-
-        // Apple Music commonly appends featured artists to the displayed track
-        // title, while MusicBrainz stores them in the artist credit instead.
-        // Ignore only terminal featured-artist suffixes for comparison.
-        let previous;
-        do {
-            previous = title;
-            title = title
-                .replace(/\s*\(\s*(?:feat(?:uring)?|ft)\.?\s+[^)]*\)\s*$/i, '')
-                .replace(/\s*\[\s*(?:feat(?:uring)?|ft)\.?\s+[^\]]*\]\s*$/i, '')
-                .trim();
-        } while (title !== previous);
-
+        // A featuring credit can precede a remix/version qualifier:
+        // "Gasolina (feat. Myke Towers) [Safari Riot Remix]".
+        // Remove only a self-contained featuring qualifier, not the remix,
+        // version, subtitle or other editorially significant information.
+        const title = String(value || '')
+            .replace(/\s*[([]\s*(?:feat(?:uring)?|ft)\.?\s+[^\])]+[)\]]/gi, '')
+            .trim();
         return normalizeText(title);
     }
 
@@ -370,6 +363,9 @@ function __amMbGmXmlhttpRequest(details) {
             ['We Should (feat. Shadow Aspect)', 'We Should'],
             ['Like You (ft. Elle Vee)', 'Like You'],
             ['Song [featuring Artist]', 'Song'],
+            ['Gasolina (feat. Myke Towers) [Safari Riot Remix]', 'Gasolina (Safari Riot remix)'],
+            ["Let's Ride (feat. Ty Dolla $ign, Lambo4oe & Bone Thugs-N-Harmony) [Trailer Anthem]", 'Let’s Ride (Trailer Anthem)'],
+            ['Song (feat. Artist) (Extended Mix)', 'Song (Extended Mix)'],
         ];
 
         for (const [appleTitle, mbTitle] of tests) {
@@ -1535,17 +1531,32 @@ function __amMbGmXmlhttpRequest(details) {
     }
 
     function selectedRecordingsSnapshot() {
+        // MusicBrainz stores selected recordings in a weight-balanced-tree:
+        // {size, left, value, right}. Walking for entityType on the tree's
+        // root misses leaf values and makes a valid selection look empty.
+        const tree = (PAGE.MB || MB)?.relationshipEditor?.state?.selectedRecordings;
+        if (!tree || !Number.isSafeInteger(tree.size)) {
+            throw new Error('MusicBrainz recording selection is unavailable.');
+        }
         const selected = [];
-        const seen = new Set();
-
-        walk(MB?.relationshipEditor?.state?.selectedRecordings, object => {
-            if (object?.entityType !== 'recording') return;
-            const key = object.gid || object.id;
-            if (!key || seen.has(key)) return;
-            seen.add(key);
-            selected.push(object);
-        });
-
+        const stack = [];
+        let cursor = tree;
+        while ((cursor && cursor.size > 0) || stack.length) {
+            while (cursor && cursor.size > 0) {
+                stack.push(cursor);
+                cursor = cursor.left;
+            }
+            cursor = stack.pop();
+            if (cursor.value?.entityType === 'recording') {
+                selected.push(cursor.value);
+            } else {
+                throw new Error('MusicBrainz returned an unexpected selected-recording entry.');
+            }
+            cursor = cursor.right;
+        }
+        if (selected.length !== tree.size) {
+            throw new Error('MusicBrainz recording selection count was inconsistent.');
+        }
         return selected;
     }
 
@@ -1583,6 +1594,9 @@ function __amMbGmXmlhttpRequest(details) {
         });
 
         try {
+            // Wait for the React relationship-editor state to reflect the
+            // selection before validating the native batch action.
+            await wait(50);
             const selected = selectedRecordingsSnapshot();
             if (
                 selected.length !== 1 ||
