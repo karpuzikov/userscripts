@@ -450,6 +450,28 @@ function Invoke-ArchiveCloud([string]$src, [string]$dst) {
             if (-not (Test-Path -LiteralPath $output -PathType Leaf)) { throw 'Processed file not found.' }
             $relativeOut = [IO.Path]::GetRelativePath($outRoot,$output).Replace('\','/')
             $target = if (Test-RclonePath $dst) { Join-CloudPath $dst $relativeOut } else { Join-Path $dst $relativeOut.Replace('/','\') }
+            # Multiple source formats can normalize to the same output filename.
+            # Mirror the original compressor's [source-extension] suffix rule.
+            if ($occupied.Contains($target)) {
+                $relativeDir = [IO.Path]::GetDirectoryName($relativeOut.Replace('/', '\'))
+                $baseName = [IO.Path]::GetFileNameWithoutExtension($relativeOut)
+                $targetExt = [IO.Path]::GetExtension($relativeOut)
+                $sourceTag = [IO.Path]::GetExtension($file.Rel).TrimStart([char]'.').ToLowerInvariant()
+                if (-not $sourceTag) { $sourceTag = 'file' }
+                $candidateIndex = 1
+                do {
+                    $tag = if ($candidateIndex -eq 1) { $sourceTag } else { "$sourceTag-$candidateIndex" }
+                    $name = "$baseName [$tag]$targetExt"
+                    $relativeOut = if ($relativeDir) { $relativeDir.Replace('\','/') + '/' + $name } else { $name }
+                    $target = if (Test-RclonePath $dst) {
+                        Join-CloudPath $dst $relativeOut
+                    } else {
+                        Join-Path $dst $relativeOut.Replace('/','\')
+                    }
+                    $candidateIndex++
+                } while ($occupied.Contains($target))
+                Write-Host ("[OUTPUT NAME COLLISION] {0} -> {1}" -f $file.Rel,$relativeOut) -ForegroundColor Yellow
+            }
             $data = Cloud-Stat $rclone $output
             $existing = Cloud-Stat $rclone $target
             if ($existing) {
