@@ -2,7 +2,7 @@
 
 ## Product and state
 - Product: Karpuzikov Picard Scripts, a Picard 3.x Git-updatable MusicBrainz metadata plugin.
-- Current version: 1.5.9 - Under construction ⚠️ (not yet verified inside user Picard).
+- Current version: 1.5.10 - Under construction ⚠️ (not yet verified inside user Picard).
 - Git repository and active branch: `karpuzikov/userscripts`, `main`.
 - There is no additional project-specific `RULES.md` currently; the canonical repository root `SOFTWARE_RULES.md` governs this project.
 
@@ -39,6 +39,15 @@
 - Automated regression source: `picard-tools/tests/test_album_title_regressions.py`, with seven tests covering all four user cases, suffix idempotence, ambiguous English titles and embedded/manual source parity. Tests are **added but not executed in this session**; no Picard runtime verification has been performed.
 - Do not modify barcode matching, current artist-name normalization, Format Multiple Artists or other unrelated scripts. Do not enable both language-aware and legacy English capitalization simultaneously.
 
+## Barcode / UPC Lookup toolbar restoration (2026-10-08)
+
+- Picard 3 `MainWindow.create_action_toolbar()` clears and replaces `window.toolbar` when Actions toolbar customization changes. The previous plugin added a QAction once and retained a non-null global pointer, so it never inserted the button into the recreated toolbar. The Barcode/UPC batch matching code was NOT the cause and remains unchanged.
+- v1.5.10 introduces an idempotent `_place_barcode_action`, checks membership in the CURRENT toolbar rather than trusting a global action pointer, and adds a `_BarcodeToolbarWatcher` that schedules reattachment on child-added/window-activation events and checks every 4 seconds for a toolbar cleared in place.
+- Also registers `BarcodeLookupToolsAction` with Picard 3's supported `register_tools_menu_action` (Tools > Plugins). It uses the same `_barcode_only_lookup` selection handler.
+- `disable()` must stop/disconnect the watcher, invalidate queued callbacks, remove the current toolbar action and delete the QAction exactly once. Plugin settings and all Barcode/UPC comparison and disc/track matching semantics remain unchanged.
+- Added seven standard-library unit tests in `picard-tools/tests/test_barcode_toolbar_regressions.py`: placement, idempotence, toolbar re-creation, no native button, lifecycle, monitor/menu and untouched matching API.
+- GitHub source-level checks performed; full Picard 3 UI/runtime validation still pending. Do not claim visual verification until the user confirms the button survives Options > User Interface > Toolbar changes and plugin updates.
+
 ## Dependencies and persistent data
 - Requires MusicBrainz Picard 3.x, Python >=3.9 as embedded by Picard, and PyQt6 provided by Picard.
 - No separately installed Python packages or filesystem persistent data owned by this plugin. Picard manages plugin configuration, source updates and tagging lifecycle.
@@ -54,4 +63,4 @@
 ## Known limitations and next action
 - No user-environment runtime verification for 1.5.9 yet. Leave the product Under construction ⚠️ until Picard confirms behavior.
 - The prior manual script version 1.0.0 did not write `albumartist`; the embedded copy had the same omission. Version 1.0.1/1.5.8 adds album-artist formatting.
-- Next action: run `python -m unittest discover -s picard-tools/tests` in a Python 3.9+ environment, validate the embedded Picard ScriptParser output for suffixes, then test the four linked Skrillex releases in Picard 3. Verify results are stable after a second reload and that existing ETI removal remains unchanged. Test the earlier Format Multiple Artists scenarios separately.
+- Next action: update Picard plugin to v1.5.10 and verify barcode icon/Tools > Plugins entry after a toolbar customization; then run `python -m unittest discover -s picard-tools/tests` in a Python 3.9+ environment, validate the embedded Picard ScriptParser output for suffixes, then test the four linked Skrillex releases in Picard 3. Verify results are stable after a second reload and that existing ETI removal remains unchanged. Test the earlier Format Multiple Artists scenarios separately.
