@@ -15017,6 +15017,16 @@ def _run_ascii_ui(test_mode: bool = False) -> int:
                 board = application.screen
                 if len(board.state["nodes"]) != 2:
                     raise RuntimeError("ASCII smoke test: release rows missing.")
+                if not board.query_one("#copy-all", Button).disabled:
+                    raise RuntimeError("ASCII smoke test: read-only map exposes file-copy button.")
+                await pilot.click("#changes-list ListItem")
+                await pilot.pause()
+                if board.current_release != 9702:
+                    raise RuntimeError("ASCII smoke test: click did not select NEW release.")
+                await pilot.click("#track-list ListItem")
+                await pilot.pause()
+                if board.current_track is None:
+                    raise RuntimeError("ASCII smoke test: track row not clickable.")
                 await pilot.click("#view-full")
                 await pilot.pause()
                 if board.view != "full":
