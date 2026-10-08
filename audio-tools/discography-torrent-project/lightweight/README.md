@@ -1,6 +1,6 @@
 # Duplicate Edition Analyzer Lightweight
 
-Version: **0.3.8 - Under construction ⚠️**
+Version: **0.3.9 - Under construction ⚠️**
 
 Branch: `dea-lightweight-modern`
 
@@ -41,6 +41,15 @@ The lightweight build preserves the regular DEA feature surface, including:
 - path openers, logging, settings and Undo.
 
 The failed `native-light` prototype is not the reference.
+
+## 0.3.9
+
+- Fixed a Release Map visibility defect confirmed in the v0.3.8 Skrillex run (`Duplicate Edition Analyzer Comparison 2026-10-08-19-57-51.jsonl`). Excluded-only OLD remix releases, including `2014-07-07 - Recess (Remixes) [075679936790]` and `2014-12-14 - Dirty Vibe (Remixes) [075679931368]`, had been correctly assigned `REMOVE` but were hidden because they had no included acoustic groups.
+- Full Map now shows **every analyzed release**, including excluded-only OLD `REMOVE` and NEW `SKIP` releases. Changes > Removed now includes excluded-only OLD releases with a direct explanation; NEW `SKIP` releases are inspectable in Full Map but are not miscounted as removals.
+- Excluded-only decisions now state how many tracks were excluded. Remix-only / live-only cases identify `Save Remixes OFF` / `Save Live OFF` when that cause is unambiguous.
+- Added a full decision -> snapshot -> Release Map regression using the existing OLD/NEW four-track Dirty Vibe test: both nodes remain visible, OLD is `REMOVE`, NEW is `SKIP`, the OLD row retains all four track details, and retained release/track counts remain zero.
+- GitHub Actions validation passed: [workflow 37814161743](https://github.com/karpuzikov/userscripts/actions/runs/37814161743).
+- Real Windows/WebView2 verification and the unchanged full Skrillex OLD/NEW rerun remain pending.
 
 ## 0.3.8
 
