@@ -2,10 +2,10 @@
 
 ## Project and status
 - Purpose: Tampermonkey script for importing supported Apple Music song credits as MusicBrainz Recording, Work, and Release relationships in the MusicBrainz release relationship editor.
-- Current version: **2.3.20 - Under construction ⚠️**. Runtime testing in the target browser is still required.
+- Current version: **2.3.21 - Under construction ⚠️**. Runtime testing in the target browser is still required.
 - Repository: `karpuzikov/userscripts`, default branch `main`.
 - Canonical source: `musicbrainz-tools/apple-music-composition-lyrics-importer/MusicBrainz_Apple_Music_Composition_Lyrics_Importer.user.js`.
-- Userscript metadata: `@version 2.3.20`, matching in-panel `SCRIPT_VERSION = '2.3.20'`.
+- Userscript metadata: `@version 2.3.21`, matching in-panel `SCRIPT_VERSION = '2.3.21'`.
 - Read the root `SOFTWARE_RULES.md` and current relevant UXDT guidance before modifying the UI. No separate project RULES.md was present at the 2026-10-08 preflight.
 
 ## Host, architecture, dependencies
@@ -110,3 +110,9 @@
 - Added exact examples to the script's built-in title matcher self-test. Isolated tests using the shipped source passed 10 positive/negative title examples, 5 weight-balanced-tree selection cases (single, multiple, zero, invalid values, bad count), built-in matcher tests and full source syntax, **17 checks total**.
 - Version: **2.3.20 - Under construction ⚠️**, source `musicbrainz-tools/apple-music-composition-lyrics-importer/MusicBrainz_Apple_Music_Composition_Lyrics_Importer.user.js`, native Tampermonkey update URL unchanged; distribution README pinned source must be updated to an immutable commit. No live v2.3.20 browser test yet. An earlier screenshot also showed a `Recording data` panel on the release relationship editor despite ToolBox v1.0.57 having an exclusion; possible obsolete installed script or standalone older module, not yet proven. Do not assume the displayed panel proves the current ToolBox exclusion is ineffective.
 - **Next action:** Check for userscript updates in Tampermonkey, reload FAST X editor (preserve/submit other pending user edits before reload), re-run credits with Browser Debug Bridge, and inspect Work table plus UI. Verify a new temporary Song Work is staged for genuinely missing title(s), no Work creation modal, the two previously mismatched Apple titles are accepted, duplicate/ambiguous Works remain conservative, user selection is restored, and no automatic submission. If failure remains, use bridge JSON for precise error and amend implementation.
+
+## 2026-10-08 - v2.3.21 - MusicBrainz native empty attributes correction
+- During upstream validation of v2.3.20 found that the native `accept-batch-create-works-dialog` action expects a `weight-balanced-tree` of link attributes. The official `BatchCreateWorksDialog.js` passes `attributes.resultingLinkAttributes`, initialized by `DialogAttributes.js` to `tree.empty`. Earlier `createWorkForRecording` passed `attributes: null`; this can break relationship updates once v2.3.20's recording-selection fix permits dispatch. Do not use null for this native action.
+- v2.3.21 uses an empty, structurally identical weight-balanced-tree `{size:0, left:null, right:null, value:null}` for attributes; `languages: []` and Work type Song remain as in v2.3.20. Name/namespace/update URLs unchanged. The action stages a Work plus recording-of relationship but never submits an edit.
+- All v2.3.20 title normalization and real selection-tree fixes remain. Source tests should verify empty attributes, selection restoration and correct matching/negative examples. No live Chrome test was performed yet.
+- Current distribution: **2.3.21 - Under construction ⚠️**. Next: update through Tampermonkey, preserve any unsaved edits before reloading; test the FAST X release editor with the Debug Bridge and report whether Works appear as staged and both remix-version title examples now match. Do not claim runtime success from source-only tests.
