@@ -58,6 +58,12 @@ class FakeToolbar:
         self.visible = True
         self.restored = True
 
+    def objectName(self):
+        return getattr(self, "object_name", "")
+
+    def deleteLater(self):
+        self.deleted_later = True
+
 
 class ToolbarLifecycleTests(unittest.TestCase):
     def test_first_action_avoids_right_edge_overflow(self):
@@ -128,6 +134,82 @@ class ToolbarLifecycleTests(unittest.TestCase):
         self.assertIn("self.window.removeEventFilter(self)", watcher_source)
         menu = next(n for n in TREE.body if isinstance(n, ast.ClassDef) and n.name == "BarcodeLookupToolsAction")
         self.assertIn("_barcode_only_lookup(self.api, objects)", ast.unparse(menu))
+
+    def test_orphaned_cleared_toolbar_is_disposed_even_without_barcode_action(self):
+        action = FakeAction("Barcode / UPC Lookup")
+        active = FakeToolbar(action, FakeAction("Lookup"))
+        active.object_name = "main_toolbar"
+        old = FakeToolbar()  # Picard's create_action_toolbar() called clear().
+        old.object_name = "main_toolbar"
+        old.floating = True
+        orphan_with_action = FakeToolbar(action)
+        orphan_with_action.object_name = "main_toolbar"
+        other = FakeToolbar(FakeAction("Search"))
+        other.object_name = "search_toolbar"
+        floating_user_toolbar = FakeToolbar(FakeAction("Other"))
+        floating_user_toolbar.object_name = "other_plugin_toolbar"
+        floating_user_toolbar.floating = True
+
+        class Window:
+            toolbar = active
+
+        scope = {
+            "_barcode_toolbars": lambda window: [
+                old, active, orphan_with_action, other, floating_user_toolbar
+            ],
+            "_BARCODE_TOOLBAR_ACTION": action,
+        }
+        exec(source_function("_retire_obsolete_picard_toolbars"), scope)
+        retired = scope["_retire_obsolete_picard_toolbars"](Window())
+        self.assertEqual(retired, [old, orphan_with_action])
+        for bar in retired:
+            self.assertTrue(bar.hidden)
+            self.assertTrue(bar.deleted_later)
+        self.assertNotIn(action, orphan_with_action.actions())
+        self.assertIn(action, active.actions())
+        for bar in (active, other, floating_user_toolbar):
+            self.assertFalse(getattr(bar, "deleted_later", False))
+            self.assertTrue(bar.isVisible())
+
+    def test_toolbar_replacement_retires_previous_active_toolbar(self):
+        action = FakeAction("Barcode")
+        former = FakeToolbar(action)
+        former.object_name = "main_toolbar"
+        current = FakeToolbar(FakeAction("Lookup"))
+        current.object_name = "main_toolbar"
+
+        class Window:
+            toolbar = former
+
+        window = Window()
+        scope = {
+            "_barcode_toolbars": lambda window: [former, current],
+            "_BARCODE_TOOLBAR_ACTION": action,
+        }
+        exec(source_function("_retire_obsolete_picard_toolbars"), scope)
+        self.assertEqual(scope["_retire_obsolete_picard_toolbars"](window), [current])
+        self.assertFalse(getattr(former, "deleted_later", False))
+
+        # Simulate Picard replacing window.toolbar and clearing the former one.
+        current.deleted_later = False
+        current.visible = True
+        window.toolbar = current
+        former.items.clear()
+        self.assertEqual(scope["_retire_obsolete_picard_toolbars"](window), [former])
+        self.assertTrue(former.deleted_later)
+        self.assertFalse(current.deleted_later)
+
+    def test_retirement_runs_during_close_rebuild_disable_and_quit(self):
+        watcher = next(node for node in TREE.body
+                       if isinstance(node, ast.ClassDef) and node.name == "_BarcodeToolbarWatcher")
+        text = ast.unparse(watcher)
+        self.assertIn("_retire_obsolete_picard_toolbars(self.window)", text)
+        self.assertIn("QEvent.Type.ChildRemoved", text)
+        self.assertIn("def refresh(self)", text)
+        self.assertIn("def on_quit(self)", text)
+        self.assertIn("QEvent.Type.Close", text)
+        self.assertIn("_retire_obsolete_picard_toolbars(api.tagger.window)",
+                      source_function("disable"))
 
     def test_shutdown_detaches_all_old_and_floating_barcode_actions(self):
         action = FakeAction("Barcode / UPC Lookup")
