@@ -46,6 +46,7 @@ _PHRASAL_VERBS = {
     ("fill", "in"), ("get", "in"), ("give", "in"), ("join", "in"),
     ("let", "in"), ("move", "in"), ("plug", "in"), ("tune", "in"),
     ("turn", "in"), ("walk", "in"),
+    ("bun", "up"),
     ("bring", "on"), ("carry", "on"), ("come", "on"), ("get", "on"),
     ("go", "on"), ("hold", "on"), ("keep", "on"), ("move", "on"),
     ("pass", "on"), ("put", "on"), ("shine", "on"), ("take", "on"),
@@ -102,12 +103,13 @@ def _release_title(metadata: Any, release_node: Any) -> str:
     return str(title or "")
 
 
-def _language_scores(metadata: Any, release_node: Any) -> tuple[int, int]:
+def _language_scores(metadata: Any, release_node: Any) -> tuple[int, int, int]:
     probe = _release_title(metadata, release_node).lower()
     words = set(re.findall(r"[^\W_]+", probe, flags=re.UNICODE))
 
     french_score = 0
     spanish_score = 0
+    portuguese_score = 0
 
     if re.search(r"[àâæçéèêëîïôœùûüÿ]", probe):
         french_score += 2
@@ -122,22 +124,34 @@ def _language_scores(metadata: Any, release_node: Any) -> tuple[int, int]:
         spanish_score += 2
     if {"y", "te", "mi"} & words:
         spanish_score += 1
+    # Distinctive phrases override incorrect release-language metadata.
+    # A single "la" is ambiguous (French/Spanish); "la noche" is not.
+    if re.search(r"\bla\s+noche\b", probe):
+        spanish_score += 4
 
-    return french_score, spanish_score
+    # Portuguese uses sentence case. Common "vai + gerund" constructions,
+    # e.g. "Vai sentando", are strong evidence even when a release is
+    # incorrectly marked English.
+    if re.search(r"\bvai\s+[a-zà-ÿ]+(?:ando|endo|indo)\b", probe):
+        portuguese_score += 5
+
+    return french_score, spanish_score, portuguese_score
 
 
 def _language_mode(metadata: Any, release_node: Any) -> str:
     language = _release_language(metadata, release_node)
-    french_score, spanish_score = _language_scores(metadata, release_node)
+    french_score, spanish_score, portuguese_score = _language_scores(metadata, release_node)
 
     # MusicBrainz release language can be wrong. If a release marked English
     # has strong French/Spanish title evidence, prefer the title evidence for
     # capitalization instead of blindly applying English title case.
-    if language in {"eng", "en"}:
-        if french_score >= 3 and french_score > spanish_score:
-            return "french"
-        if spanish_score >= 3 and spanish_score > french_score:
+    if language in {"eng", "en", "english"}:
+        if portuguese_score >= 4 and portuguese_score > spanish_score and portuguese_score > french_score:
             return "sentence"
+        if spanish_score >= 3 and spanish_score > french_score and spanish_score > portuguese_score:
+            return "sentence"
+        if french_score >= 3 and french_score > spanish_score and french_score > portuguese_score:
+            return "french"
         return "english"
 
     if language in {"fra", "fre", "fr", "french"}:
@@ -154,10 +168,12 @@ def _language_mode(metadata: Any, release_node: Any) -> str:
 
     # Some releases have a script but no language. Infer only when the title
     # gives strong clues; otherwise use the conservative ALL CAPS fallback.
-    if french_score >= 3 and french_score > spanish_score:
-        return "french"
-    if spanish_score >= 3 and spanish_score > french_score:
+    if portuguese_score >= 4 and portuguese_score > spanish_score and portuguese_score > french_score:
         return "sentence"
+    if spanish_score >= 3 and spanish_score > french_score and spanish_score > portuguese_score:
+        return "sentence"
+    if french_score >= 3 and french_score > spanish_score and french_score > portuguese_score:
+        return "french"
 
     return "unknown"
 
@@ -499,6 +515,22 @@ def standardize_title_case(
     return title
 
 
+def _canonical_release_suffix(title: str) -> str:
+    """Preserve a single exact '- Single' or '- EP' formatting suffix.
+
+    Sentence case must not lower 'Single' to 'single', because a separate
+    case-sensitive suffix script can then append a second suffix.
+    """
+    match = re.search(r"(?:\s+-\s+(?:single|ep))+\s*$", title, re.I)
+    if not match:
+        return title
+    labels = re.findall(r"\s+-\s+(single|ep)", match.group(0), re.I)
+    if not labels or len({label.lower() for label in labels}) != 1:
+        return title
+    final = "EP" if labels[-1].lower() == "ep" else "Single"
+    return title[:match.start()].rstrip() + " - " + final
+
+
 def _set_single_value(metadata: Any, tag: str, value: str) -> None:
     try:
         metadata[tag] = value
@@ -519,7 +551,7 @@ def capitalize_release_title(api: Any, metadata: Any, release_node: Any) -> None
         return
 
     mode = _language_mode(metadata, release_node)
-    updated = standardize_title_case(str(original), mode)
+    updated = _canonical_release_suffix(standardize_title_case(str(original), mode))
     if updated != str(original):
         _set_single_value(metadata, "album", updated)
         api.logger.debug(
