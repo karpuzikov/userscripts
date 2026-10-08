@@ -13914,7 +13914,7 @@ def _ascii_ui_contract_self_test() -> None:
     _ui_contract_self_test()
 
 
-def _run_ascii_ui() -> int:
+def _run_ascii_ui(test_mode: bool = False) -> int:
     _ensure_textual()
 
     from textual import on, work
@@ -14890,7 +14890,77 @@ def _run_ascii_ui() -> int:
             if conflicts:
                 self.notify("Undo completed with conflicts. Check logs.", severity="warning")
 
-    DEAAsciiApp().run(mouse=True)
+    if test_mode:
+        import asyncio
+
+        async def _smoke_mouse():
+            application = DEAAsciiApp()
+            async with application.run_test(size=(155, 48)) as pilot:
+                await pilot.pause()
+                if application.query_one("#analyze", Button).disabled:
+                    raise RuntimeError("ASCII smoke test: Analyze disabled.")
+                await pilot.click("#personal")
+                await pilot.pause()
+                if not isinstance(application.screen, PersonalPicksScreen):
+                    raise RuntimeError("ASCII smoke test: Personal Picks modal did not open.")
+                await pilot.click("#picks-cancel")
+                await pilot.pause()
+                await pilot.click("#old-browse")
+                await pilot.pause()
+                if not isinstance(application.screen, DirectoryChooser):
+                    raise RuntimeError("ASCII smoke test: Folder browser missing.")
+                await pilot.press("escape")
+                await pilot.pause()
+
+                # Use synthetic data to exercise real terminal rendering and
+                # click handlers without touching any user audio folders.
+                source = Release(
+                    9701, "existing", Path("2020 - ASCII Test Album"),
+                    "ASCII Test Album", release_type="album",
+                    tracks=[Track(9701, Path("Song 1.flac"), 1,
+                                  title="Song 1", group_id=12001)],
+                )
+                incoming = Release(
+                    9702, "recycle", Path("2021 - ASCII Test Bonus"),
+                    "ASCII Test Bonus", release_type="single",
+                    tracks=[Track(9702, Path("Song 2.flac"), 2,
+                                  title="Song 2", group_id=12002)],
+                )
+                audio = source.tracks + incoming.tracks
+                decisions = build_release_decisions(
+                    [source, incoming], audio, {9701, 9702}, [],
+                )
+                snapshots = build_decision_snapshot(
+                    [source, incoming], audio, {9701, 9702}, decisions,
+                )
+                application.current_session = {
+                    "snapshots": snapshots, "allow_apply": False,
+                    "selected": {9701, 9702}, "decisions": decisions,
+                }
+                application.open_map()
+                await pilot.pause()
+                if not isinstance(application.screen, ReleaseBoard):
+                    raise RuntimeError("ASCII smoke test: Release Map did not open.")
+                board = application.screen
+                if len(board.state["nodes"]) != 2:
+                    raise RuntimeError("ASCII smoke test: release rows missing.")
+                await pilot.click("#view-full")
+                await pilot.pause()
+                if board.view != "full":
+                    raise RuntimeError("ASCII smoke test: Full Map button failed.")
+                await pilot.click("#view-changes")
+                await pilot.pause()
+                if board.view != "changes":
+                    raise RuntimeError("ASCII smoke test: Changes button failed.")
+                await pilot.click("#close-map")
+                await pilot.pause()
+                if application.screen is not application._screen_stack[0]:
+                    raise RuntimeError("ASCII smoke test: Close Map button failed.")
+            print("DEA ASCII Textual mouse/UI smoke test passed.")
+
+        asyncio.run(_smoke_mouse())
+    else:
+        DEAAsciiApp().run(mouse=True)
     return 0
 
 
@@ -14899,6 +14969,8 @@ def main():
         _ascii_ui_contract_self_test()
         print(f"{APP_NAME} {APP_VERSION}: ASCII UI contract passed.")
         raise SystemExit(0)
+    if len(sys.argv) >= 2 and sys.argv[1] == "--ascii-pilot-test":
+        raise SystemExit(_run_ascii_ui(test_mode=True))
     if len(sys.argv) >= 2 and sys.argv[1] == "--ascii-ui":
         raise SystemExit(_run_ascii_ui())
     if len(sys.argv) >= 2 and sys.argv[1] == "--ui-self-test":
