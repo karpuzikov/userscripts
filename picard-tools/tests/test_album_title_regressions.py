@@ -22,6 +22,8 @@ from musicbrainz_title_capitalization import (  # noqa: E402
     normalize_europe_release_country,
     _is_digital_release,
     musicbrainz_english_title_case,
+    standardize_title_case,
+    _is_digital_medium,
 )
 
 
@@ -300,6 +302,79 @@ class PicardAlbumRegressions(unittest.TestCase):
                 ScriptParser().eval(source, metadata)
                 self.assertEqual(metadata.get("releasecountry", ""), expected)
 
+    def test_vs_dot_remains_lowercase_for_all_language_modes(self):
+        for mode in ("english", "french", "sentence", "unknown"):
+            for title in (
+                "Gypsyhook Vs. Dmndays",
+                "Gypsyhook VS. Dmndays",
+                "Gypsyhook vs. Dmndays",
+                "Vs. Opponent",
+                "Song (Artist VS. Other)",
+            ):
+                with self.subTest(mode=mode, title=title):
+                    expected = standardize_title_case(title, mode)
+                    self.assertIn("vs.", expected)
+                    self.assertNotIn("Vs.", expected)
+                    self.assertNotIn("VS.", expected)
+                    self.assertEqual(standardize_title_case(expected, mode), expected)
+        self.assertEqual(
+            musicbrainz_english_title_case("Gypsyhook Vs. Dmndays"),
+            "Gypsyhook vs. Dmndays",
+        )
+        self.assertEqual(standardize_title_case("Vs. Opponent", "english"),
+                         "vs. Opponent")
+        self.assertEqual(standardize_title_case("Vsauce vs. Opponent", "english"),
+                         "Vsauce vs. Opponent")
+
+    def test_vs_dot_never_changes_unrelated_abbreviations(self):
+        for title in ("V.S. the World", "Versus the World", "Gypsyhook vs Dmndays"):
+            with self.subTest(title=title):
+                changed = standardize_title_case(title, "unknown")
+                self.assertEqual(changed, title)
+
+    def test_vs_standalone_script_contains_last_pass(self):
+        source = (REPO / "picard-tools" / "scripts" /
+                  "English_Title_Capitalization.txt").read_text(encoding="utf-8")
+        normalize = r"$set(_case,$rreplace(%_case%,\\b[Vv][Ss]\\.,vs.))"
+        self.assertIn(normalize, source)
+        self.assertLess(source.index(normalize), source.index("$set(%_loop_value%,%_case%)"))
+        self.assertIn("$delete(releasecountry)", source)
+
+    def test_vs_standalone_picard_script_runtime(self):
+        try:
+            from picard.metadata import Metadata
+            from picard.script import ScriptParser
+        except ImportError:
+            self.skipTest("Picard runtime unavailable; run inside Picard's Python environment")
+        source = (REPO / "picard-tools" / "scripts" /
+                  "English_Title_Capitalization.txt").read_text(encoding="utf-8")
+        for title in ("Gypsyhook Vs. Dmndays",
+                      "Gypsyhook VS. Dmndays",
+                      "Gypsyhook vs. Dmndays"):
+            with self.subTest(title=title):
+                data = Metadata()
+                data["album"] = title
+                data["title"] = title
+                data["language"] = "eng"
+                data["media"] = "CD"
+                data["releasecountry"] = "XE"
+                ScriptParser().eval(source, data)
+                self.assertEqual(data["album"], "Gypsyhook vs. Dmndays")
+                self.assertEqual(data["title"], "Gypsyhook vs. Dmndays")
+                self.assertEqual(data["releasecountry"], "EU")
+                ScriptParser().eval(source, data)
+                self.assertEqual(data["title"], "Gypsyhook vs. Dmndays")
+
+    def test_digital_media_count_prefix_regex(self):
+        for raw in ("Digital Media", "digital media",
+                    "2x Digital Media", "2×Digital Media",
+                    "3 x Digital Media", " 2x Digital Media "):
+            with self.subTest(raw=raw):
+                self.assertTrue(_is_digital_medium(raw))
+        for raw in ("CD", "2x Vinyl", "Digital Media + CD", "", "Digital"):
+            with self.subTest(raw=raw):
+                self.assertFalse(_is_digital_medium(raw))
+
     def test_region_code_europe_display_preference(self):
         # Only exact XE in releasecountry becomes EU; do not modify other tags.
         for source, wanted in (("XE", "EU"), ("EU", "EU"),
@@ -345,7 +420,7 @@ class PicardAlbumRegressions(unittest.TestCase):
     def test_published_script_versions_match_stable_sources(self):
         for stable, versioned in (
             ("Unicode_to_ASCII.txt", "Unicode_to_ASCII_v1.0.1.txt"),
-            ("English_Title_Capitalization.txt", "English_Title_Capitalization_v1.1.5.txt"),
+            ("English_Title_Capitalization.txt", "English_Title_Capitalization_v1.1.6.txt"),
             ("Add_EP_Single_Suffix.txt", "Add_EP_Single_Suffix_v1.0.2.txt"),
             ("Format_Multiple_Artists.txt", "Format_Multiple_Artists_v1.0.2.txt"),
             ("Move_Featured_Artists_to_Title.txt", "Move_Featured_Artists_to_Title_v1.0.1.txt"),
