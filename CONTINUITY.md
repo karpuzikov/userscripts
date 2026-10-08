@@ -2,7 +2,7 @@
 
 ## Product and state
 - Product: Karpuzikov Picard Scripts, a Picard 3.x Git-updatable MusicBrainz metadata plugin.
-- Current version: 1.5.16 - Under construction ⚠️ (not yet verified inside user Picard).
+- Current version: 1.5.17 - Under construction ⚠️ (not yet verified inside user Picard).
 - Git repository and active branch: `karpuzikov/userscripts`, `main`.
 - There is no additional project-specific `RULES.md` currently; the canonical repository root `SOFTWARE_RULES.md` governs this project.
 
@@ -114,3 +114,9 @@
 
 - Whole-script parity audit found the embedded Format Multiple Artists code was missing the stable source's final newline. Regenerated the embedded literal from the canonical `Format_Multiple_Artists.txt` exactly (no behavior change); added it to the source-parity test. All five current standalone Picard scripts must have byte-identical embedded decoded script sources and matching latest versioned standalone downloads.
 - v1.5.16 - Under construction ⚠️. No change to Format Multiple Artists selection/join semantics. Interactive Picard runtime validation and potential partial-name false-match investigation remain outstanding; do not mark stable without the applicable tests.
+
+## Single-artist exact-credit filtering (2026-10-09; plugin v1.5.17)
+
+- Confirmed partial-name issue: when MB provides artists [A, AB] but an earlier step reduces `artist` to the exact credited name AB, the old `$in(AB,A)` would wrongly keep A and synthesize `A & AB`.
+- Standalone Format Multiple Artists v1.0.2 and embedded plugin script now use `$inmulti(%artists%,%artist%)` / `$inmulti(%albumartists%,%albumartist%)` to recognize when the display credit is exactly an entry in the original multi-valued list. For this exact-one-artist case only, selection uses `$eq` instead of substring `$in`. For all other multi-artist credits, preserve existing substring matching and join behavior (no loss of custom MB joinphrase handling).
+- Added Picard runtime regression covering both track and album artist A/AB-style collisions and repeated runs. Fixed script is distributed as `Format_Multiple_Artists_v1.0.2.txt`; older v1.0.1 remains historical. Full general substring ambiguity involving composite credits remains a documented limitation; Picard interactive QA is outstanding. v1.5.17 - Under construction ⚠️.
