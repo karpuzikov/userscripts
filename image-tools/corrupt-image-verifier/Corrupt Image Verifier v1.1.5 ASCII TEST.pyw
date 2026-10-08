@@ -1430,12 +1430,13 @@ def launch_gui():
                     collected.append((root, p))
             return collected
 
+
         def worker(self, source_records, worker_plan, run_id):
+            """Read-only scan; no disk modifications under any classification."""
             executors = []
             try:
                 sources = [record["path"] for record in source_records]
-                by_drive_sources = {}
-                drive_infos = {}
+                by_drive_sources, drive_infos = {}, {}
                 for record in source_records:
                     key = record["info"]["disk_key"]
                     by_drive_sources.setdefault(key, []).append(record)
@@ -1443,27 +1444,26 @@ def launch_gui():
 
                 all_items = []
                 with ThreadPoolExecutor(
-                    max_workers=max(1, len(by_drive_sources)),
-                    thread_name_prefix="DriveScan",
+                    max_workers=max(1, len(by_drive_sources)), thread_name_prefix="DriveScan"
                 ) as scan_pool:
-                    scan_future_map = {
+                    futures = {
                         scan_pool.submit(self._collect_drive_group, records): key
                         for key, records in by_drive_sources.items()
                     }
-                    for future in as_completed(scan_future_map):
-                        key = scan_future_map[future]
+                    for future in as_completed(futures):
+                        key = futures[future]
                         items = future.result()
                         all_items.extend((key, root, p) for root, p in items)
-                        info = drive_infos[key]
-                        self.q.put(("drive_scan_ready", info, len(items), worker_plan.get(key, 1)))
+                        self.q.put(("drive_scan_ready", drive_infos[key], len(items),
+                                    worker_plan.get(key, 1)))
 
                 if self.stop_event.is_set():
-                    self.q.put(("finished", sources, True))
+                    self.q.put(("scan_finished", True))
                     return
 
                 self.q.put(("scan_ready", len(all_items)))
                 if not all_items:
-                    self.q.put(("finished", sources, False))
+                    self.q.put(("scan_finished", False))
                     return
 
                 by_drive_files = {}
@@ -1472,60 +1472,102 @@ def launch_gui():
 
                 future_map = {}
                 for key, items in by_drive_files.items():
-                    workers = max(1, worker_plan.get(key, 1))
-                    executor = ThreadPoolExecutor(max_workers=workers, thread_name_prefix=f"ImageCheck-{key}")
+                    executor = ThreadPoolExecutor(
+                        max_workers=max(1, worker_plan.get(key, 1)),
+                        thread_name_prefix=f"ImageCheck-{key}"
+                    )
                     executors.append(executor)
                     for source_root, p in items:
-                        future = executor.submit(verify_image, p)
-                        future_map[future] = (source_root, p, key)
+                        future_map[executor.submit(verify_image, p)] = (source_root, p, key)
 
                 for future in as_completed(future_map):
                     if self.stop_event.is_set():
                         for f in future_map:
                             f.cancel()
                         break
-
                     source_root, p, key = future_map[future]
                     try:
-                        size = p.stat().st_size
+                        st = p.stat()
+                        size = st.st_size
+                        mtime = st.st_mtime_ns
                     except OSError:
-                        size = 0
-
+                        size = mtime = None
                     try:
                         status, reason = future.result()
                     except Exception as exc:
-                        status, reason = "error", f"{exc}"
-
-                    moved_to = None
-                    move_error = None
-                    if status == "corrupt":
-                        try:
-                            original = p.resolve()
-                            moved_to = move_preserving_structure(source_root, p)
-                            record_undo_move(run_id, sources, original, moved_to)
-                        except Exception as exc:
-                            move_error = str(exc)
-
-                    self.q.put(("result", source_root, p, size, status, reason, moved_to, move_error, key))
+                        status, reason = "error", str(exc)
+                    self.q.put(("result", source_root, p, size, mtime, status, reason, key))
 
                 stopped = self.stop_event.is_set()
                 for executor in executors:
-                    try:
-                        executor.shutdown(wait=True, cancel_futures=stopped)
-                    except TypeError:
-                        executor.shutdown(wait=True)
+                    executor.shutdown(wait=True, cancel_futures=stopped)
                 executors.clear()
-                self.q.put(("finished", sources, stopped))
+                self.q.put(("scan_finished", stopped))
             except Exception as exc:
                 self.q.put(("fatal", str(exc), traceback.format_exc()))
             finally:
                 for executor in executors:
                     try:
                         executor.shutdown(wait=False, cancel_futures=True)
-                    except TypeError:
-                        executor.shutdown(wait=False)
                     except Exception:
                         pass
+
+        def start_move(self):
+            if not self.scan_completed or not self.review_candidates or self.running or self.undo_running:
+                return
+            count = len(self.review_candidates)
+            if not messagebox.askyesno(
+                APP_NAME,
+                f"Move {count:,} CONFIRMED CORRUPT image(s) into their respective "
+                "*_CORRUPTED sibling folders?\n\n"
+                "Original relative paths are preserved. Existing destinations are "
+                "never overwritten. Each file is checked again before moving."
+            ):
+                return
+            pending = list(self.review_candidates)
+            sources = [record["path"] for record in self.sources]
+            run_id = datetime.now().astimezone().strftime("%Y-%m-%dT%H-%M-%S.%f%z")
+            self.stop_event.clear()
+            self.mode = "move"
+            self.set_controls(running=True)
+            self.start_time = time.monotonic()
+            self.total, self.done = len(pending), 0
+            self.progress_var.set(0)
+            self.stage_var.set("STAGE: MOVING CONFIRMED CORRUPT")
+            self.status_var.set("Verifying each candidate again before moving...")
+            threading.Thread(
+                target=self.move_worker, args=(pending, sources, run_id), daemon=True
+            ).start()
+
+        def move_worker(self, candidates, sources, run_id):
+            try:
+                for candidate in candidates:
+                    if self.stop_event.is_set():
+                        break
+                    p = candidate["path"]
+                    source_root = candidate["source"]
+                    moved_to, reason = None, ""
+                    try:
+                        if p.is_symlink():
+                            raise OSError("Symbolic link - left in place")
+                        st = p.stat()
+                        if (st.st_size, st.st_mtime_ns) != (
+                            candidate["size"], candidate["mtime"]
+                        ):
+                            raise OSError("Image changed since scan - left in place; scan again")
+                        status, new_reason = verify_image(p)
+                        if status != "corrupt":
+                            raise OSError(f"Recheck is {status.upper()}: {new_reason}")
+                        moved_to = move_preserving_structure(
+                            source_root, p, run_id=run_id, sources=sources
+                        )
+                        reason = new_reason
+                    except Exception as exc:
+                        reason = str(exc)
+                    self.q.put(("move_result", candidate, moved_to, reason))
+                self.q.put(("move_finished", self.stop_event.is_set()))
+            except Exception as exc:
+                self.q.put(("fatal", str(exc), traceback.format_exc()))
 
         def start_undo(self):
             manifest = load_undo_manifest()
