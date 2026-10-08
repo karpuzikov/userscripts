@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Apple Music works credits -> MusicBrainz
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      2.3.17
+// @version      2.3.18
 // @description  Resolve the correct Apple Music release and import supported Apple Music credits to the proper MusicBrainz Recording, Work, or Release relationships.
 // @author       karpuzikov
 // @license      MIT
@@ -135,7 +135,7 @@ function __amMbGmXmlhttpRequest(details) {
     'use strict';
 
     const PAGE = typeof unsafeWindow !== 'undefined' ? unsafeWindow : window;
-    const SCRIPT_VERSION = '2.3.17';
+    const SCRIPT_VERSION = '2.3.18';
     let MB = PAGE.MB;
     const APPLE_API_BASE = 'https://amp-api.music.apple.com/v1';
     const APPLE_TOKEN_BOOTSTRAP_URL = 'https://music.apple.com/us/browse';
@@ -1480,6 +1480,7 @@ function __amMbGmXmlhttpRequest(details) {
     }
 
     const workTitleSearchCache = new Map();
+    const stagedWorkTitles = new Set();
 
     function isWorkAuthorCredit(credit) {
         return credit?.target === 'work' &&
@@ -1795,8 +1796,16 @@ function __amMbGmXmlhttpRequest(details) {
             }
             return;
         }
+        // A different track or a previous run on this editor may have
+        // staged the same title already. Never silently stage a duplicate.
+        const normalizedTitle = normalizeText(title);
+        if (stagedWorkTitles.has(normalizedTitle) || findTemporaryCreatedWork(title)) {
+            row.workResolution = 'A Work with this title is already staged; review its recording link manually.';
+            return;
+        }
         setStatus(`No existing Work found for "${title}". Staging new Song Work...`);
         const work = await createWorkForRecording(row.mbTrack.recording);
+        stagedWorkTitles.add(normalizedTitle);
         row.works = [work];
         row.workResolution = `New Song Work staged: ${work.name || title}. Writer credits are applied separately.`;
     }
@@ -2017,6 +2026,11 @@ function __amMbGmXmlhttpRequest(details) {
             state.workLanguages = null;
             state.aliasEdits = 0;
             state.applied = false;
+            // A second Load on this page must not trust cached negative
+            // searches from before any MusicBrainz edits were submitted.
+            workTitleSearchCache.clear();
+            stagedWorkTitles.clear();
+            mbWsCache.clear();
 
             button.disabled = true;
             document.getElementById('am2mb-tracks').innerHTML = '';
