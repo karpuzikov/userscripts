@@ -1,7 +1,7 @@
 # RuTracker Digital Release Linker - Continuity
 
 ## Product
-- Version: 1.1.20 - Under construction ⚠️ (needs user testing in Tampermonkey).
+- Version: 1.1.21 - Under construction ⚠️ (needs user testing in Tampermonkey).
 - Repository: `karpuzikov/userscripts`, branch `main`.
 - Main file: `browser-tools/rutracker-digital-release-linker/RuTracker_Digital_Release_Linker.user.js`.
 - Applicable rules: repository-root `SOFTWARE_RULES.md`. No project-specific `RULES.md` currently exists.
@@ -22,7 +22,7 @@
 - Rerunning either button must be idempotent. Report linked and artwork counts, and show unresolved release titles.
 - Second button exactly `Force link all web releases` searches Deezer for every spoiler whose media label is `WEB` (plain or `[url=...]WEB[/url]`) or placeholder `CD/WEB`, including already linked releases. Exclude `CD`-only entries.
 - In force mode, search UPC and catalog via the existing validated resolver; ignore Beatport-only resolutions. If there is no identifier, make a conservative Deezer album search using topic artist, release title, exact track count, year and first track; reject ambiguous matches. If no confirmed Deezer result, do not modify the source.
-- For force-mode matches with `WEB|Deezer` or `WEB|[url=...]Deezer[/url]`, update the Deezer URL. For WEB entries with redacted/tracker or other existing source text, put the verified Deezer URL on the WEB media label as `[url=...]WEB[/url]` and retain the right-hand source untouched. For `CD/WEB|[url=...]Источник[/url]`, normalize to `WEB|[url=...]Deezer[/url]`.
+- In force mode, replace the entire media/source portion of every resolved WEB entry with `WEB|[url=<verified Deezer album URL>]Deezer[/url]`; do not retain old redacted/tracker/source text or link the `WEB` label. This intentionally overrides the pre-1.1.21 forced source preservation rule; it does not change normal mode. For unresolved entries, keep the original entire source line untouched. CD-only entries remain excluded. For entries already linked to a Deezer album URL on `WEB`, if lookup returns no candidate, reuse that same validated Deezer album URL and normalize it to the source side without inventing a different album. Keep `[hr]` and all other BBCode.
 - A hidden-by-default `Undo last link changes` button appears after changes, saving the exact previous textarea contents in memory, and restores it until another successful edit overwrites the snapshot. When a run makes no changes, preserve the previous undo snapshot.
 - Both action buttons are disabled during an active scan; progress names the active mode and shows completed/total and final counts. The result text has screen-reader status semantics; both buttons are native keyboard-operable inputs.
 - Discography topic-artist parsing now supports Russian `Дискография` in `[size=22]Skrillex | Дискография | Discography[/size]`, avoiding JavaScript ASCII `\\b` word boundary on Cyrillic. Parse `[none]`, `[n/a]`, `[unknown]` as absent catalog identifiers so their title and `- Single`/`- EP` suffix are stripped properly for a fallback search.
@@ -41,6 +41,12 @@
 - Verified target UPC/catno API data was used to link, existing source credits preserved, wrong existing Deezer corrected, exactly two placeholder images filled, CD and unresolved content unchanged, country/topic-artist parsing, repeated force run idempotent, first button behavior unchanged, status totals, undo snapshot, accessible force button and live status.
 - Mock test data (e.g. Deezer album IDs 123, 456 and 789) are synthetic, not claims about real release links. Browser/Tampermonkey and live external API verification remain pending.
 - No separate userscript update checker; only Tampermonkey-native updates.
+
+## Regression coverage in v1.1.21 (2026-10-08)
+- Requested exact conversion tested: `[b]Носитель|Источник[/b]: [url=https://www.deezer.com/album/1345324]WEB[/url]|redacted.ch[hr]` becomes `[b]Носитель|Источник[/b]: WEB|[url=https://www.deezer.com/album/1345324]Deezer[/url][hr]` in forced mode.
+- Additional mocked cases: fresh Deezer resolution replaces redacted/Beatport source, existing Deezer URL remains canonical on source side, missing-identifier existing Deezer URL is reformatted as fallback, CD-only and unresolved source untouched, regular button retains previous behavior, full BBCode tracklist preserved, progress and Undo retained, repeated forced run idempotent.
+- Entire updated JavaScript successfully compiled and mocked regression checks passed. No browser-side user testing or live Deezer verification yet.
+- Keep native Tampermonkey updates and version status. No added files, API permissions or UI elements.
 
 ## Release process
 - Bump `@version` every change; keep `@name`, `@namespace`, `@updateURL` and `@downloadURL` stable.
