@@ -1,7 +1,7 @@
 #requires -Version 7.0
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
-Write-Host "ArchiveMedia v6.1.1 - Under construction ⚠️" -ForegroundColor Cyan
+Write-Host "ArchiveMedia v6.1.2 - Under construction ⚠️" -ForegroundColor Cyan
 
 # ---------------- USER-TUNABLE SETTINGS ----------------
 $MaxParallel = 4
@@ -62,13 +62,20 @@ function Format-Bytes([Int64]$Bytes) {
     return "$Bytes B"
 }
 
+function Normalize-LocalFolder([string]$Value) {
+    $full = [IO.Path]::GetFullPath($Value)
+    $root = [IO.Path]::GetPathRoot($full)
+    if ($full.Equals($root, [StringComparison]::OrdinalIgnoreCase)) { return $root }
+    return $full.TrimEnd('\')
+}
+
 function Select-Folder([string]$Title) {
     Write-Host 'Enter local folder or rclone path (example: yandex:Pictures).'
     $p = (Read-Host "$Title [blank = browse local folders]").Trim().Trim('"')
     if ($p) {
         if (Test-RclonePath $p) { return $p.Replace('\','/').TrimEnd('/') }
         if ($p -match '^[A-Za-z]:[^\\/]') { throw "Use an absolute path, such as D:\\Pictures." }
-        return [IO.Path]::GetFullPath($p).TrimEnd('\')
+        return Normalize-LocalFolder $p
     }
     try {
         Add-Type -AssemblyName System.Windows.Forms
@@ -76,7 +83,7 @@ function Select-Folder([string]$Title) {
         $dialog.Description = $Title
         $dialog.ShowNewFolderButton = $true
         if ($dialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
-            return [IO.Path]::GetFullPath($dialog.SelectedPath).TrimEnd('\')
+            return Normalize-LocalFolder $dialog.SelectedPath
         }
     } catch { }
     return $null
