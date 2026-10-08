@@ -295,6 +295,18 @@ A lightweight build is not parity-complete until all of these pass:
 - No new lightweight build has yet been declared parity-complete.
 - Do not send another "native/light" test merely because it launches. Complete the parity checklist first.
 
+## Experimental ASCII UI branch - v0.4.0
+
+- Branch: `dea-lightweight-ascii-ui-test` (isolated from `dea-lightweight-modern`).
+- Main Python source: `audio-tools/discography-torrent-project/lightweight/Duplicate Edition Analyzer Lightweight v0.4.0.pyw`.
+- Double-click launcher: `audio-tools/discography-torrent-project/lightweight/Duplicate Edition Analyzer Lightweight ASCII v0.4.0.bat`.
+- Version/status: **0.4.0 - Under construction ⚠️**. The regular WebView2 release remains v0.3.9 on the original branch, untouched.
+- Uses Textual (installed on demand in program-owned dependencies) and Windows Terminal/conhost. Starts with `--ascii-ui`; direct `--ui-self-test`, `--ascii-self-test` and `--ascii-pilot-test` are provided. Does not need WebView2 or Qt when running in ASCII mode.
+- One self-contained .pyw shares the full analysis engine, logging, Personal Picks, automatic and manual acoustic reviews, decision snapshot and exact optimization, copy retained-plan engine, Undo and reanalysis. TUI uses dark ASCII borders, mouse-clickable releases/tracks, native terminal folder-tree chooser, progress, three-column map, search and relationship navigation.
+- The terminal substitutes clickable RELATED-release and per-track carrier navigation for SVG connection curves. This is explicitly **an experimental interaction change, not proven 100% production UI parity**.
+- Windows runtime and full Skrillex OLD/NEW testing are outstanding. GitHub workflow on this branch includes Python syntax, `--ui-self-test`, `--ascii-self-test`, `--ascii-pilot-test`, Ruff F821, embedded JS checks and bridge validation.
+- Next on this branch: confirm CI success, launch with the versioned .bat, inspect Albums/EPs/Singles mouse navigation and map interactions; then test actual Skrillex audio and export. Do not merge until parity gaps and any Windows issues are resolved.
+
 ## Exact next steps
 
 1. Re-run the user's exact Skrillex OLD/NEW test on 0.3.9. Verify: Scary Monsters exact-equivalent Existing no longer churns; the Bangarang CD remains retained while the WEB 8-track release may remain only for its unique wanted bonus track; Make It Bun Dem is shown as one `↔ Replaced` OLD->NEW change; Quest for Fire provider wording routes the 11th track acoustically and does not create a false WEB addition if the audio matches; Changes filters cannot scroll into Full-map-sized empty space; Full map uses line-separated compact groups/rows.
