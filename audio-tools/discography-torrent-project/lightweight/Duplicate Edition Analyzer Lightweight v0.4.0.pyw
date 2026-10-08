@@ -14630,6 +14630,8 @@ def _run_ascii_ui(test_mode: bool = False) -> int:
             self.last_report = 0.0
             self.activity = []
             self._progress_state = (0, 1)
+            self.started_monotonic = None
+            self._current_status_text = "Ready"
 
         def compose(self) -> ComposeResult:
             yield Header(show_clock=True)
@@ -14668,6 +14670,15 @@ def _run_ascii_ui(test_mode: bool = False) -> int:
             self.log_line("Ready. Select two folders and click Analyze.")
             self.log_line("This branch uses Textual + your real DEA Python optimizer; no browser.")
             self.query_one("#release-map", Button).disabled = not bool(_load_decision_snapshot())
+            self.set_interval(1.0, self._elapsed_tick)
+
+        def _elapsed_tick(self):
+            if self.running and self.started_monotonic is not None:
+                done, total = self._progress_state
+                elapsed = int(time.monotonic() - self.started_monotonic)
+                self.query_one("#pct", Static).update(
+                    f"{done} / {total}  |  elapsed {elapsed // 60:02d}:{elapsed % 60:02d}"
+                )
 
         def log_line(self, message):
             self.activity.append(datetime.now().strftime("%H:%M:%S") + "  " + str(message))
@@ -14683,9 +14694,12 @@ def _run_ascii_ui(test_mode: bool = False) -> int:
             view.scroll_end(animate=False)
 
         def status(self, message, done=0, total=1):
+            self._current_status_text = str(message)
+            self._progress_state = (done, total)
             self.query_one("#status", Label).update("STATUS | " + str(message))
             self.query_one("#progress", ProgressBar).update(progress=int(100*max(0,done)/max(1,total)))
             self.query_one("#pct", Static).update(f"{done} / {total}")
+            self._elapsed_tick()
 
         def save_settings(self):
             _save_app_settings(
@@ -14764,6 +14778,7 @@ def _run_ascii_ui(test_mode: bool = False) -> int:
             self.current_session = None
             self.pending_context = None
             self.running = True
+            self.started_monotonic = time.monotonic()
             self.query_one("#analyze", Button).disabled = True
             self.log_line("Scanning releases and reading metadata...")
             self._prepare_worker(old, new)
@@ -14947,6 +14962,7 @@ def _run_ascii_ui(test_mode: bool = False) -> int:
             if self.running:
                 return
             self.running = True
+            self.started_monotonic = time.monotonic()
             self._undo_worker()
 
         @work(thread=True, exclusive=True, group="undo")
