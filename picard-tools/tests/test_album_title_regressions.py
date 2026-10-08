@@ -147,6 +147,7 @@ class PicardAlbumRegressions(unittest.TestCase):
             ("add_ep_single_suffix", "Add_EP_Single_Suffix.txt"),
             ("english_title_capitalization", "English_Title_Capitalization.txt"),
             ("unicode_to_ascii", "Unicode_to_ASCII.txt"),
+            ("move_featured_artists", "Move_Featured_Artists_to_Title.txt"),
         ):
             self.assertIn(key, values)
             text = (REPO / "picard-tools" / "scripts" / filename).read_text(encoding="utf-8")
@@ -161,6 +162,30 @@ class PicardAlbumRegressions(unittest.TestCase):
         self.assertIn("la noche|vai sentando", legacy)
 
 
+
+
+    def test_move_featured_credit_does_not_duplicate_existing_title_credit(self):
+        try:
+            from picard.metadata import Metadata
+            from picard.script import ScriptParser
+        except ImportError:
+            self.skipTest("Picard runtime unavailable; run inside Picard's Python environment")
+        source = (REPO / "picard-tools" / "scripts" / "Move_Featured_Artists_to_Title.txt").read_text(encoding="utf-8")
+        for initial_title, expected_title in (
+            ("Song", "Song (ft. Guest)"),
+            ("Song (ft. Guest)", "Song (ft. Guest)"),
+            ("Song (feat. Guest)", "Song (feat. Guest)"),
+        ):
+            with self.subTest(title=initial_title):
+                metadata = Metadata()
+                metadata["artist"] = "Main feat. Guest"
+                metadata["albumartist"] = "Main"
+                metadata["title"] = initial_title
+                ScriptParser().eval(source, metadata)
+                self.assertEqual(metadata["title"], expected_title)
+                self.assertEqual(metadata["artist"], "Main")
+                ScriptParser().eval(source, metadata)
+                self.assertEqual(metadata["title"], expected_title)
 
     def test_artist_format_runs_before_unicode_normalization(self):
         module = ast.parse((REPO / "__init__.py").read_text(encoding="utf-8"))
@@ -181,6 +206,7 @@ class PicardAlbumRegressions(unittest.TestCase):
             ("English_Title_Capitalization.txt", "English_Title_Capitalization_v1.1.3.txt"),
             ("Add_EP_Single_Suffix.txt", "Add_EP_Single_Suffix_v1.0.2.txt"),
             ("Format_Multiple_Artists.txt", "Format_Multiple_Artists_v1.0.1.txt"),
+            ("Move_Featured_Artists_to_Title.txt", "Move_Featured_Artists_to_Title_v1.0.1.txt"),
         ):
             with self.subTest(stable=stable):
                 folder = REPO / "picard-tools" / "scripts"
