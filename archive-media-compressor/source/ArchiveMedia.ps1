@@ -75,7 +75,7 @@ function Select-Folder([string]$Title) {
     if ($p) {
         if (Test-RclonePath $p) { return $p.Replace('\','/').TrimEnd('/') }
         if ($p -match '^[A-Za-z]:[^\\/]') { throw "Use an absolute path, such as D:\\Pictures." }
-        return Normalize-LocalFolder $p
+        return (Normalize-LocalFolder $p)
     }
     try {
         Add-Type -AssemblyName System.Windows.Forms
@@ -83,7 +83,7 @@ function Select-Folder([string]$Title) {
         $dialog.Description = $Title
         $dialog.ShowNewFolderButton = $true
         if ($dialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
-            return Normalize-LocalFolder $dialog.SelectedPath
+            return (Normalize-LocalFolder $dialog.SelectedPath)
         }
     } catch { }
     return $null
