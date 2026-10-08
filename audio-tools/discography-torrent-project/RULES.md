@@ -1035,6 +1035,14 @@ This section supersedes older featured-remix, contextual-remix, and generic Edit
 - Strong structural conflicts such as Radio vs Extended or Acoustic vs Instrumental remain eligible for semantic pre-blocking unless exact identical Chromaprint overrides the wording.
 
 
+## v0.3.7 album completeness and provider-type aliases - authoritative
+
+- Provider release-type labels (Album/EP/Single) are not proof that two physically identical, acoustically equivalent copies are different editions. An EP/Single-tagged OLD copy may fulfill a maximum-completeness Album obligation only when its release-family title matches and its entire physical track count, included acoustic group sequence and multiplicities match a maximum-completeness Album edition.
+- This exception must never permit an incomplete EP, different release family, compilation, missing wanted recording, or larger/different physical container to substitute for a maximally complete Album.
+- The exact solver must allow those truly equivalent providers BEFORE late Existing/NEW tie-breakers; source preference and Existing no-churn rules apply normally.
+- Every late release substitution must preserve recording coverage, source quality, and at least one valid album representative. If a late tie-break somehow violates these invariants, restore the last valid exact optimizer selection with an explicit logged diagnostic; do not crash or silently degrade the plan.
+- Regression: Skrillex Scary Monsters OLD tagged EP, NEW tagged Album, 11 physical tracks including seven wanted acoustically matched groups, must retain OLD without album-completeness failure when both are otherwise interchangeable.
+
 ## v0.3.6 source-safe optimization and Release Map correctness - authoritative
 
 - For each included wanted acoustic recording group, the exact optimization model must select at least one best-source-class carrier (CD/physical above WEB; comparable CD-rip acceptability 80+ is evaluated in the source floor). Restrict the existing group-coverage requirement to best-class providers; do not double the solver's requirement graph. Numeric CD log quality differences within the same class remain late tie-breakers.
