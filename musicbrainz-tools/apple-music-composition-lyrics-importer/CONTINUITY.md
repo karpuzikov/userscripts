@@ -2,10 +2,10 @@
 
 ## Project and status
 - Purpose: Tampermonkey script for importing supported Apple Music song credits as MusicBrainz Recording, Work, and Release relationships in the MusicBrainz release relationship editor.
-- Current version: **2.3.22 - Under construction ⚠️**. Runtime testing in the target browser is still required.
+- Current version: **2.3.23 - Under construction ⚠️**. Runtime testing in the target browser is still required.
 - Repository: `karpuzikov/userscripts`, default branch `main`.
 - Canonical source: `musicbrainz-tools/apple-music-composition-lyrics-importer/MusicBrainz_Apple_Music_Composition_Lyrics_Importer.user.js`.
-- Userscript metadata: `@version 2.3.22`, matching in-panel `SCRIPT_VERSION = '2.3.22'`.
+- Userscript metadata: `@version 2.3.23`, matching in-panel `SCRIPT_VERSION = '2.3.23'`.
 - Read the root `SOFTWARE_RULES.md` and current relevant UXDT guidance before modifying the UI. No separate project RULES.md was present at the 2026-10-08 preflight.
 
 ## Host, architecture, dependencies
@@ -125,3 +125,9 @@
 - 10 source-level mocked checks passed: 16-candidate narrowing, title/author WorkSearch syntax, verified Work author relations, no-match safety, >8 ambiguity retained, rejected unrelated relationship role, rejected candidate not present in complete title search, no-author safety, <=8 regression, and network failure propagation. This is **not live confirmation of improved Work count** on v2.3.22.
 - Update distribution: source userscript `2.3.22 - Under construction ⚠️`, keep native Tampermonkey install/update metadata, README immutable pinned installer and this continuity synchronized. No new separate script/module.
 - **IMPORTANT unsaved edits:** The v2.3.21 screenshot shows staged but unsaved new Works. User must *not refresh that tab without saving or intentionally discarding those edits*. To compare v2.3.22 use a separate editor tab while keeping the first intact, and submit **only one** consistent set of changes to avoid duplicate submissions, or finish/submitted existing changes before retesting. Browser Debug Bridge capture of v2.3.22 completion is required to verify whether additional existing Works were safely linked; no guarantee all 21 require new Works.
+
+## 2026-10-08 - v2.3.23 - Yields to the unified MusicBrainz ToolBox Apple importer
+- After Credit Hoarder was merged into ToolBox v1.0.58, user observed two Apple import controls. User requests **one unified interface** rather than two parallel importers.
+- ToolBox v1.0.59 owns Apple import UI on MusicBrainz release relationship pages through `data-karpuzikov-apple-import-owner="toolbox"` on the document root. The installed standalone **v2.3.23** detects this marker across Tampermonkey sandboxes, delays its UI injection 2 seconds to allow ToolBox document-idle boot, and hides its empty panel when Toolbox becomes owner. It does **not** discard a running import or staged-results panel. Without ToolBox, its entire v2.3.22 album/direct-song/Work-matching behavior is retained as an independent fallback (version number and status bumped).
+- Compatibility rule: **ToolBox is the single owner when installed**, with one Apple icon, UPC barcode fallback, optional Apple Music song URL, Credit Hoarder review, and Work resolution. Do not add competing controls. Users must update both scripts; older already-installed userscript versions will not automatically receive the new yield behavior until native Tampermonkey update.
+- Static syntax and ownership checks passed; no real browser test for v2.3.23 yet. New parity tests with Toolbox and Bridge JSON required. Both products remain **Under construction ⚠️**.
