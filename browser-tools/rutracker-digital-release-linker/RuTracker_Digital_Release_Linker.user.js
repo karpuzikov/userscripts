@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         RuTracker Digital Release Linker
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.1.22
+// @version      1.1.23
 // @description  Links exact digital release pages in RuTracker BBCode, falls back from Deezer to MusicBrainz-linked Beatport releases, and adds country flag emoji.
 // @author       karpuzikov
 // @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/browser-tools/rutracker-digital-release-linker/RuTracker_Digital_Release_Linker.user.js
@@ -115,7 +115,7 @@
                 retries: 2,
                 retry503: true,
                 headers: {
-                    'User-Agent': `${SCRIPT_NAME}/1.1.22 (Tampermonkey userscript)`,
+                    'User-Agent': `${SCRIPT_NAME}/1.1.23 (Tampermonkey userscript)`,
                 },
             });
         });
@@ -140,7 +140,7 @@
                         url,
                         headers: {
                             Accept: 'text/html',
-                            'User-Agent': `${SCRIPT_NAME}/1.1.22 (Tampermonkey userscript)`,
+                            'User-Agent': `${SCRIPT_NAME}/1.1.23 (Tampermonkey userscript)`,
                         },
                         timeout: 20000,
                         onload(response) {
@@ -1036,7 +1036,7 @@
         return promise;
     }
 
-    async function resolveDeezer(context) {
+    async function resolveDeezer(context, { deezerOnly = false } = {}) {
         const { meta, currentUrl, topicArtist } = context;
 
         if (meta.identifier?.type === 'barcode') {
@@ -1064,7 +1064,7 @@
                 if (mbAlbum) return { kind: 'deezer', url: `https://www.deezer.com/album/${mbAlbum.id}` };
             }
 
-            return resolveBeatportFromMusicBrainz(meta);
+            return deezerOnly ? null : resolveBeatportFromMusicBrainz(meta);
         }
 
         if (meta.identifier?.type === 'catalog') {
@@ -1077,7 +1077,7 @@
                 if (album) return { kind: 'deezer', url: `https://www.deezer.com/album/${album.id}` };
             }
 
-            return resolveBeatportFromMusicBrainz(meta);
+            return deezerOnly ? null : resolveBeatportFromMusicBrainz(meta);
         }
 
         // No identifier: only search by metadata when repairing an existing
@@ -1132,11 +1132,13 @@
         },
     ];
 
-    // Manual force mode: Deezer only; never discard verified existing sources.
+    // Mandatory: in forced mode, search Deezer for EVERY WEB release
+    // irrespective of existing links, barcode, or catalog number.
     async function resolveForceDeezer(context) {
-        const primary = await resolveDeezer(context);
+        const primary = await resolveDeezer(context, { deezerOnly: true });
         if (primary?.kind === 'deezer') return primary;
-        if (context.meta.identifier || !context.topicArtist) return null;
+        // A failed UPC/catalog lookup must not skip Deezer album search.
+        if (!context.topicArtist) return null;
 
         const { meta, topicArtist } = context;
         const results = await deezerSearchAlbums(meta.title, topicArtist);
@@ -1281,7 +1283,7 @@
         forceButton.value = 'Force link all web releases';
         forceButton.className = 'btn';
         forceButton.style.cursor = 'pointer';
-        forceButton.title = 'Search all WEB releases and replace existing source credits with the matching Deezer release. CD-only entries are skipped; Undo is available.';
+        forceButton.title = 'Search Deezer for every WEB release, even those with existing sources or barcode/catalog numbers; keep unmatched sources and all artwork unchanged.';
 
         const undoButton = document.createElement('input');
         undoButton.type = 'button';
@@ -1385,7 +1387,7 @@
         if (ui.forceButton) ui.forceButton.disabled = true;
         if (ui.undoButton) ui.undoButton.disabled = true;
         let finished = 0;
-        const stage = forceWeb ? 'Checking WEB releases' : 'Resolving';
+        const stage = forceWeb ? 'Searching Deezer for WEB releases' : 'Resolving';
         setStatus(ui.status, `${stage} 0/${candidates.length}...`);
 
         try {
@@ -1467,7 +1469,7 @@
             applyPostChange(textarea, ui, originalText, updatedText);
 
             const parts = [`${forceWeb ? 'Deezer links updated' : 'Linked'}: ${linked}`];
-            if (forceWeb) parts.push(`checked: ${candidates.length}`);
+            if (forceWeb) parts.push(`WEB searched: ${candidates.length}`);
             if (alreadyCorrect) parts.push(`already correct: ${alreadyCorrect}`);
             if (beatportFallbacks) parts.push(`Beatport fallback: ${beatportFallbacks}`);
             if (countryResult.changed) parts.push(`country flags: ${countryResult.changed}`);
