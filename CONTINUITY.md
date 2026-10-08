@@ -2,7 +2,7 @@
 
 ## Product and state
 - Product: Karpuzikov Picard Scripts, a Picard 3.x Git-updatable MusicBrainz metadata plugin.
-- Current version: 1.5.14 - Under construction ⚠️ (not yet verified inside user Picard).
+- Current version: 1.5.15 - Under construction ⚠️ (not yet verified inside user Picard).
 - Git repository and active branch: `karpuzikov/userscripts`, `main`.
 - There is no additional project-specific `RULES.md` currently; the canonical repository root `SOFTWARE_RULES.md` governs this project.
 
@@ -104,3 +104,8 @@
 - Confirmed cross-script hazard: Unicode normalization changes `artist`/`albumartist`, but `Format Multiple Artists` compares those fields to MusicBrainz's original multi-valued `artists`/`albumartists`. If Unicode conversion happens first, e.g. `G‐DRAGON` becomes `G-DRAGON` only on one side and Format can incorrectly remove the artist.
 - Fixed embedded `SCRIPTS` execution order (and matching options order) to: Move Featured Artists -> Format Multiple Artists -> Unicode to ASCII -> Add EP/Single Suffix -> English Title Capitalization. When using standalone scripts in Picard's Options > Scripting, the user must arrange Format above Unicode; embedded plugin order is enforced automatically. Reordered README rows to reflect this dependency.
 - `Format Multiple Artists` itself was not redesigned; original artist/albumartist eligibility and 1/2/3+ joining logic remain unchanged to protect nonstandard join phrases. Known partial-name false-match risk remains documented. New order regression test added; plugin 1.5.14 remains Under construction ⚠️ pending Picard 3 runtime validation.
+
+## Move Featured Artists duplicate-title prevention (2026-10-09; plugin v1.5.15)
+
+- The existing Move Featured Artists script appended `(ft. Guest)` even if `title` already contained `(feat. Guest)` or `(ft. Guest)` and `artist` still carried the featured credit. Fixed by normalizing only the title-inspection copy from `feat.` to `ft.`, then appending only when the equivalent credit is absent. Existing artist/albumartist removal regex and captured credit spelling/casing are preserved. Temporary `_feat_title` is unset at end.
+- Published `picard-tools/scripts/Move_Featured_Artists_to_Title_v1.0.1.txt`, mirrored to stable .txt and embedded plugin source. Added versioned README link and runtime regression cases covering no credit, already-`ft.`, and already-`feat.` titles. Tests requiring Picard are pending execution inside Picard 3; keep v1.5.15 - Under construction ⚠️.
