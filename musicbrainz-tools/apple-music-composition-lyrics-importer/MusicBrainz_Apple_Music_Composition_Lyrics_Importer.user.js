@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Apple Music works credits -> MusicBrainz
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      2.3.16
+// @version      2.3.17
 // @description  Resolve the correct Apple Music release and import supported Apple Music credits to the proper MusicBrainz Recording, Work, or Release relationships.
 // @author       karpuzikov
 // @license      MIT
@@ -135,7 +135,7 @@ function __amMbGmXmlhttpRequest(details) {
     'use strict';
 
     const PAGE = typeof unsafeWindow !== 'undefined' ? unsafeWindow : window;
-    const SCRIPT_VERSION = '2.3.16';
+    const SCRIPT_VERSION = '2.3.17';
     let MB = PAGE.MB;
     const APPLE_API_BASE = 'https://amp-api.music.apple.com/v1';
     const APPLE_TOKEN_BOOTSTRAP_URL = 'https://music.apple.com/us/browse';
@@ -1479,172 +1479,43 @@ function __amMbGmXmlhttpRequest(details) {
         return entity;
     }
 
-    const workAuthorResolutionCache = new Map();
-    const worksByAuthorTitleCache = new Map();
-
-    async function resolveAppleAuthorForWork(name) {
-        const key = normalizeText(name);
-        if (workAuthorResolutionCache.has(key)) {
-            return workAuthorResolutionCache.get(key);
-        }
-
-        let candidates = [];
-        let reason = '';
-
-        const context = await findContextArtistCandidates(name);
-        if (context.candidates.length) {
-            candidates = context.candidates;
-            reason = `context circle ${context.circle}`;
-        } else {
-            const global = await searchArtists(name);
-            const exactIndexes = exactCandidateIndexes(name, global);
-            candidates = exactIndexes.map(index => global[index]);
-            reason = exactIndexes.length
-                ? 'global exact name/alias match'
-                : 'no exact MusicBrainz artist/alias match';
-        }
-
-        const mbids = [...new Set(
-            candidates.map(candidate => candidate.mbid).filter(Boolean)
-        )];
-
-        const resolved = { name, mbids, candidates, reason };
-        workAuthorResolutionCache.set(key, resolved);
-        return resolved;
-    }
-
-    async function searchWorksByAuthorAndTitle(mbid, title) {
-        const cacheKey = `${mbid}:${normalizeText(title)}`;
-        if (worksByAuthorTitleCache.has(cacheKey)) {
-            return worksByAuthorTitleCache.get(cacheKey);
-        }
-
-        // MusicBrainz WorkSearch supports arid + work fields. Fetch only the
-        // relevant title for this credited author, rather than traversing that
-        // artist's entire (possibly thousands-long) Work catalogue.
-        const query = `work:"${escapeLucene(title)}" AND arid:${mbid}`;
-        const works = [];
-        const limit = 100;
-        let offset = 0;
-
-        while (true) {
-            const url = `/ws/2/work/?query=${encodeURIComponent(query)}&fmt=json&limit=${limit}&offset=${offset}`;
-            const json = await musicBrainzWsJson(
-                url,
-                `MusicBrainz Works for "${title}" / author ${mbid}`,
-                `work-author-title:${cacheKey}:${offset}`
-            );
-            const batch = Array.isArray(json.works) ? json.works : [];
-            const count = Number(json['work-count'] ?? (offset + batch.length));
-            if (!Number.isFinite(count) || count < 0) {
-                throw new Error(`Invalid Work search count for "${title}".`);
-            }
-
-            works.push(...batch.filter(work =>
-                normalizeText(work.title || '') === normalizeText(title)
-            ).map(work => ({
-                mbid: work.id,
-                title: work.title || '',
-                type: work.type || '',
-                disambiguation: work.disambiguation || '',
-            })));
-
-            offset += batch.length;
-            if (offset >= count) break;
-            if (!batch.length || batch.length < limit) {
-                // A partial search result must NEVER be mistaken for proof that
-                // the Work does not already exist (which could create a duplicate).
-                throw new Error(`Incomplete Work search for "${title}" (fetched ${offset}/${count}).`);
-            }
-        }
-
-        worksByAuthorTitleCache.set(cacheKey, works);
-        return works;
-    }
+    const workTitleSearchCache = new Map();
 
     function isWorkAuthorCredit(credit) {
-        if (credit?.target !== 'work') return false;
-        return ['writer', 'composer', 'lyricist', 'librettist'].includes(
-            normalizeText(credit.mbRole)
-        );
+        return credit?.target === 'work' &&
+            ['writer', 'composer', 'lyricist', 'librettist'].includes(normalizeText(credit.mbRole));
     }
 
-    async function findWorkCandidatesByCreditedAuthors(title, workCredits) {
-        const people = new Map();
-
-        for (const credit of workCredits.filter(isWorkAuthorCredit)) {
-            const name = String(credit.appleName || '').trim();
-            if (!name) continue;
-
-            const key = normalizeText(name);
-            if (!people.has(key)) {
-                people.set(key, {
-                    key,
-                    name,
-                    roles: new Set(),
-                    mbids: [],
-                    resolutionReason: '',
-                });
-            }
-            people.get(key).roles.add(credit.mbRole);
+    async function findVerifiedExistingWork(title, matches, authorCredits) {
+        const distinct = [...new Map(matches.map(work => [work.id, work])).values()];
+        if (distinct.length > 8) return {
+            work: null,
+            reason: `${distinct.length} existing Works share this title; manual review required.`
+        };
+        const authorNames = new Set(authorCredits.map(credit => normalizeText(credit.appleName)).filter(Boolean));
+        const matchesByAuthor = [];
+        for (const candidate of distinct) {
+            const details = await musicBrainzWsJson(
+                `/ws/2/work/${encodeURIComponent(candidate.id)}?inc=artist-rels&fmt=json`,
+                `Checking Work authors: ${title}`,
+                `work-credit-check:${candidate.id}`
+            );
+            const matching = (details.relations || []).some(relation =>
+                relation.artist &&
+                ['writer', 'composer', 'lyricist', 'librettist'].includes(normalizeText(relation.type)) &&
+                [relation.artist.name, relation['source-credit'], relation['target-credit']]
+                    .some(name => name && authorNames.has(normalizeText(name)))
+            );
+            if (matching) matchesByAuthor.push(candidate);
         }
-
-        const authors = [...people.values()];
-        if (!authors.length) {
-            return {
-                candidates: [],
-                authors,
-                unresolvedAuthors: [],
-                reason: 'no composer/songwriter credits are available',
-            };
-        }
-
-        for (const author of authors) {
-            const resolved = await resolveAppleAuthorForWork(author.name);
-            author.mbids = resolved.mbids;
-            author.resolutionReason = resolved.reason;
-        }
-
-        const unresolvedAuthors = authors.filter(author => !author.mbids.length);
-        if (unresolvedAuthors.length) {
-            return {
-                candidates: [],
-                authors,
-                unresolvedAuthors,
-                reason:
-                    `could not resolve credited author(s): ${unresolvedAuthors.map(author => author.name).join(', ')}`,
-            };
-        }
-
-        const matches = new Map();
-
-        // Keep the author-first lookup contract, but ask the WorkSearch index
-        // for the author's exact title instead of downloading every Work.
-        for (const author of authors) {
-            for (const mbid of author.mbids) {
-                const works = await searchWorksByAuthorAndTitle(mbid, title);
-
-                for (const work of works) {
-                    if (normalizeText(work.title) !== normalizeText(title)) continue;
-
-                    let item = matches.get(work.mbid);
-                    if (!item) {
-                        item = {
-                            ...work,
-                            matchedAuthors: new Set(),
-                        };
-                        matches.set(work.mbid, item);
-                    }
-                    item.matchedAuthors.add(author.name);
-                }
-            }
-        }
-
+        if (matchesByAuthor.length === 1) return {
+            work: { mbid: matchesByAuthor[0].id, title: matchesByAuthor[0].title }, reason: ''
+        };
         return {
-            candidates: [...matches.values()],
-            authors,
-            unresolvedAuthors: [],
-            reason: '',
+            work: null,
+            reason: matchesByAuthor.length
+                ? `${matchesByAuthor.length} Works match the credited author(s); manual review required.`
+                : `${distinct.length} Work(s) have the same title, but no author match was verified; manual review required.`
         };
     }
 
@@ -1850,22 +1721,30 @@ function __amMbGmXmlhttpRequest(details) {
     }
 
     async function searchExistingWorksByExactTitle(title) {
-        // A fallback for authors absent from MusicBrainz. Never assume that
-        // an unresolved author proves the Work does not already exist.
+        const key = normalizeText(title);
+        if (workTitleSearchCache.has(key)) return workTitleSearchCache.get(key);
         const query = `work:"${escapeLucene(title)}"`;
-        const json = await musicBrainzWsJson(
-            `/ws/2/work?query=${encodeURIComponent(query)}&fmt=json&limit=100`,
-            `MusicBrainz Work title check: ${title}`,
-            `work-exact-title:${normalizeText(title)}`
-        );
-        const works = Array.isArray(json.works) ? json.works : [];
-        const matches = works.filter(work =>
-            normalizeText(work.title || work.name) === normalizeText(title)
-        );
-        return {
-            matches,
-            complete: Number(json['work-count'] || works.length) <= works.length,
-        };
+        const limit = 100, matches = [];
+        let offset = 0;
+        for (;;) {
+            const json = await musicBrainzWsJson(
+                `/ws/2/work?query=${encodeURIComponent(query)}&fmt=json&limit=${limit}&offset=${offset}`,
+                `Existing Work title search: ${title}`,
+                `work-title:${key}:${offset}`
+            );
+            const page = Array.isArray(json.works) ? json.works : [];
+            const count = Number(json['work-count'] ?? (offset + page.length));
+            if (!Number.isSafeInteger(count) || count < 0) throw Error(`Invalid Work search count: ${title}`);
+            matches.push(...page.filter(work => normalizeText(work.title || work.name) === key));
+            offset += page.length;
+            if (offset >= count) break;
+            if (!page.length || page.length < limit) {
+                throw Error(`Incomplete Work title search: ${title} (${offset}/${count})`);
+            }
+        }
+        const result = { matches, complete: true };
+        workTitleSearchCache.set(key, result);
+        return result;
     }
 
     async function linkExistingWorkForRow(row, candidate) {
@@ -1883,60 +1762,43 @@ function __amMbGmXmlhttpRequest(details) {
     async function ensureWorkForRow(row) {
         const workCredits = row.supportedCredits.filter(credit => credit.target === 'work');
         if (!workCredits.length) return;
-
         if (row.works.length === 1) {
             row.workResolution = 'Existing linked Work';
             return;
         }
         if (row.works.length > 1) {
-            row.workResolution = `Multiple linked Works (${row.works.length}); no automatic changes`;
+            row.workResolution = `Multiple linked Works (${row.works.length}); manual review required`;
             return;
         }
-
         const title = row.mbTitle || row.appleTrack.title;
         const authors = workCredits.filter(isWorkAuthorCredit);
         if (!authors.length) {
-            row.workResolution = 'No supported songwriter/composer credits for duplicate checking; Work not created';
+            row.workResolution = 'No songwriter/composer credits; Work not created';
             return;
         }
 
-        setStatus(`Checking existing Works for "${title}"...`);
-        const lookup = await findWorkCandidatesByCreditedAuthors(title, authors);
-        if (lookup.candidates.length === 1 && !lookup.unresolvedAuthors.length) {
-            // An exact-title Work belonging to the credited authors is not a
-            // reason to abandon the import. Reuse it instead of duplicating it.
-            setStatus(`Linking existing Work to "${title}"...`);
-            await linkExistingWorkForRow(row, lookup.candidates[0]);
+        // Search the title BEFORE resolving credited artists. 503 errors on
+        // the artist endpoint must not prevent staging a genuinely new Work.
+        setStatus(`Looking for existing Work "${title}"...`);
+        const titleCheck = await searchExistingWorksByExactTitle(title);
+        if (!titleCheck.complete) {
+            row.workResolution = 'Work search incomplete; manual review required';
             return;
         }
-        if (lookup.candidates.length) {
-            row.workResolution = `${lookup.candidates.length} author-matched Work candidate(s) ` +
-                '(or some authors unresolved). No duplicate Work will be created.';
-            return;
-        }
-
-        if (lookup.unresolvedAuthors.length) {
-            // The old code stopped here, leaving all songwriting credits
-            // unattached. A global title check can prove that no currently
-            // indexed Work with the same title exists.
-            setStatus(`Some songwriters could not be resolved. Checking Work title "${title}"...`);
-            const titleCheck = await searchExistingWorksByExactTitle(title);
-            if (!titleCheck.complete) {
-                row.workResolution = 'Work title search incomplete; no automatic Work created';
-                return;
+        if (titleCheck.matches.length) {
+            setStatus(`Checking existing Work authors for "${title}"...`);
+            const selection = await findVerifiedExistingWork(title, titleCheck.matches, authors);
+            if (selection.work) {
+                await linkExistingWorkForRow(row, selection.work);
+            } else {
+                row.workResolution = selection.reason;
             }
-            if (titleCheck.matches.length) {
-                row.workResolution = `${titleCheck.matches.length} Work(s) with the same title exist; ` +
-                    'unresolved songwriters prevent safe matching. No duplicate created.';
-                return;
-            }
+            return;
         }
-
-        setStatus(`No matching Work found for "${title}". Staging new Song Work...`);
+        setStatus(`No existing Work found for "${title}". Staging new Song Work...`);
         const work = await createWorkForRecording(row.mbTrack.recording);
         row.works = [work];
-        row.workResolution = `New Song Work staged: ${work.name || title}. ` +
-            'Supported writer credits will be added for matched MusicBrainz artists when applied.';
+        row.workResolution = `New Song Work staged: ${work.name || title}. Writer credits are applied separately.`;
     }
 
     function autoCandidateIndex(person) {
@@ -2007,7 +1869,7 @@ function __amMbGmXmlhttpRequest(details) {
                 if (row.workResolution) {
                     details.push(row.workResolution);
                 }
-                if (blockedWork.length) {
+                if (blockedWork.length && row.workResolution !== 'Waiting for Work lookup') {
                     details.push(
                         row.works.length === 0
                             ? `${blockedWork.length} Work credit(s) blocked - no unambiguous Work could be resolved`
@@ -2219,6 +2081,18 @@ function __amMbGmXmlhttpRequest(details) {
             // Enter the source note before any Work edits are staged.
             await addEditNote();
 
+            // Expose partial results while Work lookups run, including via bridge.
+            for (const row of state.rows) {
+                if (row.mbTrack && row.titleMatch && !row.error &&
+                    row.supportedCredits.some(credit => credit.target === 'work')) {
+                    row.workResolution = 'Waiting for Work lookup';
+                }
+            }
+            renderTracks();
+            let workChecks = 0;
+            let worksStaged = 0;
+            let worksReused = 0;
+
             for (let index = 0; index < state.rows.length; index++) {
                 const row = state.rows[index];
                 if (row.error || !row.mbTrack || !row.titleMatch) continue;
@@ -2236,6 +2110,16 @@ function __amMbGmXmlhttpRequest(details) {
                     }
                 } else if (hasWorkCredits) {
                     await ensureWorkForRow(row);
+                }
+                if (hasWorkCredits) {
+                    workChecks++;
+                    if (row.workResolution.startsWith('New Song Work staged:')) worksStaged++;
+                    if (row.workResolution.startsWith('Linked existing Work:')) worksReused++;
+                    renderTracks();
+                    setStatus(
+                        `Works checked ${workChecks}: ${worksStaged} newly staged, ${worksReused} existing linked. ` +
+                        'Artist credits are checked separately.'
+                    );
                 }
             }
 
