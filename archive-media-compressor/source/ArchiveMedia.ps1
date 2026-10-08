@@ -1,7 +1,7 @@
 #requires -Version 7.0
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
-Write-Host "ArchiveMedia v6.1.0 - Under construction ⚠️" -ForegroundColor Cyan
+Write-Host "ArchiveMedia v6.1.1 - Under construction ⚠️" -ForegroundColor Cyan
 
 # ---------------- USER-TUNABLE SETTINGS ----------------
 $MaxParallel = 4
@@ -67,6 +67,7 @@ function Select-Folder([string]$Title) {
     $p = (Read-Host "$Title [blank = browse local folders]").Trim().Trim('"')
     if ($p) {
         if (Test-RclonePath $p) { return $p.Replace('\','/').TrimEnd('/') }
+        if ($p -match '^[A-Za-z]:[^\\/]') { throw "Use an absolute path, such as D:\\Pictures." }
         return [IO.Path]::GetFullPath($p).TrimEnd('\')
     }
     try {
@@ -252,7 +253,7 @@ Write-Host "ImageMagick:$Magick"
 # First-class cloud backend. The original analysis and conversion engine runs
 # in a child process on one locally staged file; its media policies are unchanged.
 function Test-RclonePath([string]$p) {
-    if ($p -match '^[A-Za-z]:([\\/]|$)') { return $false }
+    if ($p -match '^[A-Za-z]:') { return $false }
     return $p -match '^[A-Za-z0-9][A-Za-z0-9 _.-]*:'
 }
 function Join-CloudPath([string]$root, [string]$relative) {
