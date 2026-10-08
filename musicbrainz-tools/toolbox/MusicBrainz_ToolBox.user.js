@@ -19270,7 +19270,7 @@ Leave empty to use the default (${srcName} name, or MB's most-frequent existing 
     if (sources.tidal) importSources.push({ name: "Tidal", url: sources.tidal, run: (g, c, collect) => runTidalImport(sources.tidal, g, c, collect) });
     if (sources.qobuz) importSources.push({ name: "Qobuz", url: sources.qobuz, run: (g, c, collect) => runQobuzImport(sources.qobuz, g, c, collect) });
     if (sources.deezer) importSources.push({ name: "Deezer", url: sources.deezer, run: (g, c, collect) => runDeezerImport(sources.deezer, g, c, collect) });
-    if (sources.apple) importSources.push({ name: "Apple", url: sources.apple, run: (g, c, collect) => runAppleImport(sources.apple, g, c, collect) });
+    importSources.push({ name: "Apple", url: sources.apple || "", run: (g, c, collect) => runAppleImport(sources.apple || "", g, c, collect) });
     if (sources.metalArchives) importSources.push({ name: "Metal Archives", url: sources.metalArchives, run: (g, c, collect) => runMetalArchivesImport(sources.metalArchives, g, c, collect) });
     if (sources.ytmusic) importSources.push({ name: "YouTube Music", url: sources.ytmusic, run: (g, c, collect) => runYtmImport(sources.ytmusic, g, c, collect) });
     if ((meta.titlesRemixCount || 0) > 0) {
@@ -19317,6 +19317,28 @@ Leave empty to use the default (${srcName} name, or MB's most-frequent existing 
       return b;
     };
     importSources.forEach(makeSrcButton);
+    const toolboxSongLabel = document.createElement("label");
+    toolboxSongLabel.htmlFor = "toolbox-apple-song-url";
+    toolboxSongLabel.textContent = "Apple song URL (optional)";
+    toolboxSongLabel.style.cssText = "font-size:0.8rem;white-space:nowrap;";
+    const toolboxSongInput = document.createElement("input");
+    toolboxSongInput.id = "toolbox-apple-song-url";
+    toolboxSongInput.type = "url";
+    toolboxSongInput.inputMode = "url";
+    toolboxSongInput.autocomplete = "off";
+    toolboxSongInput.placeholder = "https://music.apple.com/us/song/title/1685732274";
+    toolboxSongInput.title = "Paste a song URL and select the Apple icon to import only that song. Leave blank for an album.";
+    toolboxSongInput.style.cssText = "flex:1 1 220px;max-width:350px;min-width:160px;padding:6px;border:1px solid var(--mbu-border);border-radius:4px;background:var(--mbu-bg);color:inherit;";
+    toolboxSongInput.addEventListener("input", () => toolboxSongInput.setCustomValidity(""));
+    toolboxSongInput.addEventListener("change", () => {
+      if (!toolboxSongInput.value.trim()) return;
+      try {
+        const url = new URL(toolboxSongInput.value);
+        if (url.hostname !== "music.apple.com" || !/\/song\//.test(url.pathname)) throw Error("Invalid song URL");
+      } catch {
+        toolboxSongInput.setCustomValidity("Enter a valid music.apple.com song URL.");
+      }
+    });
     if (meta.sourceProbeFailed && !importSources.length) {
       const warn = document.createElement("span");
       warn.className = "discogs-src-probe-failed";
@@ -19360,6 +19382,8 @@ Leave empty to use the default (${srcName} name, or MB's most-frequent existing 
     progressPct.style.cssText = "display:none; margin-left:0.5rem; font-size:0.85rem; color:var(--mbu-warn); font-weight:bold; min-width:3.5rem;";
     row1.appendChild(importLabel);
     row1.appendChild(srcIcons);
+    row1.appendChild(toolboxSongLabel);
+    row1.appendChild(toolboxSongInput);
     row1.appendChild(progressPct);
     const actionSlot = document.createElement("div");
     actionSlot.className = "discogs-bar-action";
@@ -20336,42 +20360,140 @@ ${lines}
       log.error(err.message || String(err));
     });
   }
-  function runAppleImport(appleUrl, getOpts, cancelled, collect) {
-    const parsed = parseAppleAlbumUrl(appleUrl);
-    if (!parsed) {
-      log.error(`Not an Apple Music album URL: ${appleUrl}`);
-      return Promise.resolve();
-    }
-    log.info(`Fetching Apple Music credits (anonymous): album ${parsed.id} (${parsed.storefront})`);
-    return fetchAppleCredits(parsed.storefront, parsed.id, (d, n) => document.querySelector(".discogs-bar")?._setProgress?.(null, `Apple ${d}/${n}`)).then(({ album, tracks }) => {
-      _appleJson = { source: appleUrl, album, tracks };
-      const li = document.createElement("li");
-      const pre = document.createElement("pre");
-      pre.style.cssText = "max-height:400px;overflow:auto;font-size:0.72rem;background:var(--mbu-bg-raised);padding:0.5rem;border:1px solid var(--mbu-border);border-radius:3px;margin:0.3rem 0 0 0;white-space:pre-wrap;word-break:break-all;";
-      pre.textContent = JSON.stringify(_appleJson, null, 2);
-      li.innerHTML = `<details><summary style="cursor:pointer;user-select:none;"><strong>${album || "Apple album"} \xB7 ${tracks.length} tracks \u2014 parsed Apple credits (API)</strong></summary></details>`;
-      li.querySelector("details").appendChild(pre);
-      _logs2.appendChild(li);
-      if (!tracks.length) {
-        log.warn("No Apple credits found (Apple has no credit data for this album, or none of its tracks list credits) \u2014 nothing to import.");
-        stopMsg(collect, "No importable credits found");
-        return;
-      }
-      const { tracklistRels, tracklist, skipped, multiVolume } = appleToEngine(tracks);
-      log.info(`Apple credits: ${tracklistRels.length} per-track relationship(s) across ${tracklist.length} track(s)`);
-      skipped.forEach((s) => log.info(`Not imported (v1 scope): ${s}`));
-      if (multiVolume) log.warn(`Multi-medium Apple album \u2014 track numbers repeat per medium; positions may not all match this release's mediums. Review carefully.`);
-      if (!tracklistRels.length) {
-        log.warn("No importable Apple credits found.");
-        stopMsg(collect, "No importable credits found");
-        return;
-      }
-      const parts = { companies: [], artistRoles: [], tracklistRels, tracklist, sourceUrl: appleUrl, processTracklist: true };
-      return collect ? parts : runSourcePipeline({ ...parts, getOpts, cancelled });
-    }).catch((err) => {
-      log.error(err.message || String(err));
-    });
+
+  function toolboxAppleNormalized(s) {
+    return String(s || "").normalize("NFKD").replace(/[\u0300-\u036f]/g,"")
+      .replace(/\s*[([]\s*(?:feat(?:uring)?|ft)\.?\s+[^\])]+[)\]]/gi,"")
+      .toLowerCase().replace(/[^\p{L}\p{N}]+/gu," ").trim();
   }
+  function toolboxAppleUpc(value) {
+    return String(value || "").replace(/\D/g,"").replace(/^0+/,"") || "0";
+  }
+  async function toolboxAppleMbRelease() {
+    const mbid = location.pathname.match(/\/release\/([a-f0-9-]{36})\/edit-relationships/i)?.[1];
+    if (!mbid) throw Error("MusicBrainz release not found.");
+    const response = await __mbToolBoxFetch("/ws/2/release/" + mbid + "?inc=recordings&fmt=json",
+      {headers:{Accept:"application/json"}});
+    if (!response.ok) throw Error("MusicBrainz release lookup failed: HTTP " + response.status);
+    return response.json();
+  }
+  async function toolboxAppleAlbumFromBarcode(link,release) {
+    const barcode = String(release.barcode || "").replace(/\D/g,"");
+    if (link) {
+      const parsed = parseAppleAlbumUrl(link);
+      if (parsed) {
+        try {
+          const token = await appleToken();
+          const r = await appleGet(APPLE_AMP + "/" + parsed.storefront + "/albums/" + parsed.id + "?l=en-US",ampHeaders(token));
+          if (r.status === 200) {
+            const album = JSON.parse(r.text).data?.[0];
+            const upc = String(album?.attributes?.upc || "").replace(/\D/g,"");
+            if (album && (!barcode || (upc && toolboxAppleUpc(upc) === toolboxAppleUpc(barcode)))) {
+              return {url:link,...parsed};
+            }
+            log.warn("The linked Apple Music album UPC differs from MusicBrainz; searching by exact barcode.");
+          }
+        } catch(error) {log.warn("Apple Music linked album verification failed: "+error.message);}
+      }
+    }
+    if (!barcode) throw Error("No verified Apple Music link or MusicBrainz barcode; enter a song URL.");
+    const token = await appleToken();
+    for (const sf of ["us","gb","de","fr","ua","jp"]) {
+      try {
+        const r = await appleGet(APPLE_AMP + "/" + sf +
+          "/albums?filter%5Bupc%5D=" + encodeURIComponent(barcode) + "&limit=25",ampHeaders(token));
+        if (r.status !== 200) continue;
+        const albums = JSON.parse(r.text).data || [];
+        const match = albums.find(a =>
+          a.attributes?.upc && toolboxAppleUpc(a.attributes.upc) === toolboxAppleUpc(barcode));
+        if (match) return {
+          url:match.attributes?.url || ("https://music.apple.com/"+sf+"/album/id"+match.id),
+          storefront:sf,id:String(match.id)
+        };
+      } catch(error) {log.warn("Apple "+sf+" UPC search: "+error.message);}
+    }
+    throw Error("No Apple Music album verified against MusicBrainz barcode "+barcode+".");
+  }
+  async function toolboxAppleOneSong(rawUrl,release) {
+    let url;
+    try {url = new URL(rawUrl);}catch {throw Error("Invalid Apple Music song URL.");}
+    const match = url.pathname.match(/^\/(?:([a-z]{2})\/)?song\/(?:[^/]+\/)?(\d+)\/?$/i);
+    if (url.hostname !== "music.apple.com" || !match) throw Error("Enter a music.apple.com song URL.");
+    const sf = (match[1] || "us").toLowerCase(),sid = match[2];
+    const token = await appleToken(), base = APPLE_AMP+"/"+sf+"/songs/"+sid;
+    const r = await appleGet(base+"?l=en-US",ampHeaders(token));
+    if (r.status !== 200) throw Error("Apple song metadata: HTTP "+r.status);
+    const song = JSON.parse(r.text).data?.[0];
+    if (!song?.attributes?.name || String(song.id) !== sid) throw Error("Apple song identity was not confirmed.");
+    const title = song.attributes.name, matches = [];
+    for (const medium of release.media || []) {
+      for (const track of medium.tracks || []) {
+        if (toolboxAppleNormalized(track.title) === toolboxAppleNormalized(title)) {
+          matches.push({medium,track});
+        }
+      }
+    }
+    let selected = matches.length === 1 ? matches[0] : null;
+    if (!selected && matches.length > 1) {
+      const slot = matches.filter(m => Number(m.medium.position) === Number(song.attributes.discNumber || 1) &&
+        Number(m.track.position) === Number(song.attributes.trackNumber || 1));
+      if (slot.length === 1) selected = slot[0];
+    }
+    if (!selected) throw Error('Apple song "'+title+'" does not uniquely match a MusicBrainz track.');
+    const cr = await appleGet(base+"/credits?l=en-US",ampHeaders(token));
+    if (cr.status !== 200) throw Error("Apple song credits unavailable: HTTP "+cr.status);
+    const credits = [];
+    for (const group of JSON.parse(cr.text).data || []) {
+      for (const person of group.relationships?.["credit-artists"]?.data || []) {
+        for (const role of person.attributes?.roleNames || []) {
+          if (person.attributes?.name) credits.push({name:person.attributes.name,role});
+        }
+      }
+    }
+    if (!credits.length) throw Error("No Apple credits were available for the selected song.");
+    const position = release.media.length > 1
+      ? selected.medium.position + "-" + selected.track.position : String(selected.track.position);
+    return {album:title,tracks:[{index:Number(selected.track.position),title,credits}],
+      sourceUrl:url.href,forcedPosition:position};
+  }
+  function runAppleImport(appleUrl, getOpts, cancelled, collect) {
+    const songUrl = String(document.getElementById("toolbox-apple-song-url")?.value || "").trim();
+    const request = (async () => {
+      if (songUrl && !collect) {
+        return toolboxAppleOneSong(songUrl,await toolboxAppleMbRelease());
+      }
+      if (songUrl && collect) log.warn("Import All uses the full Apple album; the song URL is Apple-only.");
+      const release = await toolboxAppleMbRelease();
+      const result = await toolboxAppleAlbumFromBarcode(appleUrl,release);
+      log.info("Fetching verified Apple Music credits: "+result.url);
+      const payload = await fetchAppleCredits(result.storefront,result.id,
+        (d,n)=>document.querySelector(".discogs-bar")?._setProgress?.(null,"Apple "+d+"/"+n));
+      return {...payload,sourceUrl:result.url};
+    })();
+    return request.then(({album,tracks,sourceUrl,forcedPosition}) => {
+      _appleJson = {source:sourceUrl,album,tracks};
+      const li = document.createElement("li"),pre = document.createElement("pre");
+      pre.style.cssText = "max-height:400px;overflow:auto;font-size:0.72rem;white-space:pre-wrap;word-break:break-all;";
+      pre.textContent = JSON.stringify(_appleJson,null,2);
+      li.innerHTML = '<details><summary>Apple Music - '+tracks.length+' track(s) - raw credits</summary></details>';
+      li.querySelector("details").appendChild(pre);
+      _logs.appendChild(li);
+      if (!tracks.length) {log.warn("No Apple credits found.");stopMsg(collect,"No Apple credits");return;}
+      const converted = appleToEngine(tracks);
+      if (forcedPosition) {
+        for (const r of converted.tracklistRels) r.track.position = forcedPosition;
+        for (const t of converted.tracklist) t.position = forcedPosition;
+      }
+      converted.skipped.forEach(x=>log.info("Unmapped Apple Music role: "+x));
+      if (converted.multiVolume) log.warn("Apple multi-medium album: verify positions in review.");
+      if (!converted.tracklistRels.length) {stopMsg(collect,"No importable credits");return;}
+      const parts = {companies:[],artistRoles:[],tracklistRels:converted.tracklistRels,
+        tracklist:converted.tracklist,sourceUrl,processTracklist:true};
+      return collect ? parts : runSourcePipeline({...parts,getOpts,cancelled});
+    }).catch(error=>{log.error("Apple Music importer: "+(error.message || String(error)));});
+  }
+
+  // YouTube Music import: retain the original provider pipeline.
   function editorMediumSizes() {
     try {
       const MB2 = pageWindow.MB, st = MB2?.relationshipEditor?.state;
@@ -20871,7 +20993,7 @@ ${lines}
       const remixCount = remix?.count || 0;
       if (!probe.failed) logSourceProbe(sources);
       log.info(`Toolbar: ${probe.failed ? "source probe FAILED" : hasProvider ? "linked source(s) found" : "no linked sources"}, ${remixCount} title-derived remixer(s) \u2014 ${probe.failed || hasProvider || remixCount ? "mounting" : "not mounting (nothing to import)"}`);
-      if (!probe.failed && !hasProvider && remixCount === 0) return;
+      // Apple album barcode discovery and direct-song import remain available without linked providers.
       insertDiscogsBar(sources.discogs, sources, { titlesRemixCount: remixCount, sourceProbeFailed: probe.failed });
       log.info(`Boot: toolbar mounted (+${since()}ms from script start)`);
     }
