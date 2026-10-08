@@ -2,7 +2,7 @@
 
 ## Product and state
 - Product: Karpuzikov Picard Scripts, a Picard 3.x Git-updatable MusicBrainz metadata plugin.
-- Current version: 1.5.10 - Under construction ⚠️ (not yet verified inside user Picard).
+- Current version: 1.5.11 - Under construction ⚠️ (not yet verified inside user Picard).
 - Git repository and active branch: `karpuzikov/userscripts`, `main`.
 - There is no additional project-specific `RULES.md` currently; the canonical repository root `SOFTWARE_RULES.md` governs this project.
 
@@ -48,6 +48,17 @@
 - Added seven standard-library unit tests in `picard-tools/tests/test_barcode_toolbar_regressions.py`: placement, idempotence, toolbar re-creation, no native button, lifecycle, monitor/menu and untouched matching API.
 - GitHub source-level checks performed; full Picard 3 UI/runtime validation still pending. Do not claim visual verification until the user confirms the button survives Options > User Interface > Toolbar changes and plugin updates.
 
+## Barcode / UPC Lookup edge clipping fix (2026-10-08)
+
+- User reported Barcode Lookup appearing beyond the Picard window edge. The exact window screenshot was not provided; clipping is the working diagnosis, not a visually confirmed Qt root cause.
+- v1.5.11 pins Barcode Lookup into the first QAction position of Picard's native Actions QToolBar; the former behavior inserted it after the native Lookup action, which could leave it at the far right on narrow windows.
+- Existing late-position actions are promoted without duplicates and Picard 3's toolbar-recreation watcher keeps the leading placement. If the native Actions toolbar is empty, the new action becomes the first item.
+- Compact toolbar text `Barcode` reduces button width. The full tooltip and existing Tools > Plugins menu action remain available for accessibility and keyboard navigation.
+- Native Qt QToolBar overflow is allowed to handle lower-priority actions; plugin must not create a detached/floating widget, force docking, or alter user toolbar configuration.
+- Unit regression tests added/updated in `picard-tools/tests/test_barcode_toolbar_regressions.py` to cover first-item priority, late-action promotion, idempotence, recreated/empty toolbar and menu fallback.
+- Pure Python placement simulation passed 5 tests in this session. Full Picard 3 visual QA is still pending: confirm narrow/maximized window, toolbar customization and normal barcode matching without user settings loss.
+- Do not change barcode query/matching semantics, artist formatting or capitalization while adjusting toolbar placement.
+
 ## Dependencies and persistent data
 - Requires MusicBrainz Picard 3.x, Python >=3.9 as embedded by Picard, and PyQt6 provided by Picard.
 - No separately installed Python packages or filesystem persistent data owned by this plugin. Picard manages plugin configuration, source updates and tagging lifecycle.
@@ -61,6 +72,6 @@
 - Recheck all final version strings, README URLs, syntax of the Python module, and the published versioned standalone download.
 
 ## Known limitations and next action
-- No user-environment runtime verification for 1.5.9 yet. Leave the product Under construction ⚠️ until Picard confirms behavior.
+- Toolbar placement in v1.5.11 is pending user-environment visual verification. Leave the product Under construction ⚠️ until Picard confirms behavior.
 - The prior manual script version 1.0.0 did not write `albumartist`; the embedded copy had the same omission. Version 1.0.1/1.5.8 adds album-artist formatting.
-- Next action: update Picard plugin to v1.5.10 and verify barcode icon/Tools > Plugins entry after a toolbar customization; then run `python -m unittest discover -s picard-tools/tests` in a Python 3.9+ environment, validate the embedded Picard ScriptParser output for suffixes, then test the four linked Skrillex releases in Picard 3. Verify results are stable after a second reload and that existing ETI removal remains unchanged. Test the earlier Format Multiple Artists scenarios separately.
+- Next action: update Picard plugin to v1.5.11 and test Barcode toolbar placement at narrow and maximized window sizes and the Tools-menu fallback; then run `python -m unittest discover -s picard-tools/tests` in a Python 3.9+ environment, validate the embedded Picard ScriptParser output for suffixes, then test the four linked Skrillex releases in Picard 3. Verify results are stable after a second reload and that existing ETI removal remains unchanged. Test the earlier Format Multiple Artists scenarios separately.
