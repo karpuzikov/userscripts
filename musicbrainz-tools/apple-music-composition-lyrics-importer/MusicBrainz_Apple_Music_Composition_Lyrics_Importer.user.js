@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Apple Music works credits -> MusicBrainz
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      2.3.12
+// @version      2.3.13
 // @description  Resolve the correct Apple Music release and import supported Apple Music credits to the proper MusicBrainz Recording, Work, or Release relationships.
 // @author       karpuzikov
 // @license      MIT
@@ -125,7 +125,7 @@ function __amMbGmXmlhttpRequest(details) {
     'use strict';
 
     const PAGE = typeof unsafeWindow !== 'undefined' ? unsafeWindow : window;
-    const SCRIPT_VERSION = '2.3.11';
+    const SCRIPT_VERSION = '2.3.13';
     let MB = PAGE.MB;
     const APPLE_API_BASE = 'https://amp-api.music.apple.com/v1';
     const APPLE_TOKEN_BOOTSTRAP_URL = 'https://music.apple.com/us/browse';
@@ -533,6 +533,15 @@ function __amMbGmXmlhttpRequest(details) {
         }
     }
 
+    function parseAppleSongUrl(value) {
+        try {
+            const url = new URL(String(value || '').trim());
+            if (url.protocol !== 'https:' || url.hostname.toLowerCase() !== 'music.apple.com') return null;
+            const match = /^\/([a-z]{2})\/song\/[^/]+\/([0-9]+)\/?$/i.exec(url.pathname);
+            return match ? { url: url.origin + url.pathname, storefront: match[1].toLowerCase(), id: match[2] } : null;
+        } catch { return null; }
+    }
+
     function appleStorefrontFromUrl(value) {
         try {
             const url = new URL(value);
@@ -753,6 +762,11 @@ function __amMbGmXmlhttpRequest(details) {
         return json?.data?.find(item => item?.type === 'albums') || null;
     }
 
+    async function getAppleSongById(songId, storefront, token) {
+        const json = await appleApiGet(`/catalog/${encodeURIComponent(storefront)}/songs/${encodeURIComponent(songId)}`, token);
+        return json?.data?.find(item => item?.type === 'songs' && String(item.id) === String(songId)) || null;
+    }
+
     async function inspectAppleReleaseLink(link) {
         const page = await gmRequest(link, {
             headers: { Accept: 'text/html,application/xhtml+xml' },
@@ -871,6 +885,34 @@ function __amMbGmXmlhttpRequest(details) {
         throw new Error('The Apple Music/iTunes link is dead or unusable, and this MusicBrainz release has no barcode for fallback search.');
     }
 
+    async function resolveAppleSongUrl(rawUrl) {
+        const source = parseAppleSongUrl(rawUrl);
+        if (!source) throw new Error('Enter an Apple Music song URL, such as https://music.apple.com/us/song/title/123456.');
+        setStatus('Loading selected Apple Music song credits...');
+        const mbSource = await getMusicBrainzReleaseSourceData();
+        state.mbBarcode = mbSource.barcode;
+        const page = await gmRequest(source.url, { headers: { Accept: 'text/html,application/xhtml+xml' } });
+        const redirected = parseAppleSongUrl(page.finalUrl || source.url);
+        if (redirected && redirected.id !== source.id) throw new Error('Apple Music redirected to a different song; import blocked.');
+        const data = parseAppleServerData(page.responseText);
+        let track = getAppleTracks(data).find(item => item.id === source.id);
+        if (!track) {
+            setStatus('Fetching Apple Music metadata by song ID...');
+            const token = await ensureAppleToken(page.responseText, page.finalUrl || source.url);
+            const song = await getAppleSongById(source.id, source.storefront, token);
+            if (!song?.attributes?.name) throw new Error('Could not verify Apple Music song metadata.');
+            track = {
+                id: source.id,
+                title: String(song.attributes.name),
+                discNumber: Number(song.attributes.discNumber || 1),
+                trackNumber: Number(song.attributes.trackNumber || 1),
+                url: song.attributes.url || source.url,
+            };
+        }
+        state.sourceMode = 'direct Apple Music song URL';
+        return { url: source.url, appleTrack: track, creditsUrl: source.url, credits: getAppleCredits(data) };
+    }
+
     function setSourceInfo(resolved) {
         const target = document.getElementById('am2mb-source');
         if (!target) return;
@@ -930,6 +972,29 @@ function __amMbGmXmlhttpRequest(details) {
             tracks[Number(trackNumber) - 1] ||
             null
         );
+    }
+
+    function resolveMbTrackForSong(song) {
+        MB = PAGE.MB || MB;
+        const title = normalizeTrackTitleForMatch(song.title);
+        if (!title) return { mbTrack: null, error: 'Missing Apple Music song title.' };
+        const matches = [];
+        for (const medium of MB?.relationshipEditor?.state?.entity?.mediums || []) {
+            for (const track of medium.tracks || []) {
+                if (normalizeTrackTitleForMatch(track.name) === title) matches.push({ medium, track });
+            }
+        }
+        if (matches.length === 1) return { mbTrack: matches[0].track, error: '' };
+        if (matches.length > 1) {
+            const slot = matches.filter(x =>
+                Number(x.medium.position) === Number(song.discNumber) &&
+                Number(x.track.position) === Number(song.trackNumber)
+            );
+            if (slot.length === 1) return { mbTrack: slot[0].track, error: '' };
+        }
+        return { mbTrack: null, error: matches.length
+            ? `Ambiguous MusicBrainz track: "${song.title}". Credits not imported.`
+            : `No matching MusicBrainz track: "${song.title}". Credits not imported.` };
     }
 
     function getTrackWorks(track) {
@@ -2021,42 +2086,38 @@ function __amMbGmXmlhttpRequest(details) {
             document.getElementById('am2mb-people').innerHTML = '';
             document.getElementById('am2mb-source').innerHTML = '';
 
-            const resolved = await resolveAppleRelease();
-            state.appleUrl = resolved.url;
-            setSourceInfo(resolved);
-
-            // Populate the required source/script edit note as soon as the
-            // Apple Music source has been verified.
-            await addEditNote();
-
-            setStatus('Loading resolved Apple Music release...');
-            const albumHtml = await gmGet(state.appleUrl);
-            const albumData = parseAppleServerData(albumHtml);
-            const appleTracks = getAppleTracks(albumData);
-
-            if (!appleTracks.length) {
-                throw new Error('No Apple Music tracks were found on the resolved release page.');
+            const songUrl = document.getElementById('am2mb-song-url')?.value.trim() || '';
+            const singleSong = Boolean(songUrl);
+            let appleTracks, creditResults;
+            if (singleSong) {
+                const song = await resolveAppleSongUrl(songUrl);
+                state.appleUrl = song.url;
+                setSourceInfo(song);
+                appleTracks = [song.appleTrack];
+                creditResults = [{ creditsUrl: song.creditsUrl, credits: song.credits }];
+            } else {
+                const resolved = await resolveAppleRelease();
+                state.appleUrl = resolved.url;
+                setSourceInfo(resolved);
+                setStatus('Loading resolved Apple Music release...');
+                const albumData = parseAppleServerData(await gmGet(state.appleUrl));
+                appleTracks = getAppleTracks(albumData);
+                if (!appleTracks.length) throw new Error('No Apple Music tracks were found on the resolved release page.');
+                setStatus(`Found ${appleTracks.length} tracks. Loading all Apple Music credits...`);
+                creditResults = await mapPool(appleTracks, 4, async (track, index) => {
+                    setStatus(`Loading Apple Music credits ${index + 1}/${appleTracks.length}: ${track.title}`);
+                    const creditsUrl = songCreditsUrl(track, state.appleUrl);
+                    const data = parseAppleServerData(await gmGet(creditsUrl));
+                    return { creditsUrl, credits: getAppleCredits(data) };
+                });
             }
-
             state.appleTracks = appleTracks;
-            setStatus(`Found ${appleTracks.length} tracks. Loading all Apple Music credits...`);
-
-            const creditResults = await mapPool(appleTracks, 4, async (track, index) => {
-                setStatus(
-                    `Loading Apple Music credits ${index + 1}/${appleTracks.length}: ${track.title}`
-                );
-                const creditsUrl = songCreditsUrl(track, state.appleUrl);
-                const html = await gmGet(creditsUrl);
-                const data = parseAppleServerData(html);
-                return {
-                    creditsUrl,
-                    credits: getAppleCredits(data),
-                };
-            });
-
             state.rows = appleTracks.map((appleTrack, index) => {
                 const result = creditResults[index];
-                const mbTrack = getMbTrack(appleTrack.discNumber, appleTrack.trackNumber);
+                const match = singleSong
+                    ? resolveMbTrackForSong(appleTrack)
+                    : { mbTrack: getMbTrack(appleTrack.discNumber, appleTrack.trackNumber), error: '' };
+                const mbTrack = match.mbTrack;
                 const mbTitle = mbTrack?.name || '';
                 const works = getTrackWorks(mbTrack);
                 const credits = result?.credits || [];
@@ -2072,9 +2133,16 @@ function __amMbGmXmlhttpRequest(details) {
                     works,
                     workResolution: '',
                     titleMatch: !!mbTrack && normalizeTrackTitleForMatch(appleTrack.title) === normalizeTrackTitleForMatch(mbTitle),
-                    error: result?.error ? result.error.message : '',
+                    error: result?.error ? result.error.message : match.error,
                 };
             });
+
+            if (singleSong && !state.rows.some(row => row.mbTrack && row.titleMatch && !row.error)) {
+                renderTracks();
+                throw new Error(state.rows[0]?.error || 'Song does not match a MusicBrainz track.');
+            }
+            // Enter the source note before any Work edits are staged.
+            await addEditNote();
 
             for (let index = 0; index < state.rows.length; index++) {
                 const row = state.rows[index];
@@ -2316,10 +2384,21 @@ function __amMbGmXmlhttpRequest(details) {
                 #am2mb-panel {
                     margin: 1em 0;
                     padding: 12px;
-                    border: 1px solid #aaa;
+                    border: 1px solid #50627a;
                     border-radius: 6px;
-                    background: var(--background, #fff);
+                    background: #19232d;
+                    color: #edf3f8;
                 }
+                #am2mb-panel input, #am2mb-panel select, #am2mb-panel button {
+                    background: #263747; color: #f5f8fb;
+                    border: 1px solid #8092a5; border-radius: 4px;
+                    padding: 7px 9px; font: inherit;
+                }
+                #am2mb-panel a { color: #8cc7ff; }
+                #am2mb-panel input:focus-visible, #am2mb-panel select:focus-visible,
+                #am2mb-panel button:focus-visible { outline: 3px solid #8cc7ff; outline-offset: 2px; }
+                #am2mb-panel input[type="url"] { flex: 1 1 320px; min-width: 0; max-width: 700px; }
+                #am2mb-panel label { font-weight: 600; }
                 #am2mb-panel h2,
                 #am2mb-panel h3 {
                     margin-top: 0;
@@ -2336,14 +2415,14 @@ function __amMbGmXmlhttpRequest(details) {
                 }
                 #am2mb-panel #am2mb-status[data-kind="bad"],
                 #am2mb-panel td.bad {
-                    color: #b00020;
+                    color: #ff919e;
                 }
                 #am2mb-panel #am2mb-status[data-kind="ok"],
                 #am2mb-panel td.ok {
-                    color: #087a28;
+                    color: #80e5a8;
                 }
                 #am2mb-panel td.warn {
-                    color: #9b6500;
+                    color: #f8cf7d;
                 }
                 #am2mb-panel .am2mb-scroll {
                     overflow-x: auto;
@@ -2372,10 +2451,16 @@ function __amMbGmXmlhttpRequest(details) {
 
             <h2>Apple Music works credits -> MusicBrainz <small>v${SCRIPT_VERSION}</small></h2>
             <div class="am2mb-controls">
-                <button type="button" id="am2mb-load">Find Apple Music & Load Credits</button>
+                <label for="am2mb-song-url">Apple Music song URL (optional - import this song only)</label>
+                <input id="am2mb-song-url" type="url" inputmode="url"
+                    placeholder="https://music.apple.com/us/song/title/1685732274"
+                    autocomplete="off" spellcheck="false"
+                    aria-describedby="am2mb-song-help">
+                <button type="button" id="am2mb-load">Load Apple Music credits</button>
             </div>
-            <p id="am2mb-status">
-                Ready to verify the MusicBrainz barcode and Apple/iTunes links.
+            <p class="am2mb-hint" id="am2mb-song-help">Paste a song URL to import that track only. Leave blank to import the full album using its Apple link/barcode.</p>
+            <p id="am2mb-status" role="status" aria-live="polite">
+                Ready. Paste a song URL or use the linked album/barcode.
             </p>
             <p id="am2mb-source"></p>
             <div id="am2mb-tracks"></div>
