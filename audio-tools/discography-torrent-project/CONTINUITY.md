@@ -24,8 +24,8 @@ This file is the authoritative handoff for DEA development. Read it before chang
   - Do not use the native prototype as the functional specification.
 - New lightweight/fast/modern rewrite:
   - Branch: `dea-lightweight-modern`
-  - Source: `audio-tools/discography-torrent-project/lightweight/Duplicate Edition Analyzer Lightweight v0.3.6.pyw`
-  - Version: `0.3.6 - Under construction ⚠️`
+  - Source: `audio-tools/discography-torrent-project/lightweight/Duplicate Edition Analyzer Lightweight v0.3.7.pyw`
+  - Version: `0.3.7 - Under construction ⚠️`
   - Separate from the failed native prototype.
   - Functional baseline is production/reference DEA 0.22.12.
   - No production feature may disappear merely to reduce EXE size or complexity.
@@ -273,17 +273,22 @@ A lightweight build is not parity-complete until all of these pass:
 - New request: create a separate lightweight, fast implementation with a modern UI and zero functional loss from production.
 - Architecture implemented at source level: production Python core + pywebview 6.2.1 + Microsoft Edge WebView2 host, with the production main HTML UI and full Release Map HTML/JS retained. Legacy Qt/PySide6 and dormant Tk/Tcl UI code have been removed from the lightweight source.
 - WebView2 detection uses Microsoft-documented runtime registry keys and WinGet package `Microsoft.EdgeWebView2Runtime` when installation is required.
-- New source version is 0.3.6 on branch `dea-lightweight-modern`. The Skrillex comparison log exposed both UI and optimizer bugs. CD/source quality is now preserved for shared recordings even when a lower-source WEB superset must remain for a unique bonus track; provider release-type metadata cannot cause churn for otherwise exact-equivalent containers; and same album + same track slot is an acoustic-routing safety path for provider naming drift such as Quest for Fire `Warped Tour '05 (ft. pete WENTZ)` vs `Warped Tour ’05 with pete WENTZ`. Changes view now has `↔ Replaced`, pairs OLD->NEW replacements, names unique recordings for real additions, resets stale SVG scroll extent, and uses line-separated compact Full-map groups/rows.
+- Latest source version is 0.3.7 on branch `dea-lightweight-modern`. The Skrillex comparison log exposed both UI and optimizer bugs. CD/source quality is now preserved for shared recordings even when a lower-source WEB superset must remain for a unique bonus track; provider release-type metadata cannot cause churn for otherwise exact-equivalent containers; and same album + same track slot is an acoustic-routing safety path for provider naming drift such as Quest for Fire `Warped Tour '05 (ft. pete WENTZ)` vs `Warped Tour ’05 with pete WENTZ`. Changes view now has `↔ Replaced`, pairs OLD->NEW replacements, names unique recordings for real additions, resets stale SVG scroll extent, and uses line-separated compact Full-map groups/rows.
 - v0.3.6 fixes acoustic group 0 disappearance in the Release Map, narrows ↔ Replaced to verified whole-release wanted coverage in one same-family NEW release, and caches replacement-pair calculation per state.
 - Source preservation (best CD/WEB source class and comparable CD 80+ threshold class per wanted recording) is now encoded directly in one exact-cover provider requirement per wanted recording group, without doubling group constraints. The former post-optimization source-addition pass is removed; equivalent CD replacements cannot increase physical track count; final source/album/wanted-coverage invariants fail closed if violated.
 - v0.3.6 has GitHub source-level patch/static checks, with additional `--ui-self-test` regressions for acoustic group 0 and source-safe minimum-release selection. The Python self-test, actual Windows/WebView2 UI and exact Skrillex folder test have **not been run** here. Do not claim they passed.
-- Tested/source-level artifact path: `audio-tools/discography-torrent-project/lightweight/Duplicate Edition Analyzer Lightweight v0.3.6.pyw`.
+- Current source: `audio-tools/discography-torrent-project/lightweight/Duplicate Edition Analyzer Lightweight v0.3.7.pyw`.
+- Real Skrillex v0.3.6 run (2026-10-08; user's screenshot and `Duplicate Edition Analyzer Comparison 2026-10-08-04-13-13.jsonl`) reached all 66 exact optimization components, then failed with `Optimizer lost a most-complete album edition after quality tie-breaks.` Log includes 470 track rows, 360 eligible tracks, 191 acoustic groups, and a final DR pass with zero tie groups. OLD Scary Monsters (11 physical tracks, 7 wanted) was EP-tagged, while the otherwise audio-identical NEW release was Album-tagged; 7 wanted OLD/NEW matches were acoustically verified.
+- v0.3.7 introduces `_album_requirement_provider_ids`, permitting an otherwise truly identical EP/Single/Album physical edition of the same title and audio sequence to satisfy maximum-completeness album representation. This also fixes short 2-track album editions split by the broader album clustering heuristic. An incomplete single/EP never qualifies. The exact solver, Existing-copy late-substitution veto and final album audit now use the same eligibility contract.
+- If a subsequent CD/Existing/DR tie-break unexpectedly breaks a solver requirement, v0.3.7 falls back to the proven exact selection with an explicit error diagnostic; the exact plan is revalidated before use.
+- CI validation passed for v0.3.7: Python compilation, `--ui-self-test` (including Skrillex-shaped 11-track EP/Album no-churn and short-album regressions), undefined-name checks, embedded JS validation and bridge contract. Workflow run: https://github.com/karpuzikov/userscripts/actions/runs/37712322914.
+- Actual Windows rerun on v0.3.7 and Release Map inspection remain unfinished.
 - No new lightweight build has yet been declared parity-complete.
 - Do not send another "native/light" test merely because it launches. Complete the parity checklist first.
 
 ## Exact next steps
 
-1. Re-run the user's exact Skrillex OLD/NEW test on 0.3.6. Verify: Scary Monsters exact-equivalent Existing no longer churns; the Bangarang CD remains retained while the WEB 8-track release may remain only for its unique wanted bonus track; Make It Bun Dem is shown as one `↔ Replaced` OLD->NEW change; Quest for Fire provider wording routes the 11th track acoustically and does not create a false WEB addition if the audio matches; Changes filters cannot scroll into Full-map-sized empty space; Full map uses line-separated compact groups/rows.
+1. Re-run the user's exact Skrillex OLD/NEW test on 0.3.7. Verify: Scary Monsters exact-equivalent Existing no longer churns; the Bangarang CD remains retained while the WEB 8-track release may remain only for its unique wanted bonus track; Make It Bun Dem is shown as one `↔ Replaced` OLD->NEW change; Quest for Fire provider wording routes the 11th track acoustically and does not create a false WEB addition if the audio matches; Changes filters cannot scroll into Full-map-sized empty space; Full map uses line-separated compact groups/rows.
 2. Run syntax/static checks and source-mode launch checks.
 3. Compare main-window controls and behaviors against production 0.22.12.
 4. Compare full Release Map behavior against production 0.22.12, especially SVG links, cross-release highlighting, alternative-family panels, ignore/restore, Re-Analyze and result drawer.
