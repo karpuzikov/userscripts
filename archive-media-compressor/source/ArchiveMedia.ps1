@@ -62,22 +62,22 @@ function Format-Bytes([Int64]$Bytes) {
 }
 
 function Select-Folder([string]$Title) {
+    Write-Host 'Enter local folder or rclone path (example: yandex:Pictures).'
+    $p = (Read-Host "$Title [blank = browse local folders]").Trim().Trim('"')
+    if ($p) {
+        if (Test-RclonePath $p) { return $p.Replace('\','/').TrimEnd('/') }
+        return [IO.Path]::GetFullPath($p).TrimEnd('\')
+    }
     try {
         Add-Type -AssemblyName System.Windows.Forms
         $dialog = [System.Windows.Forms.FolderBrowserDialog]::new()
         $dialog.Description = $Title
         $dialog.ShowNewFolderButton = $true
         if ($dialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
-            return [IO.Path]::GetFullPath($dialog.SelectedPath).TrimEnd("\")
+            return [IO.Path]::GetFullPath($dialog.SelectedPath).TrimEnd('\')
         }
-    }
-    catch {
-        # Fall back to console input.
-    }
-
-    $p = (Read-Host $Title).Trim().Trim('"')
-    if ([string]::IsNullOrWhiteSpace($p)) { return $null }
-    return [IO.Path]::GetFullPath($p).TrimEnd("\")
+    } catch { }
+    return $null
 }
 
 function Resolve-Executable([string]$Name, [string[]]$FallbackPatterns = @()) {
@@ -486,47 +486,49 @@ function Invoke-ArchiveCloud([string]$src, [string]$dst) {
 }
 
 # ---- Operation mode / source / destination ----
-Write-Section "Mode"
-Write-Host "1. Copy files mode"
-Write-Host "   Process files into another folder and keep all source files unchanged."
-Write-Host "2. Replace mode"
-Write-Host "   Process files in place and replace each original only after its output succeeds."
-Write-Host ""
-
-do {
-    $modeChoice = (Read-Host "Choose mode [1/2]").Trim()
-} while ($modeChoice -notin @("1", "2"))
-
-$OperationMode = if ($modeChoice -eq "1") { "Copy" } else { "Replace" }
-
-Write-Section "Folders"
-$InputRoot = Select-Folder $(if ($OperationMode -eq "Copy") { "Select SOURCE folder" } else { "Select folder to process in place" })
-if (-not $InputRoot) { throw "No input folder selected." }
-if (-not (Test-Path -LiteralPath $InputRoot -PathType Container)) {
-    throw "Input folder does not exist: $InputRoot"
-}
-
-if ($OperationMode -eq "Copy") {
-    $OutputRoot = Select-Folder "Select DESTINATION folder"
-    if (-not $OutputRoot) { throw "No destination folder selected." }
-
-    if ([string]::Equals(
-        [IO.Path]::GetFullPath($InputRoot).TrimEnd("\"),
-        [IO.Path]::GetFullPath($OutputRoot).TrimEnd("\"),
-        [StringComparison]::OrdinalIgnoreCase
-    )) {
-        throw "Source and destination folders must be different in Copy files mode. Use Replace mode to process files in place."
-    }
-
+$ArchiveBatch = -not [string]::IsNullOrWhiteSpace($env:ARCHIVEMEDIA_BATCH_FILE)
+if ($ArchiveBatch) {
+    $OperationMode = 'Copy'
+    $InputRoot = $env:ARCHIVEMEDIA_BATCH_INPUT
+    $OutputRoot = $env:ARCHIVEMEDIA_BATCH_OUTPUT
     New-Item -ItemType Directory -Path $OutputRoot -Force | Out-Null
-    Write-Host "Mode:        Copy files"
-    Write-Host "Source:      $InputRoot"
-    Write-Host "Destination: $OutputRoot"
-}
-else {
-    $OutputRoot = $InputRoot
-    Write-Host "Mode:   Replace"
-    Write-Host "Folder: $InputRoot"
+} else {
+    Write-Section 'Mode'
+    Write-Host '1. Copy: save to another local or rclone folder, keeping source files.'
+    Write-Host '2. Replace: local folder only; no cloud overwrite.'
+    do { $choice = (Read-Host 'Choose mode [1/2]').Trim() } while ($choice -notin @('1','2'))
+    $OperationMode = if ($choice -eq '1') { 'Copy' } else { 'Replace' }
+    Write-Section 'Source and destination'
+    $InputRoot = Select-Folder $(if ($OperationMode -eq 'Copy') { 'SOURCE' } else { 'LOCAL folder to replace in place' })
+    if (-not $InputRoot) { throw 'No source selected.' }
+    if (-not (Test-RclonePath $InputRoot) -and -not (Test-Path -LiteralPath $InputRoot -PathType Container)) {
+        throw "Local source folder does not exist: $InputRoot"
+    }
+    if ($OperationMode -eq 'Copy') {
+        $OutputRoot = Select-Folder 'DESTINATION'
+        if (-not $OutputRoot) { throw 'No destination selected.' }
+    } else {
+        if (Test-RclonePath $InputRoot) { throw 'Cloud Replace is disabled. Use Copy to a different destination.' }
+        $OutputRoot = $InputRoot
+    }
+    if ((Test-RclonePath $InputRoot) -or (Test-RclonePath $OutputRoot)) {
+        if ($OperationMode -ne 'Copy') { throw 'Cloud operation requires Copy mode.' }
+        Invoke-ArchiveCloud $InputRoot $OutputRoot
+        Write-Host 'Press Enter to close ArchiveMedia...' -ForegroundColor Cyan
+        [void](Read-Host)
+        return
+    }
+    if ($OperationMode -eq 'Copy') {
+        if ([string]::Equals(
+            [IO.Path]::GetFullPath($InputRoot).TrimEnd('\'),
+            [IO.Path]::GetFullPath($OutputRoot).TrimEnd('\'),
+            [StringComparison]::OrdinalIgnoreCase)) {
+            throw 'Local source and destination must differ.'
+        }
+        New-Item -ItemType Directory -Path $OutputRoot -Force | Out-Null
+        Write-Host "Source: $InputRoot"
+        Write-Host "Destination: $OutputRoot"
+    } else { Write-Host "Replace folder: $InputRoot" }
 }
 
 # ---- Hardware detection ----
@@ -830,7 +832,7 @@ $analysisJob = $scanInputs | ForEach-Object -Parallel {
                         # we need to inspect pixels; unused transparent entries do not
                         # by themselves make the image transparent.
                         if (-not $hasAlphaChannel -and (($pixelFormat -band [System.Drawing.Imaging.PixelFormat]::Indexed) -ne 0)) {
-                            foreach ($entry in ($img.Palette.Entries) {
+                            foreach ($entry in $img.Palette.Entries) {
                                 if ($entry.A -lt 255) {
                                     $hasAlphaChannel = $true
                                     break
