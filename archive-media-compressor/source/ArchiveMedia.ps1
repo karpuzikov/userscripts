@@ -394,6 +394,7 @@ function Invoke-ArchiveCloud([string]$src, [string]$dst) {
                 $stat = Cloud-Stat $rclone ([string]$old.Target)
                 if ($stat -and $stat.Size -eq [Int64]$old.Size -and
                     $stat.MD5 -eq ([string]$old.MD5).ToLowerInvariant()) {
+                    [void]$occupied.Add([string]$old.Target)
                     $resumed++
                     Write-Host ("[RESUME] {0} ({1}/{2})" -f $file.Rel,($success+$resumed),$ordered.Count)
                     continue
