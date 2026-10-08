@@ -2,7 +2,7 @@
 
 ## Product and state
 - Product: Karpuzikov Picard Scripts, a Picard 3.x Git-updatable MusicBrainz metadata plugin.
-- Current version: 1.5.20 - Under construction ⚠️ (not yet verified inside user Picard).
+- Current version: 1.5.21 - Under construction ⚠️ (not yet verified inside user Picard).
 - Git repository and active branch: `karpuzikov/userscripts`, `main`.
 - There is no additional project-specific `RULES.md` currently; the canonical repository root `SOFTWARE_RULES.md` governs this project.
 
@@ -141,3 +141,12 @@
 - Standalone/embedded English Title Capitalization v1.1.5: adds `$if($rsearch($lower(%media%),^[0-9]*[x×]?[ ]*digital media$),$delete(releasecountry),...)` *outside* the English-only title capitalization guard. This retains the XE->EU transformation on non-digital releases and removes the actual saved audio tag using `$delete` rather than `$unset`. Per-medium standalone scripts cannot inspect all formats of a mixed release; when a single track's media is Digital Media within a hybrid release, the standalone script treats it as digital. The language-aware plugin prefers the full release node to avoid this ambiguity.
 - Regression test coverage: Digital Media (single, case insensitive, 2× count), CD, vinyl, unknown, hybrid release nodes, missing media formats, idempotence, and actual deletion marking. The script and its embedded counterpart must remain identical. Updated README and versioned standalone script download `English_Title_Capitalization_v1.1.5.txt`.
 - Existing Barcode/UPC toolbar and all other scripts unchanged. Picard 3 interactive QA remains mandatory, especially verifying that the tag is actually removed from previously tagged MP3/FLAC/MP4 files after Save, and that physical CD/vinyl release countries remain intact. Keep v1.5.20 - Under construction ⚠️ until verified.
+
+## Lowercase vs. abbreviation everywhere in capitalization (2026-10-09; plugin 1.5.21)
+
+- User regression: capitalization erroneously transformed `Gypsyhook vs. Dmndays` to `Gypsyhook Vs. Dmndays`. Correct output is **always lowercase `vs.`** as an independent word, including title start, parenthetical ETI, and all language modes; do not rewrite unrelated `V.S.`, `Vsauce`, or undotted `vs`.
+- Language-aware Python title capitalization now applies final `_lowercase_vs_abbreviation` using word-boundary/case-insensitive detection after all stylistic transforms. This is enforced both in `musicbrainz_english_title_case` and the general `standardize_title_case`, and is idempotent.
+- Legacy standalone English Title Capitalization v1.1.6 (stable source, versioned source and plugin embedded source) adds final `$rreplace` rule `\\b[Vv][Ss]\\.` -> `vs.` immediately before assigning output to title/album, preventing a later rewrite in the same script from capitalizing it again.
+- Additional audit of 1.5.20 detected a mistakenly double-escaped Python raw-regex whitespace atom (`\\s` rather than `\s`) in the `2x Digital Media` medium-format classifier. Corrected and added digital count-prefix tests; the existing country-removal rules remain unchanged otherwise.
+- Tests cover example Gypsyhook title, uppercase `VS.`, title-start/ETI contexts, multiple language modes, idempotence, unrelated abbreviations, embedded/download parity, optional Picard ScriptParser runtime tests, and Digital Media count prefixes.
+- The installed Windows Picard/PyQt6 environment was not accessible from this chat. Until interactive validation, keep 1.5.21 - Under construction ⚠️. Do not mark tested/stable.
