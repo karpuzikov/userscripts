@@ -1,6 +1,6 @@
 uuid = "f25833be-e7f2-4d9b-938e-20f17ed32b92"
 name = "Karpuzikov Picard Scripts"
-version = "1.5.8"
+version = "1.5.9"
 description = "Git-updatable Picard 3 tools: current artist names, language-aware MusicBrainz title capitalization, tagging scripts, and strict Barcode/UPC Lookup."
 api = ["3.0"]
 authors = ["karpuzikov"]
