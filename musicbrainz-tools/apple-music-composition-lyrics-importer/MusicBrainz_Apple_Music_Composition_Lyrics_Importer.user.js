@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Apple Music works credits -> MusicBrainz
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      2.3.14
+// @version      2.3.15
 // @description  Resolve the correct Apple Music release and import supported Apple Music credits to the proper MusicBrainz Recording, Work, or Release relationships.
 // @author       karpuzikov
 // @license      MIT
@@ -125,7 +125,7 @@ function __amMbGmXmlhttpRequest(details) {
     'use strict';
 
     const PAGE = typeof unsafeWindow !== 'undefined' ? unsafeWindow : window;
-    const SCRIPT_VERSION = '2.3.14';
+    const SCRIPT_VERSION = '2.3.15';
     let MB = PAGE.MB;
     const APPLE_API_BASE = 'https://amp-api.music.apple.com/v1';
     const APPLE_TOKEN_BOOTSTRAP_URL = 'https://music.apple.com/us/browse';
@@ -1006,17 +1006,21 @@ function __amMbGmXmlhttpRequest(details) {
         const seen = new Set();
 
         for (const relationship of relationships) {
+            // MusicBrainz can expose the Work at either relationship endpoint.
             const target = relationship?.target;
-            const isWork =
-                relationship?.target_type === 'work' ||
-                target?.entityType === 'work';
-
-            if (!isWork || !target) continue;
-
-            const key = target.gid || target.id || target.name;
+            const source = relationship?.source;
+            const work = target?.entityType === 'work'
+                ? target
+                : source?.entityType === 'work'
+                    ? source
+                    : relationship?.target_type === 'work'
+                        ? target
+                        : null;
+            if (!work) continue;
+            const key = work.gid || work.id || work.name;
             if (seen.has(key)) continue;
             seen.add(key);
-            works.push(target);
+            works.push(work);
         }
 
         return works;
@@ -1816,6 +1820,37 @@ function __amMbGmXmlhttpRequest(details) {
         }
     }
 
+    async function searchExistingWorksByExactTitle(title) {
+        // A fallback for authors absent from MusicBrainz. Never assume that
+        // an unresolved author proves the Work does not already exist.
+        const query = `work:"${escapeLucene(title)}"`;
+        const json = await musicBrainzWsJson(
+            `/ws/2/work?query=${encodeURIComponent(query)}&fmt=json&limit=100`,
+            `MusicBrainz Work title check: ${title}`,
+            `work-exact-title:${normalizeText(title)}`
+        );
+        const works = Array.isArray(json.works) ? json.works : [];
+        const matches = works.filter(work =>
+            normalizeText(work.title || work.name) === normalizeText(title)
+        );
+        return {
+            matches,
+            complete: Number(json['work-count'] || works.length) <= works.length,
+        };
+    }
+
+    async function linkExistingWorkForRow(row, candidate) {
+        const recording = row.mbTrack?.recording;
+        if (!recording || !candidate?.mbid) throw new Error('Cannot link the selected Work to this recording.');
+        const work = await fetchMbEntity(candidate.mbid, 'work');
+        if (work.entityType !== 'work') throw new Error('MusicBrainz returned an unexpected entity instead of a Work.');
+        if (!existingRelationship(recording, work, RECORDING_OF_LINK_TYPE_ID)) {
+            addRelationship(recording, work, RECORDING_OF_LINK_TYPE_ID, '');
+        }
+        row.works = [work];
+        row.workResolution = `Linked existing Work: ${work.name || candidate.title || row.mbTitle}`;
+    }
+
     async function ensureWorkForRow(row) {
         const workCredits = row.supportedCredits.filter(credit => credit.target === 'work');
         if (!workCredits.length) return;
@@ -1824,54 +1859,55 @@ function __amMbGmXmlhttpRequest(details) {
             row.workResolution = 'Existing linked Work';
             return;
         }
-
         if (row.works.length > 1) {
-            row.workResolution = 'Multiple Works already linked (' + row.works.length + ') - manual review';
+            row.workResolution = `Multiple linked Works (${row.works.length}); no automatic changes`;
             return;
         }
 
         const title = row.mbTitle || row.appleTrack.title;
-        const authorCredits = workCredits.filter(isWorkAuthorCredit);
-
-        if (!authorCredits.length) {
-            row.workResolution =
-                'No composer/songwriter credits available for Work duplicate check - manual review';
+        const authors = workCredits.filter(isWorkAuthorCredit);
+        if (!authors.length) {
+            row.workResolution = 'No supported songwriter/composer credits for duplicate checking; Work not created';
             return;
         }
 
-        setStatus('Checking credited composers/songwriters for Work: ' + title);
-
-        const lookup = await findWorkCandidatesByCreditedAuthors(title, authorCredits);
+        setStatus(`Checking existing Works for "${title}"...`);
+        const lookup = await findWorkCandidatesByCreditedAuthors(title, authors);
+        if (lookup.candidates.length === 1 && !lookup.unresolvedAuthors.length) {
+            // An exact-title Work belonging to the credited authors is not a
+            // reason to abandon the import. Reuse it instead of duplicating it.
+            setStatus(`Linking existing Work to "${title}"...`);
+            await linkExistingWorkForRow(row, lookup.candidates[0]);
+            return;
+        }
+        if (lookup.candidates.length) {
+            row.workResolution = `${lookup.candidates.length} author-matched Work candidate(s) ` +
+                '(or some authors unresolved). No duplicate Work will be created.';
+            return;
+        }
 
         if (lookup.unresolvedAuthors.length) {
-            row.workResolution = lookup.reason + ' - manual review';
-            return;
+            // The old code stopped here, leaving all songwriting credits
+            // unattached. A global title check can prove that no currently
+            // indexed Work with the same title exists.
+            setStatus(`Some songwriters could not be resolved. Checking Work title "${title}"...`);
+            const titleCheck = await searchExistingWorksByExactTitle(title);
+            if (!titleCheck.complete) {
+                row.workResolution = 'Work title search incomplete; no automatic Work created';
+                return;
+            }
+            if (titleCheck.matches.length) {
+                row.workResolution = `${titleCheck.matches.length} Work(s) with the same title exist; ` +
+                    'unresolved songwriters prevent safe matching. No duplicate created.';
+                return;
+            }
         }
 
-        if (lookup.candidates.length) {
-            const matchedNames = [...new Set(
-                lookup.candidates.flatMap(candidate => [...candidate.matchedAuthors])
-            )];
-
-            row.workResolution =
-                lookup.candidates.length +
-                ' existing Work candidate(s) found under credited author(s): ' +
-                matchedNames.join(', ') +
-                ' - manual review';
-            return;
-        }
-
-        setStatus(
-            'No credited composer/songwriter has Work "' + title + '". Creating new Work...'
-        );
-
+        setStatus(`No matching Work found for "${title}". Staging new Song Work...`);
         const work = await createWorkForRecording(row.mbTrack.recording);
         row.works = [work];
-        row.workResolution =
-            'No credited composer/songwriter has an existing Work titled "' +
-            title +
-            '"; New Work staged: ' +
-            (work.name || title);
+        row.workResolution = `New Song Work staged: ${work.name || title}. ` +
+            'Supported writer credits will be added for matched MusicBrainz artists when applied.';
     }
 
     function autoCandidateIndex(person) {
@@ -2453,6 +2489,22 @@ function __amMbGmXmlhttpRequest(details) {
                     align-items: center;
                     flex-wrap: wrap;
                 }
+                #am2mb-panel .am2mb-controls > label {
+                    flex: 1 0 100%;
+                    margin: 0;
+                    line-height: 1.4;
+                }
+                #am2mb-panel .am2mb-controls > input[type="url"] {
+                    flex: 1 1 320px;
+                    min-width: 0;
+                    max-width: 100%;
+                    box-sizing: border-box;
+                }
+                #am2mb-panel .am2mb-controls > button {
+                    flex: 0 0 auto;
+                    max-width: 100%;
+                    white-space: normal;
+                }
                 #am2mb-panel #am2mb-status {
                     margin: 10px 0 0;
                     font-weight: 600;
@@ -2489,7 +2541,8 @@ function __amMbGmXmlhttpRequest(details) {
                     min-width: 285px;
                 }
                 #am2mb-panel .am2mb-hint {
-                    margin-top: -4px;
+                    margin: 6px 0 10px;
+                    line-height: 1.45;
                 }
             </style>
 
