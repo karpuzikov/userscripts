@@ -41,15 +41,28 @@ class FakeToolbar:
     def insertAction(self, before, action):
         self.items.insert(self.items.index(before), action)
 
+    def removeAction(self, action):
+        self.items.remove(action)
+
 
 class ToolbarLifecycleTests(unittest.TestCase):
-    def test_insert_after_native_lookup(self):
+    def test_first_action_avoids_right_edge_overflow(self):
         native = FakeAction("&Lookup")
-        later = FakeAction("Save")
+        earlier = FakeAction("Save")
+        later = FakeAction("Cluster")
         button = FakeAction("Barcode / UPC Lookup")
-        toolbar = FakeToolbar(native, later)
+        toolbar = FakeToolbar(earlier, native, later)
         self.assertTrue(place(toolbar, button))
-        self.assertEqual(toolbar.actions(), [native, button, later])
+        self.assertEqual(toolbar.actions(), [button, earlier, native, later])
+
+    def test_promotes_existing_later_action(self):
+        native = FakeAction("Lookup")
+        button = FakeAction("Barcode / UPC Lookup")
+        toolbar = FakeToolbar(native, button, FakeAction("Save"))
+        self.assertTrue(place(toolbar, button))
+        self.assertEqual(toolbar.actions()[0], button)
+        self.assertEqual(toolbar.actions().count(button), 1)
+        self.assertFalse(place(toolbar, button))
 
     def test_repeat_is_idempotent(self):
         button = FakeAction("Barcode / UPC Lookup")
@@ -65,12 +78,25 @@ class ToolbarLifecycleTests(unittest.TestCase):
         fresh = FakeToolbar(FakeAction("Lookup"))
         self.assertTrue(place(fresh, button))
         self.assertEqual(fresh.actions().count(button), 1)
+        self.assertEqual(fresh.actions()[0], button)
 
     def test_no_native_lookup_still_visible(self):
         button = FakeAction("Barcode / UPC Lookup")
         toolbar = FakeToolbar(FakeAction("Save"))
         self.assertTrue(place(toolbar, button))
-        self.assertEqual(toolbar.actions()[-1], button)
+        self.assertEqual(toolbar.actions()[0], button)
+
+    def test_empty_toolbar(self):
+        button = FakeAction("Barcode / UPC Lookup")
+        toolbar = FakeToolbar()
+        self.assertTrue(place(toolbar, button))
+        self.assertEqual(toolbar.actions(), [button])
+
+    def test_short_label_and_tools_fallback(self):
+        installer = source_function("_install_barcode_lookup_button")
+        self.assertIn("setIconText('Barcode')", installer)
+        self.assertIn("setToolTip(", installer)
+        self.assertIn("BarcodeLookupToolsAction", SOURCE)
 
     def test_plugin_lifecycle_hooks(self):
         enable = source_function("enable")
