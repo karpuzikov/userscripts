@@ -1035,6 +1035,14 @@ This section supersedes older featured-remix, contextual-remix, and generic Edit
 - Strong structural conflicts such as Radio vs Extended or Acoustic vs Instrumental remain eligible for semantic pre-blocking unless exact identical Chromaprint overrides the wording.
 
 
+## v0.3.9 Release Map excluded-only visibility - authoritative
+
+- **Every analyzed release** must remain inspectable in **Full Map**, including zero-wanted-track releases excluded at the first classification stage. Never use membership in an acoustic recording group as a prerequisite for showing an analyzed release.
+- Existing-folder releases whose entire tracklist was excluded by Save Remixes OFF / Save Live OFF / Personal Picks pattern decisions retain backend `REMOVE` actions and MUST appear under Changes > `- Removed` with a clear count and cause. Example: `All 4 tracks excluded (Save Remixes OFF).`.
+- NEW/update-folder excluded-only releases remain `SKIP`; keep them in Full Map for transparency but do NOT classify them as OLD removals or new additions in Changes.
+- Rendering visibility must not alter coverage, the exact optimizer's selected set, Apply/Undo behavior, or retained release/track plan totals.
+- End-to-end regression: four-track Recess (Remixes) and Dirty Vibe (Remixes) OLD sources are removed rather than silently hidden; the paired NEW remix-only releases remain skipped, and the OLD/NEW Dirty Vibe decisions/snapshots/UI nodes preserve their tracklists and exclusion reasons.
+
 ## v0.3.8 Re-work remix classification - authoritative
 
 - A parenthesized, bracketed, or separated trailing remix descriptor written `Re-work`, `Rework`, `Reworked` (including a credited act such as `Jack Beats Re-work`) is Remix material, subject to **Save Remixes** in the very first classification stage. It must not reach the acoustic matcher or the optimizer when Save Remixes is OFF unless it has a genuinely remix-added featured artist.
