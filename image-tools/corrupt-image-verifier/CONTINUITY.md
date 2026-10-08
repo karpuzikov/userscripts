@@ -16,11 +16,11 @@ Single-file Python/Tkinter desktop verifier with requested ASCII/terminal dark U
 1. Scan Images is read-only. Discovered image files are verified and categorized, then non-GOOD results are listed in a reviewable table.
 2. Exactly five classification states: GOOD; WARNING - LEFT IN PLACE (including suspected JPEG visual anomalies); UNSUPPORTED - LEFT IN PLACE; ERROR - LEFT IN PLACE; CONFIRMED CORRUPT.
 3. Only objective invalid-signature evidence after identification failure, or a zero-byte image, can currently produce CONFIRMED CORRUPT. TIFF decoder failures alone never prove corruption. Missing JPEG EOI, valid-looking but ambiguously truncated images, decoder errors and huge decompression-bomb warnings must stay in place.
-4. Move Confirmed Corrupt is a separate confirmed action enabled only after a complete scan with candidates. Every candidate is rechecked before movement and skipped if its size/mtime has changed.
+4. Move Confirmed Corrupt is a separate confirmed action enabled only after a complete scan with candidates. All auto-confirmed candidates and explicitly user-confirmed visual suspects are eligible. Every candidate is rechecked before movement and skipped if its size/mtime has changed; manually confirmed visual suspects must still exhibit a visual-anomaly WARNING on recheck.
 5. File move destination is the adjacent source-name_CORRUPTED sibling, retaining its relative hierarchy. Exclude directories ending _CORRUPTED during discovery and disallow them as user-selected sources.
 6. Copy is staged privately, verified byte-for-byte, and published atomically without overwriting an occupied quarantine destination. Only after recording Undo does the original get removed. A crashed process can leave an orphaned .stage-* file; source remains intact during staging.
 7. Undo Last Run uses persisted manifest and exclusive no-overwrite restore. Unresolved conflicts remain available. Previous manifests are archived in undo/history before new runs.
-8. Separate progress stages, discovered/checked totals, elapsed time, throughput, drive/worker counts; source and results tables have mouse/keyboard OPEN cells before paths, and log paths have an adjacent clickable [DIR] tag. Result table includes a Preview Selected Image button opening the OS image viewer. Content scrolls at small window sizes. Removed forced Tk scaling.
+8. Separate progress stages, discovered/checked totals, elapsed time, throughput, drive/worker counts; source and results tables have mouse/keyboard OPEN cells before paths, and log paths have an adjacent clickable [DIR] tag. Review includes Preview Selected Image and Confirm Selected Visual Damage buttons. The latter is enabled only for visual warnings after a completed scan. Action controls are on two rows, stats wrap to a four-column grid, and content scrolls at smaller sizes. Removed forced Tk scaling.
 
 ## v1.1.6 visual-anomaly regression (2026-10-09)
 
@@ -28,7 +28,7 @@ User submitted two JPEG files:
 - nannerl_lee-06022025-0002.jpg: 1358x1358 JPEG, valid FF D8 / FF D9, Pillow verify/load OK; FFmpeg decodes without errors. Visible severe lower-half green/red blocking; visual-anomaly detector flags strong horizontal seam at about 49% and anomalous saturation shift.
 - nannerl_lee-06022025-0005(1).jpg: 1170x1169 JPEG, valid FF D8 / FF D9, Pillow verify/load OK; FFmpeg decodes without errors. Visible high-contrast yellow/green bands; detector flags abnormal horizontal seam around 69% and anomalous saturation shift.
 
-New detector is a bounded (160 px across, max 384 px high) Pillow RGB heuristic measuring full-width abrupt row differences plus large saturation changes in image regions; no new package dependency. It is only run on successfully decoded JPEG-family files. Flagged files appear as WARNING - LEFT IN PLACE with the diagnostic reason and an option to preview the selected image. It cannot establish whether visual damage is unintentional: deliberate glitch art and collage graphics can trigger it. **Never move an image just from this heuristic.**
+New detector is a bounded (160 px across, max 384 px high) Pillow RGB heuristic measuring full-width abrupt row differences plus large saturation changes in image regions; no new package dependency. It is only run on successfully decoded JPEG-family files. Flagged files appear as WARNING - LEFT IN PLACE with the diagnostic reason and a Preview Selected Image action. The user may explicitly Confirm Selected Visual Damage after reviewing the image; this changes the selected result to CONFIRMED CORRUPT (MANUAL), making it eligible for a separate, confirmed Move Confirmed Corrupt action. Before moving, the candidate is checked for changed size/mtime and visual anomaly is recomputed; no auto-move on heuristic alone. It cannot establish whether damage is unintentional: deliberate glitch art and collage graphics can trigger it. **Never move an image just from this heuristic without user confirmation.**
 
 Independent local detector regression on the two submitted files: BOTH FLAGGED. Six scikit-image reference photographs (astronaut, coffee, chelsea, rocket, cat, hubble_deep_field) were NOT flagged. Synthetic split-color graphic deliberately flags, documenting false-positive risk. This was a detector-level run, NOT an end-to-end execution of the GitHub .pyw app.
 
@@ -53,7 +53,7 @@ The following are required expected classifications; **v1.1.6 has NOT yet been e
 - Successfully decoded valid image under a mismatched file extension remains GOOD.
 - Scan must NEVER move files; move only candidates still confirmed corrupt at execution.
 - Same-drive sources share worker pool, different-drive groups run concurrently.
-- Move and Undo never overwrite an existing destination/original, even on interrupted operations; Undo restores exact bytes and retains conflicts.
+- Move and Undo never overwrite an existing destination/original, even on interrupted operations; Undo restores exact bytes and retains conflicts. Manually confirmed visual suspects require TWO confirmations (manual promotion and explicit move) and rescanning must drop stale confirmation.
 - Check stopping scan, stopping move, concurrent drive reads, path controls, UI focus and keyboard traversal.
 
 ## Mandatory UI / rule review
@@ -66,7 +66,7 @@ The following are required expected classifications; **v1.1.6 has NOT yet been e
 ## Test status and known blockers
 v1.1.6 implementation and README were committed to GitHub, but Windows tests and release certification remain **incomplete**:
 - Remote source was inspected/modified through the GitHub connector; container network cannot reach raw.githubusercontent.com. The visual-anomaly helper was executed locally, but Python py_compile on the full remote .pyw and direct Windows execution remain unverified.
-- Not verified: Tk GUI startup, 100/125/150/200% DPI, minimum-size layout, mouse/keyboard path open controls, all known real-image samples, collision/undo/interruption and worker scheduling regression tests.
+- Not verified: Tk GUI startup, 100/125/150/200% DPI, minimum-size layout, mouse/keyboard path open/preview/confirmation controls, all known real-image samples through the full application, collision/undo/interruption and worker scheduling regression tests.
 - Whole-product/global UXDT and winget/bootstrap audit not yet complete; no claim of compliance.
 - If final runtime testing exposes failures, fix them before removing Under construction ⚠️. Keep current state explicitly unfinished.
 
