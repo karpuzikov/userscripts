@@ -1,6 +1,7 @@
 #requires -Version 7.0
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
+Write-Host "ArchiveMedia v6.1.0 - Under construction ⚠️" -ForegroundColor Cyan
 
 # ---------------- USER-TUNABLE SETTINGS ----------------
 $MaxParallel = 4
@@ -463,6 +464,10 @@ function Invoke-ArchiveCloud([string]$src, [string]$dst) {
                 if ((Cloud-Stat $rclone $temp).MD5 -ne $data.MD5) { throw 'Local transfer checksum mismatch.' }
                 if (Test-Path -LiteralPath $target) { throw "Destination appeared while copying: $target" }
                 Move-Item -LiteralPath $temp -Destination $target
+            }
+            if (-not (Test-RclonePath $src)) {
+                $lastSourceHash = (Get-FileHash -LiteralPath $file.Source -Algorithm MD5).Hash.ToLowerInvariant()
+                if ($lastSourceHash -ne $file.MD5) { throw "Local source changed during processing: $($file.Rel)" }
             }
             $verified = Cloud-Stat $rclone $target
             if (-not $verified -or $verified.Size -ne $data.Size -or $verified.MD5 -ne $data.MD5) {
