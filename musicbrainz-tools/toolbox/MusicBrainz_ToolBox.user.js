@@ -42,6 +42,18 @@
 (() => {
     'use strict';
 
+    // Toolbox is the single owner of Apple Music importing when installed.
+    // Standalone legacy copies yield; keep an already-running import intact.
+    if (/^\/release\/[0-9a-f-]{36}\/edit-relationships\/?$/i.test(location.pathname)) {
+        const root = document.documentElement;
+        root.setAttribute('data-karpuzikov-apple-import-owner', 'toolbox');
+        const legacyPanel = document.getElementById('am2mb-panel');
+        if (legacyPanel && !document.getElementById('am2mb-load')?.disabled &&
+            !document.getElementById('am2mb-tracks')?.textContent?.trim()) {
+            legacyPanel.remove();
+        }
+    }
+
     const __mbToolBoxMusicBrainzIconSvg =
         '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 25 28" aria-hidden="true">' +
         '<polygon fill="#ba478f" points="12 0 0 7 0 21 12 28 12 0"/>' +
