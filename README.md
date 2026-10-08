@@ -28,9 +28,9 @@ A collection of Tampermonkey userscripts, MusicBrainz/Picard helpers, Windows ut
 
 | Project | Description | Version | Download |
 | --- | --- | ---: | --- |
-| **Picard - Current Artist Names Everywhere** | Uses current MusicBrainz artist names throughout Picard metadata. | 1.5.9 - Under construction ⚠️ | [![Picard 3](https://img.shields.io/badge/Picard_3-Git_plugin-0969da?style=for-the-badge)](https://github.com/karpuzikov/userscripts) |
-| **Picard - MusicBrainz Title Capitalization** | Capitalizes release and track titles according to MusicBrainz language rules. | 1.5.9 - Under construction ⚠️ | [![Picard 3](https://img.shields.io/badge/Picard_3-Git_plugin-0969da?style=for-the-badge)](https://github.com/karpuzikov/userscripts) |
-| **Picard - Barcode/UPC Lookup** | Resolves exact Barcode/UPC to a MusicBrainz release, uses total disc count to break duplicate-barcode ties, then matches each file directly by track/disc number. | 1.5.9 - Under construction ⚠️ | [![Picard 3](https://img.shields.io/badge/Picard_3-Git_plugin-0969da?style=for-the-badge)](https://github.com/karpuzikov/userscripts) |
+| **Picard - Current Artist Names Everywhere** | Uses current MusicBrainz artist names throughout Picard metadata. | 1.5.10 - Under construction ⚠️ | [![Picard 3](https://img.shields.io/badge/Picard_3-Git_plugin-0969da?style=for-the-badge)](https://github.com/karpuzikov/userscripts) |
+| **Picard - MusicBrainz Title Capitalization** | Capitalizes release and track titles according to MusicBrainz language rules. | 1.5.10 - Under construction ⚠️ | [![Picard 3](https://img.shields.io/badge/Picard_3-Git_plugin-0969da?style=for-the-badge)](https://github.com/karpuzikov/userscripts) |
+| **Picard - Barcode/UPC Lookup** | Resolves Barcode/UPC and tracks; restores its toolbar button automatically after Picard toolbar changes and adds a Tools-menu fallback. | 1.5.10 - Under construction ⚠️ | [![Picard 3](https://img.shields.io/badge/Picard_3-Git_plugin-0969da?style=for-the-badge)](https://github.com/karpuzikov/userscripts) |
 | **Picard - Move Featured Artists to Title** | Moves featured artists from artist fields into the track title. | 1.0.0 | [![TXT](https://img.shields.io/badge/Manual-.txt-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/main/picard-tools/scripts/Move_Featured_Artists_to_Title.txt) [![Picard 3](https://img.shields.io/badge/Picard_3-Git_plugin-0969da?style=for-the-badge)](https://github.com/karpuzikov/userscripts) |
 | **Picard - Unicode to ASCII** | Converts common Unicode punctuation and symbols to ASCII. | 1.0.0 | [![TXT](https://img.shields.io/badge/Manual-.txt-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/main/picard-tools/scripts/Unicode_to_ASCII.txt) [![Picard 3](https://img.shields.io/badge/Picard_3-Git_plugin-0969da?style=for-the-badge)](https://github.com/karpuzikov/userscripts) |
 | **Picard - Format Multiple Artists** | Formats track and album artist credits consistently (`artist` and `albumartist`). | 1.0.1 - Under construction ⚠️ | [![TXT](https://img.shields.io/badge/Manual-.txt-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/main/picard-tools/scripts/Format_Multiple_Artists_v1.0.1.txt) [![Picard 3](https://img.shields.io/badge/Picard_3-Git_plugin-0969da?style=for-the-badge)](https://github.com/karpuzikov/userscripts) |
@@ -41,7 +41,7 @@ A collection of Tampermonkey userscripts, MusicBrainz/Picard helpers, Windows ut
 
 **Current Artist Names Everywhere**, **MusicBrainz Title Capitalization**, the five tagging scripts above, and the Barcode/UPC-first Lookup helper are available through the shared Picard 3 plugin. The five tagging scripts also remain available as individual **Manual .txt** downloads.
 
-For automatic GitHub updates, install the shared **Karpuzikov Picard Scripts** plugin once:
+**Barcode / UPC Lookup** appears beside Picard's native Lookup toolbar button and under **Tools > Plugins**. Picard rebuilds the Actions toolbar when its layout changes; v1.5.10 reattaches the action automatically without adding duplicates.\n\nFor automatic GitHub updates, install the shared **Karpuzikov Picard Scripts** plugin once:
 
 1. Open `Options -> Plugins -> Install Plugin -> URL`.
 2. Git URL: `https://github.com/karpuzikov/userscripts.git`
