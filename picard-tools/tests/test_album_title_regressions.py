@@ -18,6 +18,8 @@ from musicbrainz_title_capitalization import (  # noqa: E402
     _canonical_release_suffix,
     _language_mode,
     capitalize_release_title,
+    capitalize_track_title,
+    normalize_europe_release_country,
     musicbrainz_english_title_case,
 )
 
@@ -221,10 +223,50 @@ class PicardAlbumRegressions(unittest.TestCase):
         self.assertLess(order.index("format_multiple_artists"), order.index("unicode_to_ascii"))
         self.assertLess(order.index("unicode_to_ascii"), order.index("add_ep_single_suffix"))
 
+    def test_region_code_europe_display_preference(self):
+        # Only exact XE in releasecountry becomes EU; do not modify other tags.
+        for source, wanted in (("XE", "EU"), ("EU", "EU"),
+                               ("US", "US"), ("XW", "XW")):
+            with self.subTest(country=source):
+                metadata = {"releasecountry": source, "album": "Test", "title": "Test"}
+                release = {"title": "Test", "text-representation": {"language": "eng"}}
+                capitalize_release_title(_API(), metadata, release)
+                capitalize_track_title(_API(), metadata, {}, release)
+                self.assertEqual(metadata["releasecountry"], wanted)
+        metadata = {"releasecountry": ["XE", "US", "EU"]}
+        normalize_europe_release_country(metadata)
+        self.assertEqual(metadata["releasecountry"], ["EU", "US", "EU"])
+        normalize_europe_release_country(metadata)
+        self.assertEqual(metadata["releasecountry"], ["EU", "US", "EU"])
+
+    def test_english_capitalization_region_code_script(self):
+        source = (REPO / "picard-tools" / "scripts" /
+                  "English_Title_Capitalization.txt").read_text(encoding="utf-8")
+        self.assertIn("$eq(%releasecountry%,XE),$set(releasecountry,EU)", source)
+        self.assertIn("$is_multi(%releasecountry%)", source)
+
+    def test_region_code_in_picard_scripting_runtime(self):
+        try:
+            from picard.metadata import Metadata
+            from picard.script import ScriptParser
+        except ImportError:
+            self.skipTest("Picard runtime unavailable; run inside Picard's Python environment")
+        source = (REPO / "picard-tools" / "scripts" /
+                  "English_Title_Capitalization.txt").read_text(encoding="utf-8")
+        metadata = Metadata()
+        metadata["releasecountry"] = "XE"
+        metadata["album"] = "Test"
+        metadata["title"] = "Test"
+        metadata["language"] = "eng"
+        ScriptParser().eval(source, metadata)
+        self.assertEqual(metadata["releasecountry"], "EU")
+        ScriptParser().eval(source, metadata)
+        self.assertEqual(metadata["releasecountry"], "EU")
+
     def test_published_script_versions_match_stable_sources(self):
         for stable, versioned in (
             ("Unicode_to_ASCII.txt", "Unicode_to_ASCII_v1.0.1.txt"),
-            ("English_Title_Capitalization.txt", "English_Title_Capitalization_v1.1.3.txt"),
+            ("English_Title_Capitalization.txt", "English_Title_Capitalization_v1.1.4.txt"),
             ("Add_EP_Single_Suffix.txt", "Add_EP_Single_Suffix_v1.0.2.txt"),
             ("Format_Multiple_Artists.txt", "Format_Multiple_Artists_v1.0.2.txt"),
             ("Move_Featured_Artists_to_Title.txt", "Move_Featured_Artists_to_Title_v1.0.1.txt"),
