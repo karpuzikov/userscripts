@@ -2,7 +2,7 @@
 
 ## Product and state
 - Product: Karpuzikov Picard Scripts, a Picard 3.x Git-updatable MusicBrainz metadata plugin.
-- Current version: 1.5.22 - Under construction ⚠️ (not yet verified inside user Picard).
+- Current version: 1.5.23 - Under construction ⚠️ (not yet verified inside user Picard).
 - Git repository and active branch: `karpuzikov/userscripts`, `main`.
 - There is no additional project-specific `RULES.md` currently; the canonical repository root `SOFTWARE_RULES.md` governs this project.
 
@@ -169,4 +169,15 @@
 - Do **not** extrapolate this test to the currently published plugin `1.5.22`; changes from v1.5.13 through v1.5.22 (Unicode conversion, capitalization, artist handling and persistent Barcode taskbar-window fixes) remain separately unverified and the plugin must retain `1.5.22 - Under construction ⚠️` until the latest code receives user testing.
 - The previously requested extra Barcode taskbar-window verification is still pending. Keep other standalone scripts' construction labels unchanged.
 - No version increment or plugin-code changes were performed for this documentation-only confirmation.
+
+## Barcode leading-zero equivalence regression (2026-10-09; v1.5.23)
+
+- User-reported failure: file tag `barcode=602478746901` (UPC-A / GTIN-12) was not linked to MusicBrainz release `7045707b-621d-408c-9e97-3fc0c652ee24` with stored `barcode=0602478746901` (EAN-13 / GTIN-13). Those codes represent the same GTIN when normalized to zero-padded 14-digit GS1 representation.
+- Prior `_barcodes_match` already recognized leading-zero equivalence, but the response handler in `_start_barcode_batch_lookup` required `form_targets.get(release_barcode)` exact textual equality. MusicBrainz can return a zero-padded barcode for a raw UPC query, causing a valid response to be silently discarded. Searching equivalent representations only in a later fallback pass was also fragile.
+- v1.5.23 constructs queries for all supported `_barcode_forms` in the initial search; the handler now accepts a returned release only when its actual barcode passes `_barcodes_match` against the original file barcode. The same comparison applies to disc-count resolution; disc-count query variants include padded and unpadded forms.
+- Preserve false-positive prevention: never select a result with a different GTIN, even if Lucene search returns it. The existing release-choice rule for multiple genuine barcode matches (disc-count filter, otherwise first result) is unchanged. File-to-track assignment remains by disc/track index as before.
+- Added `picard-tools/tests/test_barcode_lookup_regressions.py` with five Qt-independent tests: equivalence, first-pass UPC/EAN search, padded response from raw query, different-barcode rejection and duplicate release/disc-count choice. The tests use AST-extracted repository functions and mocked asynchronous MusicBrainz responses; run locally with `python -m unittest discover -s picard-tools/tests -p "test_*.py"`. They are authored but not executed in this chat, and a Windows/Picard runtime test is still required.
+- The MusicBrainz release itself could not be fetched live from this environment; the specific release/barcode mapping is user-supplied, whereas GS1's leading-zero equivalence is independently standardized.
+- Manual QA: update Git-updatable Picard 3 plugin to v1.5.23, select a file containing the 12-digit UPC, click Barcode, verify it links to release `7045707b-621d-408c-9e97-3fc0c652ee24` and is matched by disc/track number. Check inverse EAN-13 file case, nonmatching last digit, batch lookup, and multiple releases. If a valid release is found but no track is assigned, investigate the separate disc/track-number matching logic rather than loosening GTIN comparison.
+- Existing Picard toolbar/taskbar issues remain independently pending user runtime verification. Keep v1.5.23 - Under construction ⚠️; do not infer complete testing from the previous EP suffix `done` confirmation.
 
