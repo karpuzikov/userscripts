@@ -1,9 +1,10 @@
 $if($and(
-$or($not(%language%),$eq($lower(%language%),eng),$eq($lower(%language%),en),$eq($lower(%language%),english)),
+$or($not(%language%),$eq($lower(%language%),eng),$eq($lower(%language%),en),$eq($lower(%language%),english),$and($or($eq($lower(%language%),und),$eq($lower(%language%),mul)),$rsearch($lower(%album%),^the[ ]+))),
 $not($rsearch($lower(%album%),la noche|vai sentando))
 ),
 $foreach(title; album,
-$set(_case,$title($get(%_loop_value%)))
+$set(_case_core,$rreplace($trim($get(%_loop_value%)), - [Ss][Ii][Nn][Gg][Ll][Ee]$| - [Ee][Pp]$,))
+$if($eq(%_case_core%,$upper(%_case_core%)),$set(_case,$title($lower($get(%_loop_value%)))),$set(_case,$title($get(%_loop_value%))))
 $set(_case,$replace(%_case%, A , a ))
 $set(_case,$replace(%_case%, An , an ))
 $set(_case,$replace(%_case%, The , the ))
@@ -174,9 +175,21 @@ $set(_case,$replace(%_case%, - of , - Of ))
 $set(_case,$replace(%_case%, - on , - On ))
 $set(_case,$replace(%_case%, - to , - To ))
 $set(_case,$replace(%_case%, - from , - From ))
+$if($eq(%_case_core%,$upper(%_case_core%)),
+$set(_case,$rreplace(%_case%,\\b[Dd][Jj]\\b,DJ))
+$set(_case,$rreplace(%_case%,\\b[Vv][Ii][Pp]\\b,VIP))
+$set(_case,$rreplace(%_case%,\\b[Ee][Dd][Mm]\\b,EDM))
+$set(_case,$rreplace(%_case%,\\b[Bb][Bb][Cc]\\b,BBC))
+$set(_case,$rreplace(%_case%,\\b[Uu][Kk]\\b,UK))
+$set(_case,$rreplace(%_case%,\\b[Uu][Ss][Aa]\\b,USA))
+$set(_case,$rreplace(%_case%,\\b[Ee][Pp]\\b,EP))
+$set(_case,$rreplace(%_case%,\\b[Ll][Pp]\\b,LP))
+)
+$set(_case,$rreplace(%_case%, - Ep$,- EP))
 $set(_case,$rreplace(%_case%,\\b[Vv][Ss]\\.,vs.))
 $set(%_loop_value%,%_case%)
 )
 $unset(_case)
+$unset(_case_core)
 )
 $if($rsearch($lower(%media%),^[0-9]*[x×]?[ ]*digital media$),$delete(releasecountry),$if($is_multi(%releasecountry%),$setmulti(releasecountry,$map(%releasecountry%,$if($eq(%_loop_value%,XE),EU,%_loop_value%))),$if($eq(%releasecountry%,XE),$set(releasecountry,EU))))
