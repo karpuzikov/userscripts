@@ -402,6 +402,11 @@ def _start_barcode_batch_lookup(api, file_groups):
             return
 
         state["pending"] = len(chunks)
+        candidate_barcodes = {
+            original
+            for originals in form_targets.values()
+            for original in originals
+        }
 
         for chunk in chunks:
             holder = {}
@@ -424,8 +429,12 @@ def _start_barcode_batch_lookup(api, file_groups):
                         release_barcode = _exact_release_barcode(release)
                         if not release_barcode:
                             continue
-                        for original_barcode in form_targets.get(release_barcode, ()):
-                            add_release(target_store, original_barcode, release)
+                        # MusicBrainz may return GTIN-13 with a leading zero
+                        # for a search made with its 12-digit UPC-A form.
+                        # Compare barcode *equivalence*, not identical strings.
+                        for original_barcode in candidate_barcodes:
+                            if _barcodes_match(original_barcode, release_barcode):
+                                add_release(target_store, original_barcode, release)
 
                 state["pending"] -= 1
                 if state["pending"] == 0:
@@ -453,10 +462,11 @@ def _start_barcode_batch_lookup(api, file_groups):
             if not disc_count:
                 continue
 
-            duplicate_queries.append(
-                "(barcode:%s AND mediums:%s)" % (barcode, disc_count)
-            )
-            duplicate_targets.setdefault(barcode, set()).add(barcode)
+            for form in _barcode_forms(barcode):
+                duplicate_queries.append(
+                    "(barcode:%s AND mediums:%s)" % (form, disc_count)
+                )
+                duplicate_targets.setdefault(form, set()).add(barcode)
 
         request_queries(
             duplicate_queries,
@@ -465,43 +475,15 @@ def _start_barcode_batch_lookup(api, file_groups):
             finish,
         )
 
-    def start_fallback():
-        missing = [
-            barcode
-            for barcode in barcodes
-            if not state["matches"][barcode]
-        ]
-        if not missing:
-            resolve_duplicates()
-            return
+    # Search UPC-A / EAN-13 equivalents in the first pass, rather than
+    # requiring a failed first request before trying a padded code.
+    form_targets = {}
+    for barcode in barcodes:
+        for form in _barcode_forms(barcode):
+            form_targets.setdefault(form, set()).add(barcode)
 
-        form_targets = {}
-        fallback_queries = []
-
-        for barcode in missing:
-            for form in sorted(_barcode_forms(barcode) - {barcode}):
-                form_targets.setdefault(form, set()).add(barcode)
-                fallback_queries.append("barcode:%s" % form)
-
-        def after_fallback():
-            resolve_duplicates()
-
-        request_queries(
-            fallback_queries,
-            form_targets,
-            state["matches"],
-            after_fallback,
-        )
-
-    exact_targets = {barcode: {barcode} for barcode in barcodes}
-    exact_queries = ["barcode:%s" % barcode for barcode in barcodes]
-    request_queries(
-        exact_queries,
-        exact_targets,
-        state["matches"],
-        start_fallback,
-    )
-
+    queries = ["barcode:%s" % form for form in sorted(form_targets)]
+    request_queries(queries, form_targets, state["matches"], resolve_duplicates)
 
 
 def _start_barcode_lookup(api, files, barcode):
