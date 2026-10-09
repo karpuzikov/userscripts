@@ -11570,7 +11570,7 @@ button:focus-visible,input:focus-visible{
 
 <div id="content">
   <section class="card">
-    <div class="cardHead"><div class="cardTitle">Source folders</div><div class="cardHint">Analysis never changes these folders. Release Map exports copies only.</div></div>
+    <div class="cardHead"><div class="cardTitle">Source folders</div><div class="cardHint">Analysis is read-only. Release Map can Copy or Move retained releases after confirmation.</div></div>
     <div class="sources">
       <div class="sourceBlock">
         <div class="labelRow"><label class="fieldLabel" for="existingPath">Existing discography</label><div class="optional">optional</div></div>
