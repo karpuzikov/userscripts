@@ -1035,6 +1035,15 @@ This section supersedes older featured-remix, contextual-remix, and generic Edit
 - Strong structural conflicts such as Radio vs Extended or Acoustic vs Instrumental remain eligible for semantic pre-blocking unless exact identical Chromaprint overrides the wording.
 
 
+## v0.4.1 default UPDATED destination and independent Copy/Move - authoritative
+
+- Both export actions must default to a sibling `<New / update releases root> - UPDATED` folder. Example: `C:\!deemix Music\Metro Boomin` => `C:\!deemix Music\Metro Boomin - UPDATED`. Show the complete default next to a folder-opener immediately, and retain a Browse override per action.
+- **Copy old + new releases into:** copies retained OLD + NEW source material non-destructively, never changes either scanned source.
+- **Move old + new releases into:** replaces the old `Copy new releases into`; it is not a rename of a NEW-only copy! It must physically relocate retained OLD + NEW release folders, leave rejected/non-retained releases at source, and require a clear confirmation explicitly warning that selected originals leave their folders.
+- Fail closed on destination collisions, overlapping paths or output trees within either source tree; never merge/overwrite release folders. Copy/move must preserve original folder structure and filenames.
+- Cross-volume moves must verify copied release data before deleting originals, keep Undo/restoration journal, and roll back completed transfers if a later move fails. Do not silently overwrite previous Undo history. After Move, invalidate release decisions with obsolete source paths and request a fresh analysis.
+- Both actions are disabled during pending manual Ignore/Restore decisions until Re-Analyze completes. Under construction remains until Windows runtime testing confirms behavior.
+
 ## v0.4.0 graphical Release Map line readability - authoritative
 
 - This version continues the full-featured WebView2 + pywebview desktop interface. The isolated ASCII/Textual experiment is rejected and must not be merged or substituted for the graphical release.
