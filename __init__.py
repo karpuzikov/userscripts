@@ -610,50 +610,49 @@ def _detach_barcode_action(window):
     return affected
 
 
-def _retire_obsolete_picard_toolbars(window):
-    """Dispose Actions toolbars orphaned by Picard's toolbar recreation.
+def _retire_replaced_barcode_toolbar(toolbar, current):
+    """Dispose the previously observed Actions toolbar by direct reference.
 
-    Picard's create_action_toolbar() clears and removes the previous QToolBar,
-    but doesn't destroy it. Once cleared, it no longer contains our QAction,
-    so searching only for Barcode actions misses its detached taskbar window.
+    Qt can remove or clear a toolbar before it appears in a widget enumeration;
+    objectName and QAction-based searches are not sufficient.
     """
+    if toolbar is None or toolbar is current:
+        return False
+    try:
+        if (
+            _BARCODE_TOOLBAR_ACTION is not None
+            and _BARCODE_TOOLBAR_ACTION in toolbar.actions()
+        ):
+            toolbar.removeAction(_BARCODE_TOOLBAR_ACTION)
+        toolbar.hide()
+        toolbar.deleteLater()
+        return True
+    except RuntimeError:
+        return False
+
+
+def _retire_obsolete_picard_toolbars(window):
+    """Dispose detached Actions toolbars, including those already cleared."""
     current = getattr(window, "toolbar", None) if window is not None else None
     removed = []
     for toolbar in _barcode_toolbars(window):
         try:
             if toolbar is current or toolbar.objectName() != "main_toolbar":
                 continue
-            if _BARCODE_TOOLBAR_ACTION is not None and _BARCODE_TOOLBAR_ACTION in toolbar.actions():
-                toolbar.removeAction(_BARCODE_TOOLBAR_ACTION)
-            toolbar.hide()
-            toolbar.deleteLater()
-            removed.append(toolbar)
+            if _retire_replaced_barcode_toolbar(toolbar, current):
+                removed.append(toolbar)
         except RuntimeError:
-            # Picard may already have destroyed a toolbar mid-rebuild.
             continue
     return removed
 
 
-def _hide_floating_barcode_toolbars(toolbars):
-    """Return ONLY toolbar windows actually hidden by us during shutdown."""
-    hidden = []
-    for toolbar in toolbars:
-        try:
-            if toolbar.isFloating() and toolbar.isVisible():
-                toolbar.hide()
-                hidden.append(toolbar)
-        except RuntimeError:
-            continue
-    return hidden
-
-
-def _restore_hidden_barcode_toolbars(toolbars):
-    """Restore native toolbar visibility if Picard cancels its Close event."""
-    for toolbar in toolbars:
-        try:
-            toolbar.show()
-        except RuntimeError:
-            continue
+def _dock_barcode_toolbar(window, toolbar):
+    """Keep Barcode in Picard's owned, docked Actions toolbar."""
+    # An independent QToolBar counts as a Qt top-level window and can prevent
+    # QApplication from exiting when the Picard main window is closed.
+    if toolbar.isFloating():
+        window.addToolBar(QtCore.Qt.ToolBarArea.TopToolBarArea, toolbar)
+    toolbar.setFloatable(False)
 
 
 def _place_barcode_action(toolbar, action):
@@ -685,6 +684,15 @@ def _install_barcode_lookup_button(api):
     if toolbar is None:
         return False
 
+    try:
+        _dock_barcode_toolbar(window, toolbar)
+        watcher = _BARCODE_TOOLBAR_WATCHER
+        if watcher is not None:
+            watcher.observe_toolbar(toolbar)
+    except RuntimeError:
+        # Picard can rebuild the toolbar between the event and this callback.
+        return False
+
     if _BARCODE_TOOLBAR_ACTION is None:
         action = QtGui.QAction(
             _make_barcode_icon(window),
@@ -705,7 +713,7 @@ def _install_barcode_lookup_button(api):
 
 
 class _BarcodeToolbarWatcher(QtCore.QObject):
-    """Repair toolbars at runtime and release floating toolbars on Picard exit."""
+    """Keep Barcode docked; dispose replaced toolbars before they become floaters."""
 
     def __init__(self, api):
         window = api.tagger.window
@@ -714,8 +722,7 @@ class _BarcodeToolbarWatcher(QtCore.QObject):
         self.window = window
         self.pending = False
         self.closing = False
-        self.close_toolbars = []
-        self.hidden_toolbars = []
+        self.observed_toolbar = None
         self.window.installEventFilter(self)
         self.app = QtWidgets.QApplication.instance()
         if self.app is not None:
@@ -727,24 +734,29 @@ class _BarcodeToolbarWatcher(QtCore.QObject):
         self.check_timer.start()
         self.schedule()
 
+    def observe_toolbar(self, toolbar):
+        previous = self.observed_toolbar
+        if previous is toolbar:
+            return
+        self.observed_toolbar = toolbar
+        _retire_replaced_barcode_toolbar(previous, toolbar)
+
     def eventFilter(self, watched, event):
         if watched is not self.window:
             return False
         event_type = event.type()
         if event_type == QtCore.QEvent.Type.Close:
-            # Retire even an old, cleared toolbar with no Barcode action.
-            # An orphaned top-level toolbar can prevent QApplication quitting.
             self.closing = True
             self.check_timer.stop()
             _retire_obsolete_picard_toolbars(self.window)
-            self.close_toolbars = _detach_barcode_action(self.window)
-            self.hidden_toolbars = _hide_floating_barcode_toolbars(self.close_toolbars)
-            # Closing Picard may be cancelled. Restore the button if so.
+            # IMPORTANT: do NOT detach the active toolbar or queue a
+            # zero-delay restoration here. Picard's closeEvent may open a
+            # modal confirmation; zero-delay callbacks run in its nested event
+            # loop BEFORE the Close event is accepted.
+            QtCore.QTimer.singleShot(250, self.resume_if_close_cancelled)
+        elif event_type == QtCore.QEvent.Type.WindowActivate and self.closing:
+            # Returning from a cancelled confirmation should reactivate Picard.
             QtCore.QTimer.singleShot(0, self.resume_if_close_cancelled)
-        elif event_type == QtCore.QEvent.Type.Hide and self.closing:
-            self.hidden_toolbars.extend(
-                _hide_floating_barcode_toolbars(self.close_toolbars)
-            )
         elif not self.closing and event_type in (
             QtCore.QEvent.Type.ChildAdded,
             QtCore.QEvent.Type.ChildRemoved,
@@ -754,21 +766,20 @@ class _BarcodeToolbarWatcher(QtCore.QObject):
         return False
 
     def resume_if_close_cancelled(self):
-        try:
-            still_open = self.window.isVisible()
-        except RuntimeError:
-            return
-        if not still_open:
-            self.hidden_toolbars.extend(
-                _hide_floating_barcode_toolbars(self.close_toolbars)
-            )
-            return
         if _LOOKUP_API is not self.api or not self.closing:
             return
-        _restore_hidden_barcode_toolbars(self.hidden_toolbars)
+        try:
+            if not self.window.isVisible():
+                return
+            # Do not restore anything while Picard's quit confirmation (or
+            # any other nested modal dialog) is still running.
+            if self.app is not None and self.app.activeModalWidget() is not None:
+                return
+            if not self.window.isActiveWindow():
+                return
+        except RuntimeError:
+            return
         self.closing = False
-        self.close_toolbars = []
-        self.hidden_toolbars = []
         self.check_timer.start()
         self.refresh()
 
@@ -776,10 +787,8 @@ class _BarcodeToolbarWatcher(QtCore.QObject):
         self.closing = True
         self.check_timer.stop()
         _retire_obsolete_picard_toolbars(self.window)
-        self.close_toolbars.extend(_detach_barcode_action(self.window))
-        self.hidden_toolbars.extend(
-            _hide_floating_barcode_toolbars(self.close_toolbars)
-        )
+        # The active non-floating toolbar remains owned by Picard's window;
+        # Qt destroys it along with the window.
 
     def schedule(self):
         if not self.closing and not self.pending:
@@ -791,7 +800,6 @@ class _BarcodeToolbarWatcher(QtCore.QObject):
         if self.closing or _LOOKUP_API is not self.api:
             return
         try:
-            # Fix toolbar replacement at its source, not only on app exit.
             _retire_obsolete_picard_toolbars(self.window)
             _install_barcode_lookup_button(self.api)
         except (AttributeError, RuntimeError) as exc:
@@ -800,6 +808,7 @@ class _BarcodeToolbarWatcher(QtCore.QObject):
     def stop(self):
         self.closing = True
         self.check_timer.stop()
+        self.observed_toolbar = None
         if self.app is not None:
             try:
                 self.app.aboutToQuit.disconnect(self.on_quit)
