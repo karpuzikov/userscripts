@@ -1,6 +1,6 @@
 # Duplicate Edition Analyzer Lightweight
 
-Version: **0.4.0 - Under construction ⚠️**
+Version: **0.4.1 - Under construction ⚠️**
 
 Branch: `dea-lightweight-modern`
 
@@ -41,6 +41,16 @@ The lightweight build preserves the regular DEA feature surface, including:
 - path openers, logging, settings and Undo.
 
 The failed `native-light` prototype is not the reference.
+
+## 0.4.1
+
+- **Default export destination (both buttons):** if New / update releases is `C:\!deemix Music\Metro Boomin`, the proposed destination is automatically `C:\!deemix Music\Metro Boomin - UPDATED` (a sibling folder). You can immediately click the action; Browse remains available for overrides. Never creates this directory merely by opening Release Map.
+- **Copy old + new releases into:** unchanged non-destructive full retained OLD+NEW output, now with the automatic default.
+- **Move old + new releases into:** replaces the former `Copy new releases into` button. A separately confirmed, genuinely destructive move of *retained* OLD+NEW physical release folders to the same default destination. Skipped/rejected releases remain at the original sources; destination collisions or paths inside OLD/NEW inputs fail before moving anything.
+- Same-volume moves use direct folder rename. Cross-volume transfers copy and verify full directory contents (SHA-256 for each file) before removing originals. Progress, reverse-order rollback, journaled Undo and existing destination protection are retained.
+- The result dialog explains whether folders were copied or moved. Move completion offers an immediate **Undo move** button and invalidates the prior analysis snapshot because original release paths changed.
+- Added isolated temporary-folder regression tests covering default path, copy remaining non-destructive, full OLD+NEW move, skipped-release preservation, occupied-destination refusal, Undo restoration, and simulated cross-volume verification.
+- Remains **Under construction ⚠️** pending a real Windows Skrillex OLD/NEW run, a safe Move test and manual UI inspection.
 
 ## 0.4.0
 
