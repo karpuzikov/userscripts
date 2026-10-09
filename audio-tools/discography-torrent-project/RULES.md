@@ -1035,6 +1035,14 @@ This section supersedes older featured-remix, contextual-remix, and generic Edit
 - Strong structural conflicts such as Radio vs Extended or Acoustic vs Instrumental remain eligible for semantic pre-blocking unless exact identical Chromaprint overrides the wording.
 
 
+## v0.4.3 fingerprint worker ownership and storage-aware concurrency - authoritative
+
+- `fpcalc.exe`, `ffprobe.exe`, CUE extraction `ffmpeg.exe` and other subprocesses launched through the common hidden-process runner must be owned by the application on Windows using a kill-on-close Job Object. Close, X and normal/abnormal process termination must not leave those spawned analysis subprocesses running. Never mass-kill unrelated `fpcalc.exe` processes.
+- Auto audio I/O worker selection must inspect both OLD and NEW storage, choosing a conservative limit when either drive is rotating, network, or unidentifiable. Windows storage seek-penalty descriptor determines SSD versus HDD when accessible. HDD/network/unknown: 2; both SSD: up to 8. Do not equate CPU threads to safe disk concurrency.
+- Expose a labeled, keyboard-accessible graphical WebView2 audio I/O worker selector with Auto and manual 1-32, persist it in program-local settings and report the actual I/O limit in Activity. Cap `ffprobe` and `fpcalc` concurrent invocations; acoustic comparison parallelism is independently CPU-bound.
+- UI source-folders text must distinguish read-only analysis from destructive Move export. Never replace the graphical Release Map with the rejected ASCII prototype.
+- Include regression tests for auto/mixed-media and manual count selection, bridge availability, and tracked subprocess behavior. Windows-specific Job Object / physical-media detection still require hands-on runtime verification. Keep status Under construction ⚠️.
+
 ## v0.4.2 copy/move collision and Undo safety - authoritative
 
 - Both OLD+NEW export modes must preflight **nested/ancestor** destination targets in addition to exact collisions; reject overlapping release folder targets before any source/destination modifications.
