@@ -8016,6 +8016,56 @@ def copy_retained_plan(
     }
 
 
+def _verified_release_directory_move(source: Path, target: Path) -> None:
+    """Atomic same-volume rename; checked full-copy then removal across disks.
+
+    In a failed cross-disk copy, the original stays in place. The temporary
+    destination is deleted only while the original is still fully intact.
+    """
+    try:
+        os.replace(str(source), str(target))
+        return
+    except OSError:
+        if not source.is_dir() or target.exists():
+            raise
+    staging = target.parent / (".dea-transfer-" + hashlib.sha256(
+        str(source).encode("utf-8", "surrogatepass")
+    ).hexdigest()[:16])
+    if staging.exists():
+        raise RuntimeError(f"Interrupted transfer staging folder already exists:\n{staging}")
+    try:
+        shutil.copytree(source, staging, copy_function=shutil.copy2, symlinks=True)
+
+        def inventory(folder: Path) -> Dict[str, Tuple[str, str]]:
+            entries: Dict[str, Tuple[str, str]] = {}
+            for path in folder.rglob("*"):
+                name = str(path.relative_to(folder))
+                if path.is_symlink():
+                    entries[name] = ("link", os.readlink(path))
+                elif path.is_dir():
+                    entries[name] = ("dir", "")
+                elif path.is_file():
+                    digest = hashlib.sha256()
+                    with path.open("rb") as stream:
+                        for block in iter(lambda: stream.read(4 * 1024 * 1024), b""):
+                            digest.update(block)
+                    entries[name] = ("file", digest.hexdigest())
+                else:
+                    raise RuntimeError(f"Unrecognized source entry; refusing move:\n{path}")
+            return entries
+
+        if inventory(source) != inventory(staging):
+            raise RuntimeError(f"Cross-volume transfer verification failed:\n{source}\n{staging}")
+        os.replace(str(staging), str(target))
+    except Exception:
+        # Only purge staging; never delete an original because of a copy
+        # failure. After verification the destination is a complete copy.
+        if staging.is_dir():
+            shutil.rmtree(staging, ignore_errors=True)
+        raise
+    shutil.rmtree(source)
+
+
 def move_retained_plan(
     existing: Optional[Path],
     recycle: Path,
@@ -8111,23 +8161,10 @@ def move_retained_plan(
                     f"{source}\n{target}"
                 )
             target.parent.mkdir(parents=True, exist_ok=True)
-            try:
-                os.replace(str(source), str(target))
-            except OSError:
-                # shutil.move handles a different source/destination volume.
-                # If it fails mid-copy, preserve the original source folder.
-                try:
-                    shutil.move(str(source), str(target))
-                except Exception:
-                    if source.exists() and target.exists():
-                        if target.is_dir():
-                            shutil.rmtree(target)
-                        else:
-                            target.unlink()
-                    raise
+            _verified_release_directory_move(source, target)
+            completed.append((source, target))
             if source.exists() or not target.is_dir():
                 raise RuntimeError(f"Release move verification failed:\n{source}\n{target}")
-            completed.append((source, target))
             manifest["moves"].append({
                 "move_type": "retained_release",
                 "release_id": release.rid,
@@ -8147,7 +8184,7 @@ def move_retained_plan(
             try:
                 if target.exists() and not original.exists():
                     original.parent.mkdir(parents=True, exist_ok=True)
-                    shutil.move(str(target), str(original))
+                    _verified_release_directory_move(target, original)
             except Exception as exc:
                 conflicts.append(f"{target}: {exc}")
         if not conflicts:
@@ -8389,7 +8426,10 @@ def undo_last_run() -> Tuple[int, List[str]]:
             conflicts.append(str(original))
             continue
         original.parent.mkdir(parents=True, exist_ok=True)
-        shutil.move(str(saved), str(original))
+        if str(item.get("move_type", "")) == "retained_release":
+            _verified_release_directory_move(saved, original)
+        else:
+            shutil.move(str(saved), str(original))
         restored += 1
 
     # Remove now-empty mirrored helper folders, but preserve any older content.
