@@ -161,3 +161,12 @@
 - Execute orphan retirement on watcher refresh (normal Picard toolbar customization; every 4s fallback), ChildRemoved events, main-window Close *before* checking actions, QApplication.aboutToQuit, and plugin disable. The older close-cancel restore logic for *current* floating toolbar remains intact, and stays separate from obsolete toolbar disposal.
 - Tests cover an orphan without any QAction (key v1.5.19 regression), an orphan with the action, unrelated floating toolbar safety, replacement timing, and close/quit/disable hook coverage. No change to barcode lookup/matching, other tagging scripts, user toolbar configuration, or file paths.
 - **Under construction ⚠️** until Picard on user's Windows PC is tested: update plugin, customize Options > User Interface > Toolbar several times, close/reopen Picard, verify *no* extra taskbar window and Barcode button still works at both normal and narrow widths; test canceling Exit while unsaved changes exist. Keep root GitHub rules, standard MANIFEST/plugin version, and user settings unchanged.
+
+## User validation checkpoint - EP/Single suffix (2026-10-09)
+
+- User replied "done" after being asked to test plugin v1.5.12 against `Gypsyhook EP` and the `album` suffix duplication; treat this as confirmation of that fix's successful test.
+- Standalone `Add_EP_Single_Suffix_v1.0.2.txt` is marked tested (README Version/status: `1.0.2`, with construction label removed).
+- Do **not** extrapolate this test to the currently published plugin `1.5.22`; changes from v1.5.13 through v1.5.22 (Unicode conversion, capitalization, artist handling and persistent Barcode taskbar-window fixes) remain separately unverified and the plugin must retain `1.5.22 - Under construction ⚠️` until the latest code receives user testing.
+- The previously requested extra Barcode taskbar-window verification is still pending. Keep other standalone scripts' construction labels unchanged.
+- No version increment or plugin-code changes were performed for this documentation-only confirmation.
+
