@@ -1,6 +1,6 @@
 # Duplicate Edition Analyzer Lightweight
 
-Version: **0.4.1 - Under construction ⚠️**
+Version: **0.4.2 - Under construction ⚠️**
 
 Branch: `dea-lightweight-modern`
 
@@ -42,6 +42,16 @@ The lightweight build preserves the regular DEA feature surface, including:
 
 The failed `native-light` prototype is not the reference.
 
+## 0.4.2
+
+- Safety preflight rejects overlapping/nested OLD/NEW export destinations before any release is transferred.
+- Copy uses per-release staging, preventing an interrupted file copy from leaving a partial final release folder.
+- Cross-device fallback is used only for actual cross-device errors; ACL/sharing failures do not start a copy/delete fallback.
+- Undo keeps its manifest and reports conflicts when both original and moved folders are missing, or when a folder cannot be restored.
+- The destination folder buttons now use the displayed default UPDATED path, even before Browse.
+- Added automated regression checks for destination overlap, sharing denial, missing Undo data and default folder buttons.
+- **Status:** Under construction ⚠️. GitHub CI and real Windows/WebView2/Skrillex verification remain required; test Move only with disposable copies.
+
 ## 0.4.1
 
 - **Default export destination (both buttons):** if New / update releases is `C:\!deemix Music\Metro Boomin`, the proposed destination is automatically `C:\!deemix Music\Metro Boomin - UPDATED` (a sibling folder). You can immediately click the action; Browse remains available for overrides. Never creates this directory merely by opening Release Map.
@@ -51,7 +61,7 @@ The failed `native-light` prototype is not the reference.
 - The result dialog explains whether folders were copied or moved. Move completion offers an immediate **Undo move** button and invalidates the prior analysis snapshot because original release paths changed.
 - Added isolated temporary-folder regression tests covering default path, copy remaining non-destructive, full OLD+NEW move, skipped-release preservation, occupied-destination refusal, Undo restoration, and simulated cross-volume verification.
 - Automated source/logic validation passed: [GitHub Actions run 37872841539](https://github.com/karpuzikov/userscripts/actions/runs/37872841539). This does **not** substitute for a real Windows/WebView2 Copy/Move/Undo test.
-- Download `Duplicate Edition Analyzer Lightweight v0.4.1.pyw` from `dea-lightweight-modern`. No formal GitHub Releases tag or asset for this version has been created.
+- Latest source: `Duplicate Edition Analyzer Lightweight v0.4.2.pyw` on `dea-lightweight-modern` (versioned branch download; no formal GitHub Release).
 - Remains **Under construction ⚠️** pending a real Windows Skrillex OLD/NEW run, a safe Move test and manual UI inspection.
 
 ## 0.4.0
