@@ -9057,7 +9057,7 @@ button:focus-visible,input:focus-visible { outline:2px solid #8cc8ff; outline-of
   <div id="resultTitle">Re-Analyze result</div>
   <div id="resultBody"></div>
 </div>
-<div id="exportBar" aria-label="Copy selected releases">
+<div id="exportBar" aria-label="Copy or move retained releases">
   <div class="exportChoice">
     <div class="exportLabel"><b>Copy old + new releases into:</b><span>Final improved discography: retained OLD + additions/upgrades from NEW.</span></div>
     <button class="btn pathOpenBtn" id="openAllDestination" disabled title="Open destination" aria-label="Open old plus new destination">📁</button>
@@ -9066,11 +9066,11 @@ button:focus-visible,input:focus-visible { outline:2px solid #8cc8ff; outline-of
     <button class="btn exportCopyBtn" id="copyAllBtn" disabled>Copy old + new</button>
   </div>
   <div class="exportChoice">
-    <div class="exportLabel"><b>Copy new releases into:</b><span>Only retained releases from the NEW/update folder: ADD + UPGRADE.</span></div>
-    <button class="btn pathOpenBtn" id="openNewDestination" disabled title="Open destination" aria-label="Open new releases destination">📁</button>
+    <div class="exportLabel"><b>Move old + new releases into:</b><span>Move retained OLD + NEW folders to the updated collection. Originals will be relocated; Undo available.</span></div>
+    <button class="btn pathOpenBtn" id="openNewDestination" disabled title="Open destination" aria-label="Open move destination">📁</button>
     <div class="exportPath" id="newDestination" title="">Choose destination...</div>
     <button class="btn" id="chooseNewDestination">Browse...</button>
-    <button class="btn exportCopyBtn" id="copyNewBtn" disabled>Copy new releases</button>
+    <button class="btn exportCopyBtn" id="copyNewBtn" disabled>Move old + new</button>
   </div>
 </div>
 <script type="module">
@@ -9126,7 +9126,7 @@ function updateExportControls(){
   bar.classList.toggle("open",enabled);
   ["all","new"].forEach(function(mode){
     const cap=mode==="all"?"All":"New";
-    const path=String(exportDestinations[mode]||"");
+    const path=String(exportDestinations[mode]||(state&&state.defaultExportDestination)||"");
     const pathEl=document.getElementById(mode==="all"?"allDestination":"newDestination");
     const openBtn=document.getElementById("open"+cap+"Destination");
     const copyBtn=document.getElementById(mode==="all"?"copyAllBtn":"copyNewBtn");
@@ -10020,22 +10020,24 @@ function chooseDestination(mode){
 }
 function copyPlan(mode){
   if(!state||!state.applyEnabled||state.dirty)return;
-  const path=String(exportDestinations[mode]||"").trim();
+  const path=String(exportDestinations[mode]||state.defaultExportDestination||"").trim();
   if(!path){chooseDestination(mode);return;}
   const nodes=(state.nodes||[]).filter(function(n){
     const retained=["KEEP","ADD","REPLACE"].includes(String(n.action||"").toUpperCase())&&!n.manualRemoved;
-    return retained && (mode==="all" || String(n.rootKind||"")==="recycle");
+    return retained;
   });
   const oldCount=nodes.filter(function(n){return String(n.rootKind||"")==="existing";}).length;
   const newCount=nodes.filter(function(n){return String(n.rootKind||"")==="recycle";}).length;
   const upgradeCount=nodes.filter(function(n){return String(n.action||"").toUpperCase()==="REPLACE";}).length;
-  const label=mode==="all"?"old + new retained releases":"new/update retained releases";
-  const ok=window.confirm(
-    "Copy "+label+" to:\n\n"+path+"\n\n"
-    +oldCount+" OLD + "+newCount+" NEW releases ("+upgradeCount+" upgrade(s)).\n\n"
-    +"This is non-destructive: the existing and new/update source folders will not be moved, deleted, or modified."
-  );
-  if(ok)bridge.copyPlan(mode,path);
+  const summary=oldCount+" OLD + "+newCount+" NEW retained releases ("+upgradeCount+" upgrade(s)).";
+  const message=mode==="all"
+    ? "Copy retained OLD + NEW releases into:\n\n"+path+"\n\n"+summary+"\n\n"
+      +"This is non-destructive: the existing and new/update source folders will not be moved, deleted, or modified."
+    : "MOVE retained OLD + NEW releases into:\n\n"+path+"\n\n"+summary+"\n\n"
+      +"This WILL remove each retained release folder from its original OLD or NEW location and place it in the destination. "
+      +"Skipped/removed releases stay where they are. No destination folders will be overwritten. "
+      +"Undo Last Run can restore moved folders.";
+  if(window.confirm(message))bridge.copyPlan(mode,path);
 }
 document.getElementById("chooseAllDestination").onclick=function(){chooseDestination("all");};
 document.getElementById("chooseNewDestination").onclick=function(){chooseDestination("new");};
@@ -10792,6 +10794,12 @@ def launch_webview_release_map(session: Dict[str, object]) -> Dict[str, object]:
                 self.initial_plan_counts,
                 self.result,
             )
+            new_root = session.get("recycle")
+            if new_root is None:
+                new_root = self._ui_state.get("sourceRoots", {}).get("recycle", "")
+            self._ui_state["defaultExportDestination"] = (
+                str(default_updated_destination(Path(new_root))) if new_root else ""
+            )
     
         def _sync_ui_root(self) -> None:
             if not self._ui_state:
@@ -11070,11 +11078,15 @@ def launch_webview_release_map(session: Dict[str, object]) -> Dict[str, object]:
                 or self.dirty
                 or not self.apply_enabled
                 or mode not in {"all", "new"}
-                or not destination
             ):
                 return
+            if not destination:
+                source = session.get("recycle")
+                if not source:
+                    return
+                destination = str(default_updated_destination(Path(source)))
             self.result_payload = {
-                "action": "copy_all" if mode == "all" else "copy_new",
+                "action": "copy_all" if mode == "all" else "move_all",
                 "destination": destination,
                 "snapshots": self.snapshots,
                 "selected": self.selected,
@@ -12570,7 +12582,7 @@ def _webview_main_app() -> int:
             self._update_live_release_map_session(session, map_result)
             self.map_open = False
             action = str(map_result.get("action", "") or "")
-            if action not in {"copy_all", "copy_new"}:
+            if action not in {"copy_all", "move_all"}:
                 self.status = "Analysis complete - no copy performed."
                 self._emit_state()
                 return
@@ -12584,34 +12596,38 @@ def _webview_main_app() -> int:
                 self._error("The live analysis context is no longer available.")
                 return
             if not destination_text:
-                self._error("No copy destination was selected.")
-                return
-
-            mode = "all" if action == "copy_all" else "new"
+                destination_text = str(default_updated_destination(recycle))
+            is_move = action == "move_all"
             destination = Path(destination_text)
             self.progress_pct = 0.0
             self.progress_count = ""
-            self.status = "Copying final discography" if mode == "all" else "Copying new/update releases"
+            self.status = "Moving retained OLD + NEW releases" if is_move else "Copying final discography"
             self._last_progress_stage = ""
             self._append_activity(self.status)
             self._set_running(True)
 
             try:
-                result = copy_retained_plan(
-                    existing if isinstance(existing, Path) else None,
-                    recycle,
-                    destination,
-                    releases,
-                    decisions,
-                    mode,
-                    self._progress,
-                )
+                if is_move:
+                    result = move_retained_plan(
+                        existing if isinstance(existing, Path) else None,
+                        recycle, destination, releases, decisions, self._progress,
+                    )
+                else:
+                    result = copy_retained_plan(
+                        existing if isinstance(existing, Path) else None,
+                        recycle, destination, releases, decisions, "all", self._progress,
+                    )
                 self._live_release_map_session = None
+                if is_move:
+                    # Release paths point to old locations after a move.
+                    # Require a fresh scan rather than opening a stale map.
+                    self._decision_snapshot = []
+                    _save_decision_snapshot([])
                 self._copy_done(destination, result)
             except Exception as exc:
                 self.running = False
                 self.run_started_epoch_ms = 0
-                self.status = "Analysis complete - copy failed."
+                self.status = "Analysis complete - export failed."
                 self._error(str(exc))
 
         def _copy_done(self, destination: Path, result: Dict[str, object]) -> None:
@@ -12619,9 +12635,11 @@ def _webview_main_app() -> int:
             self.run_started_epoch_ms = 0
             self.progress_pct = 100.0
             self.progress_count = "100%"
-            self.status = "Copy complete"
+            moved = bool(result.get("source_folders_modified"))
+            self.status = "Move complete - Undo available" if moved else "Copy complete"
             self._append_activity(
-                f"Copy complete: {result.get('logical_releases', 0)} retained release(s)"
+                f"{'Move' if moved else 'Copy'} complete: "
+                f"{result.get('logical_releases', 0)} retained release(s)"
             )
             self._emit_state()
             self._event({
