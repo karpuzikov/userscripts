@@ -382,7 +382,7 @@ def musicbrainz_english_title_case(title: str) -> str:
     for token, original in protected.items():
         result = result.replace(token, original)
 
-    return _lowercase_vs_abbreviation(result)
+    return _restore_stylized_names(_lowercase_vs_abbreviation(result))
 
 
 def _has_cased_letters(text: str) -> bool:
@@ -490,6 +490,15 @@ def _apple_eti_case(title: str) -> str:
     return re.sub(r"\(([^()]*)\)", rewrite, title)
 
 
+def _restore_stylized_names(title: str) -> str:
+    """Keep established artist/album spellings after automatic title casing.
+
+    French punctuation normalization may introduce spaces around "!", hence
+    the narrowly limited optional whitespace in this exact brand-name rule.
+    """
+    return re.sub(r"(?i)(?<!\w)3oh\s*!\s*3(?!\w)", "3OH!3", title)
+
+
 def _lowercase_vs_abbreviation(title: str) -> str:
     """The abbreviated comparison marker 'vs.' remains lowercase everywhere."""
     return re.sub(r"(?i)\bvs\.", "vs.", title)
@@ -528,7 +537,7 @@ def standardize_title_case(
     else:
         result = title
 
-    return _lowercase_vs_abbreviation(result)
+    return _restore_stylized_names(_lowercase_vs_abbreviation(result))
 
 
 def _canonical_release_suffix(title: str) -> str:
