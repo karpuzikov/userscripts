@@ -1,6 +1,6 @@
 # Duplicate Edition Analyzer Lightweight
 
-Version: **0.4.2 - Under construction ⚠️**
+Version: **0.4.3 - Under construction ⚠️**
 
 Branch: `dea-lightweight-modern`
 
@@ -42,6 +42,16 @@ The lightweight build preserves the regular DEA feature surface, including:
 
 The failed `native-light` prototype is not the reference.
 
+## 0.4.3
+
+- Fixed the source of orphaned `fpcalc.exe` processes: subprocesses launched through the application's shared runner are assigned to a Windows Job Object with `KILL_ON_JOB_CLOSE`. Explicit Close, window X and interpreter exit close the job; process-tree cleanup is scoped to this application's children, not every system `fpcalc.exe`. A Windows runtime test is still required.
+- Added `Audio I/O workers` to the existing graphical WebView2 main window. Auto uses the Windows storage seek-penalty descriptor, applies the slower of OLD and NEW source drives, caps concurrent ffprobe/fpcalc tasks at 2 for HDD/network/unknown or up to 8 for SSD. Select any manual count 1-32. Selection persists in the existing settings file.
+- The Activity area shows the chosen concurrency and detected storage class at analysis start.
+- The separate CPU-bound acoustic comparison process count is unchanged; the I/O limit covers ffprobe and fpcalc only.
+- CI checks Python compilation, source-mode self-tests, embedded JavaScript, Ruff undefined names and pywebview bridge. Actual Windows child cleanup and HDD/SSD classification have **not** been verified on hardware.
+- **User test:** after terminating old orphan processes, open v0.4.3, select Auto, run a disposable HDD comparison, check Activity says `Audio I/O workers: 2 (HDD)`, check Task Manager during fingerprinting, close while busy, and confirm its `fpcalc.exe` children exit. Also test manual 1 and 4.
+- No ASCII/Textual prototype code has been merged. Status remains Under construction ⚠️.
+
 ## 0.4.2
 
 - Safety preflight rejects overlapping/nested OLD/NEW export destinations before any release is transferred.
@@ -61,7 +71,7 @@ The failed `native-light` prototype is not the reference.
 - The result dialog explains whether folders were copied or moved. Move completion offers an immediate **Undo move** button and invalidates the prior analysis snapshot because original release paths changed.
 - Added isolated temporary-folder regression tests covering default path, copy remaining non-destructive, full OLD+NEW move, skipped-release preservation, occupied-destination refusal, Undo restoration, and simulated cross-volume verification.
 - Automated source/logic validation passed: [GitHub Actions run 37872841539](https://github.com/karpuzikov/userscripts/actions/runs/37872841539). This does **not** substitute for a real Windows/WebView2 Copy/Move/Undo test.
-- Latest source: `Duplicate Edition Analyzer Lightweight v0.4.2.pyw` on `dea-lightweight-modern` (versioned branch download; no formal GitHub Release).
+- Latest source: `Duplicate Edition Analyzer Lightweight v0.4.3.pyw` on `dea-lightweight-modern` (versioned branch download; no formal GitHub Release).
 - Remains **Under construction ⚠️** pending a real Windows Skrillex OLD/NEW run, a safe Move test and manual UI inspection.
 
 ## 0.4.0
