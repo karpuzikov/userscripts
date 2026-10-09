@@ -11682,25 +11682,37 @@ function doneModal(data){
 }
 function copyDoneModal(data){
   const r=data.result||{};
-  const mode=String(r.mode||"");
-  const title=mode==="new"?"New/update releases copied":"Improved discography copied";
+  const moved=!!r.source_folders_modified;
+  const title=moved?"Improved discography moved":"Improved discography copied";
   const body='<div class="doneGrid">'
-    +'<div class="doneStat">Retained releases copied<b>'+esc(r.logical_releases||0)+'</b></div>'
+    +'<div class="doneStat">Retained releases '+(moved?'moved':'copied')+'<b>'+esc(r.logical_releases||0)+'</b></div>'
     +'<div class="doneStat">From OLD / existing<b>'+esc(r.existing_releases||0)+'</b></div>'
     +'<div class="doneStat">From NEW / update<b>'+esc(r.new_releases||0)+'</b></div>'
-    +'<div class="doneStat">Upgrades<b>'+esc(r.upgrades||0)+'</b></div>'
-    +'</div><div class="reviewDetails" style="margin-top:10px">New additions: '+esc(r.additions||0)
-    +' · Duplicate files omitted from copied output: '+esc(r.duplicate_files_omitted||0)
-    +' · Source folders modified: NO</div>'
-    +'<div class="pathNote"><button class="iconBtn" id="openCopyPathInline" title="Open copied output" aria-label="Open copied output">📁</button>'
+    +'<div class="doneStat">Release folders<b>'+esc(r.physical_folders||0)+'</b></div>'
+    +'</div><div class="reviewDetails" style="margin-top:10px">'
+    +(moved?'Original release folders relocated. Undo Last Run can restore them.'
+             :'Source folders modified: NO. Original OLD and NEW releases remain unchanged.')
+    +'</div>'
+    +'<div class="pathNote"><button class="iconBtn" id="openCopyPathInline" title="Open output" aria-label="Open output">📁</button>'
     +'<span class="pathNoteText">Destination: '+esc(data.destination||"")+'</span></div>';
-  openModal("done",title,"Copy completed. Original OLD and NEW source folders were left unchanged.",body,
+  openModal("done",title,moved
+    ?"Move complete. Selected OLD and NEW release folders are now in the UPDATED destination."
+    :"Copy completed. Original OLD and NEW source folders were left unchanged.",body,
     '<button class="btn" id="openCopyDone">Open destination</button>'
-    +'<button class="btn" id="mapAfterCopy">Release Map...</button>'
+    +(moved?'<button class="btn" id="undoMovedReleases">Undo move</button>'
+           :'<button class="btn" id="mapAfterCopy">Release Map...</button>')
     +'<div class="modalSpacer"></div><button class="btn primary" id="copyDoneClose">Close</button>');
   document.getElementById("openCopyDone").onclick=function(){bridge.openPath(data.destination||"");};
   document.getElementById("openCopyPathInline").onclick=function(){bridge.openPath(data.destination||"");};
-  document.getElementById("mapAfterCopy").onclick=function(){closeModal();bridge.openReleaseMap();};
+  if(moved){
+    document.getElementById("undoMovedReleases").onclick=function(){
+      if(window.confirm("Undo the last release move and restore original folder locations?")){
+        closeModal();bridge.undoLastRun();
+      }
+    };
+  }else{
+    document.getElementById("mapAfterCopy").onclick=function(){closeModal();bridge.openReleaseMap();};
+  }
   document.getElementById("copyDoneClose").onclick=closeModal;
 }
 function handleEvent(raw){
@@ -12827,10 +12839,11 @@ def _ui_contract_self_test() -> None:
         ),
         (
             'id="copyAllBtn" disabled>Copy old + new</button>' in map_html
-            and 'id="copyNewBtn" disabled>Copy new releases</button>' in map_html
+            and 'id="copyNewBtn" disabled>Move old + new</button>' in map_html
             and 'id="allDestination"' in map_html
-            and 'id="newDestination"' in map_html,
-            "Release Map must provide separate old+new and new-only copy destinations/actions.",
+            and 'id="newDestination"' in map_html
+            and 'function copyPlan(mode)' in map_html,
+            "Release Map must provide non-destructive Copy and explicitly confirmed Move OLD+NEW.",
         ),
         (
             'sourceLegendPill' in map_html and 'originOld' in map_html and 'originNew' in map_html,
@@ -12972,6 +12985,74 @@ def _ui_contract_self_test() -> None:
     copy_contract_source = copy_retained_plan.__doc__ or ""
     if "without modifying either source collection" not in copy_contract_source:
         raise RuntimeError("Copy workflow self-test failed: non-destructive export contract is missing.")
+
+    # v0.4.1: test default path, non-destructive copy, real OLD+NEW move,
+    # source removal, Undo and collision refusal on disposable directories.
+    with tempfile.TemporaryDirectory(prefix="dea-export-contract-") as tmp_root:
+        temp = Path(tmp_root)
+        old_root = temp / "OLD"
+        new_root = temp / "Metro Boomin"
+        output = default_updated_destination(new_root)
+        if output != temp / "Metro Boomin - UPDATED":
+            raise RuntimeError("Default UPDATED destination regression.")
+        if default_updated_destination(Path("C:/!deemix Music/Metro Boomin")).name != "Metro Boomin - UPDATED":
+            raise RuntimeError("Windows-shaped UPDATED destination regression.")
+        old_release = old_root / "Albums" / "Edition A"
+        new_release = new_root / "EPs" / "Edition B"
+        old_release.mkdir(parents=True)
+        new_release.mkdir(parents=True)
+        (old_release / "01 old.flac").write_bytes(b"test old audio")
+        (new_release / "01 new.m4a").write_bytes(b"test new audio")
+        old_obj = Release(9100, "existing", old_release, "Edition A", scan_root=old_root)
+        new_obj = Release(9101, "recycle", new_release, "Edition B", scan_root=new_root)
+        decisions = [
+            ReleaseDecision(9100, "KEEP", "Retained OLD"),
+            ReleaseDecision(9101, "ADD", "Retained NEW"),
+        ]
+        # Redirect Undo only inside the test; never touch real program state.
+        original_manifest_accessor = globals()["_last_manifest_path"]
+        test_manifest = temp / "test_undo.json"
+        globals()["_last_manifest_path"] = lambda: test_manifest
+        try:
+            report = copy_retained_plan(
+                old_root, new_root, output, [old_obj, new_obj],
+                decisions, "all",
+            )
+            if report["source_folders_modified"] or not old_release.exists() or not new_release.exists():
+                raise RuntimeError("Copy contract failed: source folder was modified.")
+            if not (output / "Albums" / "Edition A" / "01 old.flac").is_file():
+                raise RuntimeError("Copy contract failed: OLD release not copied.")
+            if not (output / "EPs" / "Edition B" / "01 new.m4a").is_file():
+                raise RuntimeError("Copy contract failed: NEW release not copied.")
+            try:
+                move_retained_plan(old_root, new_root, output, [old_obj, new_obj], decisions)
+            except RuntimeError:
+                pass
+            else:
+                raise RuntimeError("Move regression: preexisting destination not rejected.")
+            shutil.rmtree(output)
+            report = move_retained_plan(old_root, new_root, output, [old_obj, new_obj], decisions)
+            if not report.get("source_folders_modified") or not report.get("undo_available"):
+                raise RuntimeError("Move result not marked as destructive/undoable.")
+            if old_release.exists() or new_release.exists():
+                raise RuntimeError("Move contract failed: source folders still present.")
+            if not (output / "Albums" / "Edition A" / "01 old.flac").is_file():
+                raise RuntimeError("Move contract failed: OLD content missing.")
+            if not (output / "EPs" / "Edition B" / "01 new.m4a").is_file():
+                raise RuntimeError("Move contract failed: NEW content missing.")
+            restored, conflicts = undo_last_run()
+            if restored != 2 or conflicts or not old_release.exists() or not new_release.exists():
+                raise RuntimeError("Move Undo contract failed.")
+        finally:
+            globals()["_last_manifest_path"] = original_manifest_accessor
+
+    if (
+        'defaultExportDestination' not in map_html
+        or 'Move old + new releases into:' not in map_html
+        or 'This WILL remove each retained release folder' not in map_html
+        or 'Original release folders relocated.' not in main_html
+    ):
+        raise RuntimeError("Release Map UPDATED default/Move confirmation UI regression.")
 
     grouping_probe = [
         {"id": 1, "releaseType": "album", "name": "2002 - Let Go (Japan Tour Special Limited Version) [JP - BVCA-21138 - 2005]"},
