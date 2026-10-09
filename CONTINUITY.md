@@ -2,7 +2,7 @@
 
 ## Product and state
 - Product: Karpuzikov Picard Scripts, a Picard 3.x Git-updatable MusicBrainz metadata plugin.
-- Current version: 1.5.25 - Under construction ⚠️ (not yet verified inside user Picard).
+- Current version: 1.5.26 - Under construction ⚠️ (not yet verified inside user Picard).
 - Git repository and active branch: `karpuzikov/userscripts`, `main`.
 - There is no additional project-specific `RULES.md` currently; the canonical repository root `SOFTWARE_RULES.md` governs this project.
 
@@ -201,3 +201,11 @@
   5. Existing current-artist, barcode match, country, casing and standalone script code unchanged.
 - Unit regression tests (Qt independent) cover direct old-toolbar reference disposal even when undiscoverable, float prevention and re-docking, abandoned empty toolbar, modal quit dialog not reopening/reattaching the toolbar, cancelled exit restart, and preservation of native/other plugin toolbars. Still cannot execute actual Qt Windows GUI in this ChatGPT environment: Picard 3 + PyQt6 interactive close/reopen test on user's machine is required before removing Under construction ⚠️.
 - Version v1.5.25 - Under construction ⚠️. Next: user updates Git plugin and closes Picard normally with no modal and with quit-confirmation enabled, and verifies that the extra Barcode taskbar window disappears; check that toolbar customization still leaves Barcode visible at narrow width. If floating window still remains, request its Qt objectName/top-level diagnostics rather than making another unverified closure claim.
+
+## Protect 3OH!3 stylized name (2026-10-09; plugin 1.5.26 / standalone 1.1.8)
+
+- User regression: album/title `3OH!3` becomes `3oh!3` due to automatic capitalization; it must remain **3OH!3**, including digital and physical releases, artist-album self-title, suffixed ` - Single`, and nested title contexts.
+- In standalone `English_Title_Capitalization.txt`, v1.1.7 lowered a complete uppercase title to feed Picard `$title()`: `$title($lower(3OH!3))` produces `3oh!3`. Added a narrowly scoped, final case-insensitive Picard `$rreplace` restoration of full `3OH!3` tokens, before writing the `title` / `album` tags. The rule avoids matching inside longer words, retains `vs.` lowercase and keeps the all-caps `THE OUTSIDE` fix and EP/Single suffix behavior. Published `English_Title_Capitalization_v1.1.8.txt` alongside stable and embedded identical scripts.
+- In the language-aware Python module, `_capitalize_piece()`/sentence casing also convert `3OH` to `3oh` because its first character is the numeral 3, not an uppercase-able letter. Added `_restore_stylized_names()` to correct the full artist branding after English title case (including direct `musicbrainz_english_title_case` usage) and all `standardize_title_case` language modes. France-style `!` whitespace insertion is specifically reversed only inside the complete `3OH!3` mark.
+- Added pure-Python regression tests for all language modes, whole-word matching, idempotence, album/title/artist, direct public English-case utility, and optional Picard ScriptParser tests for standalone + suffix order, preserving prior allcaps and country-tag rules. This is an **exact named stylization exception**, not a blanket assumption that every all-caps numeric title should be protected.
+- Note: full GitHub source changes and static checks are available, but Windows Picard runtime has not been executed here. v1.5.26 and standalone v1.1.8 stay `Under construction ⚠️` pending user testing; earlier Barcode taskbar issue remains independently unverified.
