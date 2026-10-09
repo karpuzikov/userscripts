@@ -24,6 +24,7 @@ from musicbrainz_title_capitalization import (  # noqa: E402
     musicbrainz_english_title_case,
     standardize_title_case,
     _is_digital_medium,
+    _english_all_caps_title,
 )
 
 
@@ -62,6 +63,101 @@ class PicardAlbumRegressions(unittest.TestCase):
             ),
             "La noche (Extended Mix) - Single",
         )
+
+    def test_all_caps_outsiders_english_title_case(self):
+        original = "THE OUTSIDE (OUTSIDERS VERSION)"
+        expected = "The Outside (Outsiders Version)"
+        self.assertTrue(_english_all_caps_title(original))
+        self.assertTrue(_english_all_caps_title(original + " - Single"))
+        self.assertTrue(_english_all_caps_title(original + " - EP"))
+        self.assertFalse(_english_all_caps_title("Bun Up the Dance"))
+        self.assertFalse(_english_all_caps_title("LA NOCHE"))
+        self.assertEqual(
+            standardize_title_case(original, "english"), expected
+        )
+        self.assertEqual(
+            standardize_title_case(original, "unknown"), expected
+        )
+        self.assertEqual(
+            standardize_title_case(original + " - Single", "unknown"),
+            expected + " - Single",
+        )
+        self.assertEqual(
+            standardize_title_case(original + " - EP", "unknown"),
+            expected + " - EP",
+        )
+        for actual in (expected, expected + " - Single"):
+            self.assertEqual(standardize_title_case(actual, "unknown"), actual)
+
+    def test_outsiders_release_and_track_processors(self):
+        original = "THE OUTSIDE (OUTSIDERS VERSION)"
+        expected = "The Outside (Outsiders Version)"
+        release = {
+            "title": original,
+            "text-representation": {"language": "und"},
+        }
+        for before, wanted in (
+            (original, expected),
+            (original + " - Single", expected + " - Single"),
+        ):
+            with self.subTest(album=before):
+                metadata = {
+                    "album": before,
+                    "title": original,
+                    "language": "und",
+                }
+                capitalize_release_title(_API(), metadata, release)
+                capitalize_track_title(_API(), metadata, {}, release)
+                self.assertEqual(metadata["album"], wanted)
+                self.assertEqual(metadata["title"], expected)
+                capitalize_release_title(_API(), metadata, release)
+                capitalize_track_title(_API(), metadata, {}, release)
+                self.assertEqual(metadata["album"], wanted)
+                self.assertEqual(metadata["title"], expected)
+
+    def test_outsiders_manual_script_structure_and_suffix_safety(self):
+        source = (REPO / "picard-tools" / "scripts" /
+                  "English_Title_Capitalization.txt").read_text(encoding="utf-8")
+        self.assertIn("$title($lower($get(%_loop_value%)))", source)
+        self.assertIn("$eq(%_case_core%,$upper(%_case_core%))", source)
+        self.assertIn(" - [Ss][Ii][Nn][Gg][Ll][Ee]$", source)
+        self.assertIn("$rreplace(%_case%, - Ep$,- EP)", source)
+        self.assertIn("$unset(_case_core)", source)
+        self.assertIn("$delete(releasecountry)", source)
+
+    def test_outsiders_manual_picard_runtime(self):
+        try:
+            from picard.metadata import Metadata
+            from picard.script import ScriptParser
+        except ImportError:
+            self.skipTest("Picard runtime unavailable; run inside Picard's Python environment")
+        english = (REPO / "picard-tools" / "scripts" /
+                   "English_Title_Capitalization.txt").read_text(encoding="utf-8")
+        suffix = (REPO / "picard-tools" / "scripts" /
+                  "Add_EP_Single_Suffix.txt").read_text(encoding="utf-8")
+        original = "THE OUTSIDE (OUTSIDERS VERSION)"
+        expected = "The Outside (Outsiders Version)"
+        for language in ("eng", "und"):
+            for existing_suffix in (False, True):
+                for order in ("capitalization-first", "suffix-first"):
+                    with self.subTest(language=language, has_suffix=existing_suffix, order=order):
+                        metadata = Metadata()
+                        metadata["album"] = original + (" - Single" if existing_suffix else "")
+                        metadata["title"] = original
+                        metadata["language"] = language
+                        metadata["~primaryreleasetype"] = "single"
+                        metadata["media"] = "CD"
+                        metadata["releasecountry"] = "XE"
+                        sequence = (english, suffix) if order == "capitalization-first" else (suffix, english)
+                        for script in sequence:
+                            ScriptParser().eval(script, metadata)
+                        self.assertEqual(metadata["album"], expected + " - Single")
+                        self.assertEqual(metadata["title"], expected)
+                        self.assertEqual(metadata["releasecountry"], "EU")
+                        for script in sequence:
+                            ScriptParser().eval(script, metadata)
+                        self.assertEqual(metadata["album"], expected + " - Single")
+                        self.assertEqual(metadata["title"], expected)
 
     def test_english_phrasal_up(self):
         self.assertEqual(
@@ -420,7 +516,7 @@ class PicardAlbumRegressions(unittest.TestCase):
     def test_published_script_versions_match_stable_sources(self):
         for stable, versioned in (
             ("Unicode_to_ASCII.txt", "Unicode_to_ASCII_v1.0.1.txt"),
-            ("English_Title_Capitalization.txt", "English_Title_Capitalization_v1.1.6.txt"),
+            ("English_Title_Capitalization.txt", "English_Title_Capitalization_v1.1.7.txt"),
             ("Add_EP_Single_Suffix.txt", "Add_EP_Single_Suffix_v1.0.2.txt"),
             ("Format_Multiple_Artists.txt", "Format_Multiple_Artists_v1.0.2.txt"),
             ("Move_Featured_Artists_to_Title.txt", "Move_Featured_Artists_to_Title_v1.0.1.txt"),
