@@ -1035,6 +1035,15 @@ This section supersedes older featured-remix, contextual-remix, and generic Edit
 - Strong structural conflicts such as Radio vs Extended or Acoustic vs Instrumental remain eligible for semantic pre-blocking unless exact identical Chromaprint overrides the wording.
 
 
+## v0.4.2 copy/move collision and Undo safety - authoritative
+
+- Both OLD+NEW export modes must preflight **nested/ancestor** destination targets in addition to exact collisions; reject overlapping release folder targets before any source/destination modifications.
+- Copy must stage each retained release inside the destination volume and publish its output folder only when the copy completes; failed copies must not leave a partial final-named release folder.
+- Same-volume rename permission/sharing violations are fatal and must never be treated as cross-volume errors. Only actual EXDEV / Windows ERROR_NOT_SAME_DEVICE may trigger checked copy-before-delete fallback.
+- Undo must not silently drop entries when neither original nor moved-to path exists. Keep the manifest on conflicts, continue processing independently recoverable entries, and report the unresolved paths.
+- Visible default export paths must have operative folder-opener controls before the user selects a custom location.
+- v0.4.2 retains the full graphical WebView2/pywebview interface and all v0.4.1 Copy/Move/Undo behavior. Actual Windows and full Skrillex folder testing remain mandatory; no stable/parity claims.
+
 ## v0.4.1 default UPDATED destination and independent Copy/Move - authoritative
 
 - Both export actions must default to a sibling `<New / update releases root> - UPDATED` folder. Example: `C:\!deemix Music\Metro Boomin` => `C:\!deemix Music\Metro Boomin - UPDATED`. Show the complete default next to a folder-opener immediately, and retain a Browse override per action.
