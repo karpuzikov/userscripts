@@ -135,124 +135,173 @@ class ToolbarLifecycleTests(unittest.TestCase):
         menu = next(n for n in TREE.body if isinstance(n, ast.ClassDef) and n.name == "BarcodeLookupToolsAction")
         self.assertIn("_barcode_only_lookup(self.api, objects)", ast.unparse(menu))
 
-    def test_orphaned_cleared_toolbar_is_disposed_even_without_barcode_action(self):
+    def test_retire_cleared_orphan_and_preserve_current_toolbar(self):
         action = FakeAction("Barcode / UPC Lookup")
-        active = FakeToolbar(action, FakeAction("Lookup"))
-        active.object_name = "main_toolbar"
-        old = FakeToolbar()  # Picard's create_action_toolbar() called clear().
-        old.object_name = "main_toolbar"
-        old.floating = True
-        orphan_with_action = FakeToolbar(action)
-        orphan_with_action.object_name = "main_toolbar"
+        current = FakeToolbar(action, FakeAction("Lookup"))
+        current.object_name = "main_toolbar"
+        orphan = FakeToolbar()  # Picard cleared the toolbar before removing it.
+        orphan.object_name = "main_toolbar"
+        orphan.floating = True
         other = FakeToolbar(FakeAction("Search"))
         other.object_name = "search_toolbar"
-        floating_user_toolbar = FakeToolbar(FakeAction("Other"))
-        floating_user_toolbar.object_name = "other_plugin_toolbar"
-        floating_user_toolbar.floating = True
 
         class Window:
-            toolbar = active
+            toolbar = current
 
         scope = {
-            "_barcode_toolbars": lambda window: [
-                old, active, orphan_with_action, other, floating_user_toolbar
-            ],
             "_BARCODE_TOOLBAR_ACTION": action,
+            "_barcode_toolbars": lambda window: [orphan, current, other],
         }
+        exec(source_function("_retire_replaced_barcode_toolbar"), scope)
         exec(source_function("_retire_obsolete_picard_toolbars"), scope)
         retired = scope["_retire_obsolete_picard_toolbars"](Window())
-        self.assertEqual(retired, [old, orphan_with_action])
-        for bar in retired:
-            self.assertTrue(bar.hidden)
-            self.assertTrue(bar.deleted_later)
-        self.assertNotIn(action, orphan_with_action.actions())
-        self.assertIn(action, active.actions())
-        for bar in (active, other, floating_user_toolbar):
-            self.assertFalse(getattr(bar, "deleted_later", False))
-            self.assertTrue(bar.isVisible())
+        self.assertEqual(retired, [orphan])
+        self.assertTrue(orphan.hidden)
+        self.assertTrue(orphan.deleted_later)
+        self.assertFalse(getattr(current, "deleted_later", False))
+        self.assertFalse(getattr(other, "deleted_later", False))
+        self.assertIn(action, current.actions())
 
-    def test_toolbar_replacement_retires_previous_active_toolbar(self):
+    def test_direct_reference_cleanup_when_toolbar_is_not_enumerable(self):
         action = FakeAction("Barcode")
-        former = FakeToolbar(action)
-        former.object_name = "main_toolbar"
+        previous = FakeToolbar(action)
         current = FakeToolbar(FakeAction("Lookup"))
-        current.object_name = "main_toolbar"
+        scope = {"_BARCODE_TOOLBAR_ACTION": action}
+        exec(source_function("_retire_replaced_barcode_toolbar"), scope)
+        dispose = scope["_retire_replaced_barcode_toolbar"]
+        self.assertTrue(dispose(previous, current))
+        self.assertTrue(previous.deleted_later)
+        self.assertTrue(previous.hidden)
+        self.assertNotIn(action, previous.actions())
+        self.assertFalse(dispose(current, current))
+        self.assertFalse(dispose(None, current))
+        self.assertFalse(getattr(current, "deleted_later", False))
+
+    def test_barcode_toolbar_is_docked_and_cannot_float(self):
+        class QtStub:
+            class ToolBarArea:
+                TopToolBarArea = object()
+
+        class Toolbar(FakeToolbar):
+            def setFloatable(self, setting):
+                self.floatable = setting
 
         class Window:
-            toolbar = former
+            def __init__(self):
+                self.docked = []
 
+            def addToolBar(self, area, toolbar):
+                self.docked.append(toolbar)
+                toolbar.floating = False
+
+        scope = {"QtCore": type("Core", (), {"Qt": QtStub})}
+        exec(source_function("_dock_barcode_toolbar"), scope)
+        dock = scope["_dock_barcode_toolbar"]
         window = Window()
-        scope = {
-            "_barcode_toolbars": lambda window: [former, current],
-            "_BARCODE_TOOLBAR_ACTION": action,
-        }
-        exec(source_function("_retire_obsolete_picard_toolbars"), scope)
-        self.assertEqual(scope["_retire_obsolete_picard_toolbars"](window), [current])
-        self.assertFalse(getattr(former, "deleted_later", False))
+        floating = Toolbar(FakeAction("Barcode"))
+        floating.floating = True
+        dock(window, floating)
+        self.assertEqual(window.docked, [floating])
+        self.assertFalse(floating.floatable)
+        self.assertFalse(floating.isFloating())
+        docked = Toolbar(FakeAction("Lookup"))
+        dock(window, docked)
+        self.assertEqual(window.docked, [floating])
+        self.assertFalse(docked.floatable)
 
-        # Simulate Picard replacing window.toolbar and clearing the former one.
-        current.deleted_later = False
-        current.visible = True
-        window.toolbar = current
-        former.items.clear()
-        self.assertEqual(scope["_retire_obsolete_picard_toolbars"](window), [former])
-        self.assertTrue(former.deleted_later)
-        self.assertFalse(current.deleted_later)
+    def test_watcher_tracks_toolbar_instances_by_direct_reference(self):
+        watcher = next(node for node in TREE.body if isinstance(node, ast.ClassDef)
+                       and node.name == "_BarcodeToolbarWatcher")
+        body = ast.unparse(watcher)
+        self.assertIn("self.observed_toolbar = toolbar", body)
+        self.assertIn("_retire_replaced_barcode_toolbar(previous, toolbar)", body)
+        self.assertIn("QEvent.Type.ChildRemoved", body)
+        self.assertIn("_retire_obsolete_picard_toolbars(self.window)", body)
 
-    def test_retirement_runs_during_close_rebuild_disable_and_quit(self):
-        watcher = next(node for node in TREE.body
-                       if isinstance(node, ast.ClassDef) and node.name == "_BarcodeToolbarWatcher")
-        text = ast.unparse(watcher)
-        self.assertIn("_retire_obsolete_picard_toolbars(self.window)", text)
-        self.assertIn("QEvent.Type.ChildRemoved", text)
-        self.assertIn("def refresh(self)", text)
-        self.assertIn("def on_quit(self)", text)
-        self.assertIn("QEvent.Type.Close", text)
+    def test_close_does_not_reattach_while_confirmation_is_open(self):
+        watcher = next(node for node in TREE.body if isinstance(node, ast.ClassDef)
+                       and node.name == "_BarcodeToolbarWatcher")
+        body = ast.unparse(watcher)
+        self.assertIn("QEvent.Type.Close", body)
+        self.assertIn("self.app.activeModalWidget() is not None", body)
+        self.assertIn("if not self.window.isActiveWindow()", body)
+        self.assertNotIn("QTimer.singleShot(0, self.resume_if_close_cancelled)\n        elif",
+                         body)
+        self.assertNotIn("self.close_toolbars = _detach_barcode_action(self.window)", body)
+        self.assertNotIn("_restore_hidden_barcode_toolbars", body)
+        installer = source_function("_install_barcode_lookup_button")
+        self.assertIn("_dock_barcode_toolbar(window, toolbar)", installer)
+        self.assertIn("watcher.observe_toolbar(toolbar)", installer)
         self.assertIn("_retire_obsolete_picard_toolbars(api.tagger.window)",
                       source_function("disable"))
 
-    def test_shutdown_detaches_all_old_and_floating_barcode_actions(self):
-        action = FakeAction("Barcode / UPC Lookup")
-        current = FakeToolbar(FakeAction("Lookup"), action)
-        older = FakeToolbar(action)
-        older.floating = True
-        unrelated = FakeToolbar(FakeAction("Other plugin"))
-        helpers = {
-            "_BARCODE_TOOLBAR_ACTION": action,
-            "_barcode_toolbars": lambda window: [current, older, unrelated],
-        }
-        exec(source_function("_detach_barcode_action"), helpers)
-        exec(source_function("_hide_floating_barcode_toolbars"), helpers)
-        exec(source_function("_restore_hidden_barcode_toolbars"), helpers)
-        affected = helpers["_detach_barcode_action"](object())
-        self.assertEqual(affected, [current, older])
-        self.assertNotIn(action, current.actions())
-        self.assertNotIn(action, older.actions())
-        self.assertEqual(unrelated.actions()[0].text(), "Other plugin")
-        hidden = helpers["_hide_floating_barcode_toolbars"](affected)
-        self.assertEqual(hidden, [older])
-        self.assertTrue(older.hidden)
-        self.assertFalse(getattr(current, "hidden", False))
-        helpers["_restore_hidden_barcode_toolbars"](hidden)
-        self.assertTrue(older.isVisible())
-        self.assertTrue(older.restored)
-        self.assertFalse(getattr(current, "restored", False))
+    def test_resume_only_after_confirmation_is_cancelled(self):
+        class FakeWindow:
+            visible = True
+            active = True
 
-    def test_close_event_never_reinstalls_toolbar_during_exit(self):
-        watcher = next(node for node in TREE.body
-                       if isinstance(node, ast.ClassDef) and node.name == "_BarcodeToolbarWatcher")
-        body = ast.unparse(watcher)
-        self.assertIn("QEvent.Type.Close", body)
-        self.assertIn("QEvent.Type.Hide", body)
-        self.assertIn("self.app.aboutToQuit.connect(self.on_quit)", body)
-        self.assertIn("_detach_barcode_action(self.window)", body)
-        self.assertIn("if self.closing or _LOOKUP_API is not self.api:", body)
-        self.assertIn("resume_if_close_cancelled", body)
-        self.assertIn("self.window.isVisible()", body)
-        self.assertIn("_restore_hidden_barcode_toolbars(self.hidden_toolbars)", body)
-        installer = source_function("_install_barcode_lookup_button")
-        self.assertIn("_BARCODE_TOOLBAR_WATCHER.closing", installer)
-        self.assertIn("_detach_barcode_action(api.tagger.window)", source_function("disable"))
+            def isVisible(self):
+                return self.visible
+
+            def isActiveWindow(self):
+                return self.active
+
+        class FakeApp:
+            modal = None
+
+            def activeModalWidget(self):
+                return self.modal
+
+        # Exercise the exact watcher method body without importing Qt.
+        watcher = next(node for node in TREE.body if isinstance(node, ast.ClassDef)
+                       and node.name == "_BarcodeToolbarWatcher")
+        method = next(node for node in watcher.body if isinstance(node, ast.FunctionDef)
+                      and node.name == "resume_if_close_cancelled")
+        fn = ast.unparse(method)
+        namespace = {"_LOOKUP_API": object()}
+        exec(fn, namespace)
+        fn = namespace["resume_if_close_cancelled"]
+
+        class Timer:
+            def __init__(self):
+                self.starts = 0
+
+            def start(self):
+                self.starts += 1
+
+        class FakeWatcher:
+            pass
+
+        context = FakeWatcher()
+        context.api = namespace["_LOOKUP_API"]
+        context.closing = True
+        context.window = FakeWindow()
+        context.app = FakeApp()
+        context.check_timer = Timer()
+        context.refresh_count = 0
+        context.refresh = lambda: setattr(context, "refresh_count",
+                                          context.refresh_count + 1)
+
+        context.app.modal = object()
+        fn(context)
+        self.assertTrue(context.closing)
+        self.assertEqual(context.check_timer.starts, 0)
+
+        context.app.modal = None
+        context.window.active = False
+        fn(context)
+        self.assertTrue(context.closing)
+
+        context.window.visible = False
+        context.window.active = True
+        fn(context)
+        self.assertTrue(context.closing)
+
+        context.window.visible = True
+        fn(context)
+        self.assertFalse(context.closing)
+        self.assertEqual(context.check_timer.starts, 1)
+        self.assertEqual(context.refresh_count, 1)
 
     def test_barcode_matcher_retained(self):
         for name in ("_barcode_forms", "_barcodes_match", "_start_barcode_batch_lookup", "_barcode_only_lookup"):
