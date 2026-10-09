@@ -2,7 +2,7 @@
 
 ## Product and state
 - Product: Karpuzikov Picard Scripts, a Picard 3.x Git-updatable MusicBrainz metadata plugin.
-- Current version: 1.5.23 - Under construction ⚠️ (not yet verified inside user Picard).
+- Current version: 1.5.24 - Under construction ⚠️ (not yet verified inside user Picard).
 - Git repository and active branch: `karpuzikov/userscripts`, `main`.
 - There is no additional project-specific `RULES.md` currently; the canonical repository root `SOFTWARE_RULES.md` governs this project.
 
@@ -181,3 +181,11 @@
 - Manual QA: update Git-updatable Picard 3 plugin to v1.5.23, select a file containing the 12-digit UPC, click Barcode, verify it links to release `7045707b-621d-408c-9e97-3fc0c652ee24` and is matched by disc/track number. Check inverse EAN-13 file case, nonmatching last digit, batch lookup, and multiple releases. If a valid release is found but no track is assigned, investigate the separate disc/track-number matching logic rather than loosening GTIN comparison.
 - Existing Picard toolbar/taskbar issues remain independently pending user runtime verification. Keep v1.5.23 - Under construction ⚠️; do not infer complete testing from the previous EP suffix `done` confirmation.
 
+
+## All-caps THE OUTSIDE capitalization fix (2026-10-09; standalone 1.1.7 / plugin 1.5.24)
+
+- User reproduction: MusicBrainz release `a0a74e7e-227c-4abc-ad09-bfd59bdf25af`. Original `album` and `title` are `THE OUTSIDE (OUTSIDERS VERSION)`. Existing standalone 1.1.6 left `album` uppercase before Add EP/Single Suffix appended ` - Single`; combined capitalization fallback could turn the track into `The outside (Outsiders Version)`. Required: `album=The Outside (Outsiders Version) - Single`; `title=The Outside (Outsiders Version)`.
+- Root cause 1: Picard `$title()` only uppercase-initializes words and deliberately does NOT lowercase trailing all-capital letters; e.g. `$title(THIS TEXT)` remains `THIS TEXT`. Correct approach for typographic all-caps is `$title($lower(...))`. Detection must ignore a terminal ` - Single` or ` - EP` suffix (which is mixed-case), so running capitalization before or after Add EP/Single Suffix is idempotent.
+- Standalone `picard-tools/scripts/English_Title_Capitalization_v1.1.7.txt`: chooses `$title($lower(...))` when the complete main title is uppercase; otherwise retains previous `$title(...)` to protect ordinary mixed-case input. Accepts obvious `THE ...` English releases when MB language is undetermined/multiple, while preserving Spanish `la noche` and Portuguese `vai sentando` exceptions. Reconstitutes ` - EP` uppercase if needed; protects common DJ/VIP/EDM/BBC/UK/USA/EP/LP acronyms when an all-caps title is normalized. Keeps existing final lowercase `vs.` and Digital Media releasecountry deletion / XE->EU. Manually noted acronym coverage is not exhaustive; review other uppercase stylized identifiers in runtime testing.
+- Language-aware Python plugin: for unknown-language releases, `_english_all_caps_title()` identifies conservative leading-`THE ` English headline even with a trailing canonical release-type suffix and dispatches to English title case, not the generic unknown-language sentence-case fallback. Explicit French/Spanish/Portuguese language choices and the Spanish/Portuguese overriding heuristics remain unchanged.
+- Added static and Picard-runtime regression methods for both fields, unknown/English language codes, either script order, existing/missing suffixes, repeated processing, preservation of country codes and lowercase vs., and earlier phrasal-verb regressions. Keep embedded script byte-identical to standalone and versioned source; follow main plugin update with the user's own Picard 3 runtime test. v1.5.24 - Under construction ⚠️.
