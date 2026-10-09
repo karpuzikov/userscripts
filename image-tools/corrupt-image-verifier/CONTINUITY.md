@@ -99,3 +99,19 @@ v1.1.7 implementation and README were committed to GitHub, but Windows tests and
 2. Execute listed image fixtures including both nannerl_lee JPEGs through the application (expected WARNING with visual-anomaly reasons), and all copy/Undo collision and partial-interruption tests.
 3. Run Check File on both user JPEGs, then Scan Images on their parent folder; verify visual warnings, Preview, user confirmation, Move, Undo and conflict behavior. Exercise Windows UI at 100/125/150/200% DPI, keyboard-only, window minimum, multi-drive workloads; complete missing-winget behavior.
 4. Update source, README and this CONTINUITY.md together; mark stable only after user test confirmation.
+
+## Native Win32 EXE prototype (2026-10-09, v1.2.0 NATIVE TEST)
+
+User clarified that a native, lightweight Windows executable is required, rather than another Python/Tkinter GUI. The previous v1.1.7 NATIVE TEST.pyw was **not** a native build and does not satisfy this request.
+
+A 64-bit Windows GUI prototype, "Corrupt Image Verifier v1.2.0 NATIVE TEST.exe", was cross-compiled from Go 1.23 standard library on Linux. Output: 2,496,512 bytes, Windows PE32+ GUI, no Python runtime or third-party DLL requirement. It is available as a conversation sandbox artifact, **not committed to GitHub**. Keep the canonical GitHub version/download unchanged until source and binary have been published and the Windows GUI/regression gates pass.
+
+User's provided ReNamer 7.10 zip lists original Delphi/Pascal components including Virtual Treeview and SMComponents. These exact Delphi components were NOT reused: the prototype uses Win32 native common controls (owner-data SysListView32, Button, ProgressBar, menu, split panes, status and log views). This delivers a lightweight .exe and native component family, not binary-identical ReNamer component reuse.
+
+Prototype functionality: multiple source folders; Explorer directory open control before table paths; single-file Check; read-only recursive Scan; visual JPEG anomaly warnings; explicit manual confirmation for visually damaged JPEGs; separate Move Confirmed; byte-verified no-clobber quarantine preserving relative paths; Undo Last Run with persisted JSON and historical records; no-overwrite Undo; drag-and-drop paths; stop; disk/SSD-HDD best-effort native Windows drive queries and per-drive worker pools. Prior Tkinter build remains available as a fallback.
+
+Tests executed on Linux for the portable core: both user JPEGs report WARNING / VISUAL DAMAGE SUSPECTED (bands at ~49% and ~37%); zero-byte and invalid-signature JPEGs classify CONFIRMED CORRUPT; missing JPEG EOI remains WARNING; no-overwrite destination test passes; exact relative-path Move+Undo and occupied-original Undo tests pass. Windows x64 cross compilation succeeds. **Actual Windows GUI startup, native control behavior, 100/125/150/200% DPI and full real-world scan are UNTESTED.**
+
+Critical missing parity: TIFF including five-channel CMYK+alpha, HEIF/AVIF, WebP, BMP, JPEG2000 and other nonstandard formats currently classify UNSUPPORTED in the Go prototype (except native Go-supported JPEG, PNG, GIF). This must be completed through native WIC and/or independent decoders before declaring the native app feature-equivalent. Physical disk identification relies on IOCTL queries that require Windows testing. More visual false-positive evaluation is needed. Do not mark the native prototype stable or update README's canonical download until these issues are addressed.
+
+Exact next step: Windows-test the native EXE, first with single-file Check on both damaged JPEGs, then scan their containing folder; verify result rows, native UI, no-overwrite moves, Undo and test fixtures. Implement missing decoder parity, complete UI compliance, then publish versioned EXE and native source in the GitHub project and update README and this continuity file in the same checkpoint.
