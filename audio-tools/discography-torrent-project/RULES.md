@@ -1035,6 +1035,14 @@ This section supersedes older featured-remix, contextual-remix, and generic Edit
 - Strong structural conflicts such as Radio vs Extended or Acoustic vs Instrumental remain eligible for semantic pre-blocking unless exact identical Chromaprint overrides the wording.
 
 
+## v0.4.0 graphical Release Map line readability - authoritative
+
+- This version continues the full-featured WebView2 + pywebview desktop interface. The isolated ASCII/Textual experiment is rejected and must not be merged or substituted for the graphical release.
+- Full Map release-row separators must be clearly discernible at default Windows scale: 2 px solid `#303947`, while preserving compact rows, group headings, and normal hover/selection styles.
+- Relationship paths must have visibly pronounced but differentiated stroke weight: idle duplicates 1.65 px, selected duplicates 2.8 px, Versions 3.0 px, Remixes/Live 2.65 px, active-track carriers 3.6 px. Preserve their opacity hierarchy and dash patterns.
+- These are strictly presentation changes. Do not modify acoustic identity, recording groups, retained release selection, Release Map relationship membership, Apply, undo, file copying, or analysis performance to achieve thicker lines.
+- Keep `0.4.0 - Under construction ⚠️` until the user's exact Skrillex rerun and Windows GUI inspection pass.
+
 ## v0.3.9 Release Map excluded-only visibility - authoritative
 
 - **Every analyzed release** must remain inspectable in **Full Map**, including zero-wanted-track releases excluded at the first classification stage. Never use membership in an acoustic recording group as a prerequisite for showing an analyzed release.
