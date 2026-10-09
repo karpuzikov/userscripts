@@ -8139,6 +8139,11 @@ def move_retained_plan(
 
     manifest_path = _last_manifest_path()
     previous_manifest = manifest_path.read_bytes() if manifest_path.is_file() else None
+    if previous_manifest is not None:
+        backup_path = manifest_path.with_name(
+            "last_move_backup_" + datetime.now().strftime("%Y-%m-%d-%H-%M-%S-%f") + ".json"
+        )
+        backup_path.write_bytes(previous_manifest)
     completed: List[Tuple[Path, Path]] = []
     manifest = {
         "app": APP_NAME,
@@ -13041,13 +13046,19 @@ def _ui_contract_self_test() -> None:
         new_release = new_root / "EPs" / "Edition B"
         old_release.mkdir(parents=True)
         new_release.mkdir(parents=True)
+        skipped_release = new_root / "EPs" / "Excluded Remix"
+        skipped_release.mkdir(parents=True)
+        (skipped_release / "not-selected.m4a").write_bytes(b"skip")
         (old_release / "01 old.flac").write_bytes(b"test old audio")
         (new_release / "01 new.m4a").write_bytes(b"test new audio")
         old_obj = Release(9100, "existing", old_release, "Edition A", scan_root=old_root)
         new_obj = Release(9101, "recycle", new_release, "Edition B", scan_root=new_root)
+        skipped_obj = Release(9102, "recycle", skipped_release, "Excluded Remix", scan_root=new_root)
+        sample_releases = [old_obj, new_obj, skipped_obj]
         decisions = [
             ReleaseDecision(9100, "KEEP", "Retained OLD"),
             ReleaseDecision(9101, "ADD", "Retained NEW"),
+            ReleaseDecision(9102, "SKIP", "Excluded"),
         ]
         # Redirect Undo only inside the test; never touch real program state.
         original_manifest_accessor = globals()["_last_manifest_path"]
@@ -13055,7 +13066,7 @@ def _ui_contract_self_test() -> None:
         globals()["_last_manifest_path"] = lambda: test_manifest
         try:
             report = copy_retained_plan(
-                old_root, new_root, output, [old_obj, new_obj],
+                old_root, new_root, output, sample_releases,
                 decisions, "all",
             )
             if report["source_folders_modified"] or not old_release.exists() or not new_release.exists():
@@ -13065,13 +13076,13 @@ def _ui_contract_self_test() -> None:
             if not (output / "EPs" / "Edition B" / "01 new.m4a").is_file():
                 raise RuntimeError("Copy contract failed: NEW release not copied.")
             try:
-                move_retained_plan(old_root, new_root, output, [old_obj, new_obj], decisions)
+                move_retained_plan(old_root, new_root, output, sample_releases, decisions)
             except RuntimeError:
                 pass
             else:
                 raise RuntimeError("Move regression: preexisting destination not rejected.")
             shutil.rmtree(output)
-            report = move_retained_plan(old_root, new_root, output, [old_obj, new_obj], decisions)
+            report = move_retained_plan(old_root, new_root, output, sample_releases, decisions)
             if not report.get("source_folders_modified") or not report.get("undo_available"):
                 raise RuntimeError("Move result not marked as destructive/undoable.")
             if old_release.exists() or new_release.exists():
@@ -13080,9 +13091,29 @@ def _ui_contract_self_test() -> None:
                 raise RuntimeError("Move contract failed: OLD content missing.")
             if not (output / "EPs" / "Edition B" / "01 new.m4a").is_file():
                 raise RuntimeError("Move contract failed: NEW content missing.")
+            if not (skipped_release / "not-selected.m4a").is_file():
+                raise RuntimeError("Move contract failed: SKIP source was touched.")
             restored, conflicts = undo_last_run()
             if restored != 2 or conflicts or not old_release.exists() or not new_release.exists():
                 raise RuntimeError("Move Undo contract failed.")
+            # Simulate EXDEV, even on same-volume CI, to validate checked
+            # cross-volume copy-before-delete path.
+            from unittest import mock
+            cross_source = temp / "cross-volume-source"
+            cross_target = temp / "cross-volume-target"
+            cross_source.mkdir()
+            (cross_source / "content.flac").write_bytes(b"checked transfer")
+            native_replace = os.replace
+
+            def simulate_cross_volume(a, b):
+                if Path(a) == cross_source and Path(b) == cross_target:
+                    raise OSError(18, "Cross-device link")
+                return native_replace(a, b)
+
+            with mock.patch.object(os, "replace", side_effect=simulate_cross_volume):
+                _verified_release_directory_move(cross_source, cross_target)
+            if cross_source.exists() or (cross_target / "content.flac").read_bytes() != b"checked transfer":
+                raise RuntimeError("Cross-volume move verification regression.")
         finally:
             globals()["_last_manifest_path"] = original_manifest_accessor
 
