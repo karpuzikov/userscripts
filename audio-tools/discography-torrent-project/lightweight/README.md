@@ -1,6 +1,6 @@
 # Duplicate Edition Analyzer Lightweight
 
-Version: **0.3.9 - Under construction ⚠️**
+Version: **0.4.0 - Under construction ⚠️**
 
 Branch: `dea-lightweight-modern`
 
@@ -41,6 +41,15 @@ The lightweight build preserves the regular DEA feature surface, including:
 - path openers, logging, settings and Undo.
 
 The failed `native-light` prototype is not the reference.
+
+## 0.4.0
+
+- **Graphical WebView2 edition** based on v0.3.9. The abandoned ASCII/terminal experiment is not included and remains on an isolated test branch.
+- Increased release-row divider prominence in Full Map (1 px low-contrast border to 2 px higher-contrast border).
+- Increased SVG relationship strokes moderately for normal duplicate links, active/selected links, Versions, Remixes, Live, and recording carriers while retaining the existing visual hierarchy, colors, selection and performance architecture.
+- Added UI self-test assertions for the intended stroke widths and release separators. No changes to Chromaprint, source priority, release decisions, optimizer, or copy/undo.
+- CI source validation (Python compilation, `--ui-self-test`, undefined-name checks, embedded JavaScript syntax and bridge contract): [workflow 37871448332](https://github.com/karpuzikov/userscripts/actions/runs/37871448332) - passed.
+- **Under construction ⚠️**: the unchanged Skrillex OLD/NEW real-folder run and final Windows WebView2 appearance remain to be verified.
 
 ## 0.3.9
 
