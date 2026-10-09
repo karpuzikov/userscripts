@@ -495,6 +495,15 @@ def _lowercase_vs_abbreviation(title: str) -> str:
     return re.sub(r"(?i)\bvs\.", "vs.", title)
 
 
+def _english_all_caps_title(title: str) -> bool:
+    """Detect clearly English all-caps titles even after '- Single' / '- EP'."""
+    core = re.sub(r"(?i)(?:\s+-\s+(?:single|ep))+\s*$", "", title).strip()
+    return bool(
+        re.match(r"(?i)^the\s+[a-z]", core)
+        and _is_all_caps_title(core)
+    )
+
+
 def standardize_title_case(
     title: str,
     mode: str,
@@ -508,6 +517,10 @@ def standardize_title_case(
         result = _french_title_case(title)
     elif mode == "sentence":
         result = _apple_eti_case(_sentence_case_title(title))
+    elif _english_all_caps_title(title):
+        # "THE OUTSIDE (OUTSIDERS VERSION)" should be English title case
+        # even when the source release language is undetermined.
+        result = musicbrainz_english_title_case(title)
     elif _is_all_caps_title(title):
         # Unknown language: preserve normally styled text; normalize the
         # usual all-caps fallback conservatively.
