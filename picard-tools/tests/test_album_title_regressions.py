@@ -25,6 +25,7 @@ from musicbrainz_title_capitalization import (  # noqa: E402
     standardize_title_case,
     _is_digital_medium,
     _english_all_caps_title,
+    _restore_stylized_names,
 )
 
 
@@ -63,6 +64,78 @@ class PicardAlbumRegressions(unittest.TestCase):
             ),
             "La noche (Extended Mix) - Single",
         )
+
+    def test_preserve_stylized_3oh3_in_language_aware_capitalization(self):
+        for mode in ("english", "unknown", "french", "sentence"):
+            for original in (
+                "3OH!3", "3oh!3", "3OH!3 - Single",
+                "3OH!3 (Club Mix)", "3OH!3 vs. Diplo",
+            ):
+                with self.subTest(mode=mode, original=original):
+                    result = standardize_title_case(original, mode)
+                    self.assertIn("3OH!3", result)
+                    self.assertNotIn("3oh!3", result)
+                    self.assertEqual(standardize_title_case(result, mode), result)
+        self.assertEqual(musicbrainz_english_title_case("3OH!3"), "3OH!3")
+        self.assertEqual(musicbrainz_english_title_case("3oh!3"), "3OH!3")
+        self.assertEqual(_restore_stylized_names("3oh ! 3"), "3OH!3")
+        self.assertEqual(_restore_stylized_names("x3oh!3x"), "x3oh!3x")
+        self.assertEqual(_restore_stylized_names("3oh!30"), "3oh!30")
+
+    def test_3oh3_album_track_and_artist_are_preserved(self):
+        for language in ("eng", "und", "fra"):
+            with self.subTest(language=language):
+                metadata = {
+                    "album": "3OH!3 - Single",
+                    "title": "3OH!3",
+                    "artist": "3OH!3",
+                    "language": language,
+                }
+                node = {
+                    "title": "3OH!3",
+                    "text-representation": {"language": language},
+                }
+                for _ in range(2):
+                    capitalize_release_title(_API(), metadata, node)
+                    capitalize_track_title(_API(), metadata, {}, node)
+                    self.assertEqual(metadata["album"], "3OH!3 - Single")
+                    self.assertEqual(metadata["title"], "3OH!3")
+                    self.assertEqual(metadata["artist"], "3OH!3")
+
+    def test_3oh3_manual_picard_script_runtime(self):
+        try:
+            from picard.metadata import Metadata
+            from picard.script import ScriptParser
+        except ImportError:
+            self.skipTest("Picard runtime unavailable; run inside Picard's Python environment")
+        source = (REPO / "picard-tools" / "scripts" /
+                  "English_Title_Capitalization.txt").read_text(encoding="utf-8")
+        suffix = (REPO / "picard-tools" / "scripts" /
+                  "Add_EP_Single_Suffix.txt").read_text(encoding="utf-8")
+        for input_album in ("3OH!3", "3OH!3 - Single", "3oh!3 - Single"):
+            for order in ((source, suffix), (suffix, source)):
+                with self.subTest(album=input_album, order=order == (source, suffix)):
+                    data = Metadata()
+                    data["album"] = input_album
+                    data["title"] = "3OH!3"
+                    data["artist"] = "3OH!3"
+                    data["language"] = "eng"
+                    data["~primaryreleasetype"] = "single"
+                    for _ in range(2):
+                        for script in order:
+                            ScriptParser().eval(script, data)
+                        self.assertEqual(data["album"], "3OH!3 - Single")
+                        self.assertEqual(data["title"], "3OH!3")
+                        self.assertEqual(data["artist"], "3OH!3")
+
+    def test_3oh3_script_restoration_before_assigning_tag(self):
+        src = (REPO / "picard-tools" / "scripts" /
+               "English_Title_Capitalization.txt").read_text(encoding="utf-8")
+        restore = r"$set(_case,$rreplace(%_case%,\\b3[Oo][Hh][ ]*![ ]*3\\b,3OH!3))"
+        self.assertIn(restore, src)
+        self.assertLess(src.index(restore), src.index("$set(%_loop_value%,%_case%)"))
+        self.assertIn("$title($lower($get(%_loop_value%)))", src)
+        self.assertIn("$delete(releasecountry)", src)
 
     def test_all_caps_outsiders_english_title_case(self):
         original = "THE OUTSIDE (OUTSIDERS VERSION)"
@@ -516,7 +589,7 @@ class PicardAlbumRegressions(unittest.TestCase):
     def test_published_script_versions_match_stable_sources(self):
         for stable, versioned in (
             ("Unicode_to_ASCII.txt", "Unicode_to_ASCII_v1.0.1.txt"),
-            ("English_Title_Capitalization.txt", "English_Title_Capitalization_v1.1.7.txt"),
+            ("English_Title_Capitalization.txt", "English_Title_Capitalization_v1.1.8.txt"),
             ("Add_EP_Single_Suffix.txt", "Add_EP_Single_Suffix_v1.0.2.txt"),
             ("Format_Multiple_Artists.txt", "Format_Multiple_Artists_v1.0.2.txt"),
             ("Move_Featured_Artists_to_Title.txt", "Move_Featured_Artists_to_Title_v1.0.1.txt"),
