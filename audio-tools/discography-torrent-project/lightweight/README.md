@@ -50,7 +50,7 @@ The failed `native-light` prototype is not the reference.
 - Undo keeps its manifest and reports conflicts when both original and moved folders are missing, or when a folder cannot be restored.
 - The destination folder buttons now use the displayed default UPDATED path, even before Browse.
 - Added automated regression checks for destination overlap, sharing denial, missing Undo data and default folder buttons.
-- **Status:** Under construction ⚠️. GitHub CI and real Windows/WebView2/Skrillex verification remain required; test Move only with disposable copies.
+- **Status:** Under construction ⚠️. GitHub CI passed ([run 37906576608](https://github.com/karpuzikov/userscripts/actions/runs/37906576608)); real Windows/WebView2/Skrillex verification is still required. Test Move only with disposable copies.
 
 ## 0.4.1
 
