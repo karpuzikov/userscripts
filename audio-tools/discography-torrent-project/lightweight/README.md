@@ -1,6 +1,6 @@
 # Duplicate Edition Analyzer Lightweight
 
-Version: **0.4.4 - Under construction ⚠️**
+Version: **0.4.5 - Under construction ⚠️**
 
 Branch: `dea-lightweight-modern`
 
@@ -41,6 +41,15 @@ The lightweight build preserves the regular DEA feature surface, including:
 - path openers, logging, settings and Undo.
 
 The failed `native-light` prototype is not the reference.
+
+## 0.4.5
+
+- Fixed the `Starboy (Deluxe)` false addition from the actual 2026-10-10 The Weeknd comparison log. The 19-file CD `Starboy` and the two previously issued standalone featured-remix singles can fulfill all 20 wanted Deluxe groups, avoiding an otherwise redundant 21-file WEB Deluxe.
+- A full core album is now an eligible family representative **only** when the larger edition adds exclusively eligible featured remixes that are independently available on included Singles/EPs. Regular bonus recordings remain subject to the historical maximum-completeness edition requirement.
+- Equivalent/stronger-source full core albums are no longer irreversibly pruned when their complete Deluxe difference is independently published featured remixes. The exact-cover solver and post-optimization validator share the same album-representation contract.
+- Added synthetic full `Starboy` scenario: CD 19 files / 18 included groups, Deluxe 21 files / 20 included groups, Reminder Single 1 file, Die for You Single 4 files. Automated result: **24 physical files**, preserving all wanted groups and CD precedence. Missing independent bonus single requires Deluxe; regular album bonus remains max-completeness; weaker-source full core cannot displace a better-source Deluxe.
+- Verified the uploaded JSONL against acoustic comparison entries: 18 matched shared groups and two Deluxe-only remix groups matched to independent singles. GitHub [CI run 38020343636](https://github.com/karpuzikov/userscripts/actions/runs/38020343636) passed Python compilation, regression self-test, Ruff F821, embedded JavaScript syntax, and UI bridge contract.
+- **Still Under construction ⚠️:** no real Windows re-analysis or Move/Undo validation. Test with both source folders unchanged first.
 
 ## 0.4.4
 
@@ -83,7 +92,7 @@ The failed `native-light` prototype is not the reference.
 - The result dialog explains whether folders were copied or moved. Move completion offers an immediate **Undo move** button and invalidates the prior analysis snapshot because original release paths changed.
 - Added isolated temporary-folder regression tests covering default path, copy remaining non-destructive, full OLD+NEW move, skipped-release preservation, occupied-destination refusal, Undo restoration, and simulated cross-volume verification.
 - Automated source/logic validation passed: [GitHub Actions run 37872841539](https://github.com/karpuzikov/userscripts/actions/runs/37872841539). This does **not** substitute for a real Windows/WebView2 Copy/Move/Undo test.
-- Latest source: `Duplicate Edition Analyzer Lightweight v0.4.4.pyw` on `dea-lightweight-modern` (versioned branch download; no formal GitHub Release).
+- Latest source: `Duplicate Edition Analyzer Lightweight v0.4.5.pyw` on `dea-lightweight-modern` (versioned branch download; no formal GitHub Release).
 - Remains **Under construction ⚠️** pending a real Windows Skrillex OLD/NEW run, a safe Move test and manual UI inspection.
 
 ## 0.4.0
