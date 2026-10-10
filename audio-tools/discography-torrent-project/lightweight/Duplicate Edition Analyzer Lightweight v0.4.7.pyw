@@ -13531,7 +13531,8 @@ def _ui_contract_self_test() -> None:
         ),
         (
             'return {symbol:"⬆️",cls:"upgrade",label:"Upgrade"}' in map_html
-            and 'return {symbol:"+",cls:"add",label:"New addition"}' in map_html
+            and '{symbol:"+",cls:"add",label:"New addition"}' in map_html
+            and '{symbol:"✓",cls:"keep",label:"Retained in proposed selection"}' in map_html
             and 'return {symbol:"✓",cls:"keep",label:"Current / old release stays"}' in map_html
             and 'changesReplacedBtn' in map_html,
             "Release-group headers must use + for additions, ✓ for OLD-stays and ⬆️ for real upgrades.",
