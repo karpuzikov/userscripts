@@ -1281,7 +1281,7 @@ def refresh_heuristic_release_types(releases: List["Release"]) -> None:
 
 
 def is_remix_text(text: str) -> bool:
-    if re.search(r"\bchopped\s*(?:&|and|n)\s*screwed\b", ascii_punctuation(text or ""), re.I):
+    if re.search(r"(?:[\[(]\s*chopped\s*(?:&|and|n)\s*screwed\s*[\])]|(?:-|:)\s*chopped\s*(?:&|and|n)\s*screwed\s*$|^chopped\s*(?:&|and|n)\s*screwed$)", ascii_punctuation(text or ""), re.I):
         return True
     # Explicit Remix/Dub, Club Mix, Redux, and tempo/effect variants such as
     # Sped Up, Slowed/Slowed Down, and Reverb are remix material.
