@@ -13861,7 +13861,7 @@ def _ui_contract_self_test() -> None:
         items = []
         for disc, count in ((1, cd1), (2, cd2)):
             for number in range(1, count + 1):
-                total = str(expected if variant == "album" else count if disc == 1 else 7)
+                total = str(expected if variant == "album" else 21 if disc == 1 else 7)
                 items.append((
                     f"CD{disc}/{number:02d}.flac",
                     {
