@@ -1,6 +1,6 @@
 # Duplicate Edition Analyzer Lightweight
 
-Version: **0.4.7 - Under construction ⚠️**
+Version: **0.4.8 - Under construction ⚠️**
 
 Branch: `dea-lightweight-modern`
 
@@ -41,6 +41,14 @@ The lightweight build preserves the regular DEA feature surface, including:
 - path openers, logging, settings and Undo.
 
 The failed `native-light` prototype is not the reference.
+
+## 0.4.8
+
+- **Fixed false incomplete multi-disc release warnings.** Real 2026-10-10 JPEGMAFIA comparison log shows `2024-08-01 - I LAY DOWN MY LIFE FOR YOU_ DIRECTOR'S CUT [199066832615]` (release_id 35) has **28 physical tracks**, split into `CD1` tracks 1-21 and `CD2` tracks 1-7, with no gaps. The user confirms `TRACKTOTAL=28` refers to the *release-wide sum*, not 28 separate songs on each disc. The uploaded comparison JSONL lists track paths/numbers but not the actual TRACKTOTAL tags; that tag scope comes from the user's observation.
+- `validate_release_track_totals()` distinguishes release-wide single-total metadata from separately declared per-disc totals. In multi-disc releases, a single declared total exceeding both discs' individual lengths and highest track numbers is interpreted as an album-wide count. Also accepts continuous numbering (e.g. CD1 1-21 and CD2 22-28) with total 28.
+- **No weakened real detection:** Release-wide mode compares the actual combined physical track count against 28, checks duplicate numbers and missing internal indexes; missing one file produces a release-wide warning. Per-disc totals like CD1=21, CD2=7 still require both discs to be complete independently and detect missing tracks. Contradictory declarations remain warnings; absent tags remain unknown.
+- Regression scenarios: original 21+7 with shared TRACKTOTAL 28 (PASS), one missing with shared 28 (warning), CD1 TRACKTOTAL 21 plus CD2 TOTALTRACKS 7 (PASS), one missing in per-disc setup (warning), and continuous 1-28 cross-disc indexing (PASS). Existing standalone, corruption, optimizer and UI tests are retained.
+- GitHub CI [run 38025613096](https://github.com/karpuzikov/userscripts/actions/runs/38025613096) **passed** compile, UI self-test and static/JS checks. Windows full physical source rescan is still outstanding; status remains Under construction ⚠️.
 
 ## 0.4.7
 
@@ -111,7 +119,7 @@ The failed `native-light` prototype is not the reference.
 - The result dialog explains whether folders were copied or moved. Move completion offers an immediate **Undo move** button and invalidates the prior analysis snapshot because original release paths changed.
 - Added isolated temporary-folder regression tests covering default path, copy remaining non-destructive, full OLD+NEW move, skipped-release preservation, occupied-destination refusal, Undo restoration, and simulated cross-volume verification.
 - Automated source/logic validation passed: [GitHub Actions run 37872841539](https://github.com/karpuzikov/userscripts/actions/runs/37872841539). This does **not** substitute for a real Windows/WebView2 Copy/Move/Undo test.
-- Latest source: `Duplicate Edition Analyzer Lightweight v0.4.7.pyw` on `dea-lightweight-modern` (versioned branch download; no formal GitHub Release).
+- Latest source: `Duplicate Edition Analyzer Lightweight v0.4.8.pyw` on `dea-lightweight-modern` (versioned branch download; no formal GitHub Release).
 - Remains **Under construction ⚠️** pending a real Windows Skrillex OLD/NEW run, a safe Move test and manual UI inspection.
 
 ## 0.4.0
