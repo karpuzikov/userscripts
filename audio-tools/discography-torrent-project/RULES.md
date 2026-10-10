@@ -32,10 +32,10 @@ Album-family selection order is absolute:
 
 1. Group editions of the same album by proven included-audio overlap/order.
 2. Count the distinct included wanted recording groups carried by each edition.
-3. At least one edition with the **highest unique wanted-track count** must represent that album family.
-4. If Edition A contains every wanted recording carried by Edition B plus at least one more, A is a strict superset and B is immediately dominated.
-5. A single, EP, compilation, or another album outside the family carrying the bonus track does **not** rescue the smaller album edition.
-6. After every album has its most-complete edition represented, minimize the **total retained track count** across the collection.
+3. At least one edition with the **highest unique wanted-track count** must represent that album family, except when a no-weaker-source full core edition differs only by independently available, acoustically matched, added-featured-artist remixes issued as Singles/EPs (v0.4.5).
+4. A strict superset normally dominates an equivalent- or weaker-source subset; preserve an otherwise full core album if its entire missing delta qualifies for the independent featured-remix single/EP exception.
+5. Outside singles/EPs do not generally rescue an incomplete album edition. The only exception is **independently issued featured-remix bonus tracks**, already present on the eligible Singles/EPs and absent from the otherwise full, equal-or-better-source core album.
+6. After every album has a valid full-edition representative (or qualified full core plus standalone featured remixes), minimize the **total retained physical track count** across the collection.
 7. If total retained track count ties, minimize the **total retained release count**.
 8. Source/rip quality, Existing/Recycle preference, and DR/mastering are later tie-breaks only.
 
@@ -45,7 +45,7 @@ Album-family selection order is absolute:
 
 If `Let Go (Limited Edition)` contains every wanted track from `Let Go (Sketch Book)` plus `Get Over It` and `Why`, the Limited Edition represents the album and Sketch Book is dominated immediately.
 
-It does not matter that `Get Over It` or `Why` also exist on singles/EPs. Those outside releases may still be removed or retained by the later global optimizer, but they cannot make the less-complete Sketch Book edition represent `Let Go`.
+It does not matter that `Get Over It` or `Why` also exist on singles/EPs. They are ordinary album bonus songs, not independently issued featured-remix bonuses. Outside singles/EPs may still be removed or retained by the later global optimizer, but they cannot make the less-complete Sketch Book edition represent `Let Go`.
 
 If two maximum-completeness editions contain different wanted material but the same number of unique groups, either can satisfy the album-representation requirement; the global minimum-track/minimum-release solution then decides while still preserving every wanted group.
 
@@ -225,8 +225,8 @@ Hard requirements:
 
 1. Preserve every active wanted recording root/group.
 2. Keep every active album family represented.
-3. The album representative must be one of the editions carrying the **maximum number of distinct included wanted groups** in that family.
-4. A strict same-album superset dominates its subset before global optimization.
+3. The album representative must carry the **maximum number of distinct included wanted groups** in that family, unless it is an equal-or-better-source full core edition whose only additional Deluxe groups are featured remixes each separately covered by an eligible Single/EP.
+4. A strict same-album superset normally dominates an equivalent-or-worse-source subset, except when the subset qualifies for the narrow independently issued featured-remix bonus exception.
 5. Ignored releases cannot provide coverage.
 6. Ignored tracks and step-1 excluded Remix/Live/Clean material create no coverage obligation.
 
@@ -239,7 +239,7 @@ Global objective after those hard requirements:
 5. Use stable deterministic ordering.
 6. Use DR/mastering only for the final exact tie.
 
-Singles/EPs/compilations may satisfy wanted recording coverage, but they can never substitute a smaller album edition for the album's maximum-completeness representative.
+Singles/EPs/compilations may satisfy wanted recording coverage, but they cannot substitute an incomplete core album for its required album representative. The full-core featured-remix exception permits standalone Singles/EPs to cover only the omitted *added-featured-remix* recordings; all regular core songs and ordinary bonus songs still require the complete edition.
 
 CUE image layout receives no special one-file optimization bonus. Logical track count is what matters.
 
@@ -1034,6 +1034,15 @@ This section supersedes older featured-remix, contextual-remix, and generic Edit
 - Regression pairs that must reach the acoustic matcher include `Godspeed (Radio Edit)` vs `Godspeed (BT Edit)`, `Remember (American Radio Edit)` vs `Remember (Album Edit)`, and `Remember (Edit)` vs `Remember (Single Mix)`.
 - Strong structural conflicts such as Radio vs Extended or Acoustic vs Instrumental remain eligible for semantic pre-blocking unless exact identical Chromaprint overrides the wording.
 
+
+## v0.4.5 full CD core versus independently issued featured-remix bonuses - authoritative
+
+- **User regression (The Weeknd 2026-10-10):** OLD 19-track CD `Starboy [US - B0026150-02]` provides 18 wanted core recording groups; NEW 21-track WEB `Starboy (Deluxe) [602455499851]` contains those same 18 plus `Reminder (Remix)` and `Die for You (Remix)` (with one excluded Kygo remix). Both included remix groups have proven acoustic MATCH to independently issued Singles. The 1-track `Reminder (Remix)` single and 4-track `Die for You (Remix)` single cover all the Deluxe-only wanted material.
+- A full core Album edition may satisfy the family obligation rather than the highest-group-count Deluxe edition **only if all** of the following are true: it is in the same audio-derived album family and same normalized album title, its entire wanted acoustic-group multiset is contained in the Deluxe edition, its source rank is no worse than the Deluxe, every missing Deluxe group is an included remix with a genuinely newly featured performer, and every such group is independently carried by an **available/unblocked, included Single/EP** in the same optimization pool. Every wanted group and best eligible source remains a separate hard requirement. Missing one qualifying single revokes the exception and requires the Deluxe.
+- The optimizer must not pre-prune the full core album as dominated when this exception applies, even for equal-source copies. It must evaluate both complete Deluxe and full-core-plus-Singles plans by physical retained track count and then release count, subject to source floor. This is NOT a blanket relaxation for ordinary songs, unique versions, Extended/Instrumental additions, compilations, or an incomplete core album.
+- Target result in the real Starboy scenario: keep the 19-file CD core + 1-file Reminder Single + 4-file Die for You Single = **24 physical files**, not CD + 21-file Deluxe + existing 4-file Die for You Single = **44 files**, while keeping every wanted acoustic group and the CD source floor.
+- The provider rule, equivalent-edition prepruning, exact-cover album constraint and late-plan validation must share this same exception logic. Automatic decisions must label the omitted WEB Deluxe as covered and keep the standalone Reminder single if it is the chosen carrier.
+- Keep full GUI WebView2, never switch to the rejected ASCII prototype. Status remains Under construction ⚠️ until the actual Windows dataset and Move/Undo are tested.
 
 ## v0.4.4 compilation fallbacks and featured-remix correction - authoritative
 
