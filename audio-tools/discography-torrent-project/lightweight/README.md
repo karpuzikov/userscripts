@@ -1,6 +1,6 @@
 # Duplicate Edition Analyzer Lightweight
 
-Version: **0.4.6 - Under construction ⚠️**
+Version: **0.4.7 - Under construction ⚠️**
 
 Branch: `dea-lightweight-modern`
 
@@ -41,6 +41,15 @@ The lightweight build preserves the regular DEA feature surface, including:
 - path openers, logging, settings and Undo.
 
 The failed `native-light` prototype is not the reference.
+
+## 0.4.7
+
+- Fixed **standalone (New/update only) Release Map semantics**: `+ Added 46` was incorrectly showing 46 proposed retained sources as filesystem additions despite no Existing/OLD comparison baseline. In standalone mode, default to Full map, show `Scanned: N releases / M tracks` and `Proposed retained: N releases / M included tracks`, use `RETAIN` and ✓ for selected sources, hide the non-existent OLD legend, and show zero additions/removals until a real comparison baseline exists. The Changes filter remains usable for pending manual ignore actions, but ordinary optimizer choices are not classified as actual additions.
+- **Full audio integrity**: before fingerprint comparison, FFmpeg decodes each distinct physical source to a null output with error detection, including tails missed by ffprobe metadata reads; grouped CUE image paths decode once. Corrupt/unreadable files are flagged with their paths and decoder diagnostics, are not used as acoustic matching evidence, remain conservative unmatched recordings, and block destructive Copy/Move until the source is corrected.
+- **Release completeness**: parse `TRACKTOTAL`, `TOTALTRACKS` and (when present) `TRACKNUMBER=n/total`. Audit each disc separately using DISCNUMBER or disc folder name; report missing track numbers, duplicate numbers, contradictory total tags, or indices beyond the declared total. If track-total tags are absent, completeness is `unknown` (not an automatic failure).
+- Validation warnings are displayed in the existing dark WebView2 map banner and per-release details and row markers. Analyze still runs to show a provisional proposed selection, but Copy/Move is blocked on integrity/completeness issues.
+- Added `--ui-self-test` cases for missing track 2 of 3, correct unknown/complete totals, conflicting total tags, valid multidisc counting, mocked corrupt/healthy FFmpeg full decodes and standalone map state/labels. Historical audio, optimizer and WebView2 bridge tests retained.
+- [GitHub CI 38025032743](https://github.com/karpuzikov/userscripts/actions/runs/38025032743) PASSED. **No real Windows Weeknd decode/Apply validation yet**. One-source log `Duplicate Edition Analyzer Comparison 2026-10-10-07-34-33.jsonl` is **v0.4.5**: 1,211 tracks, 1,208 fingerprints, 46 proposed retained releases. It does not show a v0.4.7 hardware test. Status remains Under construction ⚠️.
 
 ## 0.4.6
 
@@ -102,7 +111,7 @@ The failed `native-light` prototype is not the reference.
 - The result dialog explains whether folders were copied or moved. Move completion offers an immediate **Undo move** button and invalidates the prior analysis snapshot because original release paths changed.
 - Added isolated temporary-folder regression tests covering default path, copy remaining non-destructive, full OLD+NEW move, skipped-release preservation, occupied-destination refusal, Undo restoration, and simulated cross-volume verification.
 - Automated source/logic validation passed: [GitHub Actions run 37872841539](https://github.com/karpuzikov/userscripts/actions/runs/37872841539). This does **not** substitute for a real Windows/WebView2 Copy/Move/Undo test.
-- Latest source: `Duplicate Edition Analyzer Lightweight v0.4.6.pyw` on `dea-lightweight-modern` (versioned branch download; no formal GitHub Release).
+- Latest source: `Duplicate Edition Analyzer Lightweight v0.4.7.pyw` on `dea-lightweight-modern` (versioned branch download; no formal GitHub Release).
 - Remains **Under construction ⚠️** pending a real Windows Skrillex OLD/NEW run, a safe Move test and manual UI inspection.
 
 ## 0.4.0
