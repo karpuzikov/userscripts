@@ -3016,7 +3016,7 @@ def probe_track(ffprobe: str, track: Track) -> None:
 
 def _tag_positive_number(value: str) -> Optional[int]:
     """Read positive index/total from 6, 06/06 or 6 of 6; reject nonsense."""
-    match = re.match(r"^\\s*([0-9]{1,5})(?:\\s*(?:/|of)\\s*[0-9]{1,5})?\\s*$", str(value or ""), re.I)
+    match = re.match(r"^\s*([0-9]{1,5})(?:\s*(?:/|of)\s*[0-9]{1,5})?\s*$", str(value or ""), re.I)
     if not match:
         return None
     number = int(match.group(1))
@@ -3032,7 +3032,7 @@ def _track_disc_identifier(track: Track) -> int:
     if number:
         return number
     for folder in list(track.path.parents)[:3]:
-        disc = re.match(r"^(?:cd|disc|disk)\\s*[-_. ]*(\\d+)\\s*$", folder.name, re.I)
+        disc = re.match(r"^(?:cd|disc|disk)\s*[-_. ]*(\d+)\s*$", folder.name, re.I)
         if disc:
             return int(disc.group(1))
     return 1
@@ -3072,7 +3072,7 @@ def validate_release_track_totals(releases: List[Release]) -> int:
                 if number is not None:
                     numbers.append(number)
                 if not parsed:
-                    suffix = re.search(r"^\\s*\\d+\\s*/\\s*(\\d+)\\s*$", numbered or "")
+                    suffix = re.search(r"^\s*\d+\s*/\s*(\d+)\s*$", numbered or "")
                     if suffix:
                         expected = _tag_positive_number(suffix.group(1))
                         if expected:
