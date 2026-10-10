@@ -1,6 +1,6 @@
 # Duplicate Edition Analyzer Lightweight
 
-Version: **0.4.5 - Under construction ⚠️**
+Version: **0.4.6 - Under construction ⚠️**
 
 Branch: `dea-lightweight-modern`
 
@@ -41,6 +41,16 @@ The lightweight build preserves the regular DEA feature surface, including:
 - path openers, logging, settings and Undo.
 
 The failed `native-light` prototype is not the reference.
+
+## 0.4.6
+
+- Fixed false unique audio detection in the two Weeknd editions of `My Dear Melancholy,`. The actual 2026-10-10 v0.4.5 log showed `Privilege` 170.573333 seconds on both files; the comparison reported score 0, perfect overlapping fingerprint match, but just **10.8407%** total acoustic coverage, and correctly rejected the truncated evidence. `fpcalc` was not validating fingerprint frame count relative to reported full duration, even though its JSON `duration` was 170.57 seconds.
+- Proactively detect implausibly short Chromaprint fingerprints on 30+ second files based on approximate Chromaprint 11025/4096 frames/second with a conservative margin. On suspicious output, use FFmpeg to fully decode that specific file into a program-local 11025 Hz mono PCM WAV, regenerate its fingerprint using `fpcalc -length 0 -raw -json`, and delete PCM immediately.
+- If the recovered fingerprint still appears truncated or FFmpeg fails, the file is clearly flagged with an error rather than being confidently merged. Never accept short overlap alone as a duplicate. This preserves the established 94% content gate and the distinction between genuinely edited versions.
+- JSONL track rows now log `fingerprint_frames`, `fingerprint_repaired`, and `fingerprint_incomplete`, making future root-cause inspection possible without Windows source files.
+- Added tests for the reported 10.84% `Privilege` case; mocked truncated/fixed fpcalc output, fallback ffmpeg invocation, guaranteed temporary-file cleanup, untouched originals, failure-closed behavior, and valid fingerprint no-retry. Existing Weeknd/Skrillex/WebView2 regression tests retained.
+- [GitHub validation run 38021833055](https://github.com/karpuzikov/userscripts/actions/runs/38021833055) PASSED: compile, `--ui-self-test`, Ruff F821, embedded WebView2 JS and bridge contract.
+- **Windows hardware testing still required**: v0.4.6 Analyze on unchanged Weeknd folders; inspect `Privilege` result and the new `fingerprint_repaired` log field. A real repair cannot be conclusively confirmed until the program processes both actual audio files. Status remains Under construction ⚠️.
 
 ## 0.4.5
 
@@ -92,7 +102,7 @@ The failed `native-light` prototype is not the reference.
 - The result dialog explains whether folders were copied or moved. Move completion offers an immediate **Undo move** button and invalidates the prior analysis snapshot because original release paths changed.
 - Added isolated temporary-folder regression tests covering default path, copy remaining non-destructive, full OLD+NEW move, skipped-release preservation, occupied-destination refusal, Undo restoration, and simulated cross-volume verification.
 - Automated source/logic validation passed: [GitHub Actions run 37872841539](https://github.com/karpuzikov/userscripts/actions/runs/37872841539). This does **not** substitute for a real Windows/WebView2 Copy/Move/Undo test.
-- Latest source: `Duplicate Edition Analyzer Lightweight v0.4.5.pyw` on `dea-lightweight-modern` (versioned branch download; no formal GitHub Release).
+- Latest source: `Duplicate Edition Analyzer Lightweight v0.4.6.pyw` on `dea-lightweight-modern` (versioned branch download; no formal GitHub Release).
 - Remains **Under construction ⚠️** pending a real Windows Skrillex OLD/NEW run, a safe Move test and manual UI inspection.
 
 ## 0.4.0
