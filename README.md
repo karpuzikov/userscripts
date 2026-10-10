@@ -55,7 +55,7 @@ Picard can then check for and install future updates from its Plugins interface.
 
 | Project | Description | Version | Download |
 | --- | --- | ---: | --- |
-| **Duplicate Edition Analyzer Lightweight** | Fast graphical WebView2 edition with Changes-first Release Map, acoustic matching and review. | 0.4.3 - Under construction ⚠️ | [![Download](https://img.shields.io/badge/Download-.pyw-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/dea-lightweight-modern/audio-tools/discography-torrent-project/lightweight/Duplicate%20Edition%20Analyzer%20Lightweight%20v0.4.3.pyw) |
+| **Duplicate Edition Analyzer Lightweight** | Fast graphical WebView2 edition with Changes-first Release Map, acoustic matching and review. | 0.4.4 - Under construction ⚠️ | [![Download](https://img.shields.io/badge/Download-.pyw-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/dea-lightweight-modern/audio-tools/discography-torrent-project/lightweight/Duplicate%20Edition%20Analyzer%20Lightweight%20v0.4.4.pyw) |
 | **CUE Filename Fixer - UTF-8 Recursive** | Repairs CUE file references recursively and saves them as UTF-8. | 2.0.0 | [![Download](https://img.shields.io/badge/Download-.bat-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/main/audio-tools/cue-filename-fixer/CUE_Filename_Fixer_UTF8_Recursive.bat) |
 | **AudioChecker UTF-8 Patch (Experimental)** | Patches AudioChecker for UTF-8 support. | Experimental | [![Download](https://img.shields.io/badge/Download-.bat-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/main/audio-tools/audiochecker-utf8-patch/Install_AudioChecker_UTF8_Patch.bat) |
 
