@@ -1035,6 +1035,14 @@ This section supersedes older featured-remix, contextual-remix, and generic Edit
 - Strong structural conflicts such as Radio vs Extended or Acoustic vs Instrumental remain eligible for semantic pre-blocking unless exact identical Chromaprint overrides the wording.
 
 
+## v0.4.6 incomplete acoustic fingerprint detection and PCM recovery - authoritative
+
+- `fpcalc` can produce misleadingly short fingerprint vectors while reporting the full media duration. Do not count a nonempty JSON fingerprint as complete by default. Example: v0.4.5 real `Privilege` ALAC vs FLAC, both 170.573333 seconds; comparison score 0, 100% overlap against the shorter fingerprint, but only 10.8407% of the longer fingerprint aligned. The 94% unmatched-content gate MUST reject this pair until a complete acoustic fingerprint has been recovered; never lower thresholds or merge by matching title/duration.
+- Identify clearly truncated fingerprint frame counts using Chromaprint's approximate 11025/4096 frames/second and conservative startup/tolerance margin. On those files alone, re-decode via FFmpeg into app-local temporary 11025 Hz mono PCM WAV, then recalculate full Chromaprint and delete PCM after the attempt.
+- If the regenerated fingerprint is still incomplete or decoding fails, record an explicit error and leave the track as a conservative unmatched singleton. Do not fabricate acoustic identity. Always preserve the source file. Temporary files belong inside the program-specific `Documents\\Karpuzikov Tools\\...\\temp` path.
+- `fpcalc` and FFmpeg remain application-owned child subprocesses under the Windows kill-on-close Job Object. The recovery pipeline obeys the same HDD/SSD I/O worker count as the initial fingerprinting stage.
+- The comparison JSONL must expose frame counts and whether automatic PCM repair occurred for each track. Include a synthetic root-cause reproduction, recovered-vs-unrecovered tests, validation of cleanup, and preserve full WebView2 GUI/previous matching rules. Hardware behavior must still be tested before stable release.
+
 ## v0.4.5 full CD core versus independently issued featured-remix bonuses - authoritative
 
 - **User regression (The Weeknd 2026-10-10):** OLD 19-track CD `Starboy [US - B0026150-02]` provides 18 wanted core recording groups; NEW 21-track WEB `Starboy (Deluxe) [602455499851]` contains those same 18 plus `Reminder (Remix)` and `Die for You (Remix)` (with one excluded Kygo remix). Both included remix groups have proven acoustic MATCH to independently issued Singles. The 1-track `Reminder (Remix)` single and 4-track `Die for You (Remix)` single cover all the Deluxe-only wanted material.
