@@ -13691,6 +13691,101 @@ def _ui_contract_self_test() -> None:
     if probe.stdout.strip() != "tracked-child-ok":
         raise RuntimeError("Tracked subprocess regression.")
 
+    # v0.4.7: metadata completeness is declared per-disc, never inferred
+    # merely from raw file count when the tags do not expose an expected count.
+    def _audited_rel(rid, specs):
+        return Release(
+            rid=rid, root_kind="recycle", path=Path(f"Album {rid}"),
+            title="Audit Album", tracks=[
+                Track(
+                    release_id=rid, path=Path(filename), index=i,
+                    tags=tags, title=f"Song {i}",
+                )
+                for i, (filename, tags) in enumerate(specs, 1)
+            ],
+        )
+
+    incomplete_release = _audited_rel(73001, [
+        ("01.flac", {"TRACKNUMBER": "1", "TRACKTOTAL": "3"}),
+        ("03.flac", {"TRACKNUMBER": "3", "TOTALTRACKS": "3"}),
+    ])
+    unknown_total_release = _audited_rel(73002, [
+        ("01.flac", {"TRACKNUMBER": "1"}),
+        ("02.flac", {"TRACKNUMBER": "2"}),
+    ])
+    complete_release = _audited_rel(73003, [
+        ("01.flac", {"TRACKNUMBER": "1/2"}),
+        ("02.flac", {"TRACKNUMBER": "2/2"}),
+    ])
+    conflicting_release = _audited_rel(73004, [
+        ("01.flac", {"TRACKNUMBER": "1", "TRACKTOTAL": "2", "TOTALTRACKS": "3"}),
+        ("02.flac", {"TRACKNUMBER": "2", "TRACKTOTAL": "2"}),
+    ])
+    validate_release_track_totals([
+        incomplete_release, unknown_total_release, complete_release,
+        conflicting_release,
+    ])
+    if not any("missing number(s): 2" in issue for issue in incomplete_release.validation_issues):
+        raise RuntimeError("Missing TRACKTOTAL track was not detected.")
+    if unknown_total_release.validation_issues or complete_release.validation_issues:
+        raise RuntimeError("Unknown/complete tracktotal misclassified as incomplete.")
+    if not any("conflicting" in issue for issue in conflicting_release.validation_issues):
+        raise RuntimeError("Contradictory TRACKTOTAL/TOTALTRACKS tags not flagged.")
+    if _tag_positive_number("6/6") != 6 or _tag_positive_number("garbage") is not None:
+        raise RuntimeError("Invalid TRACKNUMBER/TOTALTRACKS parsing.")
+
+    # Per-CD totals are independent; do not mistakenly expect all tracks
+    # in a multi-disc release to have the sum of per-disc TRACKTOTAL values.
+    multiple_discs = _audited_rel(73005, [
+        ("CD1/01.flac", {"DISCNUMBER": "1", "TRACKNUMBER": "1", "TRACKTOTAL": "2"}),
+        ("CD1/02.flac", {"DISCNUMBER": "1", "TRACKNUMBER": "2", "TRACKTOTAL": "2"}),
+        ("CD2/01.flac", {"DISCNUMBER": "2", "TRACKNUMBER": "1", "TOTALTRACKS": "1"}),
+    ])
+    validate_release_track_totals([multiple_discs])
+    if multiple_discs.validation_issues:
+        raise RuntimeError("Complete per-disc TRACKTOTAL flagged a false issue.")
+
+    # Full FFmpeg decoding must be mandatory; header-only FFprobe success
+    # cannot clear malformed audio. Validate failure and healthy pathways.
+    original_audio_run = globals()["run_hidden"]
+    audio_seen = []
+    def _audit_fake_run(args, **kw):
+        audio_seen.append(list(args))
+        if "-xerror" not in args or "-err_detect" not in args or "null" not in args:
+            raise RuntimeError("Integrity check did not request exhaustive decoding.")
+        bad = "broken.flac" in str(args)
+        return subprocess.CompletedProcess(args, 1 if bad else 0, "",
+                                           "Corrupt FLAC frame CRC" if bad else "")
+    globals()["run_hidden"] = _audit_fake_run
+    try:
+        if _verify_audio_file("ffmpeg-test", Path("healthy.flac")):
+            raise RuntimeError("Healthy fully decoded track was flagged as corrupt.")
+        if "CRC" not in _verify_audio_file("ffmpeg-test", Path("broken.flac")):
+            raise RuntimeError("Corrupt FLAC full decode was not flagged.")
+    finally:
+        globals()["run_hidden"] = original_audio_run
+    if len(audio_seen) != 2:
+        raise RuntimeError("Full-audio integrity regression not executed.")
+
+    # Standalone release-map output carries an explicit no-OLD baseline flag,
+    # audit warnings and scanned source counts. This is a selection, not +Added.
+    map_states = _release_map_state_for_ui(
+        [
+            {"release_id": 90001, "name": "Stand-alone test", "action": "ADD",
+             "root_kind": "recycle", "tracklist": [], "audit_issues": ["missing 2"],
+             "included_tracks": 0}
+        ],
+        None, set(), set(), set(), False, False, False, False,
+    )
+    if not map_states.get("standaloneMode") or map_states.get("auditIssueCount") != 1:
+        raise RuntimeError("Standalone Release Map state lost baseline/validation warning.")
+    if map_states.get("scannedCounts", {}).get("releases") != 1:
+        raise RuntimeError("Standalone release count was computed from only selected rows.")
+    if 'if(state&&state.standaloneMode)return "";' not in map_html:
+        raise RuntimeError("Standalone Changes board still falsely counts Additions.")
+    if 'Proposed retained: ' not in map_html or 'renderAuditBanner()' not in map_html:
+        raise RuntimeError("Standalone proposal or audit banner is absent.")
+
     # Real 2026-10-10 Privilege regression. The two versions report the
     # same 170.573-second duration, but one fpcalc vector covered only 10.8407%
     # of the track. Never bypass the unmatched-content gate; recover the full
