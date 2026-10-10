@@ -9598,6 +9598,9 @@ button,input { font:inherit; }
 button:focus-visible,input:focus-visible { outline:2px solid #8cc8ff; outline-offset:2px; }
 .pathOpenBtn { width:34px; min-width:34px; padding:0; display:inline-flex; align-items:center; justify-content:center; }
 .resultAdd { color:#98f5b3; } .resultRemove { color:#ffaaaa; }
+#auditBanner{display:none;background:#33251e;color:#ffcfac;padding:7px 14px;border-bottom:1px solid #a86c38;font-size:12px;white-space:normal}
+#auditBanner.visible{display:block}
+#details .auditNotice{padding:8px 12px;margin:5px 0;background:#33251e;color:#ffd1aa;white-space:pre-wrap;font-size:12px;border-left:3px solid #c78d49}
 </style>
 </head>
 <body>
@@ -9618,6 +9621,7 @@ button:focus-visible,input:focus-visible { outline:2px solid #8cc8ff; outline-of
   <div id="spacer"></div>
   <button class="btn" id="closeBtn">Close</button>
 </div>
+<div id="auditBanner" role="alert" aria-live="polite"></div>
 <div id="changeBar" aria-label="Release Map view and change filters">
   <button class="viewBtn active" id="changesViewBtn" aria-pressed="true">Changes</button>
   <button class="viewBtn" id="fullViewBtn" aria-pressed="false">Full map</button>
@@ -9694,7 +9698,8 @@ function actionDisplay(n) {
     if(/Better CD rip log/i.test(reason)) return {label:"UPGRADE CD RIP",cls:"upgrade"};
     return {label:"REPLACE",cls:"replace"};
   }
-  if(action==="ADD") return {label:"+ ADD",cls:"add"};
+  if(action==="ADD") return (state&&state.standaloneMode)
+    ? {label:"RETAIN",cls:"keep"} : {label:"+ ADD",cls:"add"};
   if(action==="KEEP") return {label:"KEEP",cls:"keep"};
   if(action==="REMOVE") return {label:"REMOVE",cls:"remove"};
   if(action==="SKIP") return {label:"SKIP",cls:"skip"};
@@ -9705,6 +9710,8 @@ function renderSourceLegend(){
   const oldEl=document.getElementById("oldLegend"), newEl=document.getElementById("newLegend");
   const oldPath=String(roots.existing||""), newPath=String(roots.recycle||"");
   oldEl.title=oldPath; newEl.title=newPath;
+  oldEl.style.display=(state&&state.standaloneMode)?"none":"";
+  newEl.querySelector("b").textContent=(state&&state.standaloneMode)?"SOURCE":"NEW";
   oldEl.querySelector("span").textContent=pathLeaf(oldPath)||"Existing";
   newEl.querySelector("span").textContent=pathLeaf(newPath)||"New / update";
 }
@@ -9749,6 +9756,15 @@ function renderPlanCounts() {
   };
   const initialEl=document.getElementById("initialCounts");
   const resultEl=document.getElementById("resultCounts");
+  if(state&&state.standaloneMode){
+    const scanned=state.scannedCounts||{};
+    initialEl.textContent="Scanned: "+Number(scanned.releases||0)+" releases / "+Number(scanned.tracks||0)+" tracks";
+    resultEl.textContent="Proposed retained: "+result.releases+" releases / "+result.tracks+" included tracks"
+      +(state.dirty?" - pending Re-Analyze":"");
+    resultEl.classList.remove("changed");
+    resultEl.classList.toggle("pending",!!state.dirty);
+    return;
+  }
   initialEl.textContent="Initial: "+initial.releases+" releases / "+initial.tracks+" tracks";
   resultEl.textContent="Result: "+result.releases+" releases ("+signedCount(delta.releases)+") / "
     +result.tracks+" tracks ("+signedCount(delta.tracks)+")"
@@ -9756,6 +9772,14 @@ function renderPlanCounts() {
   const changed=Number(delta.releases)!==0||Number(delta.tracks)!==0;
   resultEl.classList.toggle("changed",changed&&!state.dirty);
   resultEl.classList.toggle("pending",!!(state&&state.dirty));
+}
+function renderAuditBanner(){
+  const el=document.getElementById("auditBanner");
+  const count=Number(state&&state.auditIssueCount||0), releases=Number(state&&state.auditReleaseCount||0);
+  el.classList.toggle("visible",count>0);
+  el.textContent=count
+    ? "⚠️ Integrity / completeness: "+count+" issue(s) in "+releases+" release(s). Copy and Move are blocked. Open the affected release for details and repair the source files before rescanning."
+    : "";
 }
 function getNode(id) {
   return (state.nodes || []).find(function(n){ return Number(n.id) === Number(id); });
@@ -9999,6 +10023,8 @@ function isRealUpgrade(n) {
 }
 function changeKind(n) {
   if(n.manualRemoved||n.pendingReleaseIgnore||n.pendingReleaseRestore) return "ignored";
+  // A standalone selection is not an addition to an existing discography.
+  if(state&&state.standaloneMode)return "";
   const pairs=replacementMap();
   if(pairs.oldToTarget.has(Number(n.id)))return "replacementSource";
   if(pairs.targetToOld.has(Number(n.id)))return isRealUpgrade(n)?"upgraded":"replaced";
@@ -10091,7 +10117,9 @@ function groupStatusForNodes(items) {
   if(items.some(function(n){return !n.manualRemoved&&String(n.action||"").toUpperCase()==="REPLACE"&&actionDisplay(n).cls==="upgrade";}))
     return {symbol:"⬆️",cls:"upgrade",label:"Upgrade"};
   if(items.some(function(n){return !n.manualRemoved&&String(n.rootKind||"")==="recycle"&&String(n.action||"").toUpperCase()==="ADD";}))
-    return {symbol:"+",cls:"add",label:"New addition"};
+    return (state&&state.standaloneMode)
+      ? {symbol:"✓",cls:"keep",label:"Retained in proposed selection"}
+      : {symbol:"+",cls:"add",label:"New addition"};
   if(items.some(function(n){return !n.manualRemoved&&String(n.rootKind||"")==="existing"&&String(n.action||"").toUpperCase()==="KEEP";}))
     return {symbol:"✓",cls:"keep",label:"Current / old release stays"};
   return null;
@@ -10113,7 +10141,8 @@ function appendReleaseRow(host,n) {
   row.setAttribute("aria-label","Inspect release "+String(n.name||"")+". "+stateText+". "+(String(n.rootKind||"")==="existing"?"Existing discography.":"New or update source."));
   const changed=changeKind(n);
   const changeIcon=changed?'<span class="rowChangeIcon '+changed+'" aria-hidden="true">'+esc(changeSymbol(changed))+'</span>':"";
-  row.innerHTML=changeIcon+'<span class="folderIcon"></span><span class="releaseName">'+esc(n.name)+'</span>';
+  const auditIcon=(n.auditIssues||[]).length?'<span title="Audio integrity or incomplete release" aria-label="Validation warning">⚠️ </span>':"";
+  row.innerHTML=changeIcon+auditIcon+'<span class="folderIcon"></span><span class="releaseName">'+esc(n.name)+'</span>';
   function activateReleaseRow(){
     const details=document.getElementById("details");
     if(selectedId!=null && Number(selectedId)===Number(n.id) && details.classList.contains("open")){
@@ -10190,7 +10219,9 @@ function renderChangesBoard(nodes) {
     });
     if(!shown){
       const empty=document.createElement("div");empty.className="changeEmpty";
-      empty.textContent=changeFilter==="all"?"No release changes. The improved discography already matches the retained plan.":"No changes in this category.";
+      empty.textContent=(state&&state.standaloneMode)
+        ? "No additions or removals: only one source folder was supplied. Review the proposed retention and duplicate candidates in Full map."
+        : (changeFilter==="all"?"No release changes. The improved discography already matches the retained plan.":"No changes in this category.");
       list.appendChild(empty);
     }
   }
@@ -10264,7 +10295,9 @@ function updateTrackMode() {
     const matches=searchMatchesFor(q);
     mode.textContent=q
       ? 'Find "'+q+'" - '+matches.length+' release(s)'
-      : (viewMode==="changes"?"Changes only":"Full chronological release map");
+      : (state&&state.standaloneMode
+        ? (viewMode==="changes"?"No comparison baseline - no changes applied":"Single-folder review - no changes applied")
+        : (viewMode==="changes"?"Changes only":"Full chronological release map"));
   }
 }
 function selectTrack(releaseId,track) {
@@ -10418,7 +10451,9 @@ function openDetails(n) {
   inner.innerHTML='<div id="detailsHead"><button id="closeDetailsBtn" title="Close details" aria-label="Close details">×</button><div id="releaseName">'+esc(n.name)+'</div>'
     +'<div id="releaseMeta">'+esc(releaseMeta)
     +' | '+n.uniqueCount+' unique | '+n.includedTracks+' included</div>'
-    +sourceSummary+ignoreNotice+'<div id="releaseActions">'+ignoreRelease+'</div><div id="pathRow">'
+    +sourceSummary+ignoreNotice+((n.auditIssues||[]).length
+      ? '<div class="auditNotice">⚠️ Audio integrity / release completeness:\n'+esc(n.auditIssues.join("\n"))+'</div>'
+      : '')+'<div id="releaseActions">'+ignoreRelease+'</div><div id="pathRow">'
     +'<button class="btn pathOpenBtn" id="openFolderBtn" title="Open release folder" aria-label="Open release folder">📁</button>'
     +'<div id="releasePath">'+esc(n.path)+'</div><button class="btn" id="copyPathBtn">Copy path</button></div>'
     +'<div id="reason">'+esc(
@@ -10491,7 +10526,13 @@ function openDetails(n) {
   });
 }
 function receiveState(raw) {
-  state=JSON.parse(raw); replacementCache=null; renderPlanCounts(); renderSourceLegend(); updateButtons(); renderChangeSummary(); renderBoard();
+  state=JSON.parse(raw); replacementCache=null;
+  if(state.standaloneMode && viewMode==="changes" && !selectedId) viewMode="full";
+  document.getElementById("changesViewBtn").textContent=state.standaloneMode?"No changes":"Changes";
+  document.getElementById("changeHint").textContent=state.standaloneMode
+    ?"Single-folder review: no files have been added or removed."
+    :"Changes first; Full map keeps every analyzed release.";
+  renderPlanCounts(); renderAuditBanner(); renderSourceLegend(); updateButtons(); renderChangeSummary(); renderBoard();
   if(selectedId!=null && getNode(selectedId)) openDetails(getNode(selectedId));
   else document.getElementById("details").classList.remove("open");
   updateTrackMode(); renderResult();
@@ -10499,7 +10540,7 @@ function receiveState(raw) {
 function applyRootPatch(p) {
   if(!state) return;
   state.dirty=!!p.dirty;
-  state.applyEnabled=!!p.applyEnabled;
+  state.applyEnabled=!!p.applyEnabled && !Number(state.auditIssueCount||0);
   state.applyHighlighted=!!p.applyHighlighted;
   if(p.result) state.result=p.result;
   renderPlanCounts(); updateButtons(); renderResult();
