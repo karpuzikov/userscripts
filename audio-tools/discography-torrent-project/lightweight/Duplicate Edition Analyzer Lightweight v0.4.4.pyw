@@ -2199,7 +2199,12 @@ def configure_exclusions(
             # With no normal counterpart, a secondary ARTIST-tag collaborator
             # is positive feature evidence; do not require feat. in TITLE.
             # Plain remixer text inside TITLE is not a feature.
-            added_features = remix_specific_featured_artists(track) | _artist_tag_collaborators(track)
+            collaborators = _artist_tag_collaborators(track)
+            # A dual-artist remix can signal one newly featured performer.
+            # A 3+ act credit on a remix-only package is ambiguous: it can
+            # list the original co-creators (e.g. Dirty Vibe), not an addition.
+            tag_feature = collaborators if len(collaborators) == 1 else set()
+            added_features = remix_specific_featured_artists(track) | tag_feature
 
         track.remix_feature_exception = bool(
             track.is_remix
