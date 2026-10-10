@@ -1,6 +1,6 @@
 # Duplicate Edition Analyzer Lightweight
 
-Version: **0.4.3 - Under construction ⚠️**
+Version: **0.4.4 - Under construction ⚠️**
 
 Branch: `dea-lightweight-modern`
 
@@ -42,6 +42,18 @@ The lightweight build preserves the regular DEA feature surface, including:
 
 The failed `native-light` prototype is not the reference.
 
+## 0.4.4
+
+- Fixed permanent compilation track removal. The exact optimizer now ranks regular releases first, but retains full compilation audio-group coverage as a fallback when manual Release Map exclusions remove those providers.
+- Source type detection identifies 30-track `Trilogy` and `The Highlights (Deluxe)` as compilations even when tags report Album.
+- ARTIST-tag collaborations can preserve genuinely newly featured remixes (Maluma & The Weeknd, The Weeknd with ROSALÍA, The Weeknd & Ariana Grande). Existing Dirty Vibe multi-artist regression remains excluded.
+- `Call Out My Name` no longer matches generic callout-hook exclusions, while authentic Suggested Call Out Research Hook review grouping remains.
+- `K-POP (Chopped & Screwed)` is remix material, not normal wanted coverage when Save Remixes is OFF.
+- A significantly shortened `Open Hearts (Single Version)` is kept distinct from the album master if fingerprint contents are not identical; exact audio identity still overrides wording.
+- Regression tests use Weeknd-shaped compilation, manual exclusion, remixes, ordinary titles and version examples.
+- Two user-uploaded JSONL files from 2026-10-10 are byte-identical; they contain only the initial analysis plan and **not** the post-Re-Analyze plan. CI does not reproduce the complete live 659-track collection or Windows WebView2 behavior.
+- **Status: Under construction ⚠️.** Test a fresh 0.4.4 re-analysis and inspect coverage before allowing Move/Apply.
+
 ## 0.4.3
 
 - Fixed the source of orphaned `fpcalc.exe` processes: subprocesses launched through the application's shared runner are assigned to a Windows Job Object with `KILL_ON_JOB_CLOSE`. Explicit Close, window X and interpreter exit close the job; process-tree cleanup is scoped to this application's children, not every system `fpcalc.exe`. A Windows runtime test is still required.
@@ -71,7 +83,7 @@ The failed `native-light` prototype is not the reference.
 - The result dialog explains whether folders were copied or moved. Move completion offers an immediate **Undo move** button and invalidates the prior analysis snapshot because original release paths changed.
 - Added isolated temporary-folder regression tests covering default path, copy remaining non-destructive, full OLD+NEW move, skipped-release preservation, occupied-destination refusal, Undo restoration, and simulated cross-volume verification.
 - Automated source/logic validation passed: [GitHub Actions run 37872841539](https://github.com/karpuzikov/userscripts/actions/runs/37872841539). This does **not** substitute for a real Windows/WebView2 Copy/Move/Undo test.
-- Latest source: `Duplicate Edition Analyzer Lightweight v0.4.3.pyw` on `dea-lightweight-modern` (versioned branch download; no formal GitHub Release).
+- Latest source: `Duplicate Edition Analyzer Lightweight v0.4.4.pyw` on `dea-lightweight-modern` (versioned branch download; no formal GitHub Release).
 - Remains **Under construction ⚠️** pending a real Windows Skrillex OLD/NEW run, a safe Move test and manual UI inspection.
 
 ## 0.4.0
