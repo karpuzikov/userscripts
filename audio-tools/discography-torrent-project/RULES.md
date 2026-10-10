@@ -1035,6 +1035,16 @@ This section supersedes older featured-remix, contextual-remix, and generic Edit
 - Strong structural conflicts such as Radio vs Extended or Acoustic vs Instrumental remain eligible for semantic pre-blocking unless exact identical Chromaprint overrides the wording.
 
 
+## v0.4.4 compilation fallbacks and featured-remix correction - authoritative
+
+- Compilation tracks must NEVER be permanently excluded merely because a regular release currently covers their acoustic groups. Group identity survives manual Ignore/Restore and Re-Analyze. The exact optimizer ranks regular releases ahead of compilations *per wanted group*, uses compilations for groups with no unblocked regular providers, and preserves the best CD/source class among eligible providers. Re-Analyze with all replacement sources manually removed must be able to bring the original compilation back rather than losing wanted material. Manual exclusions must be respected, never automatically undone.
+- Recognize `The Highlights` anthology (including Deluxe) and 25+ track `Trilogy` collections as compilations even if tags report Album. Distinguish them from legitimate albums. Only keep a compilation if at least one wanted recording remains unavailable through eligible regular releases.
+- Remixes with newly credited performers in ARTIST metadata (e.g. separated with `;`, `&`, `with`) must be preserved under Save Remixes OFF when the additional featured artist was not credited on the normal source. When no ordinary comparison source is available, two-person collabs can count as explicit new-artist evidence, but an ambiguous 3+ artist credit alone must not rescue established remix-only packages such as Dirty Vibe.
+- `Call Out My Name` is a normal song title, not a Callout Hook review pattern. Match only explicit Suggested Callout / research / Hook descriptor forms. Old excluded phrase choices must not suppress the song.
+- `Chopped & Screwed` inside a bracketed or trailing version descriptor is remix material. The ordinary title `Chopped and Screwed Dreams` must not be misclassified.
+- An explicitly identified shortened Single Version with significant length difference and nonidentical acoustics must not be merged into its album recording simply because the comparison's unmatched-fingerprint segment is classified as silence. Identical fingerprint vectors remain definitive.
+- Preserve the graphical WebView2 application and all previous parity requirements. Add realistic regression fixtures and keep Under construction until real-folder reruns, Move/Undo and Windows UI testing pass.
+
 ## v0.4.3 fingerprint worker ownership and storage-aware concurrency - authoritative
 
 - `fpcalc.exe`, `ffprobe.exe`, CUE extraction `ffmpeg.exe` and other subprocesses launched through the common hidden-process runner must be owned by the application on Windows using a kill-on-close Job Object. Close, X and normal/abnormal process termination must not leave those spawned analysis subprocesses running. Never mass-kill unrelated `fpcalc.exe` processes.
