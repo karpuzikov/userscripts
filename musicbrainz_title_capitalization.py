@@ -563,7 +563,7 @@ def _set_single_value(metadata: Any, tag: str, value: str) -> None:
         metadata[tag] = [value]
 
 
-_DIGITAL_MEDIUM_RE = re.compile(r"^(?:[0-9]+\s*[x×]\s*)?digital media$", re.I)
+_DIGITAL_MEDIUM_RE = re.compile(r"^(?:[0-9]+\s*[x×]\s*)?(?:digital media|web)$", re.I)
 
 
 def _is_digital_medium(value: Any) -> bool:
@@ -591,15 +591,11 @@ def _is_digital_release(metadata: Any, release_node: Any = None) -> bool:
 
 
 def normalize_europe_release_country(metadata: Any, release_node: Any = None) -> None:
-    """Remove digital release countries; otherwise write EU instead of XE."""
+    """Preserve WEB/Digital release countries; map XE to EU on other releases.
+
+    Deletion belongs exclusively to the opt-in Don't Use This Tags script.
+    """
     if _is_digital_release(metadata, release_node):
-        # Picard Metadata.delete marks an existing file tag for actual deletion;
-        # deleting a key from a plain dict is used only by regression tests.
-        delete = getattr(metadata, "delete", None)
-        if callable(delete):
-            delete("releasecountry")
-        else:
-            metadata.pop("releasecountry", None)
         return
 
     try:
