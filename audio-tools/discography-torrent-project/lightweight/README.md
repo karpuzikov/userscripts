@@ -1,6 +1,6 @@
 # Duplicate Edition Analyzer Lightweight
 
-Version: **0.4.8 - Under construction ⚠️**
+Version: **0.4.9 - Under construction ⚠️**
 
 Branch: `dea-lightweight-modern`
 
@@ -41,6 +41,15 @@ The lightweight build preserves the regular DEA feature surface, including:
 - path openers, logging, settings and Undo.
 
 The failed `native-light` prototype is not the reference.
+
+## 0.4.9
+
+- **Fixed strict original-vs-Special Edition source precedence.** User's 2026-10-11 actual Camo & Krooked log: OLD 2011 `Cross the Line [EU - NHS194CD]` 14-track CD, NEW `Cross the Line (Special Edition) [3617056553892]` 18-track WEB. All 14 original tracks are acoustically matched; the Special Edition adds four genuinely wanted tracks: Cryptkeeper, Change Me, Portal and Menace. The old optimizer wrongly retained both editions (32 files) to satisfy a hard best-CD-source requirement. The intended output is **Special Edition alone (18 files)**, no loss of wanted audio.
+- **New priority:** Cover all wanted recordings and satisfy max-complete album representation, minimize physical tracks, then releases; use CD/rip/source quality only as a later tie-break for otherwise fully duplicate/coverage-equivalent choices. Original/full duplicate 14-CD vs 14-WEB still chooses CD; strict superset 18-WEB supersedes 14-CD. Normal albums and EPs both obey the nonredundant source rule.
+- Album strict-superset pruning now ignores source rank (except v0.4.5's independently issued featured-remix Single/EP exception). Exact solver admits all eligible regular carriers for a recording rather than only the best source; final validator verifies recording coverage and valid album representation without overriding the minimum-file plan to preserve a redundant CD. Removed obsolete post-solver source-enforcement helper.
+- Retained v0.4.5 Starboy behavior: CD core plus separately released featured-remix singles is allowed when this is the smaller complete solution. Blocking a separate remix single requires Deluxe without redundant CD.
+- Added automated synthetic regression for the exact 14+4 WEB Special Edition shape and the 14/14 exact-duplicate CD preference. Updated Bangarang EP superset and minimum-file exact-solver regressions that previously encoded the unwanted redundant CD.
+- [CI run 38107417253](https://github.com/karpuzikov/userscripts/actions/runs/38107417253) **PASSED** Python compile, UI/regression self-tests, embedded JS, bridge checks and static checks. Real Windows 192-file folder optimization has not been rerun with v0.4.9; no Copy/Move/Undo on real sources tested. Under construction ⚠️.
 
 ## 0.4.8
 
@@ -119,7 +128,7 @@ The failed `native-light` prototype is not the reference.
 - The result dialog explains whether folders were copied or moved. Move completion offers an immediate **Undo move** button and invalidates the prior analysis snapshot because original release paths changed.
 - Added isolated temporary-folder regression tests covering default path, copy remaining non-destructive, full OLD+NEW move, skipped-release preservation, occupied-destination refusal, Undo restoration, and simulated cross-volume verification.
 - Automated source/logic validation passed: [GitHub Actions run 37872841539](https://github.com/karpuzikov/userscripts/actions/runs/37872841539). This does **not** substitute for a real Windows/WebView2 Copy/Move/Undo test.
-- Latest source: `Duplicate Edition Analyzer Lightweight v0.4.8.pyw` on `dea-lightweight-modern` (versioned branch download; no formal GitHub Release).
+- Latest source: `Duplicate Edition Analyzer Lightweight v0.4.9.pyw` on `dea-lightweight-modern` (versioned branch download; no formal GitHub Release).
 - Remains **Under construction ⚠️** pending a real Windows Skrillex OLD/NEW run, a safe Move test and manual UI inspection.
 
 ## 0.4.0
