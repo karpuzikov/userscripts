@@ -12,6 +12,7 @@ from .current_artist_names import (
     normalize_track_artist_names,
 )
 from .musicbrainz_title_capitalization import (
+    _is_digital_release,
     capitalize_release_title,
     capitalize_track_title,
 )
@@ -917,12 +918,22 @@ class ScriptsOptionsPage(OptionsPage):
             self.api.plugin_config[key] = checkbox.isChecked()
 
 
-def _run_scripts(api, metadata):
+def _run_scripts(api, metadata, release_node=None):
     for key, label, script in SCRIPTS:
         if not api.plugin_config[key]:
             continue
 
         try:
+            if key == "dont_use_this_tags" and isinstance(release_node, dict):
+                # Standalone tagging scripts only see a per-track 'media' tag.
+                # An embedded Picard plugin can inspect the complete MB release
+                # and must NOT delete releasecountry for hybrid CD+digital sets.
+                release_media = release_node.get("media")
+                if isinstance(release_media, (list, tuple)) and release_media:
+                    # Preserve the canonical script's unconditional tag deletions.
+                    script = "\n".join(script.splitlines()[:2]) + "\n"
+                    if _is_digital_release(metadata, release_node):
+                        script += "$delete(releasecountry)\n"
             ScriptParser().eval(script, metadata)
         except Exception:
             api.logger.exception('Failed to run tagging script "%s"', label)
@@ -931,7 +942,7 @@ def _run_scripts(api, metadata):
 def process_album(api, album, metadata, release_node):
     if api.plugin_config["current_artist_names"]:
         normalize_album_artist_names(api, metadata, release_node)
-    _run_scripts(api, metadata)
+    _run_scripts(api, metadata, release_node)
     if api.plugin_config["musicbrainz_title_capitalization"]:
         capitalize_release_title(api, metadata, release_node)
 
@@ -939,7 +950,7 @@ def process_album(api, album, metadata, release_node):
 def process_track(api, track, metadata, track_node, release_node=None):
     if api.plugin_config["current_artist_names"]:
         normalize_track_artist_names(api, metadata, track_node, release_node)
-    _run_scripts(api, metadata)
+    _run_scripts(api, metadata, release_node)
     if api.plugin_config["musicbrainz_title_capitalization"]:
         capitalize_track_title(api, metadata, track_node, release_node)
 
