@@ -14466,8 +14466,8 @@ def _ui_contract_self_test() -> None:
     blocked_reminder = optimize_collection(
         starboy_pool, {}, blocked_release_ids={reminder_single.rid}
     )
-    if web_deluxe.rid not in blocked_reminder or cd_starboy.rid not in blocked_reminder:
-        raise RuntimeError("Starboy required Deluxe after blocking independent remix single.")
+    if web_deluxe.rid not in blocked_reminder or cd_starboy.rid in blocked_reminder:
+        raise RuntimeError("Without Reminder single, the Deluxe covers CD without retaining CD.")
 
     # Ordinary / exclusive album bonus must still enforce max-completeness.
     ordinary_bonus = Track(
@@ -14504,6 +14504,48 @@ def _ui_contract_self_test() -> None:
         cd_starboy, web_deluxe, starboy_pool
     ):
         raise RuntimeError("Weaker-source album improperly displaced a higher-source deluxe.")
+
+    # Real Cross the Line log (2026-10-11): the existing CD album has 14
+    # wanted fingerprint groups. Incoming 18-track WEB Special Edition contains
+    # those same 14 + four unique bonus recordings with no other carrier.
+    # A strict superset MUST win, even when its source rank is lower than CD.
+    cross_cd = Release(
+        rid=8401, root_kind="existing",
+        path=Path("2011-10-03 - Cross the Line [EU - NHS194CD]"),
+        title="Cross the Line", release_type="album", source_medium="CD",
+        tracks=[
+            Track(8401, Path(f"CD {i}.m4a"), i, title=f"Cross track {i}", group_id=84000+i)
+            for i in range(1, 15)
+        ],
+    )
+    cross_special = Release(
+        rid=8402, root_kind="recycle",
+        path=Path("2011-10-03 - Cross the Line (Special Edition) [3617056553892]"),
+        title="Cross the Line (Special Edition)",
+        release_type="album", source_medium="Digital Media",
+        tracks=[
+            Track(8402, Path(f"WEB {i}.flac"), i, title=f"Cross track {i}", group_id=84000+i)
+            for i in range(1, 19)
+        ],
+    )
+    if not _release_covers(cross_special, cross_cd) or _release_covers(cross_cd, cross_special):
+        raise RuntimeError("Cross the Line acoustic subset relationship failed.")
+    if cross_cd.rid not in find_dominated_releases([cross_cd, cross_special]):
+        raise RuntimeError("Superset did not dominate lower-track CD original.")
+    if optimize_collection([cross_cd, cross_special], {}) != {cross_special.rid}:
+        raise RuntimeError("Cross the Line must keep 18-track WEB Special Edition ONLY.")
+
+    # Exact FULL duplicates are different: preserve the original/better CD.
+    cross_web_duplicate = Release(
+        rid=8403, root_kind="recycle", path=Path("Cross the Line 14-track WEB"),
+        title="Cross the Line", release_type="album", source_medium="WEB",
+        tracks=[
+            Track(8403, Path(f"WEBdup {i}.flac"), i, title=f"Cross track {i}", group_id=84000+i)
+            for i in range(1, 15)
+        ],
+    )
+    if optimize_collection([cross_cd, cross_web_duplicate], {}) != {cross_cd.rid}:
+        raise RuntimeError("CD must win a complete audio-identical duplicate.")
 
     # v0.3.8 regression from the real Skrillex Dirty Vibe v0.3.7 log.
     # Both "Jack Beats Re-work" files were retained by mistake; all other
@@ -14623,8 +14665,8 @@ def _ui_contract_self_test() -> None:
             or feature_track.exclude_from_coverage):
         raise RuntimeError("Dirty Vibe remix self-test failed: added-feature exception lost.")
 
-    # v0.3.5: lower-source WEB superset may carry unique bonus material, but it
-    # must not erase the already available CD source for the shared recordings.
+    # New rule: a WEB strict audio superset with a wanted bonus may replace
+    # its shorter CD original. Only FULL duplicate editions prefer CD.
     cd_common = Release(
         rid=5101,
         root_kind="existing",
@@ -14651,10 +14693,9 @@ def _ui_contract_self_test() -> None:
             Track(release_id=5102, path=Path("Bonus.flac"), index=5499, title="Bonus", group_id=5399)
         ],
     )
-    source_kept = enforce_source_quality_floor([cd_common, web_superset], {web_superset.rid})
-    source_kept = prune_redundant_selected([cd_common, web_superset], source_kept)
-    if source_kept != {cd_common.rid, web_superset.rid}:
-        raise RuntimeError("Source-floor self-test failed: CD shared source was lost to WEB superset.")
+    source_kept = optimize_collection([cd_common, web_superset], {})
+    if source_kept != {web_superset.rid}:
+        raise RuntimeError("Superset EP must not retain a redundant CD: " + str(source_kept))
 
     # Same album + same numbered slot must route even when provider wording differs.
     slot_old = Track(
@@ -14688,8 +14729,8 @@ def _ui_contract_self_test() -> None:
     if len(zero_map["nodes"]) != 1 or zero_map["nodes"][0]["tracks"][0]["groupId"] != 0:
         raise RuntimeError("Release Map self-test failed: group zero lost from visible map.")
 
-    # Source floor + exact minimization: one CD+WEB pair beats two partial
-    # CDs+WEB when coverage/physical track totals are otherwise equal.
+    # Source quality is a tie-break: the full WEB superset alone covers all
+    # wanted recordings without a redundant CD original.
     def make_cover(rid, medium, gids, root):
         return Release(
             rid=rid, root_kind=root, path=Path(f"Source {rid}"),
@@ -14706,9 +14747,9 @@ def _ui_contract_self_test() -> None:
     cover_result, cover_stats = exact_global_collection_minimize(
         [cd_all, cd_half_a, cd_half_b, web_bonus], {web_bonus.rid},
     )
-    if cover_result != {cd_all.rid, web_bonus.rid} or cover_stats.get("source_floor_requirements") != 5 or cover_stats.get("requirements") != 5:
+    if cover_result != {web_bonus.rid} or cover_stats.get("source_floor_requirements") != 0 or cover_stats.get("requirements") != 5:
         raise RuntimeError(
-            f"Optimizer self-test failed: best-source minimum-release plan {sorted(cover_result)}."
+            f"Optimizer self-test failed: minimum-file source-tiebreak plan {sorted(cover_result)}."
         )
     if not (
         "let replacementCache=null;" in map_html
