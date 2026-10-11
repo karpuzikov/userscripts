@@ -1,3 +1,5 @@
+> **MIGRATED:** The lightweight graphical application is now maintained as **Music Collection Cleaner v0.5.0 - Under construction ⚠️** in [karpuzikov/MCC](https://github.com/karpuzikov/MCC). This directory is the historical v0.4.x source; the separate production Duplicate Edition Analyzer v0.22.12 in `tools/` is unchanged. Continue MCC development in its new repository. Windows regressions and cross-volume Move safety remain unresolved.
+
 # Duplicate Edition Analyzer Lightweight
 
 Version: **0.4.9 - Under construction ⚠️**
