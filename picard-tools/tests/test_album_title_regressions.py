@@ -439,6 +439,7 @@ class PicardAlbumRegressions(unittest.TestCase):
         self.assertIn("$delete(albumartistsort)", dont)
         self.assertIn("$delete(artistsort)", dont)
         self.assertIn("$delete(releasecountry)", dont)
+        self.assertIn("^[0-9]*[ ]*[x×]?[ ]*web$", dont)
         self.assertIn("digital media$", dont)
         self.assertIn("web$", dont)
         module = (REPO / "musicbrainz_title_capitalization.py").read_text(encoding="utf-8")
@@ -447,6 +448,48 @@ class PicardAlbumRegressions(unittest.TestCase):
             if script.name.startswith("Dont_Use_This_Tags") or "_v" in script.stem:
                 continue
             self.assertNotIn("$delete(releasecountry)", script.read_text(encoding="utf-8"))
+
+    def test_plugin_tag_exclusion_uses_full_release_media(self):
+        # Run the actual plugin dispatch function without requiring PyQt/Picard.
+        import types
+        plugin = ast.parse((REPO / "__init__.py").read_text(encoding="utf-8"))
+        fn = next(n for n in plugin.body
+                  if isinstance(n, ast.FunctionDef) and n.name == "_run_scripts")
+        commands = []
+        class FakeParser:
+            def eval(self, code, metadata):
+                commands.append(code)
+        standalone = (REPO / "picard-tools" / "scripts" /
+                      "Dont_Use_This_Tags.txt").read_text(encoding="utf-8")
+        space = {
+            "SCRIPTS": (("dont_use_this_tags", "don't use this tags", standalone),),
+            "ScriptParser": FakeParser,
+            "_is_digital_release": _is_digital_release,
+        }
+        exec(compile(ast.Module(body=[fn], type_ignores=[]), "<plugin>", "exec"), space)
+        run = space["_run_scripts"]
+        api = types.SimpleNamespace(
+            plugin_config={"dont_use_this_tags": True},
+            logger=types.SimpleNamespace(exception=lambda *a: self.fail(str(a))),
+        )
+        metadata = {"media": "Digital Media"}
+        for source, should_delete in (
+            ({"media": [{"format": "Digital Media"}, {"format": "CD"}]}, False),
+            ({"media": [{"format": "Digital Media"}, {"format": "WEB"}]}, True),
+            ({"media": [{"format": "CD"}]}, False),
+            ({"media": [{"format": "Digital Media"}, {}]}, False),
+        ):
+            with self.subTest(source=source):
+                commands.clear()
+                run(api, metadata, source)
+                self.assertEqual(len(commands), 1)
+                self.assertIn("$delete(artistsort)", commands[0])
+                self.assertIn("$delete(albumartistsort)", commands[0])
+                self.assertEqual("$delete(releasecountry)" in commands[0],
+                                 should_delete)
+        commands.clear()
+        run(api, metadata, None)
+        self.assertEqual(commands, [standalone])
 
     def test_country_preserved_in_capitalization_metadata_api(self):
         class TrackedMetadata(dict):
