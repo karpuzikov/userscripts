@@ -3,6 +3,12 @@
 Last updated: 2026-10-09
 Status: Under construction ⚠️
 
+## Migration completed - 2026-10-12
+
+- **Current independent application:** [Music Collection Cleaner v0.5.0.pyw](https://github.com/karpuzikov/MCC/blob/main/Music%20Collection%20Cleaner%20v0.5.0.pyw) in `karpuzikov/MCC` (branch `main`). Repository root contains full `SOFTWARE_RULES.md`, `RULES.md`, and `CONTINUITY.md` plus README. GitHub readback verified 2026-10-12.
+- The v0.4.9 lightweight source in this branch is historical and **unchanged**; the original production DEA v0.22.12 and unrelated tools remain in this repository. The new app is renamed, re-versioned to 0.5.0, points its standalone releases updater to `karpuzikov/MCC`, and copies prior user settings, logs, caches and Undo state into its new isolated Documents data directory non-destructively on first start.
+- Migration is **published at source level only**; Python compilation, built-in self-test and real Windows/WebView2 behavior have **not yet been executed** for MCC. `0.5.0 - Under construction ⚠️` remains; cross-volume Move cleanup/journaling remains a release blocker. No new workflows or EXE have been published. The previous planned target `karpuzikov/music-collection-cleaner` was superseded by the user's actual `karpuzikov/MCC` repository.
+
 ## Purpose
 
 Duplicate Edition Analyzer (DEA) compares an existing discography with incoming/new releases, identifies exact acoustic duplicates and distinct versions, optimizes which releases should be retained, lets the user inspect and override the proposed plan in Release Map, and only changes files after explicit Apply. Undo must remain available after applying changes.
