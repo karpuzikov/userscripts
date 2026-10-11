@@ -33,7 +33,7 @@ Album-family selection order is absolute:
 1. Group editions of the same album by proven included-audio overlap/order.
 2. Count the distinct included wanted recording groups carried by each edition.
 3. At least one edition with the **highest unique wanted-track count** must represent that album family, except when a no-weaker-source full core edition differs only by independently available, acoustically matched, added-featured-artist remixes issued as Singles/EPs (v0.4.5).
-4. A strict superset normally dominates an equivalent- or weaker-source subset; preserve an otherwise full core album if its entire missing delta qualifies for the independent featured-remix single/EP exception.
+4. A strict same-album superset dominates the subset regardless of source rank, except for the separate featured-remix Singles/EPs exception.
 5. Outside singles/EPs do not generally rescue an incomplete album edition. The only exception is **independently issued featured-remix bonus tracks**, already present on the eligible Singles/EPs and absent from the otherwise full, equal-or-better-source core album.
 6. After every album has a valid full-edition representative (or qualified full core plus standalone featured remixes), minimize the **total retained physical track count** across the collection.
 7. If total retained track count ties, minimize the **total retained release count**.
@@ -226,7 +226,7 @@ Hard requirements:
 1. Preserve every active wanted recording root/group.
 2. Keep every active album family represented.
 3. The album representative must carry the **maximum number of distinct included wanted groups** in that family, unless it is an equal-or-better-source full core edition whose only additional Deluxe groups are featured remixes each separately covered by an eligible Single/EP.
-4. A strict same-album superset normally dominates an equivalent-or-worse-source subset, except when the subset qualifies for the narrow independently issued featured-remix bonus exception.
+4. A strict same-album superset dominates even a higher-source CD subset, except for the independent featured-remix Single/EP exception. CD preference applies to full duplicates.
 5. Ignored releases cannot provide coverage.
 6. Ignored tracks and step-1 excluded Remix/Live/Clean material create no coverage obligation.
 
@@ -611,7 +611,7 @@ Do not flatten release folders into the duplicate root. After successful moves, 
 ### Exact global minimum-track rule
 
 - Preserve all active wanted groups and album obligations first.
-- Preserve source class and CD-log quality requirements.
+- Apply source/CD-log quality only as a later tie-break, after required coverage, full album representation, physical track count and release count.
 - Minimize total retained track count, counting excluded extras carried inside kept releases.
 - Then minimize retained release count.
 - Then minimize Recycle/update release count; Existing therefore wins only a complete later tie.
@@ -1035,6 +1035,16 @@ This section supersedes older featured-remix, contextual-remix, and generic Edit
 - Strong structural conflicts such as Radio vs Extended or Acoustic vs Instrumental remain eligible for semantic pre-blocking unless exact identical Chromaprint overrides the wording.
 
 
+## v0.4.9 strict superset before source preference - authoritative
+
+- **New user rule:** Prefer the original CD/physical edition only when the alternative has fully equivalent included wanted audio. If an acoustically proven Special/Deluxe Edition has *all* wanted tracks of the original and **at least one more wanted bonus recording** (particularly one unavailable on any other release), the **complete Special/Deluxe** replaces the original regardless of source class. It is not correct to keep the smaller CD as a second release just to preserve CD quality for the shared recordings. Release titles alone do not prove audio identity; use accepted fingerprint groups.
+- **Confirmed Camo & Krooked regression:** OLD `2011-10-03 - Cross the Line [EU - NHS194CD]` is 14-track CD; NEW `2011-10-03 - Cross the Line (Special Edition) [3617056553892]` is 18-track Digital Media. All 14 original songs are matched acoustically; the Special Edition additionally contains four wanted songs: `Cryptkeeper`, `Change Me`, `Portal`, `Menace`, with no alternate bonus-track sources. Correct result: retain **WEB Special Edition 18 tracks only**, not 14-track CD plus 18-track WEB.
+- For full duplicate edition coverage, prefer CD/physical or the higher quality verified rip, then Existing when earlier objectives tie. Lower source quality does not negate a strict acoustic superset.
+- Hard requirements are wanted acoustic groups, regular-release preference over compilation where an eligible regular source exists, and a most-complete valid album-family representative. Then minimize total physical tracks, then retained releases, then compare CD/source quality, Existing, DR in that order. No hard best-source-carrier requirement per acoustic group.
+- Preserve the v0.4.5 **independently issued featured-remix single** exception: if the complete CD core plus eligible featured-remix singles is a smaller valid collection than the WEB Deluxe and meets all family/coverage rules, retain CD plus singles. If separate remix sources disappear, Deluxe must represent the album and redundant CD must not remain.
+- Prior v0.3.5/v0.3.6 wording that required redundant shared-CD preservation is expressly superseded. Keep all existing corruption, TRACKTOTAL, WebView2 Release Map, Re-Analyze, Undo and Copy/Move safeguards.
+- v0.4.9 must pass tests for the exact Cross the Line 14/18 split, exact equivalent 14/14 CD vs WEB preferring CD, Bangarang superset and Starboy remix exception. Windows file operations remain unverified, status Under construction ⚠️.
+
 ## v0.4.8 album-wide vs per-disc TRACKTOTAL scope - authoritative
 
 - `TRACKTOTAL` and `TOTALTRACKS` can describe either the entire multi-disc release or the individual disc, depending on tagger/provider. Do **not** assume all totals are disc-local, and do not require the declared release-wide number on each separate disc. Inference is based on physical disc grouping, track number sequences, and declared totals; title, barcode and folder name are not sufficient to infer a missing recording.
@@ -1064,15 +1074,15 @@ This section supersedes older featured-remix, contextual-remix, and generic Edit
 ## v0.4.5 full CD core versus independently issued featured-remix bonuses - authoritative
 
 - **User regression (The Weeknd 2026-10-10):** OLD 19-track CD `Starboy [US - B0026150-02]` provides 18 wanted core recording groups; NEW 21-track WEB `Starboy (Deluxe) [602455499851]` contains those same 18 plus `Reminder (Remix)` and `Die for You (Remix)` (with one excluded Kygo remix). Both included remix groups have proven acoustic MATCH to independently issued Singles. The 1-track `Reminder (Remix)` single and 4-track `Die for You (Remix)` single cover all the Deluxe-only wanted material.
-- A full core Album edition may satisfy the family obligation rather than the highest-group-count Deluxe edition **only if all** of the following are true: it is in the same audio-derived album family and same normalized album title, its entire wanted acoustic-group multiset is contained in the Deluxe edition, its source rank is no worse than the Deluxe, every missing Deluxe group is an included remix with a genuinely newly featured performer, and every such group is independently carried by an **available/unblocked, included Single/EP** in the same optimization pool. Every wanted group and best eligible source remains a separate hard requirement. Missing one qualifying single revokes the exception and requires the Deluxe.
-- The optimizer must not pre-prune the full core album as dominated when this exception applies, even for equal-source copies. It must evaluate both complete Deluxe and full-core-plus-Singles plans by physical retained track count and then release count, subject to source floor. This is NOT a blanket relaxation for ordinary songs, unique versions, Extended/Instrumental additions, compilations, or an incomplete core album.
-- Target result in the real Starboy scenario: keep the 19-file CD core + 1-file Reminder Single + 4-file Die for You Single = **24 physical files**, not CD + 21-file Deluxe + existing 4-file Die for You Single = **44 files**, while keeping every wanted acoustic group and the CD source floor.
+- A full core Album edition may satisfy the family obligation rather than the highest-group-count Deluxe edition **only if all** of the following are true: it is in the same audio-derived album family and same normalized album title, its entire wanted acoustic-group multiset is contained in the Deluxe edition, its source rank is no worse than the Deluxe, every missing Deluxe group is an included remix with a genuinely newly featured performer, and every such group is independently carried by an **available/unblocked, included Single/EP** in the same optimization pool. Every wanted acoustic group remains a hard requirement; source rank is a later tie-break. Missing one qualifying single revokes the exception and requires the Deluxe.
+- The optimizer must not pre-prune the full core album as dominated when this exception applies, even for equal-source copies. It must evaluate both complete Deluxe and full-core-plus-Singles plans by physical retained track count and then release count, with source quality only as a late tie-break. This is NOT a blanket relaxation for ordinary songs, unique versions, Extended/Instrumental additions, compilations, or an incomplete core album.
+- Target result in the real Starboy scenario: keep the 19-file CD core + 1-file Reminder Single + 4-file Die for You Single = **24 physical files**, not CD + 21-file Deluxe + existing 4-file Die for You Single = **44 files**, while keeping every wanted acoustic group without a hard source floor.
 - The provider rule, equivalent-edition prepruning, exact-cover album constraint and late-plan validation must share this same exception logic. Automatic decisions must label the omitted WEB Deluxe as covered and keep the standalone Reminder single if it is the chosen carrier.
 - Keep full GUI WebView2, never switch to the rejected ASCII prototype. Status remains Under construction ⚠️ until the actual Windows dataset and Move/Undo are tested.
 
 ## v0.4.4 compilation fallbacks and featured-remix correction - authoritative
 
-- Compilation tracks must NEVER be permanently excluded merely because a regular release currently covers their acoustic groups. Group identity survives manual Ignore/Restore and Re-Analyze. The exact optimizer ranks regular releases ahead of compilations *per wanted group*, uses compilations for groups with no unblocked regular providers, and preserves the best CD/source class among eligible providers. Re-Analyze with all replacement sources manually removed must be able to bring the original compilation back rather than losing wanted material. Manual exclusions must be respected, never automatically undone.
+- Compilation tracks must NEVER be permanently excluded merely because a regular release currently covers their acoustic groups. Group identity survives manual Ignore/Restore and Re-Analyze. The exact optimizer ranks regular releases ahead of compilations *per wanted group*, uses compilations for groups with no unblocked regular providers, and uses the best CD/source class as a late tie-break among otherwise eligible providers. Re-Analyze with all replacement sources manually removed must be able to bring the original compilation back rather than losing wanted material. Manual exclusions must be respected, never automatically undone.
 - Recognize `The Highlights` anthology (including Deluxe) and 25+ track `Trilogy` collections as compilations even if tags report Album. Distinguish them from legitimate albums. Only keep a compilation if at least one wanted recording remains unavailable through eligible regular releases.
 - Remixes with newly credited performers in ARTIST metadata (e.g. separated with `;`, `&`, `with`) must be preserved under Save Remixes OFF when the additional featured artist was not credited on the normal source. When no ordinary comparison source is available, two-person collabs can count as explicit new-artist evidence, but an ambiguous 3+ artist credit alone must not rescue established remix-only packages such as Dirty Vibe.
 - `Call Out My Name` is a normal song title, not a Callout Hook review pattern. Match only explicit Suggested Callout / research / Hook descriptor forms. Old excluded phrase choices must not suppress the song.
@@ -1136,14 +1146,14 @@ This section supersedes older featured-remix, contextual-remix, and generic Edit
 - Provider release-type labels (Album/EP/Single) are not proof that two physically identical, acoustically equivalent copies are different editions. An EP/Single-tagged OLD copy may fulfill a maximum-completeness Album obligation only when its release-family title matches and its entire physical track count, included acoustic group sequence and multiplicities match a maximum-completeness Album edition.
 - This exception must never permit an incomplete EP, different release family, compilation, missing wanted recording, or larger/different physical container to substitute for a maximally complete Album.
 - The exact solver must allow those truly equivalent providers BEFORE late Existing/NEW tie-breakers; source preference and Existing no-churn rules apply normally.
-- Every late release substitution must preserve recording coverage, source quality, and at least one valid album representative. If a late tie-break somehow violates these invariants, restore the last valid exact optimizer selection with an explicit logged diagnostic; do not crash or silently degrade the plan.
+- Every late release substitution must preserve acoustic coverage, valid album representation and the minimum-track/minimum-release objective. If a late tie-break somehow violates these invariants, restore the last valid exact optimizer selection with an explicit logged diagnostic; do not crash or silently degrade the plan.
 - Regression: Skrillex Scary Monsters OLD tagged EP, NEW tagged Album, 11 physical tracks including seven wanted acoustically matched groups, must retain OLD without album-completeness failure when both are otherwise interchangeable.
 
-## v0.3.6 source-safe optimization and Release Map correctness - authoritative
+## v0.3.6 source-safe optimization and Release Map correctness - historical (hard source floor superseded v0.4.9)
 
-- For each included wanted acoustic recording group, the exact optimization model must select at least one best-source-class carrier (CD/physical above WEB; comparable CD-rip acceptability 80+ is evaluated in the source floor). Restrict the existing group-coverage requirement to best-class providers; do not double the solver's requirement graph. Numeric CD log quality differences within the same class remain late tie-breakers.
-- Source preservation is a hard coverage constraint **before** minimizing total retained physical tracks and retained release count. Never add higher-source copies after exact minimization as an unoptimized repair pass.
-- Equivalent-edition pre-pruning must not remove the only better-source carrier. CD-log/DR late substitutions must not increase physical track count or violate recording, source-floor or maximum-completeness album constraints.
+- **Superseded v0.4.9:** All eligible non-compilation acoustic-group carriers can satisfy recording coverage. CD and CD rip log quality are late tie-breakers, not a separate per-group best-source-floor obligation.
+- **Superseded v0.4.9:** Source preservation is not a hard coverage constraint. Do not add redundant higher-source CD copies after exact minimum-track solving.
+- Equivalent-edition pruning prefers better-source fully duplicate editions; strict superset pruning ignores CD/WEB source rank. Late CD-log/DR changes may not increase physical track count or violate wanted recording/album constraints.
 - The Release Map must preserve valid acoustic group ID `0` in all visible nodes, relationship links and alternate-version catalogs.
 - A coverage/duplicate link does not prove a replacement. Show `↔ Replaced` only if one NEW release completely covers the included wanted acoustic groups of a removed OLD release and both are recognized as the same release family; otherwise report separate add/remove with actual partial coverage.
 - Cache Release Map replacement pairing per state and invalidate it after updates. Do not rebuild every pair for every displayed row or filter.
@@ -1151,14 +1161,14 @@ This section supersedes older featured-remix, contextual-remix, and generic Edit
 
 ## v0.3.5 source preservation and Release Map delta correction - authoritative
 
-This section supersedes older optimization wording wherever it allowed collection-size minimization to erase a better source for recordings that are already available at higher quality.
+This section is HISTORICAL. Its per-recording hard source-floor requirement is superseded by the user's newest v0.4.9 complete-edition selection rule; keep the separate acoustic routing/Release Map fixes.
 
 ### CD / source quality preservation
 
-- Source preference applies to the shared **recordings**, not only to whole-release exact-equivalence ties.
-- A lower-source release (for example WEB) may be retained because it contributes a unique wanted recording/version, but it must **not** displace an available higher-source CD/physical copy of the recordings they share.
-- If keeping the unique lower-source release and the higher-source release together is necessary to satisfy both unique coverage and CD>WEB preference, keep both. This source-preservation rule outranks the lower-total-track/lower-release-count objective.
-- A strict album superset does not automatically dominate a higher-source subset when the superset's source quality is lower. The superset may still be required for album completeness/unique material, while the higher-source edition remains for its shared recordings.
+- **Superseded v0.4.9:** Source preference breaks ties among complete-equivalent release solutions and is NOT a per-recording mandate to keep redundant physical releases.
+- **Superseded v0.4.9:** A lower-source complete WEB Special Edition supersedes a higher-source CD subset when it contains the entire included wanted original plus wanted bonus tracks.
+- **Superseded v0.4.9:** Do not keep an extra CD solely to preserve the source of shared audio already contained by the complete WEB edition.
+- **Superseded v0.4.9:** An audio-proven same-album strict superset dominates its CD subset regardless of source rank, except the dedicated independently issued featured-remix singles exception.
 - Among competing source-preservation candidates, prefer higher source rank, then better comparable CD-log quality, then Existing, then the smaller container/stable order.
 - A below-threshold CD still follows the existing CD-log rules; this correction does not turn metadata into duplicate identity.
 - Exact-equivalent Existing preference is based on proven included audio/container shape. Provider Album/EP/Single metadata disagreement alone must not create churn.
