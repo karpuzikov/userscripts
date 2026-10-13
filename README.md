@@ -2,6 +2,8 @@
 
 A collection of Tampermonkey userscripts, MusicBrainz/Picard helpers, Windows utilities, image tools, game installers, and backup scripts.
 
+**Discography Torrent Project has moved to [karpuzikov/TRRNT-project](https://github.com/karpuzikov/TRRNT-project).** The original GitHub Releases/EXE assets remain available in this repository's release history.
+
 ## Browser Tools
 
 | Project | Description | Version | Download |
