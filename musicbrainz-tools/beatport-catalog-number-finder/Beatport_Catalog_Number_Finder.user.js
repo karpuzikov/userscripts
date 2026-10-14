@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MusicBrainz - Beatport Catalog Number Finder
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      0.1.4
+// @version      0.1.5
 // @description  Find missing digital-release catalog numbers on Beatport and review safe MusicBrainz edits.
 // @author       karpuzikov
 // @license      MIT
@@ -613,8 +613,16 @@
         return ui;
     }
 
+    function isBeatportReleaseAlreadyLinked(release, value) {
+        const wantedId = beatportUrl(value)?.match(/\/(\d+)$/)?.[1];
+        return !!wantedId && releaseLinks(release).some(link => link.match(/\/(\d+)$/)?.[1] === wantedId);
+    }
+
     function stageEdit(release, item, evidence) {
-        const record = {id: release.id, title: release.title, catalog: item.catalog, label: item.label, beatport: item.url, upc: item.upc, barcode: release.barcode, evidence, timestamp: Date.now()};
+        const source = beatportUrl(item.url);
+        if (!source || !UUID.test(release.id)) return;
+        const addBeatportLink = !isBeatportReleaseAlreadyLinked(release, source);
+        const record = {id: release.id, title: release.title, catalog: item.catalog, label: item.label, beatport: source, upc: item.upc, barcode: release.barcode, evidence, addBeatportLink, timestamp: Date.now()};
         const stored = GM_getValue(KEY, {});
         const next = stored && typeof stored === 'object' ? stored : {};
         next[release.id] = record;
@@ -622,8 +630,15 @@
             if (Date.now() - Number(next[id]?.timestamp || 0) > 2 * 60 * 60 * 1000) delete next[id];
         }
         GM_setValue(KEY, next);
-        // Open editor for manual confirmation. No database edit is submitted by the script.
-        window.open(`${location.origin}/release/${encodeURIComponent(release.id)}/edit`, '_blank', 'noopener');
+        // MusicBrainz seeds release URL relationships from these query keys
+        // (root/static/scripts/external-links-editor/state.js). Type 74
+        // is "purchase for download", the Beatport release shop page.
+        const editUrl = new URL(location.origin + '/release/' + encodeURIComponent(release.id) + '/edit');
+        if (addBeatportLink) {
+            editUrl.searchParams.set('edit-release.url.0.text', source);
+            editUrl.searchParams.set('edit-release.url.0.link_type_id', '74');
+        }
+        window.open(editUrl.href, '_blank', 'noopener');
     }
 
     function displayCandidate(ui, release, finding) {
@@ -761,6 +776,16 @@
             setBoundValue(input,[input.value.trim(),proposedEditNote(record)].filter(Boolean).join('\n\n'));
         return true;
     }
+    function editorHasBeatportLink(beatport) {
+        const wantedId = beatportUrl(beatport)?.match(/\/(\d+)$/)?.[1];
+        const table = document.getElementById('external-links-editor');
+        if (!wantedId || !table) return false;
+        return [...table.querySelectorAll('a.url, input.value')].some(el => {
+            const address = el.tagName === 'A' ? el.href : el.value;
+            return beatportUrl(address)?.match(/\/(\d+)$/)?.[1] === wantedId;
+        });
+    }
+
     function initEdit(recordId) {
         let data;
         try {data=GM_getValue(KEY,{})?.[recordId];} catch {return;}
@@ -813,11 +838,15 @@
             const note=appendEditNote(data);
             if(!filled && choice.status==='already'){
                 message.textContent='Catalog number already present; no changes needed.';finished=true;
-            }else if(note){
-                message.textContent='Catalog number and evidence note filled. Review and submit manually.';finished=true;
+            }else if(note && (!data.addBeatportLink || editorHasBeatportLink(data.beatport))){
+                message.textContent = data.addBeatportLink
+                    ? 'Catalog number, Beatport purchase link and evidence note prepared. Review and submit manually.'
+                    : 'Catalog number and evidence note prepared. Beatport release link already exists. Review and submit manually.';
+                finished=true;
             }else if(Date.now()>deadline){
-                message.textContent='Catalog number filled. Use Copy edit note before submitting.';finished=true;
-            }else message.textContent='Catalog number filled. Waiting for edit-note field.';
+                message.textContent='Catalog number prepared, but the Beatport external link or edit note could not be verified. Check External links and use Copy edit note before submitting.';
+                finished=true;
+            }else message.textContent='Preparing Beatport external link and edit note...';
         }
         apply();
         if(!finished)timer=setInterval(()=>{
@@ -841,6 +870,6 @@
 
     // Test entry point is disabled in production unless explicitly enabled by a test harness.
     if (globalThis.__BPCNF_TEST__ === true) {
-        globalThis.__BPCNF_TEST_HOOKS__ = {beatportChallengeVisible, browserLoadedPageResult, sameBarcode, normalizeCatalog, beatportUrl, releaseDetailsFromHtml, searchReleaseLinks, isDigital, catalogs, releaseLinks, reviewFinding, proposedEditNote, isBarcodeCatalog, findCatalogInputs, chooseCatalogInput, releaseDetailsFromProps, browserBeatportRequest, bridgeKey, browserNavigationUrl};
+        globalThis.__BPCNF_TEST_HOOKS__ = {beatportChallengeVisible, browserLoadedPageResult, sameBarcode, normalizeCatalog, beatportUrl, releaseDetailsFromHtml, searchReleaseLinks, isDigital, catalogs, releaseLinks, reviewFinding, proposedEditNote, isBarcodeCatalog, findCatalogInputs, chooseCatalogInput, isBeatportReleaseAlreadyLinked, editorHasBeatportLink, releaseDetailsFromProps, browserBeatportRequest, bridgeKey, browserNavigationUrl};
     }
 })();
