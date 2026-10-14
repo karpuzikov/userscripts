@@ -2,7 +2,7 @@
 
 ## Purpose and current baseline
 - Product: Archive Media Compressor, under `karpuzikov/userscripts/archive-media-compressor/`.
-- Current working build: `ArchiveMedia v6.00.14.bat` (semantic version 6.0.14), **Under construction ⚠️**, published on the default `main` branch. Previous build: `ArchiveMedia v6.00.13.bat`.
+- Current working build: `ArchiveMedia v6.00.15.bat` (semantic version 6.0.15), **Under construction ⚠️**, published on the default `main` branch. Previous build: `ArchiveMedia v6.00.14.bat`.
 - Default branch: `main`. No alternate active branch is established.
 - A single versioned Windows .bat embeds a Base64 ZIP containing `ArchiveMedia.ps1`; the BAT bootstraps WinGet, PowerShell 7, FFmpeg/FFprobe, and ImageMagick; extracts payload into a temporary folder; then runs PowerShell. The BAT contains temporary source-repair/worker-tuning transformations in 6.0.13.
 - Project README: `archive-media-compressor/README.md`; repository-wide download/version table: root `README.md`.
@@ -26,6 +26,12 @@
 - Implemented v6.0.14 temporary-payload PowerShell patch with a pre-commit guard on `ConvertPhoto`, `RemuxVideo` and `EncodeVideo` results. If candidate length >= source length, immediately delete the candidate. In Replace mode return a successful `Skip` and preserve the original. In Copy mode copy source bytes into output using original relative path/extension with atomic `FileMode.CreateNew` so an existing file cannot be overwritten. Each outcome records accurate action/size in the success results and log. An output collision is treated as failure without destroying the source. This patch runs after v6.0.13's existing embedded-source integrity/worker corrections and runs a second PowerShell parser check before starting the main program.
 - The v6.0.14 BAT retains the exact existing embedded ZIP/Base64 payload; new source behavior is inserted into its temporary extracted `ArchiveMedia.ps1` on launch. This is a safety hotfix pending a future cleanup/repackaging of the fragile runtime-patch architecture.
 
+## Change: v6.0.15 concise SKIP log (2026-10-14)
+- User confirmed skip-log output should be limited to `[SKIP] <source path>`. The previous redundant `[7.38 MiB] -> [7.38 MiB] 0 B saved` suffix is removed only for actual `Skip` actions. Other actions keep meaningful before/after sizes and saved-byte deltas.
+- Retained the 6.0.14 embedded ZIP and existing size-growth safety gate unchanged. A new startup PowerShell patch injects an early `if ($Action -eq 'Skip')` branch into `Write-FileResultLine` immediately after the action label is calculated; it prints label and path and returns. The patch validates unique marker presence and PowerShell parse syntax before execution.
+- Filename: `archive-media-compressor/ArchiveMedia v6.00.15.bat`. Repo README and project README updated.
+- Source-level static checks: **PASS**, startup command max length 7,272 characters; original ZIP payload unchanged; new early SKIP branch retained; older no-growth guard retained. Actual Windows execution / log verification: **NOT RUN**.
+
 ## Validation
 - Source, embedded PS1 analysis, README and applicable repository rules inspected through authenticated GitHub connector (2026-10-14).
 - Static tests **PASS**: downloaded new 39,740-character BAT exists; the safety patch Base64 decodes to the intended source; the new command line is 7,272 characters before expansion (within the 8,191-character CMD line limit); guards verify size before source replacement, distinguish Copy/Replace modes, copy under original extension, and use `CreateNew` to prevent overwrites; original payload marker/base64 retained; Windows PowerShell syntax validation is built into startup (execution NOT RUN).
@@ -34,7 +40,7 @@
 - Never describe an untested code checkpoint as stable.
 
 ## Next actions
-1. On Windows run v6.0.14 with a separate empty output folder in **Copy** mode, using examples from the user's MOV/AVI list. Verify that files with unsuccessful remuxes are copied unchanged with `.MOV`/`.avi` extensions, without any larger `.mp4` candidate retained. Hash originals before/after. Verify output folder size does not exceed source folder size for successfully processed items (unless duplicate output and error-log metadata are included).
+1. On Windows run v6.0.15 with a separate empty output folder in **Copy** mode, using examples from the user's MOV/AVI list. Verify that files with unsuccessful remuxes are copied unchanged with `.MOV`/`.avi` extensions, without any larger `.mp4` candidate retained. Hash originals before/after. Verify output folder size does not exceed source folder size for successfully processed items (unless duplicate output and error-log metadata are included).
 2. Test Replace mode only on expendable duplicate fixtures: oversized candidate => source hash unchanged; genuinely smaller candidate => new output retained and original removed only after success. Test collisions, reruns, interrupted FFmpeg/cancel, snapshots and errors.
-3. Check actual PowerShell syntax validation and startup, user prompt/progress status, copy/replace summaries, source timestamps, Unicode names, and Windows UI interaction. Record genuine Windows PASS/FAIL for these tests. Do not mark stable without those results.
+3. Check actual PowerShell syntax validation and startup, user prompt/progress status, copy/replace summaries, source timestamps, Unicode names, and Windows UI interaction. Validate that `[SKIP]` omits all size text while actual conversion results still show saved bytes. Record genuine Windows PASS/FAIL for these tests. Do not mark stable without those results.
 4. Consider replacing the accumulated runtime source string patches with a clean, separately testable embedded PowerShell source in a later version after parity validation. Do not revive broken parser or label-based BAT control flow.
