@@ -836,8 +836,12 @@
                 setBoundValue(choice.el,data.catalog);filled=true;
             }
             const note=appendEditNote(data);
-            if(!filled && choice.status==='already'){
-                message.textContent='Catalog number already present; no changes needed.';finished=true;
+            if(!filled && choice.status==='already' &&
+                (!data.addBeatportLink || editorHasBeatportLink(data.beatport))){
+                message.textContent=data.addBeatportLink
+                    ? 'Beatport purchase link and evidence note prepared; catalog already present.'
+                    : 'Catalog and Beatport link already present; no changes needed.';
+                finished=true;
             }else if(note && (!data.addBeatportLink || editorHasBeatportLink(data.beatport))){
                 message.textContent = data.addBeatportLink
                     ? 'Catalog number, Beatport purchase link and evidence note prepared. Review and submit manually.'
