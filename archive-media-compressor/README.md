@@ -1,10 +1,10 @@
 # Archive Media Compressor
 
-Download and double-click `ArchiveMedia v6.00.15.bat`.
+Download and double-click `ArchiveMedia v6.00.16.bat`.
 
 ## Single-file design
 
-`ArchiveMedia v6.00.15.bat` is self-contained. It embeds the compressor PowerShell payload and extracts it only to a temporary folder while running. Temporary payload files are removed when the run finishes.
+`ArchiveMedia v6.00.16.bat` is self-contained. It embeds the compressor PowerShell payload and extracts it only to a temporary folder while running. Temporary payload files are removed when the run finishes.
 
 On startup it:
 
@@ -17,7 +17,9 @@ On startup it:
 
 ## What it does
 
-- Asks for input and output folders.
+- Uses a compact Copy (Enter) / Replace (R) choice, defaulting safely to Copy.
+- Opens source and destination folder pickers at previously selected locations when available; Copy asks for both folders, Replace only for the source.
+- Remembers folder locations under `Documents\Karpuzikov Tools\ArchiveMedia\settings.json` without requiring a settings window.
 - Recursively preserves the source folder structure.
 - Detects NVIDIA, Intel, and AMD hardware encoding support.
 - Automatically chooses analysis and encode concurrency for the current PC and source storage.
@@ -34,13 +36,13 @@ On startup it:
 
 ## Download
 
-[Download ArchiveMedia v6.00.15.bat](https://raw.githubusercontent.com/karpuzikov/userscripts/main/archive-media-compressor/ArchiveMedia%20v6.00.15.bat)
+[Download ArchiveMedia v6.00.16.bat](https://raw.githubusercontent.com/karpuzikov/userscripts/main/archive-media-compressor/ArchiveMedia%20v6.00.16.bat)
 
 ## Important
 
 JPEG conversion/resizing is not mathematically lossless. Existing JPEG files already within the configured size limit are copied unchanged.
 
-**v6.0.15 - Under construction ⚠️:** the no-growth guard is implemented but has not yet passed real Windows runtime testing. The new version does not remove oversized MP4s left by older runs. Manually inspect prior outputs before cleanup.
+**v6.0.16 - Under construction ⚠️:** the no-growth guard is implemented but has not yet passed real Windows runtime testing. The new version does not remove oversized MP4s left by older runs. Manually inspect prior outputs before cleanup.
 
 **Safety:** v6.0.13 could delete differently named source files in Replace mode after accepting a larger remux. If that occurred, recover originals from an independent backup where available.
 
