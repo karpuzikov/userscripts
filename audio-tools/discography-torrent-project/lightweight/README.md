@@ -130,7 +130,7 @@ The failed `native-light` prototype is not the reference.
 - The result dialog explains whether folders were copied or moved. Move completion offers an immediate **Undo move** button and invalidates the prior analysis snapshot because original release paths changed.
 - Added isolated temporary-folder regression tests covering default path, copy remaining non-destructive, full OLD+NEW move, skipped-release preservation, occupied-destination refusal, Undo restoration, and simulated cross-volume verification.
 - Automated source/logic validation passed: [GitHub Actions run 37872841539](https://github.com/karpuzikov/userscripts/actions/runs/37872841539). This does **not** substitute for a real Windows/WebView2 Copy/Move/Undo test.
-- Latest source: `Duplicate Edition Analyzer Lightweight v0.4.9.pyw` on `dea-lightweight-modern` (versioned branch download; no formal GitHub Release).
+- Latest source: `Duplicate Edition Analyzer Lightweight v0.04.09.pyw` on `dea-lightweight-modern` (versioned branch download; no formal GitHub Release).
 - Remains **Under construction ⚠️** pending a real Windows Skrillex OLD/NEW run, a safe Move test and manual UI inspection.
 
 ## 0.4.0
