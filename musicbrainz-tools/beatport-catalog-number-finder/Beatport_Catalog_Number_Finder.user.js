@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MusicBrainz - Beatport Catalog Number Finder
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      0.1.6
+// @version      0.1.7
 // @description  Find missing digital-release catalog numbers on Beatport and review safe MusicBrainz edits.
 // @author       karpuzikov
 // @license      MIT
@@ -32,6 +32,7 @@
     const SCRIPT_URL = 'https://github.com/karpuzikov/userscripts/blob/main/musicbrainz-tools/beatport-catalog-number-finder/Beatport_Catalog_Number_Finder.user.js';
     const KEY = 'karpuzikov:beatport-catno:pending:v1';
     const BRIDGE = 'karpuzikov:beatport-catno:browser-bridge:v1';
+    const RESULTS_KEY = 'karpuzikov:beatport-catno:saved-results:v1:';
     const IS_BEATPORT = location.hostname === 'www.beatport.com';
     const UUID = /^[a-f\d]{8}-(?:[a-f\d]{4}-){3}[a-f\d]{12}$/i;
     const ARTIST = location.pathname.match(/^\/artist\/([a-f\d-]{36})(?:\/|$)/i);
@@ -588,10 +589,12 @@
         const start = button('▶ Scan (open Beatport tab)', () => startScan(ui), 'bpcnf-primary');
         const stop = button('■ Stop scan', () => {if (run) {run.cancelled = true;run.activeRequest?.abort?.();}}, '');
         stop.disabled = true;
-        const bulk = button('↗ Open all edits (0)', () => openAllEdits(ui), 'bpcnf-primary');
+        const bulk = button('↗ Open all edits (0)', () => openAllEdits(ui));
         bulk.disabled = true;
         bulk.title = 'Open remaining MusicBrainz review edits in background tabs.';
-        controls.append(start, stop, bulk);
+        const clear = button('× Clear saved results', () => clearArtistResults(ui));
+        clear.hidden = true;
+        controls.append(start, stop, bulk, clear);
         const status = element('div', {id: 'bpcnf-status', className: 'bpcnf-small', role: 'status', 'aria-live': 'polite'}, 'Ready.');
         const progress = element('progress', {max: '100', value: '0'});
         progress.hidden = true;
@@ -611,8 +614,9 @@
         open.title = 'Open Beatport catalog number finder';
         open.addEventListener('keydown', e => {if (e.key === 'Escape') panel.hidden = true;});
         document.body.append(open);
-        const ui = {panel, start, stop, bulk, status, progress, summary, results, errors, detail, entries: []};
+        const ui = {panel, controls, start, stop, bulk, clear, status, progress, summary, results, errors, detail, entries: []};
         panel.addEventListener('keydown', e => {if (e.key === 'Escape') {panel.hidden = true;open.focus();}});
+        restoreArtistResults(ui);
         return ui;
     }
 
@@ -654,17 +658,134 @@
         return true;
     }
 
+    function artistResultsKey() {
+        return RESULTS_KEY + location.hostname + ':' + ARTIST[1].toLowerCase();
+    }
+
+    // Store only data required to recreate review tabs. Do not persist a
+    // browser DOM object, a tab handle, a worker session or a scan timeout.
+    function recordForStorage(entry) {
+        return {
+            release: {
+                id: entry.release.id,
+                title: entry.release.title,
+                barcode: entry.release.barcode,
+                relations: releaseLinks(entry.release).map(url => ({url:{resource:url}})),
+            },
+            item: {
+                id: String(entry.item.id || ''),
+                catalog: entry.item.catalog,
+                label: entry.item.label,
+                upc: entry.item.upc,
+                url: entry.item.url,
+            },
+            evidence: entry.evidence,
+            opened: !!entry.opened,
+            savedAt: Date.now(),
+        };
+    }
+
+    function validateSavedEntry(record) {
+        if (!record || !record.release || !record.item) return null;
+        const {release, item} = record;
+        if (!UUID.test(String(release.id || '')) || !beatportUrl(item.url) ||
+            !plain(item.catalog) || isBarcodeCatalog(item.catalog,item.upc,release.barcode)) return null;
+        const barcode = plain(release.barcode);
+        if (barcode && !sameBarcode(barcode,item.upc)) return null;
+        if (!barcode && !Array.isArray(release.relations)) return null;
+        if (!barcode && !release.relations.some(rel => beatportUrl(rel?.url?.resource) === beatportUrl(item.url))) return null;
+        return {
+            release: {
+                id:String(release.id), title:plain(release.title), barcode,
+                relations:Array.isArray(release.relations)
+                    ? release.relations.slice(0,50).filter(x => beatportUrl(x?.url?.resource))
+                    : [],
+            },
+            item:{
+                id:String(item.id || ''), catalog:plain(item.catalog),
+                label:plain(item.label), upc:plain(item.upc), url:beatportUrl(item.url),
+            },
+            evidence:plain(record.evidence) || 'Previously verified Beatport release',
+            opened:!!record.opened,
+        };
+    }
+
+    function saveArtistResults(ui) {
+        try {
+            GM_setValue(artistResultsKey(), {
+                version:1, savedAt:Date.now(),
+                entries:ui.entries.map(recordForStorage),
+            });
+            return true;
+        } catch (error) {
+            ui.status.textContent = 'Could not save verified results. Keep this tab open: ' + plain(error.message);
+            return false;
+        }
+    }
+
+    function restoreArtistResults(ui) {
+        let stored;
+        try {stored=GM_getValue(artistResultsKey(), null);} catch {return;}
+        if (!stored || stored.version !== 1 || !Array.isArray(stored.entries)) {
+            updateBulkButton(ui);
+            return;
+        }
+        const ids=new Set(),catalogs=new Set();
+        for (const raw of stored.entries) {
+            const found=validateSavedEntry(raw);
+            if (!found || ids.has(found.release.id)) continue;
+            const catalog=normalizeCatalog(found.item.catalog);
+            if (catalogs.has(catalog)) continue;
+            ids.add(found.release.id); catalogs.add(catalog);
+            displayCandidate(ui,found.release,{item:found.item,evidence:found.evidence},{restored:true,opened:found.opened});
+        }
+        if (ui.entries.length) {
+            ui.summary.textContent = ui.entries.length + ' saved verified edit(s) restored. No scan needed.';
+            ui.status.textContent = 'Your earlier Beatport results are available. Open the edits or rescan for updates.';
+        } else {
+            ui.status.textContent = 'Ready.';
+        }
+        updateBulkButton(ui);
+    }
+
+    function clearArtistResults(ui) {
+        if (run || !ui.entries.length) return;
+        if (!window.confirm('Clear ' + ui.entries.length +
+            ' saved Beatport results for this artist? No MusicBrainz edits will be changed.')) return;
+        try {GM_setValue(artistResultsKey(),{version:1,savedAt:Date.now(),entries:[]});}
+        catch(error){ui.status.textContent='Unable to clear saved results: '+plain(error.message);return;}
+        ui.entries.length=0;
+        ui.results.replaceChildren();
+        ui.summary.textContent='';
+        ui.status.textContent='Saved results cleared. Scan to find new catalog numbers.';
+        updateBulkButton(ui);
+    }
+
     function updateBulkButton(ui) {
-        const count = ui.entries.filter(entry => !entry.opened).length;
-        ui.bulk.textContent = '↗ Open all edits (' + count + ')';
-        ui.bulk.disabled = !!run || count === 0;
-        ui.bulk.title = count
-            ? 'Open ' + count + ' unopened MusicBrainz review edits in new tabs.'
-            : 'No unopened MusicBrainz review edits.';
+        const count=ui.entries.filter(entry=>!entry.opened).length;
+        const hasAny=ui.entries.length>0;
+        ui.bulk.textContent='↗ Open all edits ('+count+')';
+        // Previous versions disabled this button while scanning, even though
+        // the verified results were already available. Keep it independent.
+        ui.bulk.disabled=count===0;
+        ui.bulk.title=count
+            ? 'Open '+count+' saved MusicBrainz edits now (no scan required).'
+            : 'No unopened edits in the saved review queue.';
+        ui.clear.hidden=!hasAny;
+        ui.clear.disabled=!!run;
+        ui.start.textContent=hasAny?'↻ Rescan (keep results)':'▶ Scan (open Beatport tab)';
+        ui.start.classList.toggle('bpcnf-primary',!hasAny);
+        ui.bulk.classList.toggle('bpcnf-primary',hasAny);
+        if (hasAny) {
+            // A verified result is more useful than running a 30-minute scan.
+            // Show the direct action first and make rescanning secondary.
+            if (ui.controls.firstElementChild!==ui.bulk) ui.controls.prepend(ui.bulk);
+        } else if (ui.controls.firstElementChild!==ui.start) {
+            ui.controls.prepend(ui.start);
+        }
     }
 
     function openAllEdits(ui) {
-        if (run) return;
         const entries = ui.entries.filter(entry => !entry.opened);
         if (!entries.length) return;
         if (entries.length > 10 && !window.confirm(
@@ -695,6 +816,7 @@
                 console.error('[Beatport Catalog Finder] Failed to open review tab', entry.release.id, err);
             }
         }
+        saveArtistResults(ui);
         updateBulkButton(ui);
         ui.status.textContent = opened + ' edit tab(s) opened.' +
             (failed || pending.length !== valid.length
@@ -702,10 +824,17 @@
                 : '') + ' No edits were submitted.';
     }
 
-    function displayCandidate(ui, release, finding) {
+    function displayCandidate(ui, release, finding, options = {}) {
         const {item, evidence} = finding;
-        const entry = {release, item, evidence, opened: false};
-        ui.entries.push(entry);
+        const old = ui.entries.find(x=>x.release.id===release.id);
+        const sourceChanged = old && (normalizeCatalog(old.item.catalog)!==normalizeCatalog(item.catalog) ||
+            beatportUrl(old.item.url)!==beatportUrl(item.url));
+        const entry = old || {release, item, evidence, opened:!!options.opened};
+        if (old) {
+            old.row?.remove();
+            entry.release=release; entry.item=item; entry.evidence=evidence;
+            if (sourceChanged) entry.opened=false;
+        } else ui.entries.push(entry);
         const row = element('article', {className: 'bpcnf-row'});
         const name = element('div', {className: 'bpcnf-row-title'});
         name.append(anchor(release.title, `${location.origin}/release/${release.id}`));
@@ -717,6 +846,7 @@
         actions.append(button('↗ Review edit', () => {
             if (stageEdit(release, item, evidence)) {
                 entry.opened = true;
+                saveArtistResults(ui);
                 updateBulkButton(ui);
             }
         }, 'bpcnf-primary'));
@@ -726,7 +856,10 @@
             } else window.prompt('Copy catalog number:', item.catalog);
         }));
         row.append(name, info, links, actions);
+        entry.row=row;
         ui.results.append(row);
+        if (!options.restored) saveArtistResults(ui);
+        updateBulkButton(ui);
     }
 
     async function startScan(ui) {
@@ -737,10 +870,13 @@
         metadataCache.clear(); searchCache.clear();
         ui.start.disabled = true; ui.stop.disabled = false;
         ui.progress.hidden = false; ui.progress.value = 0;
-        ui.entries.length = 0;
+        // Preserve every previously verified result when scanning again:
+        // users can review them while the new scan is still in progress.
         updateBulkButton(ui);
-        ui.results.replaceChildren(); ui.errors.textContent = '';
-        ui.summary.textContent = '';
+        ui.errors.textContent = '';
+        ui.summary.textContent = ui.entries.length
+            ? ui.entries.length+' earlier verified edit(s) remain available during this rescan.'
+            : '';
         const stats = {digital: 0, eligible: 0, candidate: 0, duplicate: 0, barcode: 0, missing: 0, ambiguous: 0, already: 0};
         const progress = text => {ui.status.textContent = text;};
         try {
@@ -754,7 +890,7 @@
             stats.digital = digital.length;
             stats.eligible = candidates.length;
             if (candidates.length) await ensureBeatportTab(state, progress);
-            const staged = new Set();
+            const staged = new Set(ui.entries.map(x=>normalizeCatalog(x.item.catalog)));
             for (let i = 0; i < candidates.length; i++) {
                 if (state.cancelled) throw cancelledError();
                 const release = candidates[i];
@@ -765,13 +901,19 @@
                 const hit = plain(release.barcode)
                     ? await findByBarcode(release, state, progress)
                     : await findByLink(release, state);
+                const existing=ui.entries.find(x=>x.release.id===release.id);
+                if (existing) staged.delete(normalizeCatalog(existing.item.catalog));
                 const finding = reviewFinding(release, hit, usedCatalogs, staged);
                 if (finding.status === 'candidate') {stats.candidate++;displayCandidate(ui, release, finding);}
-                else {stats[finding.status] = (stats[finding.status] || 0) + 1;}
+                else {
+                    if (existing) staged.add(normalizeCatalog(existing.item.catalog));
+                    stats[finding.status] = (stats[finding.status] || 0) + 1;
+                }
                 ui.summary.textContent = `${stats.candidate} edits to review · ${stats.duplicate} duplicates skipped · ${stats.barcode} barcode-like skipped · ${stats.missing} unverified · ${stats.ambiguous} ambiguous`;
             }
             ui.progress.value = candidates.length;
-            progress(`Complete: ${stats.digital} digital releases; ${stats.eligible} with no catalog number and barcode/link; ${stats.candidate} proposed edits.`);
+            progress('Complete: '+stats.digital+' digital releases checked; '+
+                ui.entries.length+' saved verified edit(s) available without rescanning.');
         } catch (err) {
             progress(state.cancelled ? 'Scan stopped. Reviewed results remain available.' : `Scan failed: ${plain(err.message)}`);
         } finally {
@@ -786,6 +928,8 @@
             } catch {}
             run = null;
             updateBulkButton(ui);
+            if (ui.entries.length && state.cancelled)
+                ui.summary.textContent=ui.entries.length+' saved edits preserved after stopping the scan.';
         }
     }
 
@@ -945,6 +1089,6 @@
 
     // Test entry point is disabled in production unless explicitly enabled by a test harness.
     if (globalThis.__BPCNF_TEST__ === true) {
-        globalThis.__BPCNF_TEST_HOOKS__ = {beatportChallengeVisible, browserLoadedPageResult, sameBarcode, normalizeCatalog, beatportUrl, releaseDetailsFromHtml, searchReleaseLinks, isDigital, catalogs, releaseLinks, reviewFinding, proposedEditNote, isBarcodeCatalog, findCatalogInputs, chooseCatalogInput, isBeatportReleaseAlreadyLinked, editorHasBeatportLink, prepareEdit, saveEditProposals, stageEdit, updateBulkButton, openAllEdits, releaseDetailsFromProps, browserBeatportRequest, bridgeKey, browserNavigationUrl};
+        globalThis.__BPCNF_TEST_HOOKS__ = {beatportChallengeVisible, browserLoadedPageResult, sameBarcode, normalizeCatalog, beatportUrl, releaseDetailsFromHtml, searchReleaseLinks, isDigital, catalogs, releaseLinks, reviewFinding, proposedEditNote, isBarcodeCatalog, findCatalogInputs, chooseCatalogInput, isBeatportReleaseAlreadyLinked, editorHasBeatportLink, prepareEdit, saveEditProposals, stageEdit, updateBulkButton, openAllEdits, artistResultsKey, recordForStorage, validateSavedEntry, saveArtistResults, restoreArtistResults, clearArtistResults, displayCandidate, releaseDetailsFromProps, browserBeatportRequest, bridgeKey, browserNavigationUrl};
     }
 })();
