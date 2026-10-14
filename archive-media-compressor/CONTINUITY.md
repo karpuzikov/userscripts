@@ -2,7 +2,7 @@
 
 ## Purpose and current baseline
 - Product: Archive Media Compressor, under `karpuzikov/userscripts/archive-media-compressor/`.
-- Current verified source at checkpoint start: `ArchiveMedia v6.00.13.bat` (semantic version 6.0.13), **Under construction ⚠️**.
+- Current working build: `ArchiveMedia v6.00.14.bat` (semantic version 6.0.14), **Under construction ⚠️**, published on the default `main` branch. Previous build: `ArchiveMedia v6.00.13.bat`.
 - Default branch: `main`. No alternate active branch is established.
 - A single versioned Windows .bat embeds a Base64 ZIP containing `ArchiveMedia.ps1`; the BAT bootstraps WinGet, PowerShell 7, FFmpeg/FFprobe, and ImageMagick; extracts payload into a temporary folder; then runs PowerShell. The BAT contains temporary source-repair/worker-tuning transformations in 6.0.13.
 - Project README: `archive-media-compressor/README.md`; repository-wide download/version table: root `README.md`.
@@ -20,17 +20,21 @@
 - `SOFTWARE_RULES.md`, `UI_UX_RULES.md`, `UI_UX_ACCEPTANCE.md` at repository root; UXDT complete guideline tree. This product has an interactive Windows console UI, with prompt, progress and action status surfaces.
 - Windows native runtime and interactive acceptance tests cannot be inferred from source inspection or static validation.
 
-## Open defect as of 2026-10-14
+## Defect and correction (2026-10-14)
 - Reported v6.0.13 `[REMUX]` AVI and MOV files increased in size; e.g. `CD1E.MOV` 93.71 MiB to 160.39 MiB, and multiple `Gogo` AVI files became roughly 8-14 MiB larger.
 - Verified from embedded PowerShell: below-bitrate non-MP4 material is planned as `RemuxVideo`; remux tries stream copy, then AAC 128k fallback, then full transcode, but all retain `RemuxVideo` label. After writing the temp result, code unconditionally moves it to the output and in Replace mode deletes the original on a differently named path. There is no output-byte-size gate.
-- Need a loss-prevention pre-commit guard on every conversion, including photos and video; avoid temporary output retention if candidate does not save bytes; in Copy mode preserve original relative name/extension on fallback.
+- Implemented v6.0.14 temporary-payload PowerShell patch with a pre-commit guard on `ConvertPhoto`, `RemuxVideo` and `EncodeVideo` results. If candidate length >= source length, immediately delete the candidate. In Replace mode return a successful `Skip` and preserve the original. In Copy mode copy source bytes into output using original relative path/extension with atomic `FileMode.CreateNew` so an existing file cannot be overwritten. Each outcome records accurate action/size in the success results and log. An output collision is treated as failure without destroying the source. This patch runs after v6.0.13's existing embedded-source integrity/worker corrections and runs a second PowerShell parser check before starting the main program.
+- The v6.0.14 BAT retains the exact existing embedded ZIP/Base64 payload; new source behavior is inserted into its temporary extracted `ArchiveMedia.ps1` on launch. This is a safety hotfix pending a future cleanup/repackaging of the fragile runtime-patch architecture.
 
 ## Validation
-- Source and README inspected through the authenticated GitHub connector (2026-10-14).
+- Source, embedded PS1 analysis, README and applicable repository rules inspected through authenticated GitHub connector (2026-10-14).
+- Static tests **PASS**: downloaded new 39,740-character BAT exists; the safety patch Base64 decodes to the intended source; the new command line is 7,272 characters before expansion (within the 8,191-character CMD line limit); guards verify size before source replacement, distinguish Copy/Replace modes, copy under original extension, and use `CreateNew` to prevent overwrites; original payload marker/base64 retained; Windows PowerShell syntax validation is built into startup (execution NOT RUN).
+- WARNING: nonempty real-world files can be remuxed with unchanged streams but larger container/audio; the guard prevents retention, not the underlying FFmpeg muxing size increase. Some v6.0.13 outputs may already need manual review/cleanup.
 - Windows .bat execution, PowerShell 7 parsing, FFmpeg end-to-end on the user's MOV/AVI, Replace-mode regression, disk-collision tests and interactive console acceptance: **NOT RUN**.
 - Never describe an untested code checkpoint as stable.
 
 ## Next actions
-1. Implement a pre-commit size gate and safe fallback; update source and semantic/padded filename, README and root version table, and this file together.
-2. Verify raw GitHub source, payload extraction/contents, patch placement and static invariants.
-3. On Windows test Copy and Replace modes with expendable MOV/AVI fixtures and original unchanged-byte hash checks, colliding filenames, reruns, and FFmpeg failures; record PASS/FAIL. Test the user's listed samples. Leave Under construction until Windows tests pass.
+1. On Windows run v6.0.14 with a separate empty output folder in **Copy** mode, using examples from the user's MOV/AVI list. Verify that files with unsuccessful remuxes are copied unchanged with `.MOV`/`.avi` extensions, without any larger `.mp4` candidate retained. Hash originals before/after. Verify output folder size does not exceed source folder size for successfully processed items (unless duplicate output and error-log metadata are included).
+2. Test Replace mode only on expendable duplicate fixtures: oversized candidate => source hash unchanged; genuinely smaller candidate => new output retained and original removed only after success. Test collisions, reruns, interrupted FFmpeg/cancel, snapshots and errors.
+3. Check actual PowerShell syntax validation and startup, user prompt/progress status, copy/replace summaries, source timestamps, Unicode names, and Windows UI interaction. Record genuine Windows PASS/FAIL for these tests. Do not mark stable without those results.
+4. Consider replacing the accumulated runtime source string patches with a clean, separately testable embedded PowerShell source in a later version after parity validation. Do not revive broken parser or label-based BAT control flow.
