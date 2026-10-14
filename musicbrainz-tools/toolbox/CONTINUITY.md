@@ -1,7 +1,7 @@
 # MusicBrainz ToolBox - Continuity
 
 Last reviewed: 2026-10-15
-Current version: 1.0.60 - Under construction ⚠️ (pending browser verification)
+Current version: 1.0.61 - Under construction ⚠️ (pending browser verification)
 Repository: `karpuzikov/userscripts`, branch `main`
 Global rules: `/SOFTWARE_RULES.md`; no separate ToolBox `RULES.md` exists.
 
@@ -67,3 +67,12 @@ Global rules: `/SOFTWARE_RULES.md`; no separate ToolBox `RULES.md` exists.
 - Existing Barcode and Catalog Number release searches remain unchanged; only the generic URL builder gained optional `type` defaulting to `release`.
 - Validation: entire userscript parsed via JS Function compilation, seven valid-code equivalence cases and four invalid formats checked, and static routing/preservation checks passed. **NOT RUN:** real Chrome/Tampermonkey rendering/hover/focus/keyboard testing, responsiveness at narrow widths/zoom, live MusicBrainz Web Service availability and real label-search behavior. Remains **1.0.60 - Under construction ⚠️**.
 - Next: Update via Tampermonkey > Check for userscript updates; test all four supplied inputs and a code shared by multiple labels. Verify one unique label opens directly, duplicates open results, and both original fields behave unchanged; inspect at 200% zoom. Preserve version/status until actual browser tests pass.
+
+## 2026-10-15 - v1.0.61 Apple Music artist grid icon fix
+- Report: screenshot of `https://music.apple.com/us/artist/gims/458659054` shows MusicBrainz logo only on BONNIE; other release cards lack MusicBrainz or Harmony indicators.
+- Root cause in source: `scan(false)` every 5s and `MutationObserver` retrigger `decorateTarget` even while its request is queued. Every scan increments the DOM target generation, invalidating pending results. Queries are serialized with 1100ms spacing, making this highly likely on a large artist grid.
+- Fix: a per-target-and-album in-flight promise (WeakMap) prevents redundant repeated scanning and keeps outstanding requests valid; a reused DOM node with a changed album still invalidates its old request; completion cleans up pending state safely.
+- Card discovery also includes `[data-testid="product-lockup"]` and `[data-testid="lockup-control"]` containers with separate artwork album link and visible title; existing direct title, featured-release and product-lockup-link anchors stay supported. Deduplication uses visible title element identity.
+- UI/control contract: existing 18px icon; hover and keyboard focus expose a destination label. Click/Enter opens a MusicBrainz release or Harmony lookup in new tab, with broken-chain badge for barcode-matched but unlinked release. No data changes and no extra user-facing controls. Cache, global unlimited HTTP 503 retry and MB throttling unchanged.
+- Automated: full userscript syntax PASS; simulated repeated scans, single request/render, completion cleanup, recycled title DOM target and stale-lookup suppression PASS. **NOT RUN**: actual Chrome/Tampermonkey Apple Music page, screenshot validation, scroll/lazy-load, zoom and keyboard/pointer tests, live MusicBrainz responses and errors. Remains **1.0.61 - Under construction ⚠️**.
+- Next: Tampermonkey > Check for userscript updates. Reload GIMS artist page and verify logo placement on multiple tiles, Harmony fallback for unmatched albums, no duplicate icons and continued progress under rate-limited requests. Confirm ordinary Apple album title icon unchanged.
