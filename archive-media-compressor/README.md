@@ -4,7 +4,7 @@
 
 ## Download (development branch)
 
-[Download ArchiveMedia v6.1.2.bat](https://raw.githubusercontent.com/karpuzikov/userscripts/archivemedia-rclone/archive-media-compressor/ArchiveMedia%20v6.1.2.bat)
+[Download ArchiveMedia v6.01.02.bat](https://raw.githubusercontent.com/karpuzikov/userscripts/archivemedia-rclone/archive-media-compressor/ArchiveMedia%20v6.01.02.bat)
 
 The BAT is the single-file launcher. Double-click it, choose **Copy** or **Replace**, and enter the source and destination. Type local paths or any configured rclone remote (for example `yandex:Pictures`); leave the path blank to browse local folders.
 

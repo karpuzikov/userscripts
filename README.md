@@ -62,7 +62,7 @@ Picard can then check for and install future updates from its Plugins interface.
 
 | Project | Description | Version | Download |
 | --- | --- | ---: | --- |
-| **Corrupt Image Verifier** | Recursively verifies image integrity and moves confirmed corrupt files to a sibling `_CORRUPTED` folder while preserving the original folder structure. | 1.0.2 - Under construction ⚠️ | [![Download](https://img.shields.io/badge/Download-.pyw-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/main/image-tools/corrupt-image-verifier/Corrupt%20Image%20Verifier%20v1.0.2.pyw) |
+| **Corrupt Image Verifier** | Recursively verifies image integrity and moves confirmed corrupt files to a sibling `_CORRUPTED` folder while preserving the original folder structure. | 1.0.2 - Under construction ⚠️ | [![Download](https://img.shields.io/badge/Download-.pyw-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/main/image-tools/corrupt-image-verifier/Corrupt%20Image%20Verifier%20v1.00.02.pyw) |
 | **3x3 Image Combiner** | Combines up to nine images into a 3x3 grid. | 2.0.0 | [![Download](https://img.shields.io/badge/Download-.bat-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/main/image-tools/3x3-image-combiner/Run_3x3_Image_Combiner.bat) |
 | **Fast Image to JPG Converter** | Recursively converts supported images to JPG. | 2.0.0 | [![Download](https://img.shields.io/badge/Download-.bat-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/main/image-tools/fast-image-to-jpg/Fast_Image_to_JPG_Converter.bat) |
 | **Photoshop 500px PNG / 600px JPG Batch Exporter** | Batch-exports 500px PNG and 600px JPG images from Photoshop. | 1.4 | [![Download](https://img.shields.io/badge/Download-.jsx-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/main/image-tools/photoshop-batch-export/Photoshop_Batch_500PNG_600JPG.jsx) |
@@ -71,13 +71,13 @@ Picard can then check for and install future updates from its Plugins interface.
 
 | Project | Description | Version | Download |
 | --- | --- | ---: | --- |
-| **Archive Media Compressor** | Media compression with direct Yandex/rclone source/output, verified uploads and resumable staging. | 6.1.2 - Under construction ⚠️ | [![Download](https://img.shields.io/badge/Download-.bat-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/archivemedia-rclone/archive-media-compressor/ArchiveMedia%20v6.1.2.bat) |
+| **Archive Media Compressor** | Media compression with direct Yandex/rclone source/output, verified uploads and resumable staging. | 6.1.2 - Under construction ⚠️ | [![Download](https://img.shields.io/badge/Download-.bat-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/archivemedia-rclone/archive-media-compressor/ArchiveMedia%20v6.01.02.bat) |
 
 ## Windows Tools
 
 | Project | Description | Version | Download |
 | --- | --- | ---: | --- |
-| **Priorities** | Exhaustive pairwise preference sorter that compares every item against every other item and exports an AI-readable hierarchy. | 0.1.0 - Under construction ⚠️ | [![Download](https://img.shields.io/badge/Download-.pyw-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/main/windows-tools/priorities/Priorities%20v0.1.0.pyw) |
+| **Priorities** | Exhaustive pairwise preference sorter that compares every item against every other item and exports an AI-readable hierarchy. | 0.1.0 - Under construction ⚠️ | [![Download](https://img.shields.io/badge/Download-.pyw-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/main/windows-tools/priorities/Priorities%20v0.01.00.pyw) |
 | **Requirements Manager** | Installs Python requirements and required dependencies automatically. | 1.1.0 | [![Download](https://img.shields.io/badge/Download-.bat-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/main/windows-tools/requirements-manager/Requirements_Manager.bat) |
 
 ## Game Tools

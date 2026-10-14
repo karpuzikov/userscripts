@@ -3,7 +3,7 @@
 ## TLDR / current checkpoint (2026-10-08)
 - Product: Archive Media Compressor. **Current development build v6.1.2 - Under construction ⚠️**, branch `archivemedia-rclone`; main's last prior build is v6.0.13.
 - Product root: `archive-media-compressor/` inside `karpuzikov/userscripts`.
-- Downloadable single-file build: `archive-media-compressor/ArchiveMedia v6.1.2.bat` on the development branch.
+- Downloadable single-file build: `archive-media-compressor/ArchiveMedia v6.01.02.bat` on the development branch.
 - Editable embedded source: `archive-media-compressor/source/ArchiveMedia.ps1`.
 - Documentation: `archive-media-compressor/README.md`; GitHub index: monorepo root `README.md`.
 - Standard: canonical root `SOFTWARE_RULES.md` applies. Re-read it and current UXDT guidelines before further UI work; no separate project RULES.md currently exists.
@@ -57,7 +57,7 @@
 - No GitHub Actions workflows created. Do not add routine userscript validation workflows.
 
 ## Next actions
-1. Run BAT `ArchiveMedia v6.1.2.bat` under PowerShell 7/Windows 11; confirm WinGet/rclone bootstrap, parser and input prompts.
+1. Run BAT `ArchiveMedia v6.01.02.bat` under PowerShell 7/Windows 11; confirm WinGet/rclone bootstrap, parser and input prompts.
 2. Test Yandex->local, local->Yandex, Yandex->Yandex against a **small disposable** test folder with JPG, PNG alpha, video, and unknown file. Confirm exact format and same relative path outputs, MD5 and completion journal.
 3. Interrupt transfers mid-copy and after upload but before journal; rerun and verify no corrupted output and no unnecessary re-encoding.
 4. Fix any failures. Add collision output-name handling, empty directories, higher optional cloud concurrency while respecting bounded cache and four-encode ceiling if needed.
@@ -68,7 +68,7 @@
 - Confirmed from rclone's official documentation that `moveto` overwrites destination files by default; added `--immutable` to final remote move, with a pre-move destination check and post-move hash verification. This is still not a tested atomic create-if-absent guarantee on Yandex; cross-process races remain a limitation.
 - Fixed cloud output basename collisions: sort input files with the original JPEG/MP4 priority; reserve verified target names; append `[source-extension]` and numbered suffixes when needed, including after resume.
 - Reject Windows drive-relative paths such as `D:Pictures` rather than interpreting them as a cloud remote.
-- Regenerated the self-contained `ArchiveMedia v6.1.2.bat` from the changed PowerShell source. Decoded embedded UTF-8 payload matched source byte-for-byte (79,914 bytes). JS lexical bracket/string balance check passed. Real PowerShell 7 parsing and Yandex integration were **not executed** here.
+- Regenerated the self-contained `ArchiveMedia v6.01.02.bat` from the changed PowerShell source. Decoded embedded UTF-8 payload matched source byte-for-byte (79,914 bytes). JS lexical bracket/string balance check passed. Real PowerShell 7 parsing and Yandex integration were **not executed** here.
 - Remaining blockers: no real Windows/Yandex live test; cloud encoding serial (below desired 4); interrupted in-flight transfers may repeat work; over-limit files fail closed; cloud empty directories not retained; potential remote race before move, no verified atomic no-replace guarantee; full UXDT/user-rules audit needs live review.
 - Next: run Windows smoke tests on disposable local/Yandex files, check collisions/resume, optimize 4-concurrent cloud processing with cache budget, and only then mark ready for merging.
 
