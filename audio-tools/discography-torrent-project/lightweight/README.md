@@ -12,16 +12,16 @@ This isolated test branch adds a **genuine mouse-enabled Windows terminal UI**, 
 
 **Run on Windows:** download both files into the same directory and double-click the launcher.
 
-- `Duplicate Edition Analyzer Lightweight ASCII v0.4.0.bat` - opens the terminal and runs Python with `--ascii-ui`.
-- `Duplicate Edition Analyzer Lightweight v0.4.0.pyw` - complete one-file analysis engine and Textual terminal UI, installed on demand into `Documents\Karpuzikov Tools\Duplicate Edition Analyzer\dependencies\...`.
+- `Duplicate Edition Analyzer Lightweight ASCII v0.04.00.bat` - opens the terminal and runs Python with `--ascii-ui`.
+- `Duplicate Edition Analyzer Lightweight v0.04.00.pyw` - complete one-file analysis engine and Textual terminal UI, installed on demand into `Documents\Karpuzikov Tools\Duplicate Edition Analyzer\dependencies\...`.
 
 The ASCII interface includes mouse interaction (clickable rows and controls, folder tree, wheel scrolling), keyboard shortcuts, persistent settings/Personal Picks, preflight pattern review, manual acoustic review, classification, progress, scan logs, Changes-first/Full Map with Album/EP/Single columns, typed search, clickable recording carriers, release/track Ignore/Restore, Re-Analyze, separate OLD+NEW and NEW-only exports, and Undo. Export uses the same non-destructive `copy_retained_plan` engine as the graphical interface.
 
 **Important limitation:** terminals cannot draw the existing SVG relationship curves. The ASCII test exposes clickable RELATED-release rows and per-track carrier details instead. Full visual and interaction parity with production is **not yet established**; this is an experiment, not a replacement for v0.3.9.
 
 **Validation commands:**
-- `py -3 "Duplicate Edition Analyzer Lightweight v0.4.0.pyw" --ascii-self-test`
-- `py -3 "Duplicate Edition Analyzer Lightweight v0.4.0.pyw" --ascii-pilot-test` (requires Textual; installed by the launcher on first use)
+- `py -3 "Duplicate Edition Analyzer Lightweight v0.04.00.pyw" --ascii-self-test`
+- `py -3 "Duplicate Edition Analyzer Lightweight v0.04.00.pyw" --ascii-pilot-test` (requires Textual; installed by the launcher on first use)
 - Full Windows Skrillex OLD/NEW scan, map review and copy remain for user testing.
 
 ## Architecture

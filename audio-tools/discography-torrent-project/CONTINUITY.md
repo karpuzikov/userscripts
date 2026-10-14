@@ -298,8 +298,8 @@ A lightweight build is not parity-complete until all of these pass:
 ## Experimental ASCII UI branch - v0.4.0
 
 - Branch: `dea-lightweight-ascii-ui-test` (isolated from `dea-lightweight-modern`).
-- Main Python source: `audio-tools/discography-torrent-project/lightweight/Duplicate Edition Analyzer Lightweight v0.4.0.pyw`.
-- Double-click launcher: `audio-tools/discography-torrent-project/lightweight/Duplicate Edition Analyzer Lightweight ASCII v0.4.0.bat`.
+- Main Python source: `audio-tools/discography-torrent-project/lightweight/Duplicate Edition Analyzer Lightweight v0.04.00.pyw`.
+- Double-click launcher: `audio-tools/discography-torrent-project/lightweight/Duplicate Edition Analyzer Lightweight ASCII v0.04.00.bat`.
 - Version/status: **0.4.0 - Under construction ⚠️**. The regular WebView2 release remains v0.3.9 on the original branch, untouched.
 - Uses Textual (installed on demand in program-owned dependencies) and Windows Terminal/conhost. Starts with `--ascii-ui`; direct `--ui-self-test`, `--ascii-self-test` and `--ascii-pilot-test` are provided. Does not need WebView2 or Qt when running in ASCII mode.
 - One self-contained .pyw shares the full analysis engine, logging, Personal Picks, automatic and manual acoustic reviews, decision snapshot and exact optimization, copy retained-plan engine, Undo and reanalysis. TUI uses dark ASCII borders, mouse-clickable releases/tracks, native terminal folder-tree chooser, progress, three-column map, search and relationship navigation.
