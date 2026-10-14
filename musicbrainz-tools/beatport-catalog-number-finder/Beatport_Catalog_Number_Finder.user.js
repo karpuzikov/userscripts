@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MusicBrainz - Beatport Catalog Number Finder
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      0.1.5
+// @version      0.1.6
 // @description  Find missing digital-release catalog numbers on Beatport and review safe MusicBrainz edits.
 // @author       karpuzikov
 // @license      MIT
@@ -588,7 +588,10 @@
         const start = button('▶ Scan (open Beatport tab)', () => startScan(ui), 'bpcnf-primary');
         const stop = button('■ Stop scan', () => {if (run) {run.cancelled = true;run.activeRequest?.abort?.();}}, '');
         stop.disabled = true;
-        controls.append(start, stop);
+        const bulk = button('↗ Open all edits (0)', () => openAllEdits(ui), 'bpcnf-primary');
+        bulk.disabled = true;
+        bulk.title = 'Open remaining MusicBrainz review edits in background tabs.';
+        controls.append(start, stop, bulk);
         const status = element('div', {id: 'bpcnf-status', className: 'bpcnf-small', role: 'status', 'aria-live': 'polite'}, 'Ready.');
         const progress = element('progress', {max: '100', value: '0'});
         progress.hidden = true;
@@ -608,7 +611,7 @@
         open.title = 'Open Beatport catalog number finder';
         open.addEventListener('keydown', e => {if (e.key === 'Escape') panel.hidden = true;});
         document.body.append(open);
-        const ui = {panel, start, stop, status, progress, summary, results, errors, detail};
+        const ui = {panel, start, stop, bulk, status, progress, summary, results, errors, detail, entries: []};
         panel.addEventListener('keydown', e => {if (e.key === 'Escape') {panel.hidden = true;open.focus();}});
         return ui;
     }
@@ -618,31 +621,91 @@
         return !!wantedId && releaseLinks(release).some(link => link.match(/\/(\d+)$/)?.[1] === wantedId);
     }
 
-    function stageEdit(release, item, evidence) {
+    function prepareEdit(release, item, evidence) {
         const source = beatportUrl(item.url);
-        if (!source || !UUID.test(release.id)) return;
+        if (!source || !UUID.test(release.id)) return null;
         const addBeatportLink = !isBeatportReleaseAlreadyLinked(release, source);
-        const record = {id: release.id, title: release.title, catalog: item.catalog, label: item.label, beatport: source, upc: item.upc, barcode: release.barcode, evidence, addBeatportLink, timestamp: Date.now()};
-        const stored = GM_getValue(KEY, {});
-        const next = stored && typeof stored === 'object' ? stored : {};
-        next[release.id] = record;
-        for (const id of Object.keys(next)) {
-            if (Date.now() - Number(next[id]?.timestamp || 0) > 2 * 60 * 60 * 1000) delete next[id];
-        }
-        GM_setValue(KEY, next);
-        // MusicBrainz seeds release URL relationships from these query keys
-        // (root/static/scripts/external-links-editor/state.js). Type 74
-        // is "purchase for download", the Beatport release shop page.
-        const editUrl = new URL(location.origin + '/release/' + encodeURIComponent(release.id) + '/edit');
+        const record = {id: release.id, title: release.title, catalog: item.catalog, label: item.label,
+            beatport: source, upc: item.upc, barcode: release.barcode, evidence,
+            addBeatportLink, timestamp: Date.now()};
+        const url = new URL(location.origin + '/release/' + encodeURIComponent(release.id) + '/edit');
         if (addBeatportLink) {
-            editUrl.searchParams.set('edit-release.url.0.text', source);
-            editUrl.searchParams.set('edit-release.url.0.link_type_id', '74');
+            url.searchParams.set('edit-release.url.0.text', source);
+            url.searchParams.set('edit-release.url.0.link_type_id', '74');
         }
-        window.open(editUrl.href, '_blank', 'noopener');
+        return {url: url.href, record};
+    }
+
+    function saveEditProposals(proposals) {
+        const data = GM_getValue(KEY, {});
+        const next = data && typeof data === 'object' && !Array.isArray(data) ? data : {};
+        for (const id of Object.keys(next)) {
+            if (Date.now() - Number(next[id]?.timestamp || 0) > 7200000) delete next[id];
+        }
+        for (const proposal of proposals) next[proposal.record.id] = proposal.record;
+        GM_setValue(KEY, next);
+    }
+
+    function stageEdit(release, item, evidence) {
+        const proposal = prepareEdit(release, item, evidence);
+        if (!proposal) return false;
+        saveEditProposals([proposal]);
+        window.open(proposal.url, '_blank', 'noopener');
+        return true;
+    }
+
+    function updateBulkButton(ui) {
+        const count = ui.entries.filter(entry => !entry.opened).length;
+        ui.bulk.textContent = '↗ Open all edits (' + count + ')';
+        ui.bulk.disabled = !!run || count === 0;
+        ui.bulk.title = count
+            ? 'Open ' + count + ' unopened MusicBrainz review edits in new tabs.'
+            : 'No unopened MusicBrainz review edits.';
+    }
+
+    function openAllEdits(ui) {
+        if (run) return;
+        const entries = ui.entries.filter(entry => !entry.opened);
+        if (!entries.length) return;
+        if (entries.length > 10 && !window.confirm(
+            'Open ' + entries.length + ' MusicBrainz review edits in background tabs? No edits will be submitted.'
+        )) return;
+        const pending = entries.map(entry =>
+            ({entry, proposal: prepareEdit(entry.release, entry.item, entry.evidence)}));
+        const valid = pending.filter(x => x.proposal);
+        if (!valid.length) {
+            ui.status.textContent = 'Could not prepare any edit URL; nothing opened.';
+            return;
+        }
+        try {
+            // All tab editors must have their own record before any tab starts.
+            saveEditProposals(valid.map(x => x.proposal));
+        } catch (err) {
+            ui.status.textContent = 'Could not store review data: ' + plain(err.message) + '. No tabs opened.';
+            return;
+        }
+        let opened = 0, failed = 0;
+        for (const {entry, proposal} of valid) {
+            try {
+                GM_openInTab(proposal.url, {active: false, insert: true, setParent: true});
+                entry.opened = true;
+                opened++;
+            } catch (err) {
+                failed++;
+                console.error('[Beatport Catalog Finder] Failed to open review tab', entry.release.id, err);
+            }
+        }
+        updateBulkButton(ui);
+        ui.status.textContent = opened + ' edit tab(s) opened.' +
+            (failed || pending.length !== valid.length
+                ? ' ' + (failed + pending.length - valid.length) + ' failed; retry the remaining edits.'
+                : '') + ' No edits were submitted.';
     }
 
     function displayCandidate(ui, release, finding) {
         const {item, evidence} = finding;
+        const entry = {release, item, evidence, opened: false};
+        ui.entries.push(entry);
         const row = element('article', {className: 'bpcnf-row'});
         const name = element('div', {className: 'bpcnf-row-title'});
         name.append(anchor(release.title, `${location.origin}/release/${release.id}`));
@@ -651,7 +714,12 @@
         links.append(anchor('Beatport source ↗', item.url));
         if (release.barcode) links.append(document.createTextNode(` · UPC ${release.barcode}`));
         const actions = element('div', {className: 'bpcnf-actions'});
-        actions.append(button('↗ Review edit', () => stageEdit(release, item, evidence), 'bpcnf-primary'));
+        actions.append(button('↗ Review edit', () => {
+            if (stageEdit(release, item, evidence)) {
+                entry.opened = true;
+                updateBulkButton(ui);
+            }
+        }, 'bpcnf-primary'));
         actions.append(button('Copy catalog', () => {
             if (navigator.clipboard?.writeText) {
                 navigator.clipboard.writeText(item.catalog).catch(() => window.prompt('Copy catalog number:', item.catalog));
@@ -669,6 +737,8 @@
         metadataCache.clear(); searchCache.clear();
         ui.start.disabled = true; ui.stop.disabled = false;
         ui.progress.hidden = false; ui.progress.value = 0;
+        ui.entries.length = 0;
+        updateBulkButton(ui);
         ui.results.replaceChildren(); ui.errors.textContent = '';
         ui.summary.textContent = '';
         const stats = {digital: 0, eligible: 0, candidate: 0, duplicate: 0, barcode: 0, missing: 0, ambiguous: 0, already: 0};
@@ -715,6 +785,7 @@
                 state.bridgeTab?.close?.();
             } catch {}
             run = null;
+            updateBulkButton(ui);
         }
     }
 
@@ -874,6 +945,6 @@
 
     // Test entry point is disabled in production unless explicitly enabled by a test harness.
     if (globalThis.__BPCNF_TEST__ === true) {
-        globalThis.__BPCNF_TEST_HOOKS__ = {beatportChallengeVisible, browserLoadedPageResult, sameBarcode, normalizeCatalog, beatportUrl, releaseDetailsFromHtml, searchReleaseLinks, isDigital, catalogs, releaseLinks, reviewFinding, proposedEditNote, isBarcodeCatalog, findCatalogInputs, chooseCatalogInput, isBeatportReleaseAlreadyLinked, editorHasBeatportLink, releaseDetailsFromProps, browserBeatportRequest, bridgeKey, browserNavigationUrl};
+        globalThis.__BPCNF_TEST_HOOKS__ = {beatportChallengeVisible, browserLoadedPageResult, sameBarcode, normalizeCatalog, beatportUrl, releaseDetailsFromHtml, searchReleaseLinks, isDigital, catalogs, releaseLinks, reviewFinding, proposedEditNote, isBarcodeCatalog, findCatalogInputs, chooseCatalogInput, isBeatportReleaseAlreadyLinked, editorHasBeatportLink, prepareEdit, saveEditProposals, stageEdit, updateBulkButton, openAllEdits, releaseDetailsFromProps, browserBeatportRequest, bridgeKey, browserNavigationUrl};
     }
 })();
