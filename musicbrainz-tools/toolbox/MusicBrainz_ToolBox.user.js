@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MusicBrainz ToolBox
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.0.59
+// @version      1.0.60
 // @description  Combined MusicBrainz release-editor, recording, barcode, Spotify/Apple Music linking, search, cover-art, Disc ID, and duplicate-edit tools.
 // @author       karpuzikov
 // @license      MIT
@@ -1272,7 +1272,7 @@
     }
 
     // ============================================================================
-    // Barcode and Catalog Number Search
+    // Barcode, Catalog Number and Label Code Search
     // Source merged from: musicbrainz-tools/barcode-catalog-search/MusicBrainz_Barcode_Catalog_Search.user.js
     // ============================================================================
     if (__mbToolBoxShouldRun(["https://musicbrainz.org/*","https://beta.musicbrainz.org/*"], [])) {
@@ -1301,6 +1301,7 @@
             .search-container.mb-quick-release-search-enabled {
                 display: flex;
                 align-items: flex-start;
+                flex-wrap: wrap;
             }
     
             #${GROUP_ID} {
@@ -1308,6 +1309,7 @@
                 align-items: flex-start;
                 gap: 4px;
                 margin-right: 6px;
+                flex-wrap: wrap;
             }
     
             #${GROUP_ID} form {
@@ -1423,12 +1425,19 @@
             'Search MusicBrainz releases by catalog number'
         );
     
+        const labelCodeSearch = makeSearchForm(
+            'code',
+            'Label code',
+            'Search MusicBrainz labels by label code',
+            true
+        );
+
         searchContainer.insertBefore(group, nativeForm);
     
-        const buildSearchUrl = (query) => {
+        const buildSearchUrl = (query, type = 'release') => {
             const url = new URL('/search', location.origin);
             url.searchParams.set('query', query);
-            url.searchParams.set('type', 'release');
+            url.searchParams.set('type', type);
             url.searchParams.set('limit', '100');
             url.searchParams.set('method', 'advanced');
             return url;
@@ -1491,6 +1500,48 @@
             location.assign(resultsUrl.toString());
         };
     
+        const normalizeLabelCode = (value) => String(value ?? '')
+            .replace(/^0+(?=\d)/, '');
+
+        const buildLabelCodeQuery = (value) => {
+            const code = normalizeLabelCode(value);
+            const variants = [];
+            for (let width = code.length; width <= Math.max(5, code.length); width++) {
+                variants.push('code:' + code.padStart(width, '0'));
+            }
+            return variants.join(' OR ');
+        };
+
+        const openUniqueLabelOrResults = async (query, code) => {
+            const resultsUrl = buildSearchUrl(query, 'label');
+            const apiUrl = new URL('/ws/2/label/', location.origin);
+            apiUrl.searchParams.set('query', query);
+            apiUrl.searchParams.set('fmt', 'json');
+            apiUrl.searchParams.set('limit', '100');
+
+            try {
+                const response = await __mbToolBoxFetch(apiUrl, {
+                    credentials: 'same-origin',
+                    headers: { Accept: 'application/json' }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    const labels = Array.isArray(data.labels) ? data.labels : [];
+                    const label = labels[0];
+                    if (Number(data.count) === 1 && labels.length === 1 &&
+                        label?.id && normalizeLabelCode(label['label-code']) === code) {
+                        location.assign('/label/' + label.id);
+                        return;
+                    }
+                }
+            } catch {
+                // Fall back to the normal MusicBrainz label search results.
+            }
+
+            location.assign(resultsUrl.toString());
+        };
+
         barcodeSearch.form.addEventListener('submit', (event) => {
             event.preventDefault();
     
@@ -1522,6 +1573,23 @@
                 'catno:"' + escapedCatalogNumber + '"',
                 catalogNumber
             );
+        });
+
+        labelCodeSearch.input.addEventListener('input', () => {
+            labelCodeSearch.input.setCustomValidity('');
+        });
+
+        labelCodeSearch.form.addEventListener('submit', (event) => {
+            event.preventDefault();
+
+            const match = /^(?:LC[\s-]*)?(\d+)$/i.exec(labelCodeSearch.input.value.trim());
+            if (!match) {
+                labelCodeSearch.input.setCustomValidity('Enter a label code such as LC-0193 or 193.');
+                labelCodeSearch.input.reportValidity();
+                return;
+            }
+
+            openUniqueLabelOrResults(buildLabelCodeQuery(match[1]), normalizeLabelCode(match[1]));
         });
     })();
     }
