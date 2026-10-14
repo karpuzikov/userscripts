@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MusicBrainz - Beatport Catalog Number Finder
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      0.1.3
+// @version      0.1.4
 // @description  Find missing digital-release catalog numbers on Beatport and review safe MusicBrainz edits.
 // @author       karpuzikov
 // @license      MIT
@@ -110,16 +110,20 @@
         state.bridgeSession = session;
         progress('Opening Beatport browser tab to read release metadata...');
         state.bridgeTab = GM_openInTab('https://www.beatport.com/?bpcnf_worker=' + encodeURIComponent(session), {
-            active: false, insert: true, setParent: true,
+            active: true, insert: true, setParent: true,
         });
         const start = Date.now();
-        while (Date.now() - start < 25000) {
-            if (state.cancelled) throw cancelledError();
+        // The Beatport tab may be on a CAPTCHA for an arbitrary duration.
+        // Wait for a genuine ready signal; only the Stop scan button cancels.
+        while (!state.cancelled) {
             const ready = GM_getValue(bridgeKey(session, 'ready'), null);
             if (ready?.session === session && ready.timestamp >= start) return;
-            await sleepCancellable(300, state);
+            const phase = GM_getValue(bridgeKey(session, 'status'), null);
+            if (phase?.phase === 'challenge' || Date.now() - start > 5000)
+                progress('Beatport needs attention: finish the CAPTCHA in its tab. Scan is paused; use Stop scan to cancel.');
+            await sleepCancellable(450, state);
         }
-        throw new Error('Beatport browser tab did not start. Check whether Beatport opened and allows access in your browser.');
+        throw cancelledError();
     }
 
     async function beatportTask(kind, value, state) {
@@ -132,12 +136,13 @@
         return new Promise((resolve, reject) => {
             let settled = false;
             let listener = null;
-            let timer = null;
+            let monitor = null;
+            const started = Date.now();
             function finish(error, result) {
                 if (settled) return;
                 settled = true;
                 if (listener !== null) GM_removeValueChangeListener(listener);
-                if (timer !== null) clearTimeout(timer);
+                if (monitor !== null) clearInterval(monitor);
                 if (state.activeRequest?.id === requestId) state.activeRequest = null;
                 if (error) reject(error); else resolve(result);
             }
@@ -145,7 +150,16 @@
                 if (!reply || reply.requestId !== requestId) return;
                 finish(reply.error ? new Error(reply.error) : null, reply.result);
             });
-            timer = setTimeout(() => finish(new Error('Beatport browser lookup timed out. Check the Beatport tab.')), 30000);
+            // Never time out and advance to another release while a human
+            // is still completing a Beatport verification challenge.
+            monitor = setInterval(() => {
+                if (state.cancelled) return finish(cancelledError());
+                const status = GM_getValue(bridgeKey(session, 'status'), null);
+                if (status?.requestId === requestId && status.phase === 'challenge')
+                    state.progress?.('Beatport CAPTCHA: complete it in the Beatport tab. Scan paused; Stop scan cancels.');
+                else if (Date.now() - started > 7000)
+                    state.progress?.('Waiting for this Beatport page; the scan will not advance until it responds. Stop scan to cancel.');
+            }, 900);
             state.activeRequest = {id: requestId, abort: () => finish(cancelledError())};
             GM_setValue(requestKey, {requestId, kind, value, timestamp: Date.now()});
         });
@@ -221,48 +235,96 @@
         return url.href;
     }
 
-    async function browserLoadedPageResult(request) {
-        const current = new URL(location.href);
-        if (request.kind === 'release') {
-            const id = beatportUrl(request.value)?.match(/\/(\d+)$/)?.[1];
-            if (!id || current.pathname.match(/\/(\d+)\/?$/)?.[1] !== id) throw new Error('Beatport redirected away from requested release');
-            const node = document.getElementById('__NEXT_DATA__');
-            const parsed = JSON.parse(node?.textContent || '{}');
-            const item = releaseDetailsFromProps(parsed, id);
-            if (!item) throw new Error('Beatport release metadata missing from loaded page');
-            item.url = beatportUrl(request.value);
-            return item;
-        }
-        if (request.kind === 'search') {
-            if (!/^\/(?:[a-z]{2}(?:-[a-z]{2})?\/)?search\/releases\/?$/i.test(current.pathname) || current.searchParams.get('q') !== plain(request.value)) {
-                throw new Error('Beatport redirected away from release-title search');
+    function beatportChallengeVisible() {
+        const path = location.pathname.toLowerCase();
+        if (path.includes('/cdn-cgi/challenge') || path.includes('/cdn-cgi/l/chk_')) return true;
+        const title = plain(document.title).toLowerCase();
+        if (/just a moment|attention required|verify (?:you are|that you are) human|checking your browser|security check/.test(title)) return true;
+        if (document.querySelector('#cf-challenge-running, #challenge-form, #challenge-stage, .cf-challenge, .cf-turnstile, iframe[src*="challenges.cloudflare.com"], input[name="cf-turnstile-response"]')) return true;
+        const body = plain(document.body?.innerText || '').slice(0, 1200).toLowerCase();
+        return /verify (?:you are|that you are) human|checking (?:your browser|if the site connection is secure)|complete the security check|performing security verification/.test(body);
+    }
+
+    async function browserLoadedPageResult(request, session) {
+        const requestKey = bridgeKey(session, 'request');
+        const statusKey = bridgeKey(session, 'status');
+        let emptySince = 0;
+        let lastUrl = '';
+        for (;;) {
+            if (GM_getValue(requestKey, null)?.requestId !== request.requestId) throw cancelledError();
+            if (beatportChallengeVisible()) {
+                GM_setValue(statusKey, {requestId:request.requestId, phase:'challenge', timestamp:Date.now()});
+                emptySince = 0;
+                await wait(900);
+                continue;
             }
-            // Allow Beatport client-side release results time to appear.
-            await wait(1200);
-            return searchReleaseLinks(document.documentElement.outerHTML);
+            const current = new URL(location.href);
+            if (request.kind === 'release') {
+                const expected = beatportUrl(request.value)?.match(/\/(\d+)$/)?.[1];
+                if (!expected) throw new Error('Invalid Beatport release');
+                if (current.pathname.match(/\/(\d+)\/?$/)?.[1] === expected) {
+                    const node = document.getElementById('__NEXT_DATA__');
+                    let data = null;
+                    try {data = JSON.parse(node?.textContent || '{}');} catch {}
+                    const item = releaseDetailsFromProps(data, expected);
+                    if (item) {
+                        item.url = beatportUrl(request.value);
+                        GM_setValue(statusKey,{requestId:request.requestId,phase:'completed',timestamp:Date.now()});
+                        return item;
+                    }
+                }
+                // No metadata is NOT a reason to leave while a CAPTCHA
+                // may still be pending or Beatport is hydrating the page.
+                GM_setValue(statusKey,{requestId:request.requestId,phase:'loading',timestamp:Date.now()});
+                await wait(900);
+                continue;
+            }
+            if (request.kind === 'search') {
+                if (/^\/(?:[a-z]{2}(?:-[a-z]{2})?\/)?search\/releases\/?$/i.test(current.pathname) &&
+                    current.searchParams.get('q') === plain(request.value)) {
+                    const links = searchReleaseLinks(document.documentElement.outerHTML);
+                    if (links.length) {
+                        GM_setValue(statusKey,{requestId:request.requestId,phase:'completed',timestamp:Date.now()});
+                        return links;
+                    }
+                    if (document.getElementById('__NEXT_DATA__')) {
+                        if (!emptySince || lastUrl !== location.href) emptySince = Date.now();
+                        // Only a hydrated non-challenge search may finish empty.
+                        if (Date.now() - emptySince > 12000) return [];
+                    } else emptySince = 0;
+                } else emptySince = 0;
+                lastUrl = location.href;
+                GM_setValue(statusKey,{requestId:request.requestId,phase:'loading',timestamp:Date.now()});
+                await wait(900);
+                continue;
+            }
+            throw new Error('Unsupported browser request');
         }
-        throw new Error('Unexpected Beatport browser lookup type');
     }
 
     function initBeatportWorker() {
-        const session = new URL(location.href).searchParams.get('bpcnf_worker');
+        const search = new URL(location.href).searchParams;
+        const session = search.get('bpcnf_worker') || sessionStorage.getItem(BRIDGE + ':worker-session');
         if (!session || !/^[\w-]{8,100}$/.test(session)) return;
+        if (search.get('bpcnf_worker')) sessionStorage.setItem(BRIDGE + ':worker-session', session);
         let busy = false;
         let lastId = '';
         let activeController = null;
-        const directRequestId = new URL(location.href).searchParams.get('bpcnf_request');
+        const directRequestId = search.get('bpcnf_request') ||
+            sessionStorage.getItem(BRIDGE + ':direct-request');
         const reqKey = bridgeKey(session, 'request');
         const replyKey = bridgeKey(session, 'reply');
         const readyKey = bridgeKey(session, 'ready');
         function ready() {GM_setValue(readyKey, {session, timestamp: Date.now()});}
         async function process(request) {
             if (!request || busy || lastId === request.requestId ||
-                Date.now() - Number(request.timestamp || 0) > 35000) return;
+                Date.now() - Number(request.timestamp || 0) > 6 * 60 * 60 * 1000) return;
             if (!/^[\w-]{8,100}$/.test(String(request.requestId))) return;
             busy = true;
             lastId = request.requestId;
             activeController = new AbortController();
-            const timer = setTimeout(() => activeController?.abort(), 24000);
+            const timer = directRequestId === request.requestId ? null :
+                setTimeout(() => activeController?.abort(), 24000);
             let reply;
             let navigating = false;
             try {
@@ -270,7 +332,7 @@
                 if (directRequestId === request.requestId) {
                     // Cloudflare sometimes rejects fetch even inside an allowed browser
                     // session. Read the real top-level page after ordinary navigation.
-                    result = await browserLoadedPageResult(request);
+                    result = await browserLoadedPageResult(request, session);
                 } else {
                     result = await browserBeatportRequest(request.kind, request.value, activeController.signal);
                 }
@@ -283,20 +345,33 @@
                     const url = browserNavigationUrl(request, session);
                     if (url) {
                         navigating = true;
+                        sessionStorage.setItem(BRIDGE + ':direct-request', request.requestId);
+                        GM_setValue(bridgeKey(session, 'status'),
+                            {requestId:request.requestId,phase:'loading',timestamp:Date.now()});
                         location.assign(url);
                     }
                 }
                 if (!navigating) reply = {requestId: request.requestId, error: plain(error.message)};
             } finally {
-                clearTimeout(timer);
+                if (timer !== null) clearTimeout(timer);
                 activeController = null;
                 busy = false;
             }
             if (reply) GM_setValue(replyKey, reply);
         }
         GM_addValueChangeListener(reqKey, (_key, _old, request) => {void process(request);});
-        ready();
         const pending = GM_getValue(reqKey, null);
+        // Do not signal that the initial tab is ready while it shows
+        // Cloudflare/Turnstile; the scan must remain paused.
+        const initialReady = async () => {
+            while (beatportChallengeVisible()) {
+                GM_setValue(bridgeKey(session,'status'),
+                    {requestId:pending?.requestId || '',phase:'challenge',timestamp:Date.now()});
+                await wait(900);
+            }
+            ready();
+        };
+        void initialReady();
         if (!directRequestId || pending?.requestId === directRequestId) void process(pending);
     }
 
@@ -575,6 +650,7 @@
         if (run) return;
         const state = {cancelled: false, errors: [], activeRequest: null, bridgeTab: null, bridgeSession: ''};
         run = state;
+        state.progress = text => {ui.status.textContent = text;};
         metadataCache.clear(); searchCache.clear();
         ui.start.disabled = true; ui.stop.disabled = false;
         ui.progress.hidden = false; ui.progress.value = 0;
@@ -618,7 +694,11 @@
             ui.stop.disabled = true;
             ui.errors.textContent = [...new Set(state.errors)].slice(0, 30).join('\n') || 'No network errors. Beatport search may still return no public results; those are not treated as matches.';
             if (state.errors.length) ui.detail.open = true;
-            try {state.activeRequest?.abort?.(); state.bridgeTab?.close?.();} catch {}
+            try {
+                if (state.bridgeSession) GM_setValue(bridgeKey(state.bridgeSession, 'request'), null);
+                state.activeRequest?.abort?.();
+                state.bridgeTab?.close?.();
+            } catch {}
             run = null;
         }
     }
@@ -761,6 +841,6 @@
 
     // Test entry point is disabled in production unless explicitly enabled by a test harness.
     if (globalThis.__BPCNF_TEST__ === true) {
-        globalThis.__BPCNF_TEST_HOOKS__ = {sameBarcode, normalizeCatalog, beatportUrl, releaseDetailsFromHtml, searchReleaseLinks, isDigital, catalogs, releaseLinks, reviewFinding, proposedEditNote, isBarcodeCatalog, findCatalogInputs, chooseCatalogInput, releaseDetailsFromProps, browserBeatportRequest, bridgeKey, browserNavigationUrl};
+        globalThis.__BPCNF_TEST_HOOKS__ = {beatportChallengeVisible, browserLoadedPageResult, sameBarcode, normalizeCatalog, beatportUrl, releaseDetailsFromHtml, searchReleaseLinks, isDigital, catalogs, releaseLinks, reviewFinding, proposedEditNote, isBarcodeCatalog, findCatalogInputs, chooseCatalogInput, releaseDetailsFromProps, browserBeatportRequest, bridgeKey, browserNavigationUrl};
     }
 })();
