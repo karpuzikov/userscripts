@@ -2,7 +2,7 @@
 
 ## Purpose and current baseline
 - Product: Archive Media Compressor, under `karpuzikov/userscripts/archive-media-compressor/`.
-- Current working build: `ArchiveMedia v6.00.15.bat` (semantic version 6.0.15), **Under construction ⚠️**, published on the default `main` branch. Previous build: `ArchiveMedia v6.00.14.bat`.
+- Current working build: `ArchiveMedia v6.00.16.bat` (semantic version 6.0.16), **Under construction ⚠️**, published on default `main`. Previous build: `ArchiveMedia v6.00.15.bat`.
 - Default branch: `main`. No alternate active branch is established.
 - A single versioned Windows .bat embeds a Base64 ZIP containing `ArchiveMedia.ps1`; the BAT bootstraps WinGet, PowerShell 7, FFmpeg/FFprobe, and ImageMagick; extracts payload into a temporary folder; then runs PowerShell. The BAT contains temporary source-repair/worker-tuning transformations in 6.0.13.
 - Project README: `archive-media-compressor/README.md`; repository-wide download/version table: root `README.md`.
@@ -23,6 +23,15 @@
 - Acceptance: compared with v6.0.15, Copy requires one fewer keyboard character and no menu-reading step; folder pickers start at familiar locations; Replace is never the default. Verify remembered paths, malformed JSON handling, unchanged file handling, and no accidental writes to source under Copy.
 - Applicable UXDT principles: reduce redundant steps and text; preserve accessible/native folder picker and clear error recovery. **Open-location control before each console-printed path remains a known platform limitation** (ordinary console lines have no cross-host clickable controls). The existing console-based UI cannot claim full compliance with the repository's mandatory clickable-path rule without an intentional native GUI redesign.
 - Target implementation v6.0.16 - Under construction; Windows native interaction/run tests must be recorded as NOT RUN until performed.
+
+## Implementation checkpoint - ArchiveMedia v6.0.16
+- Source: `archive-media-compressor/ArchiveMedia v6.00.16.bat`, single-file Windows BAT with original Base64 ZIP embedded media engine. Existing runtime source-repair/worker adjustment, no-growth guard, and concise SKIP logging retained.
+- New prelaunch PowerShell patch surgically adds remembered-folder preselection to existing native FolderBrowserDialog and replaces the old verbose 1/2 mode menu/folder block. The new keyboard choice is `Mode: Copy [Enter] / Replace [R]`. Enter is nondestructive Copy; Replace requires `R`. The source and destination pickers preselect existing paths remembered from prior successful selections; when no destination is remembered, the source's parent is used to reduce navigation.
+- Preferences: `[Environment]::GetFolderPath("MyDocuments")\\Karpuzikov Tools\\ArchiveMedia\\settings.json` (only source/destination values; never store Replace mode). Corrupt, absent, inaccessible preferences must not prevent launching. The application still explicitly asks for input folder, and for destination only in Copy mode.
+- Console output: one compact Copy/Replace line and one output location line for Copy, no prior two explanatory menu paragraphs or redundant Mode/Source/Destination echo block. Other progress/error/size summaries retained.
+- Static checks: GitHub source/payload marker/version check; program-launch and PS1 patch marker uniqueness; all wrapper command lengths below 8,191 characters; malformed quoting corrected before delivery; syntax validation is included in startup. No Windows PowerShell 7 runtime or real picker interaction executed in this environment: **NOT RUN**.
+- Actual Windows tests required: Copy via Enter, Replace via R on expendable files, invalid mode retry, cancel in either folder picker, last-location remembered after restart, broken settings JSON ignored, absent previous folders ignored, same source/destination rejected, no source deletion in Copy, v6.0.14 size guard and v6.0.15 concise SKIP output. User to confirm successful tests before stable designation.
+- Compliance limits: Console cannot provide a portable folder-opening control immediately preceding every printed filesystem path across cmd.exe/Windows Terminal. This strict global UI invariant and Windows visual/interaction acceptance are **NOT VERIFIED / release blockers** until a native UI approach is implemented and tested.
 
 ## Relevant standards and rules
 - `SOFTWARE_RULES.md`, `UI_UX_RULES.md`, `UI_UX_ACCEPTANCE.md` at repository root; UXDT complete guideline tree. This product has an interactive Windows console UI, with prompt, progress and action status surfaces.
@@ -48,7 +57,7 @@
 - Never describe an untested code checkpoint as stable.
 
 ## Next actions
-1. On Windows run v6.0.15 with a separate empty output folder in **Copy** mode, using examples from the user's MOV/AVI list. Verify that files with unsuccessful remuxes are copied unchanged with `.MOV`/`.avi` extensions, without any larger `.mp4` candidate retained. Hash originals before/after. Verify output folder size does not exceed source folder size for successfully processed items (unless duplicate output and error-log metadata are included).
+1. On Windows run v6.0.16 with a separate empty output folder in **Copy** mode, using examples from the user's MOV/AVI list. Verify that files with unsuccessful remuxes are copied unchanged with `.MOV`/`.avi` extensions, without any larger `.mp4` candidate retained. Hash originals before/after. Verify output folder size does not exceed source folder size for successfully processed items (unless duplicate output and error-log metadata are included).
 2. Test Replace mode only on expendable duplicate fixtures: oversized candidate => source hash unchanged; genuinely smaller candidate => new output retained and original removed only after success. Test collisions, reruns, interrupted FFmpeg/cancel, snapshots and errors.
 3. Check actual PowerShell syntax validation and startup, user prompt/progress status, copy/replace summaries, source timestamps, Unicode names, and Windows UI interaction. Validate that `[SKIP]` omits all size text while actual conversion results still show saved bytes. Record genuine Windows PASS/FAIL for these tests. Do not mark stable without those results.
 4. Consider replacing the accumulated runtime source string patches with a clean, separately testable embedded PowerShell source in a later version after parity validation. Do not revive broken parser or label-based BAT control flow.
