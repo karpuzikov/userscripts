@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MusicBrainz ToolBox
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.0.60
+// @version      1.0.61
 // @description  Combined MusicBrainz release-editor, recording, barcode, Spotify/Apple Music linking, search, cover-art, Disc ID, and duplicate-edit tools.
 // @author       karpuzikov
 // @license      MIT
@@ -9612,6 +9612,7 @@
 
         const pendingLookups = new Map();
         const targetLookupGeneration = new WeakMap();
+        const pendingTargetDecorations = new WeakMap();
         let requestQueue = Promise.resolve();
         let lastRequestAt = 0;
         let scanQueued = false;
@@ -10146,8 +10147,13 @@
             if (!target || !info) return;
 
             const key = encodeURIComponent(info.key);
-            const existing = indicatorsForTarget(target)[0];
+            const pending = pendingTargetDecorations.get(target);
 
+            // Reuse requests for an unchanged card. Periodic and mutation
+            // rescans must not invalidate a slow in-flight MusicBrainz lookup.
+            if (pending?.key === key) return pending.promise;
+
+            const existing = indicatorsForTarget(target)[0];
             if (
                 existing &&
                 existing.dataset.mbtbKey === key &&
@@ -10161,41 +10167,66 @@
                 (targetLookupGeneration.get(target) || 0) + 1;
             targetLookupGeneration.set(target, generation);
 
-            const releases = await lookupResource(
-                info,
-                force
-            );
-            if (
-                !Array.isArray(releases) ||
-                !target.isConnected ||
-                targetLookupGeneration.get(target) !== generation
-            ) {
-                return;
+            const work = (async () => {
+                const releases = await lookupResource(info, force);
+                if (
+                    !Array.isArray(releases) ||
+                    !target.isConnected ||
+                    targetLookupGeneration.get(target) !== generation
+                ) {
+                    return;
+                }
+
+                installStyles();
+                indicatorsForTarget(target).forEach(node => node.remove());
+
+                const indicator = createIndicator(info, releases);
+                indicator.dataset.mbtbTarget = ensureTargetId(target);
+                target.insertAdjacentElement('afterend', indicator);
+            })();
+
+            pendingTargetDecorations.set(target, {key, promise: work});
+            try {
+                await work;
+            } finally {
+                if (pendingTargetDecorations.get(target)?.promise === work) {
+                    pendingTargetDecorations.delete(target);
+                }
             }
-
-            installStyles();
-
-            indicatorsForTarget(target).forEach(
-                node => node.remove()
-            );
-
-            const indicator = createIndicator(info, releases);
-            indicator.dataset.mbtbTarget = ensureTargetId(target);
-            target.insertAdjacentElement('afterend', indicator);
         }
 
         function appleTargets() {
-            const selectors = [
-                'a[data-testid="product-lockup-title"][href*="/album/"]',
-                '[data-testid="artist-featured-release-title"] > a[href*="/album/"]',
-            ];
+            const targets = new Map();
+            const cardSelector =
+                '[data-testid="product-lockup"], [data-testid="lockup-control"]';
+            const titleSelector =
+                '[data-testid="product-lockup-title"], ' +
+                '[data-testid="lockup-title"], .product-lockup__title';
 
-            return [...document.querySelectorAll(selectors.join(','))]
-                .map(target => ({
-                    target,
-                    info: appleAlbumInfo(target.href),
-                }))
-                .filter(item => item.info);
+            const addTarget = (target, href) => {
+                const info = href && appleAlbumInfo(href);
+                if (target && info) targets.set(target, {target, info});
+            };
+
+            // Apple artist grids can put the album URL on the artwork anchor,
+            // with the visible title in a separate non-anchor element.
+            for (const card of document.querySelectorAll(cardSelector)) {
+                const albumLink = card.querySelector('a[href*="/album/"]');
+                const title = card.querySelector(titleSelector);
+                if (albumLink && title) addTarget(title, albumLink.href);
+            }
+
+            for (const anchor of document.querySelectorAll([
+                'a[data-testid="product-lockup-title"][href*="/album/"]',
+                'a[data-testid="product-lockup-link"][href*="/album/"]',
+                '[data-testid="artist-featured-release-title"] > a[href*="/album/"]',
+            ].join(','))) {
+                const card = anchor.closest(cardSelector);
+                if (card && card.querySelector(titleSelector)) continue;
+                addTarget(anchor, anchor.href);
+            }
+
+            return [...targets.values()];
         }
 
         function scan(forceMissing = false) {
