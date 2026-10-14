@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MusicBrainz - Beatport Catalog Number Finder
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      0.1.2
+// @version      0.1.3
 // @description  Find missing digital-release catalog numbers on Beatport and review safe MusicBrainz edits.
 // @author       karpuzikov
 // @license      MIT
@@ -45,6 +45,13 @@
     const sameBarcode = (a, b) => !!normalizeBarcode(a) && normalizeBarcode(a) === normalizeBarcode(b);
     const normalizeCatalog = x => String(x || '').normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
     const plain = x => String(x ?? '').replace(/\s+/g, ' ').trim();
+    // Barcode-equivalent or UPC/EAN/GTIN-shaped numeric catnos are not useful here.
+    function isBarcodeCatalog(catalog, upc, barcode) {
+        const digits = plain(catalog).normalize('NFKC').replace(/[\s._-]/g, '');
+        if (!/^\d{8,14}$/.test(digits)) return false;
+        return sameBarcode(digits, upc) || sameBarcode(digits, barcode) ||
+            [8, 12, 13, 14].includes(digits.length);
+    }
     const isPresent = x => !!plain(x); // [none] is intentional existing data, not an empty field.
     const cancelledError = () => new Error('Scan stopped by user');
     const metadataCache = new Map();
@@ -438,6 +445,7 @@
         if (hit.status !== 'match') return {status: hit.status, reason: hit.reason};
         const item = hit.item;
         if (!item.catalog || !normalizeCatalog(item.catalog)) return {status: 'missing', reason: 'No Beatport catalog number'};
+        if (isBarcodeCatalog(item.catalog, item.upc, release.barcode)) return {status:'barcode', reason:'Beatport catalog number is a barcode'};
         const catKey = normalizeCatalog(item.catalog);
         if (usedCatalogs.has(catKey)) return {status: 'duplicate', reason: 'Catalog number already belongs to an artist digital release'};
         if (staged.has(catKey)) return {status: 'duplicate', reason: 'Catalog number already proposed for another release'};
@@ -531,7 +539,7 @@
     }
 
     function stageEdit(release, item, evidence) {
-        const record = {id: release.id, title: release.title, catalog: item.catalog, label: item.label, beatport: item.url, evidence, timestamp: Date.now()};
+        const record = {id: release.id, title: release.title, catalog: item.catalog, label: item.label, beatport: item.url, upc: item.upc, barcode: release.barcode, evidence, timestamp: Date.now()};
         const stored = GM_getValue(KEY, {});
         const next = stored && typeof stored === 'object' ? stored : {};
         next[release.id] = record;
@@ -572,7 +580,7 @@
         ui.progress.hidden = false; ui.progress.value = 0;
         ui.results.replaceChildren(); ui.errors.textContent = '';
         ui.summary.textContent = '';
-        const stats = {digital: 0, eligible: 0, candidate: 0, duplicate: 0, missing: 0, ambiguous: 0, already: 0};
+        const stats = {digital: 0, eligible: 0, candidate: 0, duplicate: 0, barcode: 0, missing: 0, ambiguous: 0, already: 0};
         const progress = text => {ui.status.textContent = text;};
         try {
             const releases = await readArtistReleases(ARTIST[1], state, progress);
@@ -599,7 +607,7 @@
                 const finding = reviewFinding(release, hit, usedCatalogs, staged);
                 if (finding.status === 'candidate') {stats.candidate++;displayCandidate(ui, release, finding);}
                 else {stats[finding.status] = (stats[finding.status] || 0) + 1;}
-                ui.summary.textContent = `${stats.candidate} edits to review · ${stats.duplicate} duplicates skipped · ${stats.missing} unverified · ${stats.ambiguous} ambiguous`;
+                ui.summary.textContent = `${stats.candidate} edits to review · ${stats.duplicate} duplicates skipped · ${stats.barcode} barcode-like skipped · ${stats.missing} unverified · ${stats.ambiguous} ambiguous`;
             }
             ui.progress.value = candidates.length;
             progress(`Complete: ${stats.digital} digital releases; ${stats.eligible} with no catalog number and barcode/link; ${stats.candidate} proposed edits.`);
@@ -615,87 +623,127 @@
         }
     }
 
+    // MusicBrainz editor uses #catno-N and Knockout "value: catalogNumber".
     function findCatalogInputs() {
-        return [...document.querySelectorAll('input[type="text"],input:not([type])')].filter(el => {
-            const value = `${el.name || ''} ${el.id || ''}`;
-            return /catalog[_-]?number|catalog[_-]?no\b/i.test(value) && !el.disabled && !el.readOnly;
-        });
+        const root = document.getElementById('release-editor');
+        if (!root) return [];
+        return [...root.querySelectorAll('#information input[type="text"]')].filter(el =>
+            !el.disabled && !el.readOnly && (
+                /^catno-\d+$/i.test(el.id) ||
+                /\bvalue\s*:\s*catalogNumber\b/.test(el.getAttribute('data-bind') || '') ||
+                /catalog[_-]?number/i.test(el.name || '')
+            )
+        );
     }
-
+    function chooseCatalogInput(record) {
+        const all = findCatalogInputs();
+        if (!all.length) return {status:'wait', reason:'Waiting for the label fields to load.'};
+        if (all.some(x => plain(x.value).toLowerCase() === '[none]'))
+            return {status:'stop', reason:'A [none] catalog number is present; nothing changed.'};
+        if (all.some(x => normalizeCatalog(x.value) === normalizeCatalog(record.catalog)))
+            return {status:'already'};
+        const empty = all.filter(x => !plain(x.value));
+        if (!empty.length) return {status:'stop', reason:'No empty catalog-number field; existing values were preserved.'};
+        if (all.length === 1 && empty.length === 1) return {status:'fill',el:empty[0]};
+        const wanted = plain(record.label).normalize('NFKC').toLowerCase();
+        if (wanted) {
+            const matching = empty.filter(x =>
+                plain(x.closest('tr')?.querySelector('input.name')?.value).normalize('NFKC').toLowerCase() === wanted
+            );
+            if (matching.length === 1) return {status:'fill',el:matching[0]};
+        }
+        return {status:'stop',reason:'Several label rows were found without a unique label match. Use Copy catalog and choose the correct row manually.'};
+    }
     function proposedEditNote(record) {
-        return `Catalog number ${record.catalog} verified from Beatport: ${record.beatport}\n${SCRIPT_URL}`;
+        return 'Catalog number ' + record.catalog + ' verified from Beatport: ' +
+            record.beatport + '\n' + SCRIPT_URL;
     }
-
     function findEditableEditNote() {
-        const fields = [...document.querySelectorAll('textarea')].filter(el =>
-            /^(?:edit[_-]?note|editNote)$/i.test(plain(el.name || el.id)) && !el.disabled && !el.readOnly
+        const field = document.getElementById('edit-note-text');
+        if (field?.tagName === 'TEXTAREA' && !field.disabled && !field.readOnly) return field;
+        const fields = [...document.querySelectorAll('#release-editor textarea')].filter(x =>
+            /^(?:edit[_-]?note|editNote|edit-note-text)$/i.test(plain(x.name || x.id)) &&
+            !x.disabled && !x.readOnly
         );
         return fields.length === 1 ? fields[0] : null;
     }
-
+    function setBoundValue(input, value) {
+        const proto = input.tagName === 'TEXTAREA' ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+        const setter = Object.getOwnPropertyDescriptor(proto,'value')?.set;
+        if (setter) setter.call(input,value); else input.value=value;
+        input.dispatchEvent(new Event('input',{bubbles:true}));
+        input.dispatchEvent(new Event('change',{bubbles:true}));
+    }
     function appendEditNote(record) {
-        const field = findEditableEditNote();
-        if (!field) return false;
-        if (!field.value.includes(SCRIPT_URL)) {
-            const text = [field.value.trim(), proposedEditNote(record)].filter(Boolean).join('\n\n');
-            const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set;
-            if (setter) setter.call(field, text); else field.value = text;
-            field.dispatchEvent(new Event('input', {bubbles: true}));
-            field.dispatchEvent(new Event('change', {bubbles: true}));
-        }
+        const input = findEditableEditNote();
+        if (!input) return false;
+        if (!input.value.includes(SCRIPT_URL))
+            setBoundValue(input,[input.value.trim(),proposedEditNote(record)].filter(Boolean).join('\n\n'));
         return true;
     }
-
     function initEdit(recordId) {
         let data;
-        try { data = GM_getValue(KEY, {})?.[recordId]; } catch { return; }
-        if (!data || data.id !== recordId || Date.now() - Number(data.timestamp || 0) > 2 * 60 * 60 * 1000) return;
+        try {data=GM_getValue(KEY,{})?.[recordId];} catch {return;}
+        if (!data || data.id!==recordId || Date.now()-Number(data.timestamp||0)>7200000) return;
         css();
-        const panel = element('section', {id: 'bpcnf-panel', 'aria-label': 'Beatport catalog edit proposal'});
-        panel.style.bottom = '12px';
-        panel.style.maxHeight = '55vh';
-        const head = element('header');
-        head.append(element('strong', {}, 'Beatport catalog proposal'));
-        const dismiss = button('×', () => {panel.remove();const stored = GM_getValue(KEY, {});delete stored[recordId];GM_setValue(KEY, stored);});
-        dismiss.setAttribute('aria-label', 'Dismiss catalog proposal');
-        head.append(dismiss);
-        const body = element('div', {id: 'bpcnf-edit'});
-        body.append(element('div', {}, `${data.catalog} · Beatport label: ${data.label || 'Unknown'} · ${data.evidence}`));
-        const links = element('div');links.append(anchor('Beatport evidence ↗', data.beatport));body.append(links);
-        const message = element('div', {className: 'bpcnf-small', role: 'status', 'aria-live': 'polite'}, 'Review the label and catalog field before entering the MusicBrainz edit.');
-        const actions = element('div');
-        actions.append(button('Fill sole empty catalog field', () => {
-            const fields = findCatalogInputs();
-            if (fields.some(f => plain(f.value) === '[none]')) {message.textContent = 'An explicit [none] catalog exists; nothing changed.';return;}
-            const empty = fields.filter(f => !plain(f.value));
-            if (fields.length !== 1 || empty.length !== 1) {
-                message.textContent = `${fields.length} catalog field(s) found. Only one unambiguous empty field can be filled automatically; use Copy catalog and select the correct label manually.`;
+        const panel=element('section',{id:'bpcnf-panel','aria-label':'Beatport catalog edit'});
+        panel.style.bottom='12px';panel.style.maxHeight='55vh';
+        const head=element('header');head.append(element('strong',{},'Beatport catalog edit'));
+        let timer=null;
+        const dismiss=button('×',()=>{
+            if(timer!==null)clearInterval(timer);
+            panel.remove();
+            const stored=GM_getValue(KEY,{});
+            delete stored[recordId];GM_setValue(KEY,stored);
+        });
+        dismiss.setAttribute('aria-label','Dismiss catalog proposal');head.append(dismiss);
+        const body=element('div',{id:'bpcnf-edit'});
+        body.append(element('div',{},data.catalog+' · Beatport label: '+(data.label||'Unknown')+' · '+data.evidence));
+        body.append(anchor('Beatport evidence ↗',data.beatport));
+        const message=element('div',{className:'bpcnf-small',role:'status','aria-live':'polite'},
+            'Preparing the catalog number as soon as the MusicBrainz editor loads.');
+        const actions=element('div');
+        actions.append(button('Copy catalog',()=>{
+            if(navigator.clipboard?.writeText)navigator.clipboard.writeText(data.catalog).then(()=>{message.textContent='Catalog number copied.';}).catch(()=>window.prompt('Copy catalog:',data.catalog));
+            else window.prompt('Copy catalog:',data.catalog);
+        }));
+        actions.append(button('Copy edit note',()=>{
+            const note=proposedEditNote(data);
+            if(navigator.clipboard?.writeText)navigator.clipboard.writeText(note).then(()=>{message.textContent='Edit note copied.';}).catch(()=>window.prompt('Copy edit note:',note));
+            else window.prompt('Copy edit note:',note);
+        }));
+        body.append(actions,message);panel.append(head,body);document.body.append(panel);
+        if(isBarcodeCatalog(data.catalog,data.upc,data.barcode)){
+            message.textContent='Skipped barcode-shaped catalog number. No changes made.';return;
+        }
+        const deadline=Date.now()+25000;
+        let filled=false,finished=false;
+        function apply(){
+            if(!panel.isConnected || finished)return;
+            const choice=chooseCatalogInput(data);
+            if(choice.status==='wait'){
+                if(Date.now()>deadline){message.textContent='Catalog field did not load. Use Copy catalog to enter it manually.';finished=true;}
                 return;
             }
-            if (!appendEditNote(data)) {
-                message.textContent = 'Could not identify one editable MusicBrainz edit-note field. No changes made. Copy the catalog number and include the Beatport source plus this script URL in your edit note.';
-                return;
+            if(choice.status==='stop'){message.textContent=choice.reason;finished=true;return;}
+            if(choice.status==='fill'){
+                if(plain(choice.el.value)){message.textContent='Catalog field is no longer empty. Nothing overwritten.';finished=true;return;}
+                setBoundValue(choice.el,data.catalog);filled=true;
             }
-            const input = empty[0];
-            const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
-            if (setter) setter.call(input, data.catalog); else input.value = data.catalog;
-            input.dispatchEvent(new Event('input', {bubbles: true}));
-            input.dispatchEvent(new Event('change', {bubbles: true}));
-            input.focus();
-            message.textContent = 'Catalog field filled. Verify the label, continue the edit, and submit manually.';
-        }, 'bpcnf-primary'));
-        actions.append(button('Copy catalog', () => {
-            if (navigator.clipboard?.writeText) navigator.clipboard.writeText(data.catalog).then(() => {message.textContent = 'Catalog number copied.';}).catch(() => {window.prompt('Copy catalog number:', data.catalog);});
-            else window.prompt('Copy catalog number:', data.catalog);
-        }));
-        actions.append(button('Copy edit note', () => {
-            const note = proposedEditNote(data);
-            if (navigator.clipboard?.writeText) navigator.clipboard.writeText(note).then(() => {message.textContent = 'Edit note copied; preserve any existing note when pasting.';}).catch(() => {window.prompt('Copy edit note:', note);});
-            else window.prompt('Copy edit note:', note);
-        }));
-        body.append(actions, message);
-        panel.append(head, body);
-        document.body.append(panel);
+            const note=appendEditNote(data);
+            if(!filled && choice.status==='already'){
+                message.textContent='Catalog number already present; no changes needed.';finished=true;
+            }else if(note){
+                message.textContent='Catalog number and evidence note filled. Review and submit manually.';finished=true;
+            }else if(Date.now()>deadline){
+                message.textContent='Catalog number filled. Use Copy edit note before submitting.';finished=true;
+            }else message.textContent='Catalog number filled. Waiting for edit-note field.';
+        }
+        apply();
+        if(!finished)timer=setInterval(()=>{
+            apply();
+            if(finished){clearInterval(timer);timer=null;}
+        },500);
     }
 
     if (IS_BEATPORT) {
@@ -713,6 +761,6 @@
 
     // Test entry point is disabled in production unless explicitly enabled by a test harness.
     if (globalThis.__BPCNF_TEST__ === true) {
-        globalThis.__BPCNF_TEST_HOOKS__ = {sameBarcode, normalizeCatalog, beatportUrl, releaseDetailsFromHtml, searchReleaseLinks, isDigital, catalogs, releaseLinks, reviewFinding, proposedEditNote, releaseDetailsFromProps, browserBeatportRequest, bridgeKey, browserNavigationUrl};
+        globalThis.__BPCNF_TEST_HOOKS__ = {sameBarcode, normalizeCatalog, beatportUrl, releaseDetailsFromHtml, searchReleaseLinks, isDigital, catalogs, releaseLinks, reviewFinding, proposedEditNote, isBarcodeCatalog, findCatalogInputs, chooseCatalogInput, releaseDetailsFromProps, browserBeatportRequest, bridgeKey, browserNavigationUrl};
     }
 })();
