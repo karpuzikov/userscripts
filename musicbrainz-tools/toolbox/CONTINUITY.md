@@ -1,7 +1,7 @@
 # MusicBrainz ToolBox - Continuity
 
-Last reviewed: 2026-10-08
-Current version: 1.0.59 - Under construction ⚠️ (pending browser verification)
+Last reviewed: 2026-10-15
+Current version: 1.0.60 - Under construction ⚠️ (pending browser verification)
 Repository: `karpuzikov/userscripts`, branch `main`
 Global rules: `/SOFTWARE_RULES.md`; no separate ToolBox `RULES.md` exists.
 
@@ -58,3 +58,12 @@ Global rules: `/SOFTWARE_RULES.md`; no separate ToolBox `RULES.md` exists.
 - **Tested statically/mocked**, not live in Chrome: 11 Work-lookup tests (zero/one/many candidates, author verification, wrong relation type, incomplete queries, server failures, cross-run staged-title guard); 15 Apple/packaging checks (single song ID, credits, title normalization including Safari Riot remix, strict URL, UPC confirmation and mismatched-link fallback, no guessed album, single icon, keyboard-usable expandable input, other Toolbox modules and syntax); native and standalone script syntax checks. Combined Toolbox ~916 KB; performance/accessibility/zoom/keyboard testing in real Chrome has NOT been performed. Preserve **Under construction ⚠️**.
 - **Known limitations/risk to verify:** Original v2.3.22 and Credit Hoarder may represent some Apple metadata and roles differently; every role should be compared on a real release before claiming absolute parity. Distinct releases with no linked Apple album require valid barcode or a direct song URL. Source-page UI reflow and multiple provider import interactions still require browser testing. A standalone importer updated to v2.3.23 can run alone, but deliberately yields to Toolbox when both are loaded; an old standalone still needs to update. Never assume eight staged FAST X Works were already submitted. Do not reload that previously unsaved editor without preserving the user's edits.
 - **Next:** Tampermonkey **Check for userscript updates** for BOTH ToolBox v1.0.59 and standalone Apple Music importer v2.3.23. On a fresh `/release/.../edit-relationships` tab, confirm one Apple icon, one collapsible song input and no standalone `am2mb-panel`. Test normal album import, exact UPC fallback, one Apple song URL, ambiguous Work title reuse and `Use works -> create needed`. Test `All` with multiple providers. Export Browser Debug Bridge JSON/screenshots. Review pending edits; never auto-submit. Check keyboard/focus and 200% zoom. Only after parity verified consider retiring the standalone installer.
+
+## 2026-10-15 - v1.0.60 - Label-code header search
+
+- Added a third, MusicBrainz-native styled **Label code** search form beside Barcode and Catalog number; same 180 x 25 px form, same header button/icon, numeric keyboard hint, Enter/click submit, accessible name. The group/header permit wrapping rather than clipping at narrow widths. Three independent forms, no additional confirmation or settings.
+- Accepted label-code inputs include `LC-0193`, `LC0193`, `LC 0193`, `0193`, `00193`, `193` (case-insensitive LC). Strip prefix/leading zeros for equivalence; query numeric `code:` values with padding up through 5 digits (e.g. `code:193 OR code:0193 OR code:00193`). Do not treat label codes as release catalog numbers.
+- Search MusicBrainz `type=label`, `method=advanced`. Query `/ws/2/label/` using the existing global 503 retry helper; navigate directly to `/label/<MBID>` only if the entire result set contains exactly one label with matching normalized `label-code`; otherwise open the regular label search results. On invalid input, use native HTML form validation and keep focus on the field. No data is edited.
+- Existing Barcode and Catalog Number release searches remain unchanged; only the generic URL builder gained optional `type` defaulting to `release`.
+- Validation: entire userscript parsed via JS Function compilation, seven valid-code equivalence cases and four invalid formats checked, and static routing/preservation checks passed. **NOT RUN:** real Chrome/Tampermonkey rendering/hover/focus/keyboard testing, responsiveness at narrow widths/zoom, live MusicBrainz Web Service availability and real label-search behavior. Remains **1.0.60 - Under construction ⚠️**.
+- Next: Update via Tampermonkey > Check for userscript updates; test all four supplied inputs and a code shared by multiple labels. Verify one unique label opens directly, duplicates open results, and both original fields behave unchanged; inspect at 200% zoom. Preserve version/status until actual browser tests pass.
