@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MusicBrainz - Beatport Catalog Number Finder
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      0.1.3
+// @version      0.1.4
 // @description  Find missing digital-release catalog numbers on Beatport and review safe MusicBrainz edits.
 // @author       karpuzikov
 // @license      MIT
