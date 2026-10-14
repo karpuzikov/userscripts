@@ -2,6 +2,14 @@
 
 These rules apply to all current and future software maintained under the `karpuzikov` GitHub account. Repository-specific rules may add stricter requirements, but must not weaken these baseline requirements.
 
+## Highest-priority conversational trigger: `this chat is done`
+
+**STOP AND HAND OFF, NEVER JUST CLOSE THE CHAT.** When the user says exactly `this chat is done` in a software-development conversation, perform the complete GitHub closeout described below **before replying**. This trigger requires action, not merely a polite acknowledgment, and takes precedence over a generic brief-answer/stop response.
+
+Required, in order: (1) audit the conversation for pending changes, rules, bugs, version/status, results and next steps; (2) write missing details into the project's canonical `CONTINUITY.md` and relevant rules; (3) fetch the files back from GitHub and verify the commit and content; (4) reply with a genuinely concise **TLDR**, a real commit or updated file link, and a **ready-to-copy continuation prompt** identifying the project and the GitHub rules/continuity files to read first. If the GitHub write or verification fails, **explicitly state that the handoff is incomplete** and give a recovery prompt; never say only "chat closed", "this chat is closed", or falsely claim the handoff succeeded.
+
+This is a global requirement for every `karpuzikov` software repository and every new conversation, **even when the phrase arrives after an unfinished implementation or a prior attempt already reported completion**. An unfinished build stays `Under construction ⚠️`; do not launch or publish unrelated code in lieu of handoff. If the documentation is already complete, still verify it and provide the continuation prompt.
+
 ## Universal compliance gate - release blocking
 
 This section is a meta-rule over **every rule in this file, every project-specific rule, and every permanent software rule the user adds later**.
@@ -16,6 +24,14 @@ Unless a rule is explicitly labeled as optional/recommendation, it is a **releas
 - Any newly created or newly adopted software repository must receive the current global rule file before its first modification or release.
 - A stale, shortened, summarized, or selectively copied rule file is a compliance failure. Project-specific rules may add stricter requirements in separate rule files, but may not replace or weaken the complete global baseline.
 - Before software work begins in any repository, verify that its mirrored `SOFTWARE_RULES.md` matches the canonical file exactly.
+
+### Canonical mandatory UI/UX test gate
+
+- The file `UI_UX_RULES.md` is mandatory and must be mirrored **verbatim** from `karpuzikov/userscripts` to every `karpuzikov` software repository, alongside this `SOFTWARE_RULES.md`. Read both before editing a user-facing interface.
+- **Before implementation**, document the unique purpose, action, persistent side effects, keyboard and pointer interactions, visual states, dimensions and icons for **every control** in the affected workflow. Reuse a shared design system. Do not create duplicate actions, inconsistent buttons, needless padding, missing icons or broken hover states.
+- **After implementation**, launch the real application on the target GUI platform, inspect **actual screenshots**, test hover, click, selection, keyboard, resize, scroll, dialogs, cancellation and errors, and compare references side by side. Fix discrepancies before declaring completion.
+- Unit tests, syntax checking, fake widgets and static inspection **do not count as real visual/interaction acceptance**. Unavailable target runtime, or any unexecuted required test, must be recorded as **NOT RUN** in `CONTINUITY.md` and block any completed/stable claim; status remains `Under construction ⚠️`.
+- For new Python GUIs default to PySide6. **Never use Tkinter.**
 
 ### Mandatory preflight
 
@@ -64,8 +80,10 @@ When the user sends this phrase:
 - Save any missing information to GitHub immediately, updating the product's `CONTINUITY.md` and any other authoritative project/global documentation that must stay synchronized.
 - Do not rely on chat memory as the handoff mechanism. GitHub documentation must be sufficient for a fresh conversation to continue correctly.
 - If the current code/documentation checkpoint is incomplete or inconsistent, fix the documentation before considering the handoff complete.
-- After the GitHub handoff is complete, reply with a ready-to-copy continuation message for the next chat.
-- The continuation message should identify the software/project and instruct the next chat to read the latest `SOFTWARE_RULES.md`, project rules, and that product's `CONTINUITY.md` from GitHub before continuing from the current state.
+- Read back the GitHub files after writing; verify the accepted commit and that the checkpoint contains all required details. Never claim the handoff completed on an unverified or failed write.
+- After the verified GitHub handoff, reply with a concise TLDR, commit/file link, and a ready-to-copy continuation message for the next chat. Do not replace these with "chat closed" or other acknowledgments.
+- The continuation message must state project/repository, exact version and status, outstanding task/bug, and instruct the next chat to read the latest `SOFTWARE_RULES.md`, project rules, and product `CONTINUITY.md` from GitHub first.
+- If any GitHub update or verification cannot be completed, mark **HANDOFF INCOMPLETE** and explain what could not be saved or verified rather than falsely closing.
 - This command does not by itself mark software as tested/stable or remove `Under construction ⚠️`; normal testing/status rules still apply.
 
 ### Mandatory whole-product compliance audit
@@ -305,11 +323,12 @@ This is a blocking repository rule.
 ## Versioned filenames for GitHub software downloads - mandatory
 
 - Every user-downloadable software build, executable, script, installer, or archive must have its **actual version in its physical filename**. GitHub's raw download basename and release asset filename must make the saved file's version immediately obvious.
-- Preserve each project's established naming convention. When the project has no stricter convention, use `<ProductName> v<MAJOR.MINOR.PATCH>.<extension>` (for example, `ArchiveMedia v6.0.12.bat`). Product names must remain intact; never substitute generic basenames like `ArchiveMedia.bat` for the distributed download.
-- The filename version must match the program's version and the version displayed in repository listings. `Under construction ⚠️` is a separate status and must never replace or hide the version.
-- For every version change, publish a newly versioned download filename and update all links, download badges, readmes, release assets, and documented run commands. Verify that download links point to a real file and that the browser/download filename contains the correct version.
-- Stable *internal* source filenames, package metadata and updater endpoints may remain unchanged when renaming would break integrations. In particular, preserve Tampermonkey `.user.js` identity and `@updateURL`/`@downloadURL` stability; use separately named versioned downloadable artifacts where applicable without interfering with native update behavior.
-- Apply this rule to every existing and future software project under `karpuzikov`; bring existing unversioned user-facing download files into compliance as each project is updated. Never present an unversioned file as the current downloadable build.
+- **GitHub lexicographic sorting - global requirement (2026-10-14, corrected):** For all newly published *versioned downloadable filenames*, format the MINOR and PATCH numeric components with a **minimum of two decimal digits**, never three-digit padding by default. Use `<ProductName> v<MAJOR>.<MINOR:02>.<PATCH:02>.<extension>`: for example `Music Collection Cleaner v0.05.20.pyw`, `Music Collection Cleaner v0.05.01.pyw`, `ArchiveMedia v6.00.13.bat`, and `SC2 Bridge v0.02.04.pyw`. A product already standardized on two-digit MAJOR padding may instead use names such as `v00.05.01`. **Keep major-component width consistent within each product/version series:** never mix `v0.05.20` and `v00.05.01` in one product's sorted series because lexicographic order then breaks. Any extra fourth component follows the same minimum two-digit padding. Components >=100 must not be truncated; before crossing a fixed-width boundary, coordinate a wider, consistent filename convention for that product. Product name must stay intact; no generic basenames.
+- **Separate file sorting from the software's semantic version.** Filename `v0.05.20` (or project-consistent `v00.05.20`) represents exactly software version `0.5.20` numerically. Do not add leading zeros to SemVer tags, executable version resources, Python/JS package versions, user-visible app versions, `APP_VERSION`, `@version`, or dependency/updater comparisons. These continue to use normal version formatting; numeric components must match the file's padded version. Never bump a software version solely to pad a filename, and never represent filename padding as a different software version.
+- For every new version, publish a sorting-safe versioned download name, update current-release links/badges/readmes/documented launch commands, and verify the actual GitHub filename and its numeric equivalence to the program version. Repository file-tree listings for a single product with consistently padded version components must sort in numeric version order.
+- **Historical migration approved by the user (2026-10-14):** Existing historical downloadable source filenames MUST also use the two-digit MINOR/PATCH convention, not only newly released versions. Migrate default-branch historical versioned application/artifact snapshots, update current in-repository filenames, test paths, READMEs, and continuity links, and confirm that Git blob contents/semantic versions are unchanged. Previously shared **unpadded raw/main links may break**; keep historical commit-pinned source accessible and record the compatibility tradeoff transparently. Do not leave duplicate unpadded files in the current Git tree merely to keep old raw/main links, since doing so defeats sorted file listings. Preserve unversioned stable source/updater endpoints (especially Tampermonkey), vendor/library filenames, workflow filenames and unversioned package identities; renaming or repackaging those requires separate compatibility review. GitHub Releases assets require their own migration and verification. If access is unavailable, record what could not be migrated. Do not modify GitHub Actions workflow files as part of a filename sort.
+- Stable *internal* source filenames, package metadata and updater endpoints may remain unchanged when renaming would break integrations. In particular preserve Tampermonkey stable `.user.js` install names, `@name`, `@namespace`, `@version`, `@updateURL`, `@downloadURL` and .meta.js manifests. Do **not** create duplicate installable userscripts merely to force sorting; the padded name applies to separately distributed versioned archives/assets only.
+- `Under construction ⚠️` remains a separate status, never a version. The repository's **current version and status** must remain accurate. Enforce this lexical-order rule in every existing or newly adopted `karpuzikov` software repository before publishing new versioned artifacts; a nonconforming *new* filename is a release-blocking defect. Do not modify GitHub Actions workflows to implement checks.
 
 ## GitHub development status
 
