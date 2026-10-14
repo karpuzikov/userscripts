@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MusicBrainz - Beatport Catalog Number Finder
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      0.1.1
+// @version      0.1.2
 // @description  Find missing digital-release catalog numbers on Beatport and review safe MusicBrainz edits.
 // @author       karpuzikov
 // @license      MIT
@@ -9,9 +9,13 @@
 // @match        https://beta.musicbrainz.org/artist/*
 // @match        https://musicbrainz.org/release/*/edit*
 // @match        https://beta.musicbrainz.org/release/*/edit*
+// @match        https://www.beatport.com/*
 // @grant        GM_getValue
 // @grant        GM_setValue
 // @grant        GM_xmlhttpRequest
+// @grant        GM_openInTab
+// @grant        GM_addValueChangeListener
+// @grant        GM_removeValueChangeListener
 // @connect      www.beatport.com
 // @connect      beatport.com
 // @connect      musicbrainz.org
@@ -27,6 +31,8 @@
     const NAME = 'Beatport catalog numbers';
     const SCRIPT_URL = 'https://github.com/karpuzikov/userscripts/blob/main/musicbrainz-tools/beatport-catalog-number-finder/Beatport_Catalog_Number_Finder.user.js';
     const KEY = 'karpuzikov:beatport-catno:pending:v1';
+    const BRIDGE = 'karpuzikov:beatport-catno:browser-bridge:v1';
+    const IS_BEATPORT = location.hostname === 'www.beatport.com';
     const UUID = /^[a-f\d]{8}-(?:[a-f\d]{4}-){3}[a-f\d]{12}$/i;
     const ARTIST = location.pathname.match(/^\/artist\/([a-f\d-]{36})(?:\/|$)/i);
     const EDIT = location.pathname.match(/^\/release\/([a-f\d-]{36})\/edit\/?$/i);
@@ -44,7 +50,7 @@
     const metadataCache = new Map();
     const searchCache = new Map();
     let lastMbRequest = 0;
-    let lastBeatportRequest = 0;
+
     let run = null;
 
     function parseDelay(value) {
@@ -80,27 +86,209 @@
         }
     }
 
-    async function beatportText(url, state) {
-        if (state?.cancelled) throw cancelledError();
-        await sleepCancellable(Math.max(0, lastBeatportRequest + 350 - Date.now()), state);
-        lastBeatportRequest = Date.now();
-        return new Promise((resolve, reject) => {
-            const handle = GM_xmlhttpRequest({
-                method: 'GET', url, timeout: 20000, responseType: 'text',
-                headers: {Accept: 'text/html,application/xhtml+xml'},
-                onload: response => {
-                    if (state?.cancelled) return reject(cancelledError());
-                    if (response.status < 200 || response.status >= 300) {
-                        return reject(new Error(`Beatport HTTP ${response.status} (${url})`));
-                    }
-                    resolve(response.responseText || String(response.response || ''));
-                },
-                onerror: () => reject(new Error('Beatport request failed')),
-                ontimeout: () => reject(new Error('Beatport request timed out')),
-                onabort: () => reject(cancelledError()),
-            });
-            if (state) state.activeRequest = handle;
+    // Browser origin bridge: using Beatport's own loaded web page means we do not
+    // mistake the public search box for a UPC lookup or issue blocked GM cross-site GETs.
+    // ONE normal Beatport browser tab is opened on explicit user scan and closed afterward.
+    function bridgeId() {
+        return String(Date.now()) + '-' + Math.random().toString(36).slice(2);
+    }
+
+    function bridgeKey(session, field) {
+        return BRIDGE + ':' + session + ':' + field;
+    }
+
+    async function ensureBeatportTab(state, progress) {
+        if (state.bridgeSession) return;
+        const session = bridgeId();
+        state.bridgeSession = session;
+        progress('Opening Beatport browser tab to read release metadata...');
+        state.bridgeTab = GM_openInTab('https://www.beatport.com/?bpcnf_worker=' + encodeURIComponent(session), {
+            active: false, insert: true, setParent: true,
         });
+        const start = Date.now();
+        while (Date.now() - start < 25000) {
+            if (state.cancelled) throw cancelledError();
+            const ready = GM_getValue(bridgeKey(session, 'ready'), null);
+            if (ready?.session === session && ready.timestamp >= start) return;
+            await sleepCancellable(300, state);
+        }
+        throw new Error('Beatport browser tab did not start. Check whether Beatport opened and allows access in your browser.');
+    }
+
+    async function beatportTask(kind, value, state) {
+        if (state.cancelled) throw cancelledError();
+        if (!state.bridgeSession) throw new Error('Beatport browser tab is not ready');
+        const session = state.bridgeSession;
+        const requestKey = bridgeKey(session, 'request');
+        const replyKey = bridgeKey(session, 'reply');
+        const requestId = bridgeId();
+        return new Promise((resolve, reject) => {
+            let settled = false;
+            let listener = null;
+            let timer = null;
+            function finish(error, result) {
+                if (settled) return;
+                settled = true;
+                if (listener !== null) GM_removeValueChangeListener(listener);
+                if (timer !== null) clearTimeout(timer);
+                if (state.activeRequest?.id === requestId) state.activeRequest = null;
+                if (error) reject(error); else resolve(result);
+            }
+            listener = GM_addValueChangeListener(replyKey, (_key, _old, reply) => {
+                if (!reply || reply.requestId !== requestId) return;
+                finish(reply.error ? new Error(reply.error) : null, reply.result);
+            });
+            timer = setTimeout(() => finish(new Error('Beatport browser lookup timed out. Check the Beatport tab.')), 30000);
+            state.activeRequest = {id: requestId, abort: () => finish(cancelledError())};
+            GM_setValue(requestKey, {requestId, kind, value, timestamp: Date.now()});
+        });
+    }
+
+    function releaseDetailsFromProps(data, expectedId = '') {
+        // Same release payload and ID check as the existing Beatport -> MusicBrainz Importer.
+        const release = data?.props?.pageProps?.release || data?.pageProps?.release || data?.release;
+        if (!release?.id || (expectedId && String(release.id) !== String(expectedId))) return null;
+        return {
+            id: String(release.id),
+            upc: plain(release.upc),
+            catalog: plain(release.catalog_number),
+            label: plain(typeof release.label === 'string' ? release.label : release.label?.name),
+            title: plain(release.name || release.title),
+            url: beatportUrl(`https://www.beatport.com/release/${release.slug || 'release'}/${release.id}`),
+        };
+    }
+
+    async function browserBeatportRequest(kind, value, signal) {
+        let url;
+        if (kind === 'release') {
+            url = beatportUrl(value);
+            if (!url) throw new Error('Invalid Beatport release URL');
+            // The importer obtains this same Next.js JSON from the build ID on the
+            // Beatport page. If available, use structured JSON without HTML scraping.
+            const embedded = document.getElementById('__NEXT_DATA__');
+            let next;
+            try { next = JSON.parse(embedded?.textContent || '{}'); } catch { next = {}; }
+            const id = url.match(/\/(\d+)$/)?.[1];
+            const match = new URL(url).pathname.match(/^\/release\/([^/]+)\/(\d+)$/);
+            if (next.buildId && match) {
+                const jsonUrl = `https://www.beatport.com/_next/data/${encodeURIComponent(next.buildId)}/en/release/${encodeURIComponent(match[1])}/${encodeURIComponent(match[2])}.json?id=${encodeURIComponent(match[2])}`;
+                try {
+                    const response = await fetch(jsonUrl, {credentials: 'same-origin', signal});
+                    if (response.ok) {
+                        const json = await response.json();
+                        const item = releaseDetailsFromProps(json, id);
+                        if (item) {item.url = url; return item;}
+                    }
+                    if (response.status === 403) throw new Error('Beatport HTTP 403 on release JSON');
+                } catch (error) {
+                    if (error.name === 'AbortError') throw error;
+                    // A changed Next.js build, route, or inaccessible JSON can still
+                    // leave the normal browser-rendered release HTML available.
+                }
+            }
+        } else if (kind === 'search') {
+            // Search by RELEASE TITLE only. Beatport public search is not a UPC database.
+            const term = plain(value);
+            if (!term || /^\d{8,14}$/.test(term)) throw new Error('Beatport UPC search is not supported');
+            url = 'https://www.beatport.com/search/releases?q=' + encodeURIComponent(term);
+        } else {
+            throw new Error('Unsupported Beatport browser request');
+        }
+        const response = await fetch(url, {credentials: 'same-origin', signal, headers: {Accept: 'text/html,application/xhtml+xml'}});
+        if (!response.ok) throw new Error(`Beatport HTTP ${response.status}: ${new URL(url).pathname}`);
+        const html = await response.text();
+        if (kind === 'search') return searchReleaseLinks(html);
+        return releaseDetailsFromHtml(html, url.match(/\/(\d+)$/)?.[1]);
+    }
+
+    function browserNavigationUrl(request, session) {
+        let destination;
+        if (request.kind === 'release') destination = beatportUrl(request.value);
+        else if (request.kind === 'search' && plain(request.value) && !/^\d{8,14}$/.test(plain(request.value))) {
+            destination = 'https://www.beatport.com/search/releases?q=' + encodeURIComponent(plain(request.value));
+        }
+        if (!destination) return '';
+        const url = new URL(destination);
+        url.searchParams.set('bpcnf_worker', session);
+        url.searchParams.set('bpcnf_request', request.requestId);
+        return url.href;
+    }
+
+    async function browserLoadedPageResult(request) {
+        const current = new URL(location.href);
+        if (request.kind === 'release') {
+            const id = beatportUrl(request.value)?.match(/\/(\d+)$/)?.[1];
+            if (!id || current.pathname.match(/\/(\d+)\/?$/)?.[1] !== id) throw new Error('Beatport redirected away from requested release');
+            const node = document.getElementById('__NEXT_DATA__');
+            const parsed = JSON.parse(node?.textContent || '{}');
+            const item = releaseDetailsFromProps(parsed, id);
+            if (!item) throw new Error('Beatport release metadata missing from loaded page');
+            item.url = beatportUrl(request.value);
+            return item;
+        }
+        if (request.kind === 'search') {
+            if (current.pathname !== '/search/releases' || current.searchParams.get('q') !== plain(request.value)) {
+                throw new Error('Beatport redirected away from release-title search');
+            }
+            // Allow Beatport client-side release results time to appear.
+            await wait(1200);
+            return searchReleaseLinks(document.documentElement.outerHTML);
+        }
+        throw new Error('Unexpected Beatport browser lookup type');
+    }
+
+    function initBeatportWorker() {
+        const session = new URL(location.href).searchParams.get('bpcnf_worker');
+        if (!session || !/^[\w-]{8,100}$/.test(session)) return;
+        let busy = false;
+        let lastId = '';
+        let activeController = null;
+        const directRequestId = new URL(location.href).searchParams.get('bpcnf_request');
+        const reqKey = bridgeKey(session, 'request');
+        const replyKey = bridgeKey(session, 'reply');
+        const readyKey = bridgeKey(session, 'ready');
+        function ready() {GM_setValue(readyKey, {session, timestamp: Date.now()});}
+        async function process(request) {
+            if (!request || busy || lastId === request.requestId ||
+                Date.now() - Number(request.timestamp || 0) > 35000) return;
+            if (!/^[\w-]{8,100}$/.test(String(request.requestId))) return;
+            busy = true;
+            lastId = request.requestId;
+            activeController = new AbortController();
+            const timer = setTimeout(() => activeController?.abort(), 24000);
+            let reply;
+            let navigating = false;
+            try {
+                let result;
+                if (directRequestId === request.requestId) {
+                    // Cloudflare sometimes rejects fetch even inside an allowed browser
+                    // session. Read the real top-level page after ordinary navigation.
+                    result = await browserLoadedPageResult(request);
+                } else {
+                    result = await browserBeatportRequest(request.kind, request.value, activeController.signal);
+                }
+                reply = {requestId: request.requestId, result};
+            } catch (error) {
+                if (directRequestId !== request.requestId &&
+                    /Beatport HTTP 403/.test(String(error.message))) {
+                    const url = browserNavigationUrl(request, session);
+                    if (url) {
+                        navigating = true;
+                        location.assign(url);
+                    }
+                }
+                if (!navigating) reply = {requestId: request.requestId, error: plain(error.message)};
+            } finally {
+                clearTimeout(timer);
+                activeController = null;
+                busy = false;
+            }
+            if (reply) GM_setValue(replyKey, reply);
+        }
+        GM_addValueChangeListener(reqKey, (_key, _old, request) => {void process(request);});
+        ready();
+        const pending = GM_getValue(reqKey, null);
+        if (!directRequestId || pending?.requestId === directRequestId) void process(pending);
     }
 
     function beatportUrl(value) {
@@ -116,18 +304,7 @@
         const doc = new DOMParser().parseFromString(html, 'text/html');
         const node = doc.querySelector('script#__NEXT_DATA__');
         if (!node?.textContent) return null;
-        let data;
-        try { data = JSON.parse(node.textContent); } catch { return null; }
-        const release = data?.props?.pageProps?.release || data?.pageProps?.release;
-        if (!release?.id || (expectedId && String(release.id) !== String(expectedId))) return null;
-        return {
-            id: String(release.id),
-            upc: plain(release.upc),
-            catalog: plain(release.catalog_number),
-            label: plain(typeof release.label === 'string' ? release.label : release.label?.name),
-            title: plain(release.name || release.title),
-            url: beatportUrl(`https://www.beatport.com/release/${release.slug || 'release'}/${release.id}`),
-        };
+        try {return releaseDetailsFromProps(JSON.parse(node.textContent), expectedId);} catch {return null;}
     }
 
     function searchReleaseLinks(html) {
@@ -150,8 +327,8 @@
         if (metadataCache.has(id)) return metadataCache.get(id);
         let result = null;
         try {
-            const html = await beatportText(clean, state);
-            result = releaseDetailsFromHtml(html, id);
+            result = await beatportTask('release', clean, state);
+            if (result && String(result.id) !== String(id)) result = null;
             if (result) result.url = clean;
         } catch (err) {
             if (state.cancelled) throw err;
@@ -207,11 +384,9 @@
         if (confirmed.length === 1) return {status: 'match', item: confirmed[0], evidence: 'Beatport link + verified UPC'};
         if (confirmed.length > 1) return {status: 'ambiguous', reason: 'Multiple linked Beatport releases have this UPC'};
 
-        const searchTerms = [plain(wanted)];
-        const simplified = normalizeBarcode(wanted);
-        if (simplified && simplified !== wanted) searchTerms.push(simplified);
-        // A title search is discovery-only; every candidate still needs verified UPC.
-        searchTerms.push(plain(release.title));
+        // Beatport's public release search does NOT search by UPC. Discover by
+        // release title, then verify each candidate's actual UPC from Beatport.
+        const searchTerms = [plain(release.title)].filter(Boolean);
         const candidates = new Map();
         for (const term of [...new Set(searchTerms)]) {
             if (!term) continue;
@@ -221,8 +396,7 @@
             if (searchCache.has(term)) links = searchCache.get(term);
             else {
                 try {
-                    const html = await beatportText(`https://www.beatport.com/search/releases?q=${encodeURIComponent(term)}`, state);
-                    links = searchReleaseLinks(html);
+                    links = await beatportTask('search', term, state);
                 } catch (err) {
                     if (state.cancelled) throw err;
                     state.errors.push(plain(err.message));
@@ -231,12 +405,12 @@
                 searchCache.set(term, links);
             }
             // Limit remote page requests; never infer a UPC from a search-result title.
-            for (const link of links.slice(0, term === release.title ? 20 : 35)) {
+            for (const link of links.slice(0, 25)) {
                 const item = await getBeatportRelease(link, state);
                 if (item && sameBarcode(item.upc, wanted)) candidates.set(item.id, item);
                 if (candidates.size > 1) break;
             }
-            if (candidates.size) break;
+            // Check all discovered hits before declaring an unambiguous UPC match.
         }
         if (candidates.size > 1) return {status: 'ambiguous', reason: 'Multiple Beatport releases share this UPC'};
         if (candidates.size === 1) return {status: 'match', item: [...candidates.values()][0], evidence: 'Exact verified UPC'};
@@ -323,10 +497,10 @@
         close.setAttribute('aria-label', 'Hide Beatport catalog number finder');
         head.append(close);
         const main = element('main');
-        const intro = element('div', {className: 'bpcnf-small'}, 'Scans digital releases with a barcode or Beatport link and missing catalog number. Prepares edits for review; never submits.');
+        const intro = element('div', {className: 'bpcnf-small'}, 'Finds digital releases missing catalog numbers. Opens one Beatport browser tab; searches release titles, then verifies UPC from Beatport metadata or checks direct Beatport links. It closes the tab afterward. Reviews only; never submits.');
         intro.style.marginBottom = '10px';
         const controls = element('div', {className: 'bpcnf-controls'});
-        const start = button('▶ Scan artist releases', () => startScan(ui), 'bpcnf-primary');
+        const start = button('▶ Scan (open Beatport tab)', () => startScan(ui), 'bpcnf-primary');
         const stop = button('■ Stop scan', () => {if (run) {run.cancelled = true;run.activeRequest?.abort?.();}}, '');
         stop.disabled = true;
         controls.append(start, stop);
@@ -389,7 +563,7 @@
 
     async function startScan(ui) {
         if (run) return;
-        const state = {cancelled: false, errors: [], activeRequest: null};
+        const state = {cancelled: false, errors: [], activeRequest: null, bridgeTab: null, bridgeSession: ''};
         run = state;
         metadataCache.clear(); searchCache.clear();
         ui.start.disabled = true; ui.stop.disabled = false;
@@ -408,6 +582,7 @@
             });
             stats.digital = digital.length;
             stats.eligible = candidates.length;
+            if (candidates.length) await ensureBeatportTab(state, progress);
             const staged = new Set();
             for (let i = 0; i < candidates.length; i++) {
                 if (state.cancelled) throw cancelledError();
@@ -433,6 +608,7 @@
             ui.stop.disabled = true;
             ui.errors.textContent = [...new Set(state.errors)].slice(0, 30).join('\n') || 'No network errors. Beatport search may still return no public results; those are not treated as matches.';
             if (state.errors.length) ui.detail.open = true;
+            try {state.activeRequest?.abort?.(); state.bridgeTab?.close?.();} catch {}
             run = null;
         }
     }
@@ -520,6 +696,10 @@
         document.body.append(panel);
     }
 
+    if (IS_BEATPORT) {
+        if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initBeatportWorker, {once: true});
+        else initBeatportWorker();
+    }
     if (ARTIST && UUID.test(ARTIST[1])) {
         if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', createPanel, {once: true});
         else createPanel();
@@ -531,6 +711,6 @@
 
     // Test entry point is disabled in production unless explicitly enabled by a test harness.
     if (globalThis.__BPCNF_TEST__ === true) {
-        globalThis.__BPCNF_TEST_HOOKS__ = {sameBarcode, normalizeCatalog, beatportUrl, releaseDetailsFromHtml, searchReleaseLinks, isDigital, catalogs, releaseLinks, reviewFinding, proposedEditNote};
+        globalThis.__BPCNF_TEST_HOOKS__ = {sameBarcode, normalizeCatalog, beatportUrl, releaseDetailsFromHtml, searchReleaseLinks, isDigital, catalogs, releaseLinks, reviewFinding, proposedEditNote, releaseDetailsFromProps, browserBeatportRequest, bridgeKey, browserNavigationUrl};
     }
 })();
