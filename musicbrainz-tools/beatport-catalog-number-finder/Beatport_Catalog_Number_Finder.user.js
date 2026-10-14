@@ -227,7 +227,7 @@
             return item;
         }
         if (request.kind === 'search') {
-            if (current.pathname !== '/search/releases' || current.searchParams.get('q') !== plain(request.value)) {
+            if (!/^\/(?:[a-z]{2}(?:-[a-z]{2})?\/)?search\/releases\/?$/i.test(current.pathname) || current.searchParams.get('q') !== plain(request.value)) {
                 throw new Error('Beatport redirected away from release-title search');
             }
             // Allow Beatport client-side release results time to appear.
@@ -267,10 +267,12 @@
                 } else {
                     result = await browserBeatportRequest(request.kind, request.value, activeController.signal);
                 }
+                if (request.kind === 'search' && !result?.length && directRequestId !== request.requestId) throw new Error('Beatport returned no search result links');
+                if (request.kind === 'release' && !result && directRequestId !== request.requestId) throw new Error('Beatport release metadata missing from request');
                 reply = {requestId: request.requestId, result};
             } catch (error) {
                 if (directRequestId !== request.requestId &&
-                    /Beatport HTTP 403/.test(String(error.message))) {
+                    /Beatport HTTP 403|no search result links|release metadata missing from request/.test(String(error.message))) {
                     const url = browserNavigationUrl(request, session);
                     if (url) {
                         navigating = true;
