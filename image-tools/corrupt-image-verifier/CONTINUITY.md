@@ -5,8 +5,8 @@
 - **Internal build:** 1.1.7-NATIVE-TEST
 - **Status:** **1.1.7 - Under construction ⚠️**
 - **Branch:** main of karpuzikov/userscripts
-- **Source:** image-tools/corrupt-image-verifier/Corrupt Image Verifier v1.1.7 NATIVE TEST.pyw
-- **Download:** https://raw.githubusercontent.com/karpuzikov/userscripts/main/image-tools/corrupt-image-verifier/Corrupt%20Image%20Verifier%20v1.1.7%20NATIVE%20TEST.pyw
+- **Source:** image-tools/corrupt-image-verifier/Corrupt Image Verifier v1.01.07 NATIVE TEST.pyw
+- **Download:** https://raw.githubusercontent.com/karpuzikov/userscripts/main/image-tools/corrupt-image-verifier/Corrupt%20Image%20Verifier%20v1.01.07%20NATIVE%20TEST.pyw
 - v1.1.4 and v1.0.2 remain as historical sources. Keep README linked to the current versioned source.
 
 ## Purpose and architecture

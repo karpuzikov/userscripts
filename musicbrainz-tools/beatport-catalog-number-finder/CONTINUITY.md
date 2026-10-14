@@ -5,7 +5,7 @@
 - Version: **0.1.3 - Under construction ⚠️** (2026-10-14).
 - Repository: `karpuzikov/userscripts`, branch `main`. Separate Tampermonkey script; **do not merge Beatport functionality into MusicBrainz ToolBox** or modify the existing Beatport -> MusicBrainz Importer.
 - Canonical source: `musicbrainz-tools/beatport-catalog-number-finder/Beatport_Catalog_Number_Finder.user.js`.
-- Tampermonkey update metadata: `musicbrainz-tools/beatport-catalog-number-finder/Beatport_Catalog_Number_Finder.meta.js`; versioned manual artifact: `musicbrainz-tools/beatport-catalog-number-finder/Beatport_Catalog_Number_Finder_v0.1.3.user.js`.
+- Tampermonkey update metadata: `musicbrainz-tools/beatport-catalog-number-finder/Beatport_Catalog_Number_Finder.meta.js`; versioned manual artifact: `musicbrainz-tools/beatport-catalog-number-finder/Beatport_Catalog_Number_Finder_v0.01.03.user.js`.
 - Identity `MusicBrainz - Beatport Catalog Number Finder` / namespace `https://github.com/karpuzikov/userscripts`. Native Tampermonkey update only; immutable commit-pinned versioned README installer; no custom update notices.
 - Mandatory rules: repository root `SOFTWARE_RULES.md`, `UI_UX_RULES.md`, `UI_UX_ACCEPTANCE.md`; UXDT guidelines. No project-specific RULES.md. Do not add GitHub Actions.
 - Dependencies: Tampermonkey, MusicBrainz Web Service, public Beatport pages. No local files, build system, settings folder or credentials. Temporary cross-tab proposals use `GM_setValue`, key `karpuzikov:beatport-catno:pending:v1`, expire after 2 hours; scan caches are in memory.
