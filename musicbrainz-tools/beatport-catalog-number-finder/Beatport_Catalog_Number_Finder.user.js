@@ -535,7 +535,7 @@
         style.id = 'bpcnf-style';
         style.textContent = `
           #bpcnf-panel { position:fixed; right:16px; bottom:16px; z-index:2147483641; width:min(570px,calc(100vw - 32px)); max-height:min(74vh,680px); display:flex; flex-direction:column; color:#e9edf4; background:#161c26; border:1px solid #566177; box-shadow:0 16px 55px #000b; border-radius:10px; font:13px/1.45 system-ui,Segoe UI,sans-serif; }
-          #bpcnf-panel * {box-sizing:border-box;} #bpcnf-panel[hidden] {display:none;}
+          #bpcnf-panel * {box-sizing:border-box;} #bpcnf-panel[hidden], #bpcnf-panel [hidden] {display:none!important;}
           #bpcnf-panel header {display:flex; gap:8px; align-items:center; padding:11px 13px; border-bottom:1px solid #364357;}
           #bpcnf-panel header strong {font-size:14px;flex:1;}
           #bpcnf-panel main {padding:12px;overflow:auto;scrollbar-color:#708099 #161c26;}
@@ -764,16 +764,20 @@
     function updateBulkButton(ui) {
         const count=ui.entries.filter(entry=>!entry.opened).length;
         const hasAny=ui.entries.length>0;
-        ui.bulk.textContent='↗ Open all edits ('+count+')';
-        // Previous versions disabled this button while scanning, even though
-        // the verified results were already available. Keep it independent.
-        ui.bulk.disabled=count===0;
-        ui.bulk.title=count
-            ? 'Open '+count+' saved MusicBrainz edits now (no scan required).'
-            : 'No unopened edits in the saved review queue.';
+        const reopening=hasAny && count===0;
+        ui.bulk.textContent=reopening
+            ? '↗ Reopen all edits ('+ui.entries.length+')'
+            : '↗ Open all edits ('+count+')';
+        // Verified results remain actionable even during a new scan.
+        ui.bulk.disabled=!hasAny;
+        ui.bulk.title=reopening
+            ? 'Reopen all saved review edits (confirmation required).'
+            : count
+                ? 'Open '+count+' saved MusicBrainz edits now (no scan required).'
+                : 'No verified edits to open.';
         ui.clear.hidden=!hasAny;
         ui.clear.disabled=!!run;
-        ui.start.textContent=hasAny?'↻ Rescan (keep results)':'▶ Scan (open Beatport tab)';
+        ui.start.textContent=hasAny?'↻ Rescan (saved results stay)':'▶ Scan (open Beatport tab)';
         ui.start.classList.toggle('bpcnf-primary',!hasAny);
         ui.bulk.classList.toggle('bpcnf-primary',hasAny);
         if (hasAny) {
@@ -786,10 +790,13 @@
     }
 
     function openAllEdits(ui) {
-        const entries = ui.entries.filter(entry => !entry.opened);
+        const unopened=ui.entries.filter(entry=>!entry.opened);
+        const reopening=!unopened.length && ui.entries.length>0;
+        const entries=reopening ? ui.entries : unopened;
         if (!entries.length) return;
-        if (entries.length > 10 && !window.confirm(
-            'Open ' + entries.length + ' MusicBrainz review edits in background tabs? No edits will be submitted.'
+        if ((reopening || entries.length>10) && !window.confirm(
+            (reopening?'Reopen all ':'Open ')+entries.length+
+            ' saved MusicBrainz review edits in background tabs? No edits will be submitted.'
         )) return;
         const pending = entries.map(entry =>
             ({entry, proposal: prepareEdit(entry.release, entry.item, entry.evidence)}));
