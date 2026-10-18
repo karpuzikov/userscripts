@@ -1,9 +1,9 @@
-# Discography Merge - Continuity
+# Discography Merge - Retired Standalone Continuity
 
 ## Project and status
 - Product: Discography Merge, a Tampermonkey helper for RuTracker discography posts.
 - Repository: `karpuzikov/userscripts`, active branch `main`.
-- Version: **0.1.1 - Under construction ⚠️** (not yet accepted in a real RuTracker + Tampermonkey browser session).
+- Version: **0.1.2 - Retired no-op**. This old userscript must no longer inject its own UI; its function is integrated into RuTracker Digital Release Linker **v1.1.24 - Under construction ⚠️**.
 - Canonical stable source: `browser-tools/rutracker-discography-merge/Discography_Merge.user.js`.
 - Metadata identity: `@name Discography Merge`; `@namespace https://github.com/karpuzikov/userscripts`.
 - Required parent rules: repository-root `SOFTWARE_RULES.md`, `UI_UX_RULES.md`, and `UI_UX_ACCEPTANCE.md`.
@@ -44,3 +44,8 @@
 2. Use the user's two FastPic sessions, verify cover/catalog mapping and insertion counts, and confirm that originals remain unchanged, including all existing source/music links.
 3. Exercise Undo, deliberate manual editing after merge, duplicate second run, malformed spoilers, bad/empty FastPic URLs, network errors, keyboard navigation, and viewport resizing; capture and compare real screenshots.
 4. Fix discrepancies with a new monotonically increased `@version`, commit script, validate pinned content, then update README link in a separate commit. Do not change GitHub Actions workflows.
+
+## Retired migration (2026-10-18)
+- Historical v0.1.1 merge design/behavior above is now implemented in `browser-tools/rutracker-digital-release-linker/RuTracker_Digital_Release_Linker.user.js`. The two source-linking buttons do not change artwork; only the new-release insertion action can add cover URLs to newly inserted releases.
+- The stable `Discography_Merge.user.js` endpoint remains present as a **v0.1.2 no-op**, for native Tampermonkey update to stop the old interface. Do not publish another independently active copy or remove its update endpoint.
+- The canonical current project continuity is `browser-tools/rutracker-digital-release-linker/CONTINUITY.md`. Live browser and screenshot acceptance still NOT RUN. If the legacy UI remains, update scripts via Tampermonkey or disable the old standalone entry.
