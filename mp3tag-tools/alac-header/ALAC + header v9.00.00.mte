@@ -1,0 +1,28 @@
+$filename(ALAC_Parent_Spoilers_v9_FRESH.txt,utf-8)'[font="calibri"][size=12][align=center][size=22]' %albumartist%' | Дискография | Discography[/size]'
+'[/align][hr][align=center][img]ссылка[/img]'
+'[hr]'
+'[b]Год[/b]: 0000-0000||[b]Страна[/b]:'
+'[b]Жанр[/b]: '%genre%
+'[b]Тексты[/b]: Вшиты||[b]Сканы[/b]: нет||[b]Программа-конвертер[/b]: CueTools'
+'[b]Кодек[/b]: ALAC||[b]Битрейт[/b]: lossless||[b]Тип рипа[/b]: tracks+.cue'
+'[b]Общая продолжительность[/b]: '%_total_time2%
+'[hr]'
+$loop($regexp(%_folderpath%,'\\CD [^\\]+\\$',''),1)
+'[spoiler="'$if($eql($left(%_directory%,3),'CD '),%_parent_directory%,%_directory%)'"][font="calibri"][size=12]'
+'[img=right]ссылка[/img]'
+'[b]Носитель|Источник[/b]: CD/WEB|[url=ссылкаНаИсточник]Источник[/url][hr]'
+$loop(%_folderpath%,1)
+$if($eql($left(%_directory%,3),'CD '),'[spoiler="'%_directory%'"][font="calibri"][size=12]'$char(13)$char(10),)
+'[b]Продолжительность[/b]:' %_total_time%
+'[b]Треклист[/b]:'
+$loop(%_filename_ext%)'[b]'$num(%_counter%,2)'[/b]' %title% '('%_length%')'
+$loopend()
+$if($eql($left(%_directory%,3),'CD '),'[/size][/font][/spoiler]'$char(13)$char(10),)
+$loopend()
+'[/size][/font][/spoiler]'
+$loopend()
+'[hr]'
+'[spoiler="Скриншоты"]'
+'ссылка'
+'[/spoiler]'
+'[align=center][img]ссылка[/img][/align]'
