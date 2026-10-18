@@ -1,15 +1,19 @@
 // ==UserScript==
 // @name         RuTracker Digital Release Linker
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.1.23
-// @description  Links exact digital release pages in RuTracker BBCode, falls back from Deezer to MusicBrainz-linked Beatport releases, and adds country flag emoji.
+// @version      1.1.24
+// @description  Links verified digital release pages and merges new releases with catalog-matched FastPic covers.
 // @author       karpuzikov
 // @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/browser-tools/rutracker-digital-release-linker/RuTracker_Digital_Release_Linker.user.js
 // @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/browser-tools/rutracker-digital-release-linker/RuTracker_Digital_Release_Linker.user.js
 // @match        https://rutracker.org/forum/posting.php*
 // @grant        GM_xmlhttpRequest
+// @grant        GM_getValue
+// @grant        GM_setValue
 // @connect      api.deezer.com
 // @connect      musicbrainz.org
+// @connect      fastpic.org
+// @connect      www.fastpic.org
 // @run-at       document-idle
 // ==/UserScript==
 
@@ -1267,85 +1271,292 @@
         return results;
     }
 
+    const EXAMPLE_SESSIONS = [
+        'https://fastpic.org/session/2026/1018/WvkKAKaush.html',
+        'https://fastpic.org/session/2026/1018/pd2tFCJvyB.html'
+    ].join('\n');
+    const PLACEHOLDER = '[img=right]ссылка[/img]';
+    const TOP_SPOILER_RE = /\[spoiler(?:=(?:"([^"]*)"|'([^']*)'|([^\]]*)))?\]|\[\/spoiler\]/gi;
+    const DIRECT_IMAGE_RE = /https?:\/\/i\d+\.fastpic\.org\/big\/\d{4}\/\d{4}\/[a-f\d]{2}\/[a-f\d]{32}\.(?:png|jpe?g|webp)/gi;
+
+    function parseTopLevelSpoilers(source) {
+        const entries = [];
+        const expression = new RegExp(TOP_SPOILER_RE.source, 'gi');
+        let match, depth = 0, begin = -1, title = '';
+        while ((match = expression.exec(source)) !== null) {
+            if (match[0].toLowerCase().startsWith('[/spoiler')) {
+                if (depth < 1) throw new Error('Invalid BBCode: unexpected [/spoiler].');
+                if (--depth === 0) {
+                    entries.push({ start: begin, end: expression.lastIndex, title,
+                        body: source.slice(begin, expression.lastIndex) });
+                }
+            } else {
+                if (depth === 0) {
+                    begin = match.index;
+                    title = match[1] ?? match[2] ?? match[3] ?? '';
+                }
+                depth++;
+            }
+        }
+        if (depth !== 0) throw new Error('Invalid BBCode: an [spoiler] block is not closed.');
+        return entries;
+    }
+
+    function identity(block) {
+        const date = block.title.match(/^(\d{4}-\d{2}-\d{2})\s+-\s+/);
+        const ids = [...block.title.matchAll(/\[([^\]]+)\]/g)];
+        // A standalone CD or Screenshots spoiler is not a complete, dated release.
+        return date && ids.length ? { date: date[1], id: ids[ids.length - 1][1].trim() } : null;
+    }
+
+    function directImageUrls(raw) {
+        return [...new Set(raw.match(DIRECT_IMAGE_RE) || [])];
+    }
+
+    function imageHash(url) {
+        return url.match(/([a-f\d]{32})\.(?:png|jpe?g|webp)(?:\.html)?(?:[?#]|$)/i)?.[1]?.toLowerCase() || null;
+    }
+
+    function parseFastpicHtml(html) {
+        const dom = new DOMParser().parseFromString(html, 'text/html');
+        const options = [...dom.querySelectorAll('textarea')].map(node => directImageUrls(node.value || node.textContent));
+        // Direct links textarea carries filenames in gallery order; other textareas may repeat links.
+        const fromDirectArea = options.sort((a, b) => b.length - a.length)[0] || [];
+        const direct = fromDirectArea.length ? fromDirectArea : directImageUrls(html);
+        const byHash = new Map(direct.map(url => [imageHash(url), url]));
+        const covers = new Map();
+        for (const titleElement of dom.querySelectorAll('h3')) {
+            const filename = titleElement.textContent.trim();
+            const catalog = filename.match(/\[([^\]]+)\]\.(?:png|jpe?g|webp)$/i)?.[1]?.trim();
+            if (!catalog) continue;
+            const group = titleElement.closest('div');
+            const anchor = group?.querySelector('a[href*="/view/"]');
+            const hash = imageHash(anchor?.getAttribute('href') || '');
+            const url = hash ? byHash.get(hash) : null;
+            if (!url) continue;
+            const previous = covers.get(catalog);
+            if (previous && previous !== url) {
+                throw new Error(`Multiple different covers for catalog ${catalog}. Resolve the FastPic upload first.`);
+            }
+            covers.set(catalog, url);
+        }
+        return covers;
+    }
+
+    function mergeDiscography(original, updated, covers) {
+        const existing = parseTopLevelSpoilers(original);
+        const incoming = parseTopLevelSpoilers(updated);
+        if (!existing.length) throw new Error('No release blocks were found in the current post.');
+        if (!incoming.length) throw new Error('No [spoiler] blocks were found in the updated post.');
+
+        const originalKeys = new Set(existing.map(identity).filter(Boolean).map(item => item.id));
+        const seen = new Set(originalKeys);
+        const additions = [];
+        const eol = original.includes('\r\n') ? '\r\n' : '\n';
+        for (const block of incoming) {
+            const key = identity(block);
+            if (!key || seen.has(key.id)) continue;
+            seen.add(key.id);
+            const cover = covers.get(key.id);
+            const hasPlaceholder = block.body.includes(PLACEHOLDER);
+            // Never alter source links, metadata, title, tracklists, or tags.
+            let body = cover && hasPlaceholder
+                ? block.body.replace(PLACEHOLDER, `[img=right]${cover}[/img]`)
+                : block.body;
+            body = body.replace(/\r\n|\r|\n/g, eol);
+            additions.push({ ...key, body, title: block.title,
+                matched: Boolean(cover && hasPlaceholder), missing: !cover && hasPlaceholder });
+        }
+        additions.sort((a, b) => a.date.localeCompare(b.date));
+        if (!additions.length) return { text: original, added: 0, covers: 0, missing: [] };
+
+        const hasDatedOriginals = existing.filter(block => identity(block));
+        if (!hasDatedOriginals.length) throw new Error('No dated releases found in the original post.');
+        if (hasDatedOriginals.some((block, i) => i > 0 &&
+                identity(hasDatedOriginals[i - 1]).date > identity(block).date)) {
+            throw new Error('Original releases are not in chronological order. No changes made.');
+        }
+
+        // Append fragments from ORIGINAL verbatim, only adding new blocks at release boundaries.
+        // This preserves the entirety of each old release and all pre-existing links.
+        const segments = [];
+        let offset = 0;
+        let inserted = 0;
+        for (const block of hasDatedOriginals) {
+            segments.push(original.slice(offset, block.start));
+            while (inserted < additions.length && additions[inserted].date < identity(block).date) {
+                segments.push(additions[inserted].body, eol, eol);
+                inserted++;
+            }
+            segments.push(original.slice(block.start, block.end));
+            offset = block.end;
+        }
+        // Newer releases belong after the last existing release but before any original footer.
+        while (inserted < additions.length) {
+            segments.push(eol, eol, additions[inserted].body);
+            inserted++;
+        }
+        segments.push(original.slice(offset));
+        const merged = segments.join('');
+        const resultBlocks = parseTopLevelSpoilers(merged);
+        for (const originalBlock of existing) {
+            if (!resultBlocks.some(current => current.body === originalBlock.body)) {
+                throw new Error(`Safety check failed: original block changed (${originalBlock.title}).`);
+            }
+        }
+        if (resultBlocks.length !== existing.length + additions.length) {
+            throw new Error('Safety check failed: release count mismatch.');
+        }
+        return { text: merged, added: additions.length,
+            covers: additions.filter(item => item.matched).length,
+            missing: additions.filter(item => item.missing).map(item => item.title) };
+    }
+
+    function getSessionUrls(value) {
+        const urls = [...new Set(value.split(/[\s,]+/).map(s => s.trim()).filter(Boolean))];
+        if (!urls.length) throw new Error('Enter at least one FastPic session URL.');
+        for (const url of urls) {
+            let parsed;
+            try { parsed = new URL(url); } catch { throw new Error(`Invalid URL: ${url}`); }
+            if (parsed.protocol !== 'https:' || !['fastpic.org', 'www.fastpic.org'].includes(parsed.hostname) ||
+                !/^\/session\/\d{4}\/\d{4}\/[A-Za-z0-9]+\.html$/.test(parsed.pathname)) {
+                throw new Error(`Not a FastPic session URL: ${url}`);
+            }
+        }
+        return urls;
+    }
+
+    function fetchFastpic(url) {
+        return new Promise((resolve, reject) => {
+            GM_xmlhttpRequest({ method: 'GET', url, timeout: 30000,
+                onload: response => response.status >= 200 && response.status < 300
+                    ? resolve(response.responseText)
+                    : reject(new Error(`FastPic returned HTTP ${response.status}: ${url}`)),
+                ontimeout: () => reject(new Error(`FastPic request timed out: ${url}`)),
+                onerror: () => reject(new Error(`Cannot load FastPic session: ${url}`)) });
+        });
+    }
+
+    function fetchAllCovers(urls) {
+        return Promise.all(urls.map(fetchFastpic)).then(pages => {
+            const all = new Map();
+            pages.forEach((page, index) => {
+                const links = parseFastpicHtml(page);
+                if (!links.size) throw new Error(`No labeled covers on session page ${index + 1}.`);
+                for (const [catalog, url] of links) {
+                    const current = all.get(catalog);
+                    if (current && current !== url) {
+                        throw new Error(`Conflicting covers for catalog ${catalog}.`);
+                    }
+                    all.set(catalog, url);
+                }
+            });
+            return all;
+        });
+    }
+
+
     function createUi(textarea) {
         const wrapper = document.createElement('div');
-        wrapper.style.cssText = 'display:flex;align-items:center;gap:8px;margin:6px 0;flex-wrap:wrap;';
-
-        const button = document.createElement('input');
-        button.type = 'button';
-        button.value = 'Link digital release pages';
-        button.className = 'btn';
-        button.style.cursor = 'pointer';
-        button.title = 'Only fill missing release links.';
-
-        const forceButton = document.createElement('input');
-        forceButton.type = 'button';
-        forceButton.value = 'Force link all web releases';
-        forceButton.className = 'btn';
-        forceButton.style.cursor = 'pointer';
-        forceButton.title = 'Search Deezer for every WEB release, even those with existing sources or barcode/catalog numbers; keep unmatched sources and all artwork unchanged.';
-
-        const undoButton = document.createElement('input');
-        undoButton.type = 'button';
-        undoButton.value = 'Undo last link changes';
-        undoButton.className = 'btn';
-        undoButton.style.cssText = 'cursor:pointer;display:none;';
-
-        const status = document.createElement('span');
-        status.style.cssText = 'font-size:11px;';
-        status.setAttribute('role', 'status');
-        status.setAttribute('aria-live', 'polite');
-
-        const notFoundDetails = document.createElement('details');
-        notFoundDetails.style.cssText = 'display:none;flex-basis:100%;margin-top:2px;font-size:11px;';
-        notFoundDetails.open = true;
-
-        const notFoundSummary = document.createElement('summary');
-        notFoundSummary.style.cssText = 'cursor:pointer;font-weight:bold;';
-
-        const notFoundList = document.createElement('div');
-        notFoundList.style.cssText = 'white-space:pre-wrap;margin:4px 0 0 16px;line-height:1.4;';
-
-        notFoundDetails.append(notFoundSummary, notFoundList);
-        wrapper.append(button, forceButton, undoButton, status, notFoundDetails);
+        wrapper.id = 'rdl-tools';
+        wrapper.dataset.rutrackerDigitalReleaseLinker = '1';
+        wrapper.innerHTML = "<style>\n#rdl-tools{box-sizing:border-box;color:#eceef2;background:#202229;border:1px solid #434853;border-radius:7px;margin:6px 0;max-width:940px;font:12px/1.4 system-ui,Segoe UI,sans-serif}\n#rdl-tools *{box-sizing:border-box}\n#rdl-tools [hidden]{display:none!important}\n#rdl-tools .rdl-bar{display:flex;align-items:center;flex-wrap:wrap;gap:6px;padding:7px}\n#rdl-tools button{font:inherit;border:1px solid #555c6a;background:#343b46;color:#f3f4f6;border-radius:5px;min-height:32px;padding:5px 10px;cursor:pointer}\n#rdl-tools button:hover:not(:disabled){background:#475466}\n#rdl-tools button:focus-visible,#rdl-tools textarea:focus-visible{outline:2px solid #9ac1ff;outline-offset:2px}\n#rdl-tools button:disabled{opacity:.48;cursor:progress}\n#rdl-tools .rdl-primary{background:#315d94;border-color:#5284bf}\n#rdl-tools .rdl-primary:hover:not(:disabled){background:#3b72b5}\n#rdl-tools .rdl-current[aria-expanded=\"true\"]{background:#364962;border-color:#799ac4}\n#rdl-tools .rdl-status{min-width:0;flex:1 1 200px;overflow-wrap:anywhere}\n#rdl-tools .rdl-panel{display:grid;gap:7px;padding:4px 8px 9px;border-top:1px solid #3e434b}\n#rdl-tools .rdl-label{display:block;margin-bottom:3px;font-weight:600}\n#rdl-tools textarea{display:block;width:100%;background:#171a20;color:#f1f3f5;border:1px solid #535b67;border-radius:5px;padding:7px;font:12px/1.4 Consolas,monospace;resize:vertical}\n#rdl-tools .rdl-footer{display:flex;align-items:center;gap:8px}\n#rdl-tools details{margin:0 8px 7px;font-size:12px}\n#rdl-tools summary{cursor:pointer;font-weight:600}\n#rdl-tools .rdl-missing{white-space:pre-wrap;margin:5px 0 0 10px;max-height:180px;overflow:auto}\n#rdl-tools .rdl-error{color:#ffa39c}\n@media(max-width:600px){#rdl-tools .rdl-bar{align-items:stretch}#rdl-tools .rdl-bar button{flex:1 1 auto}#rdl-tools .rdl-status{flex-basis:100%}}\n</style>\n<div class=\"rdl-bar\">\n<button type=\"button\" class=\"rdl-normal\" title=\"Fill missing digital release links without changing artwork.\">Link digital release pages</button>\n<button type=\"button\" class=\"rdl-force\" title=\"Search Deezer for every WEB release without changing artwork.\">Force link all web releases</button>\n<button type=\"button\" class=\"rdl-current\" aria-expanded=\"false\" aria-controls=\"rdl-merge-fields\">Add new releases</button>\n<button type=\"button\" class=\"rdl-undo\" hidden>Undo</button>\n<span class=\"rdl-status\" role=\"status\" aria-live=\"polite\"></span>\n</div>\n<div id=\"rdl-merge-fields\" class=\"rdl-panel\" hidden>\n<label><span class=\"rdl-label\">Updated BBCode</span><textarea class=\"rdl-updated\" rows=\"7\" spellcheck=\"false\" placeholder=\"Paste updated discography\"></textarea></label>\n<label><span class=\"rdl-label\">FastPic session URLs</span><textarea class=\"rdl-sessions\" rows=\"2\" spellcheck=\"false\" placeholder=\"https://fastpic.org/session/...\"></textarea></label>\n<div class=\"rdl-footer\"><button type=\"button\" class=\"rdl-primary rdl-insert\">Insert new releases</button></div>\n</div>\n<details class=\"rdl-not-found\" hidden><summary class=\"rdl-not-found-summary\"></summary><div class=\"rdl-missing\"></div></details>";
         textarea.parentNode.insertBefore(wrapper, textarea);
-        return { wrapper, button, forceButton, undoButton, undoText: null,
-            status, notFoundDetails, notFoundSummary, notFoundList };
+        const get = (selector) => wrapper.querySelector(selector);
+        const ui = {
+            wrapper, button: get('.rdl-normal'), forceButton: get('.rdl-force'),
+            toggleButton: get('.rdl-current'), undoButton: get('.rdl-undo'),
+            status: get('.rdl-status'), mergePanel: get('.rdl-panel'),
+            updatedInput: get('.rdl-updated'), sessionsInput: get('.rdl-sessions'),
+            mergeButton: get('.rdl-insert'), notFoundDetails: get('.rdl-not-found'),
+            notFoundSummary: get('.rdl-not-found-summary'), notFoundList: get('.rdl-missing'),
+            undoSnapshot: null, busy: false
+        };
+        ui.sessionsInput.value = GM_getValue('discography-merge:sessions', EXAMPLE_SESSIONS);
+        ui.toggleButton.addEventListener('click', () => {
+            ui.mergePanel.hidden = !ui.mergePanel.hidden;
+            ui.toggleButton.setAttribute('aria-expanded', String(!ui.mergePanel.hidden));
+            if (!ui.mergePanel.hidden) ui.updatedInput.focus();
+        });
+        ui.sessionsInput.addEventListener('change', () =>
+            GM_setValue('discography-merge:sessions', ui.sessionsInput.value));
+        return ui;
     }
 
     function setStatus(statusNode, text) {
         statusNode.textContent = text;
     }
 
-    function showNotFound(ui, titles) {
+    function showNotFound(ui, titles, label = 'Not found') {
         if (!titles.length) {
-            ui.notFoundDetails.style.display = 'none';
+            ui.notFoundDetails.hidden = true;
             ui.notFoundSummary.textContent = '';
             ui.notFoundList.textContent = '';
             return;
         }
 
-        ui.notFoundSummary.textContent = `Not found (${titles.length})`;
+        ui.notFoundSummary.textContent = `${label} (${titles.length})`;
         ui.notFoundList.textContent = titles.map((title) => `- ${title}`).join('\n');
-        ui.notFoundDetails.style.display = 'block';
+        ui.notFoundDetails.hidden = false;
         ui.notFoundDetails.open = true;
     }
 
     function writePost(textarea, content) {
-        textarea.value = content;
+        const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set;
+        if (setter) setter.call(textarea, content);
+        else textarea.value = content;
         textarea.dispatchEvent(new Event('input', { bubbles: true }));
         textarea.dispatchEvent(new Event('change', { bubbles: true }));
     }
 
     function applyPostChange(textarea, ui, previous, next) {
         if (previous === next) return;
-        ui.undoText = previous;
-        if (ui.undoButton) ui.undoButton.style.display = '';
+        ui.undoSnapshot = { before: previous, after: next };
+        ui.undoButton.hidden = false;
         writePost(textarea, next);
     }
 
+    function setBusy(ui, state) {
+        ui.busy = state;
+        for (const control of [ui.button, ui.forceButton, ui.mergeButton, ui.undoButton,
+            ui.updatedInput, ui.sessionsInput]) control.disabled = state;
+    }
+
+    async function runMerge(textarea, ui) {
+        if (ui.busy) return;
+        showNotFound(ui, []);
+        const original = textarea.value;
+        const updated = ui.updatedInput.value;
+        try {
+            if (!updated.trim()) throw new Error('Paste updated BBCode first.');
+            const sessions = ui.sessionsInput.value.trim()
+                ? getSessionUrls(ui.sessionsInput.value) : [];
+            setBusy(ui, true);
+            setStatus(ui.status, 'Loading FastPic covers...');
+            const covers = sessions.length ? await fetchAllCovers(sessions) : new Map();
+            const result = mergeDiscography(original, updated, covers);
+            if (textarea.value !== original)
+                throw new Error('The post changed during the merge. Retry.');
+            if (result.added) applyPostChange(textarea, ui, original, result.text);
+            GM_setValue('discography-merge:sessions', ui.sessionsInput.value);
+            ui.status.classList.remove('rdl-error');
+            setStatus(ui.status, result.added
+                ? 'Added ' + result.added + ' | Covers ' + result.covers +
+                    ' | Missing ' + result.missing.length
+                : 'No new releases.');
+            showNotFound(ui, result.missing, 'Missing covers');
+        } catch (error) {
+            ui.status.classList.add('rdl-error');
+            setStatus(ui.status, error.message || String(error));
+        } finally {
+            setBusy(ui, false);
+        }
+    }
+
     async function runLinker(textarea, ui, { forceWeb = false } = {}) {
+        if (ui.busy) return;
         const originalText = textarea.value;
+        ui.status.classList.remove('rdl-error');
         showNotFound(ui, []);
         const countryResult = addCountryFlags(originalText);
         const workingText = countryResult.text;
@@ -1374,6 +1585,10 @@
         }
 
         if (!candidates.length) {
+            if (textarea.value !== originalText) {
+                setStatus(ui.status, 'The post changed during scanning. Retry.');
+                return;
+            }
             applyPostChange(textarea, ui, originalText, workingText);
 
             const parts = [];
@@ -1383,9 +1598,7 @@
             return;
         }
 
-        ui.button.disabled = true;
-        if (ui.forceButton) ui.forceButton.disabled = true;
-        if (ui.undoButton) ui.undoButton.disabled = true;
+        setBusy(ui, true);
         let finished = 0;
         const stage = forceWeb ? 'Searching Deezer for WEB releases' : 'Resolving';
         setStatus(ui.status, `${stage} 0/${candidates.length}...`);
@@ -1466,6 +1679,8 @@
                 updatedText = updatedText.slice(0, replacement.start) + replacement.text + updatedText.slice(replacement.end);
             }
 
+            if (textarea.value !== originalText)
+                throw new Error('The post changed during scanning. Retry.');
             applyPostChange(textarea, ui, originalText, updatedText);
 
             const parts = [`${forceWeb ? 'Deezer links updated' : 'Linked'}: ${linked}`];
@@ -1477,33 +1692,37 @@
             if (notFoundTitles.length) parts.push(`not found: ${notFoundTitles.length}`);
             setStatus(ui.status, parts.join(' | '));
             showNotFound(ui, notFoundTitles);
+        } catch (error) {
+            ui.status.classList.add('rdl-error');
+            setStatus(ui.status, error.message || String(error));
         } finally {
-            ui.button.disabled = false;
-            if (ui.forceButton) ui.forceButton.disabled = false;
-            if (ui.undoButton) ui.undoButton.disabled = false;
+            setBusy(ui, false);
         }
     }
 
     function init() {
         const url = new URL(location.href);
         if (url.searchParams.get('mode') !== 'editpost') return;
-
         const textarea = document.querySelector('textarea[name="message"], textarea#message');
-        if (!textarea) return;
-        if (document.querySelector('[data-rutracker-digital-release-linker]')) return;
-
+        if (!textarea || document.querySelector('[data-rutracker-digital-release-linker]')) return;
         const ui = createUi(textarea);
-        ui.wrapper.dataset.rutrackerDigitalReleaseLinker = '1';
         ui.button.addEventListener('click', () => runLinker(textarea, ui));
         ui.forceButton.addEventListener('click', () => runLinker(textarea, ui, { forceWeb: true }));
+        ui.mergeButton.addEventListener('click', () => runMerge(textarea, ui));
         ui.undoButton.addEventListener('click', () => {
-            if (ui.undoText === null) return;
-            const previous = ui.undoText;
-            ui.undoText = null;
-            ui.undoButton.style.display = 'none';
+            if (!ui.undoSnapshot || ui.busy) return;
+            if (textarea.value !== ui.undoSnapshot.after) {
+                ui.status.classList.add('rdl-error');
+                setStatus(ui.status, 'The post changed since the last action. Undo cancelled.');
+                return;
+            }
+            const previous = ui.undoSnapshot.before;
+            ui.undoSnapshot = null;
+            ui.undoButton.hidden = true;
             writePost(textarea, previous);
             showNotFound(ui, []);
-            setStatus(ui.status, 'Last link changes restored.');
+            ui.status.classList.remove('rdl-error');
+            setStatus(ui.status, 'Last change undone.');
         });
     }
 
