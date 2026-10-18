@@ -1,23 +1,23 @@
 # RuTracker Digital Release Linker - Continuity
 
 ## Product
-- Version: 1.1.23 - Under construction ⚠️ (needs user testing in Tampermonkey).
+- Version: 1.1.24 - Under construction ⚠️ (needs user testing in Tampermonkey).
 - Repository: `karpuzikov/userscripts`, branch `main`.
 - Main file: `browser-tools/rutracker-digital-release-linker/RuTracker_Digital_Release_Linker.user.js`.
 - Applicable rules: repository-root `SOFTWARE_RULES.md`. No project-specific `RULES.md` currently exists.
-- Purpose: On RuTracker post editor `posting.php?mode=editpost`, find exact digital release links for discography BBCode and mark the header's country flag. Manual button; no automatic edits on page load.
+- Purpose: On RuTracker `posting.php?mode=editpost`, link verified digital release pages, optionally force Deezer links, add country flags, and insert genuinely new discography releases with catalog-matched FastPic cover artwork. Each operation is explicitly manual; no automatic edits on page load.
 
 ## Design and dependencies
-- Single Tampermonkey userscript, `@grant GM_xmlhttpRequest`, `@connect api.deezer.com` and `@connect musicbrainz.org`.
+- Single Tampermonkey userscript, `@grant GM_xmlhttpRequest`, `GM_getValue`, `GM_setValue`, `@connect api.deezer.com`, `musicbrainz.org`, `fastpic.org` and `www.fastpic.org`.
 - Native Tampermonkey updates: clean main-branch `@updateURL` and `@downloadURL`; stable script identity; no custom update checker. Do not change or move the stable userscript source filename.
-- No extra local persistent storage. Caches live in memory per page.
+- Network caches live in memory per page. The combined script stores the last FastPic session URL list in Tampermonkey storage (`discography-merge:sessions`). The updated BBCode is not persisted.
 - Existing exact UPC/catalog lookups through Deezer and MusicBrainz, MusicBrainz page fallbacks to Deezer/Beatport, and country emoji support remain operational.
 - MusicBrainz HTTP 503 must retry without an attempt limit, respecting `Retry-After` and waiting at least 5 seconds without one; rate limit MB requests and avoid unrelated network changes.
 
 ## Important contracts
 - Recognize both old source BBCode formats and unfilled `CD/WEB|[url=ссылкаНаИсточник]Источник[/url]` placeholders.
 - Convert confirmed matches to `WEB|[url=<exact page>]Deezer[/url]` or `WEB|[url=<exact page>]Beatport[/url]`. Unverified or unmatched releases retain their original data.
-- **Mandatory no-artwork invariant:** This script must NEVER fetch, inspect, normalize, replace, insert, remove, or otherwise modify artwork, image URLs, or BBCode `[img]...[/img]` tags, in either button mode, including placeholder `[img=right]ссылка[/img]`. Do not reintroduce any artwork functionality without an explicit future user request. Historical v1.1.19-1.1.21 cover edits were unauthorized and their code was removed in v1.1.22.
+- **Artwork separation:** Both original linking buttons (`Link digital release pages` and `Force link all web releases`) MUST NEVER alter `[img]...[/img]`, including placeholders. The user later explicitly requested integration of the separate Discography Merge function: only the manually triggered `Insert new releases` action may substitute catalog-matched FastPic URLs into `[img=right]ссылка[/img]` within **newly inserted** release blocks. The original blocks remain byte-for-byte unchanged. The previous rule against artwork changes still applies fully to the two source-linking modes.
 - Preserve spoiler titles, tracklists, timestamps, existing concrete source URLs, unrelated BBCode and nested-spoiler boundaries.
 - Rerunning either button must be idempotent. Report release-link counts and unresolved release titles; never report or manipulate artwork.
 - Second button exactly `Force link all web releases` searches Deezer for every spoiler whose media label is `WEB` (plain or `[url=...]WEB[/url]`) or placeholder `CD/WEB`, including already linked releases. Exclude `CD`-only entries.
@@ -72,3 +72,38 @@
 - In RuTracker editpost mode, test both 'Link digital release pages' and 'Force link all web releases' on the full Skrillex discography.
 - Verify placeholder entries, Deezer/source accuracy, and absolutely no changes to any existing or placeholder artwork BBCode.
 - Check one repeated click yields no new changes. Keep status Under construction until user confirms.
+
+
+## v1.1.24 - Unified discography release workflow (2026-10-18)
+- Absorbed the previous `browser-tools/rutracker-discography-merge/Discography_Merge.user.js` v0.1.1 functionality into this existing userscript while **preserving the RuTracker Digital Release Linker userscript identity**, stable source filename, `@updateURL` and `@downloadURL`.
+- Unified into one compact dark toolbar on RuTracker's existing BBCode edit textarea: **Link digital release pages**, **Force link all web releases**, **Add new releases** (expands the only additional fields), and one context-sensitive **Undo**, plus a single live-status line and collapsible unresolved-items list. No new pages or nested menus.
+- The third workflow accepts updated release BBCode and optional FastPic session URLs. It matches top-level dated release blocks by catalog number, inserts only catalog identifiers absent from the **original** post, sorts the additions chronologically, and preserves all existing release blocks, images, Deezer/YouTube URLs, typography, tracklists, source placeholders and unrelated BBCode byte-for-byte.
+- Only new blocks may have `[img=right]ссылка[/img]` replaced by a direct FastPic cover URL. FastPic catalog names and direct image hashes must match; unresolved/missing covers retain their placeholders. No cover action in either linking mode.
+- Shared Undo captures the exact before/after textarea strings, restores only the immediately preceding successful operation, and refuses if manual editing occurred since that operation. All long-running actions disable the action buttons and report progress/errors; editor-change guards prevent overwriting user edits during network requests.
+- The former independent Discography Merge path was updated to **v0.1.2 retired no-op** with the same `@name`, `@namespace` and native update URLs. Do not delete its update endpoint: existing installations need the no-op update to stop injecting a competing UI. Its old continuity file is retained for history.
+- Manual publishing: increment metadata `@version` for behavioral changes; commit and verify main source; README pinned install link must be updated in a separate commit. No GitHub Actions workflow changes.
+
+### Unified UI control contract
+| Control | Function, side effects, states and keyboard |
+| --- | --- |
+| Link digital release pages | Existing normal resolver; modifies verified source/flag fields, never artwork. Native button, hover/focus, disabled during work, click/Enter/Space. |
+| Force link all web releases | Existing forced Deezer resolver, scanning all WEB even when sources exist; never artwork. Native button, focus, disabled during work. |
+| Add new releases | Toggles two input fields; updates `aria-expanded`, focuses the updated BBCode on expansion. No post changes when toggled. |
+| Updated BBCode textarea | Paste input for new release blocks; no persistence; disabled during a merge. |
+| FastPic session URLs textarea | One or more HTTPS FastPic session links; optional when no artwork is available. Last text stored under userscript-specific Tampermonkey settings; invalid URLs show actionable error. |
+| Insert new releases | Merges into the editor only after validation, matching, count and original-block preservation tests; error is non-destructive. Disabled while any active job runs. |
+| Undo | Hidden until any operation changes the post; single cross-feature exact snapshot, refuses to overwrite manually edited text, then clears itself. |
+| Live status / unresolved details | Accessible polite status with counts/errors; expandable list of not-found releases or missing covers. No invented matches. |
+
+### Verification matrix
+- **PASS - source/V8 parse:** v1.1.24 complete JS parsed with `new Function` after integrating the existing resolver and merge utility.
+- **PASS - GIMS fixture regression:** user-provided original and updated BBCode yielded **58 newly added** releases, including `2016-04-29 - Zoum Zoum - Single [886445883039]` immediately following the 2015 album and carrying the exact catalog-matched FastPic URL. Every original spoiler body matched verbatim, including artwork and media links; second run inserted zero.
+- **PASS - simulated RuTracker DOM:** toolbar injected once with all three actions; new-release field toggle showed correct `aria-expanded` and focused input; successful merge kept the existing block untouched; second operation was idempotent; shared Undo restored the original exactly; manual change after merge prevented unsafe Undo.
+- **PASS - GitHub publication:** integrated source, metadata and immutable published contents fetched and verified.
+- **NOT RUN - live browser:** Real Windows RuTracker edit page, Tampermonkey Chrome behavior, screenshots and side-by-side UI acceptance; hover/keyboard/resize with real browser; normal and force Deezer searches against live API.
+- **NOT RUN - live FastPic:** Cross-origin fetch/captcha/hotlink response and real session-page parsing in Tampermonkey.
+- **NOT RUN - independent userscript migration:** Confirm that an installed standalone v0.1.1 updates automatically to no-op v0.1.2. Advise manual disable if competing legacy control remains.
+- Status stays **Under construction ⚠️** until the above native acceptance tests pass.
+
+### Next action
+Open a disposable RuTracker edit post in Chrome with Tampermonkey. Run all three actions, confirm source-only behavior and original-block integrity, inspect unified dark toolbar at small/large widths, test keyboard focus/Undo and native script updating, and compare actual screenshots against the previous RuTracker controls. Preserve provider resolution and MusicBrainz 503 retry behavior. 
