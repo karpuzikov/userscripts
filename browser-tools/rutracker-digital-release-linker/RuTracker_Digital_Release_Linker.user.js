@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         RuTracker Digital Release Linker
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.1.24
+// @version      1.1.25
 // @description  Links verified digital release pages and merges new releases with catalog-matched FastPic covers.
 // @author       karpuzikov
 // @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/browser-tools/rutracker-digital-release-linker/RuTracker_Digital_Release_Linker.user.js
@@ -1350,6 +1350,7 @@
         if (!incoming.length) throw new Error('No [spoiler] blocks were found in the updated post.');
 
         const originalKeys = new Set(existing.map(identity).filter(Boolean).map(item => item.id));
+        const incomingKeys = new Set(incoming.map(identity).filter(Boolean).map(item => item.id));
         const seen = new Set(originalKeys);
         const additions = [];
         const eol = original.includes('\r\n') ? '\r\n' : '\n';
@@ -1368,7 +1369,6 @@
                 matched: Boolean(cover && hasPlaceholder), missing: !cover && hasPlaceholder });
         }
         additions.sort((a, b) => a.date.localeCompare(b.date));
-        if (!additions.length) return { text: original, added: 0, covers: 0, missing: [] };
 
         const hasDatedOriginals = existing.filter(block => identity(block));
         if (!hasDatedOriginals.length) throw new Error('No dated releases found in the original post.');
@@ -1376,6 +1376,10 @@
                 identity(hasDatedOriginals[i - 1]).date > identity(block).date)) {
             throw new Error('Original releases are not in chronological order. No changes made.');
         }
+
+        // Missing entries are highlighted for review only, never deleted.
+        const absent = hasDatedOriginals.filter(block =>
+            !incomingKeys.has(identity(block).id)).map(block => block.title);
 
         // Append fragments from ORIGINAL verbatim, only adding new blocks at release boundaries.
         // This preserves the entirety of each old release and all pre-existing links.
@@ -1397,7 +1401,25 @@
             inserted++;
         }
         segments.push(original.slice(offset));
-        const merged = segments.join('');
+        let merged = segments.join('');
+        // Replace only the header's total-duration value, never per-release track times.
+        const durationRE = /(\[b\]Общая продолжительность\[\/b\][ \t]*:[ \t]*)(\d{1,4}:\d{2}:\d{2})/i;
+        const incomingHeader = updated.slice(0, incoming[0].start);
+        const latestDuration = incomingHeader.match(durationRE);
+        const headerLength = merged.indexOf('[spoiler') < 0
+            ? merged.length : merged.indexOf('[spoiler');
+        const originalHeader = merged.slice(0, headerLength);
+        const previousDuration = originalHeader.match(durationRE);
+        let durationChange = null;
+        if (latestDuration) {
+            if (!previousDuration) throw new Error('Original post is missing its total duration field.');
+            if (latestDuration[2] !== previousDuration[2]) {
+                const nextHeader = originalHeader.replace(durationRE,
+                    (all, prefix) => prefix + latestDuration[2]);
+                merged = nextHeader + merged.slice(headerLength);
+                durationChange = { from: previousDuration[2], to: latestDuration[2] };
+            }
+        }
         const resultBlocks = parseTopLevelSpoilers(merged);
         for (const originalBlock of existing) {
             if (!resultBlocks.some(current => current.body === originalBlock.body)) {
@@ -1408,8 +1430,10 @@
             throw new Error('Safety check failed: release count mismatch.');
         }
         return { text: merged, added: additions.length,
+            addedTitles: additions.map(item => item.title),
             covers: additions.filter(item => item.matched).length,
-            missing: additions.filter(item => item.missing).map(item => item.title) };
+            missing: additions.filter(item => item.missing).map(item => item.title),
+            absent, durationChange };
     }
 
     function getSessionUrls(value) {
@@ -1501,6 +1525,30 @@
         ui.notFoundDetails.open = true;
     }
 
+    function showMergeReview(ui, result) {
+        ui.notFoundList.replaceChildren();
+        const rows = [];
+        if (result.durationChange) rows.push(['Duration ' + result.durationChange.from +
+            ' -> ' + result.durationChange.to, '#bad4ff']);
+        for (const title of result.addedTitles) rows.push(['+ ' + title, '#a9e2b7']);
+        for (const title of result.absent)
+            rows.push(['- Absent from updated post (kept): ' + title, '#ffb1a8']);
+        for (const title of result.missing)
+            rows.push(['? Missing cover: ' + title, '#ffd08d']);
+        for (const [label, color] of rows) {
+            const item = document.createElement('div');
+            item.textContent = label;
+            item.style.color = color;
+            ui.notFoundList.appendChild(item);
+        }
+        ui.notFoundSummary.textContent = 'Changes (' + rows.length + ')';
+        ui.notFoundDetails.hidden = rows.length === 0;
+        ui.notFoundDetails.open = result.absent.length > 0;
+        ui.notFoundDetails.style.border = result.absent.length ? '1px solid #c78c4c' : '';
+        ui.notFoundDetails.style.borderRadius = result.absent.length ? '5px' : '';
+        ui.notFoundDetails.style.padding = result.absent.length ? '5px' : '';
+    }
+
     function writePost(textarea, content) {
         const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set;
         if (setter) setter.call(textarea, content);
@@ -1525,6 +1573,7 @@
     async function runMerge(textarea, ui) {
         if (ui.busy) return;
         showNotFound(ui, []);
+        ui.status.style.color = '';
         const original = textarea.value;
         const updated = ui.updatedInput.value;
         try {
@@ -1537,14 +1586,16 @@
             const result = mergeDiscography(original, updated, covers);
             if (textarea.value !== original)
                 throw new Error('The post changed during the merge. Retry.');
-            if (result.added) applyPostChange(textarea, ui, original, result.text);
+            if (result.text !== original) applyPostChange(textarea, ui, original, result.text);
             GM_setValue('discography-merge:sessions', ui.sessionsInput.value);
             ui.status.classList.remove('rdl-error');
-            setStatus(ui.status, result.added
-                ? 'Added ' + result.added + ' | Covers ' + result.covers +
-                    ' | Missing ' + result.missing.length
-                : 'No new releases.');
-            showNotFound(ui, result.missing, 'Missing covers');
+            const changes = ['Added ' + result.added, 'Covers ' + result.covers];
+            if (result.durationChange) changes.push('Duration ' + result.durationChange.to);
+            if (result.absent.length) changes.push('Absent from updated: ' + result.absent.length);
+            if (result.missing.length) changes.push('Missing covers: ' + result.missing.length);
+            ui.status.style.color = result.absent.length ? '#ffd08d' : '';
+            setStatus(ui.status, changes.join(' | '));
+            showMergeReview(ui, result);
         } catch (error) {
             ui.status.classList.add('rdl-error');
             setStatus(ui.status, error.message || String(error));
