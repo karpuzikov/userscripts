@@ -27,6 +27,12 @@ A collection of Tampermonkey userscripts, MusicBrainz/Picard helpers, Windows ut
 | **Apple Music Barcodes/ISRCs** | Extracts barcodes, ISRCs, and track metadata from Apple Music. | 0.26 | [![Install](https://img.shields.io/badge/Install-.user.js-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/apple-music-barcode-isrc/master/apple-music-barcode-isrc.user.js) |
 | **Apple Music works credits -> MusicBrainz** | Standalone fallback for Apple Music credits; automatically yields to MusicBrainz ToolBox. | 2.3.23 - Under construction ⚠️ | [![Install](https://img.shields.io/badge/Install-.user.js-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/21a3ec7c5df4afe099094b8effc5504686662d91/musicbrainz-tools/apple-music-composition-lyrics-importer/MusicBrainz_Apple_Music_Composition_Lyrics_Importer.user.js) |
 
+## Mp3tag Templates
+
+| Template | Description | Version | Download |
+| --- | --- | ---: | --- |
+| **ALAC + header** | Mp3tag RuTracker BBCode export with correctly nested parent-album/CD spoilers; preserves ordinary single-folder releases. | 9.0.0 - Under construction ⚠️ | [Download .mte](https://github.com/karpuzikov/userscripts/raw/refs/heads/main/mp3tag-tools/alac-header/ALAC%20%2B%20header%20v9.00.00.mte) |
+
 ## MusicBrainz Picard Tools
 
 | Project | Description | Version | Download |
