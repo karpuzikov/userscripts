@@ -1,7 +1,7 @@
 # RuTracker Digital Release Linker - Continuity
 
 ## Product
-- Version: 1.1.24 - Under construction ⚠️ (needs user testing in Tampermonkey).
+- Version: 1.1.25 - Under construction ⚠️ (needs user testing in Tampermonkey).
 - Repository: `karpuzikov/userscripts`, branch `main`.
 - Main file: `browser-tools/rutracker-digital-release-linker/RuTracker_Digital_Release_Linker.user.js`.
 - Applicable rules: repository-root `SOFTWARE_RULES.md`. No project-specific `RULES.md` currently exists.
@@ -80,7 +80,7 @@
 - The third workflow accepts updated release BBCode and optional FastPic session URLs. It matches top-level dated release blocks by catalog number, inserts only catalog identifiers absent from the **original** post, sorts the additions chronologically, and preserves all existing release blocks, images, Deezer/YouTube URLs, typography, tracklists, source placeholders and unrelated BBCode byte-for-byte.
 - Only new blocks may have `[img=right]ссылка[/img]` replaced by a direct FastPic cover URL. FastPic catalog names and direct image hashes must match; unresolved/missing covers retain their placeholders. No cover action in either linking mode.
 - Shared Undo captures the exact before/after textarea strings, restores only the immediately preceding successful operation, and refuses if manual editing occurred since that operation. All long-running actions disable the action buttons and report progress/errors; editor-change guards prevent overwriting user edits during network requests.
-- The former independent Discography Merge path was updated to **v0.1.2 retired no-op** with the same `@name`, `@namespace` and native update URLs. Do not delete its update endpoint: existing installations need the no-op update to stop injecting a competing UI. Its old continuity file is retained for history.
+- The former independent Discography Merge path was initially retained as v0.1.2 no-op, but **both files were deleted in v1.1.25 on explicit user request**, leaving one project folder. Installed old standalone Tampermonkey scripts must be manually disabled/removed because their former update URL now returns 404.
 - Manual publishing: increment metadata `@version` for behavioral changes; commit and verify main source; README pinned install link must be updated in a separate commit. No GitHub Actions workflow changes.
 
 ### Unified UI control contract
@@ -107,3 +107,21 @@
 
 ### Next action
 Open a disposable RuTracker edit post in Chrome with Tampermonkey. Run all three actions, confirm source-only behavior and original-block integrity, inspect unified dark toolbar at small/large widths, test keyboard focus/Undo and native script updating, and compare actual screenshots against the previous RuTracker controls. Preserve provider resolution and MusicBrainz 503 retry behavior. 
+
+## v1.1.25 - Duration sync, review highlights, one surviving project (2026-10-18)
+- Source remains `browser-tools/rutracker-digital-release-linker/RuTracker_Digital_Release_Linker.user.js`. Version bumped from 1.1.24 to 1.1.25; original `@name`, `@namespace`, `@updateURL`, `@downloadURL` and linking functions remain unchanged. No GitHub Actions workflows changed.
+- **Original post is base**. `Insert new releases` compares only dated top-level release spoiler identifiers, inserts missing dated releases chronologically, and changes only the original header's `[b]Общая продолжительность[/b]: HH:MM:SS` value when the pasted updated BBCode contains its own header value. The update is restricted to header content before the first spoiler; no individual track or release duration is changed. If an incoming header has a duration but the original header lacks the field, abort without editing. If the updated post has no total duration field, preserve the old value.
+- When an original dated top-level release's catalog identifier is absent from the pasted updated post, list it as **Absent from updated post (kept)**. The original release is NEVER removed or rewritten. Such a warning indicates absence by identifier, not proven actual deletion (a changed identifier or incomplete incoming list may also cause it). Only user review resolves these differences.
+- Within the same existing `Changes` disclosure render color-and-text-coded rows: `+` newly added release, `-` absent-from-updated original, `Duration old -> new`, and `?` missing cover. A warning-colored status and outlined expanded details emphasize absences. Nothing new appears on page load and no extra menu or destructive control was added. Text labels remain meaningful without color.
+- A duration-only change is a successful edit and is Undoable via the same snapshot mechanism. Comparing identical content is idempotent. Old releases and their artwork, tracklists and Deezer/YouTube links remain byte-for-byte intact.
+- **Repository consolidation:** Deleted `browser-tools/rutracker-discography-merge/Discography_Merge.user.js` and `browser-tools/rutracker-discography-merge/CONTINUITY.md`, thereby removing the empty old directory. This explicitly supersedes v1.1.24's earlier no-op updater-retention decision. Existing separate Tampermonkey installations cannot update from the now-removed old URL; users must disable/remove them manually. Do not recreate the directory.
+
+### Control-contract delta and validation
+- Existing **Insert new releases** action also synchronizes total duration and opens the existing Changes disclosure when a release is absent. Reuses existing labels, status, disclosure and shared Undo; **no added controls**.
+- **PASS - GIMS regression:** 58 new releases; exact new FastPic cover for Zoum Zoum; existing eight top-level release blocks unchanged; header total changes `11:17:43 -> 13:24:31`; 4 original dated release identifiers absent from the updated BBCode flagged rather than deleted; rerunning inserts 0 and changes no text.
+- **PASS - simulated editor UI:** one toolbar; three actions; expands and focuses input; duration+release merge; list highlights removed/absent titles; source artwork untouched; Undo restores exact previous text; duration-only edit and Undo; repeat idempotence.
+- **PASS - repository:** confirmed old directory absent from `browser-tools`, current directory present; committed source read back; README entry updated with immutable SHA-pinned URL and verified.
+- **NOT RUN - real host:** actual RuTracker/Chrome/Tampermonkey behavior, FastPic live fetching, Deezer and MusicBrainz live behavior, screenshots, resize/keyboard/hover and UX acceptance. Keep v1.1.25 Under construction ⚠️.
+
+### Next step
+Open a disposable RuTracker edit post with the new integrated userscript. Paste a full updated discography where one previous catalog is missing, verify warning row without deletion, verify the updated total duration, confirm original links/images unchanged, Undo, and test both original link actions. Disable/remove any previously installed standalone `Discography Merge` userscript to prevent competing injection. 
