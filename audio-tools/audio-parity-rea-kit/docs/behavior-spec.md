@@ -1,6 +1,6 @@
 # Combined audio app: behavior specification, investigation checkpoint
 
-Date: 2026-10-21. Status: design/research only. No application version exists yet.
+Date: 2026-10-21. Status: application v0.01.00 experimental implementation (not accepted); remaining original parity remains research.
 
 ## Goal
 
@@ -44,5 +44,5 @@ The recovered raw report is UTF-8 without BOM with 30 CRLF line endings, 23 metr
 
 ## Open blockers
 
-Missing complete original report variants/fields and AudioChecker golden outputs; no successful native reference execution in the current environment; no working REA native provider here; no independent engine implementation; no native GUI. The prior Audio File Metrics 0.1.0 is a generic analyzer explicitly lacking official DR parity and must not be treated as a completed replacement.
+Missing complete original report variants/fields and AudioChecker golden outputs; no successful native reference execution in this environment; no working REA native provider here; experimental DR/BS.1770/spectral modules now exist in Audio_Analysis_Suite_v0.01.00.pyw, but exact original algorithms and reporting remain unimplemented; PySide6 GUI exists as source but native Windows UI acceptance is NOT RUN. The earlier Audio File Metrics 0.1.0 is not a completed replacement.
 
