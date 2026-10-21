@@ -1,41 +1,37 @@
-# Audio parity REA kit v0.1.1 - Under construction
+# Audio Analysis Suite v0.01.00 - Under construction ⚠️
 
-The combined DROffline MkII / AudioChecker application is not implemented.
-This is the complete investigation checkpoint for continuing that work.
+## Application source
 
-1. Open the extracted folder in local Codex with REA and Ghidra available.
-2. Send: `Read CONTINUITY.md and REA_TASK.md, then continue the investigation.`
+[**Download Audio_Analysis_Suite_v0.01.00.pyw**](Audio_Analysis_Suite_v0.01.00.pyw)
 
-The kit includes the original analysis targets, 29 unchanged generated audio
-fixtures, the user's existing 23-row DROffline report, parsed golden values,
-current rules, evidence and the proposed UI/behavior contract.
+This is an **operational, independent, experimental Python application**, not a completed DROffline or AudioChecker replacement.
 
-Run `python verify_kit.py` to verify retained hashes. Those checks do not
-prove replacement parity. Native measurement, full-report compatibility and
-Windows GUI acceptance remain NOT RUN.
+- Dark PySide6 desktop UI; add files/folders or drag files/folders.
+- Concurrent analysis with selectable worker count; Stop requests cancellation and terminates active FFmpeg decoders.
+- Peak Music Foundation-style **experimental DR estimate** (not yet MAAT parity); BS.1770-weighted/gated integrated loudness; oversampled true peak.
+- **Experimental spectral screen**: identifies known lossy codecs, possible lowpass signatures, or indeterminate cases. **NOT auCDtect**, and not proof of losslessness.
+- TXT and TSV results, one per-run diagnostic log, remembered settings, no modification to source audio.
+- Supports WAV, FLAC, AIFF, MP3, AAC/M4A, Opus and other audio formats accepted by the active FFmpeg decoder. Tested formats are listed below.
 
-For runtime reference measurements use the installed original applications.
-The copied DROffline files are static analysis targets, not a portable setup.
+Python 3.10+ is required. On Windows, double-click the `.pyw`; it attempts to install missing Python packages automatically, uses FFmpeg already installed or tries `winget` first and then a bundled FFmpeg fallback. **Native Windows execution and GUI visual QA have not been run.** Do not represent it as a tested Windows `.exe`.
 
-Version 0.1.1 replaces a later-discovered truncated 0.1.0 ZIP. See CONTINUITY.md
-and evidence/archive-recovery.json. No application version was changed.
+Headless example:
 
-Canonical GitHub checkpoint:
-https://github.com/karpuzikov/userscripts/tree/main/audio-tools/audio-parity-rea-kit
+```powershell
+py Audio_Analysis_Suite_v0.01.00.pyw --headless --dr --auth --workers 4 "D:\\Music\\test.wav" --output "D:\\Music\\analysis.tsv"
+```
 
-Upstream sources checked on 2026-10-21:
-- https://github.com/morluto/rea
-- https://github.com/morluto/rea/blob/main/docs/cli.md
-- https://github.com/morluto/rea/blob/main/docs/windows-ghidra-p0.md
-- https://www.maat.digital/dro2/
+## Validation
 
-## Download complete kit
+- PASS: Python compilation; synthetic 12-second PCM stereo/mono sine, silence, square-wave, DC tests; basic expected DR/loudness/true-peak values; TSV export.
+- PASS: independent test files encoded as FLAC, MP3, Opus, AAC/M4A, AIFF and 5.1 WAV; sub-10-second DR-only rejection; CLI smoke report.
+- NOT RUN: Windows GUI visual/interaction tests, native exe packaging, target-application full-column reports, auCDtect comparison, original-program differential numerical parity.
+- Known mismatch: synthetic square-wave loudness differs from the prior original report (-2.23 versus -3.04 LUFS). A successful few-metric comparison is **not** original parity.
 
-[Audio_Parity_REA_Kit_v0.01.01.zip](downloads/Audio_Parity_REA_Kit_v0.01.01.zip)
+Tests: [tests/test_app_v0.01.00.py](tests/test_app_v0.01.00.py).
 
-The full ZIP contains all analysis targets and generated audio fixtures.
-The documents and reference metadata are also browsable in this folder.
+## Investigation kit (separate)
 
-[Copy-ready handoff](HANDOFF.md) | [Detailed checkpoint](CONTINUITY.md)
+[Audio_Parity_REA_Kit_v0.01.01.zip](downloads/Audio_Parity_REA_Kit_v0.01.01.zip) contains original reference targets, 29 fixtures and 23 original rows. It is a research/test asset, **not an app download**.
 
-Do not use the older truncated v0.01.00 ZIP.
+See [REA_TASK.md](REA_TASK.md), [CONTINUITY.md](CONTINUITY.md) and [docs/behavior-spec.md](docs/behavior-spec.md) for the remaining true-parity requirements. No GitHub Actions workflow was modified.
