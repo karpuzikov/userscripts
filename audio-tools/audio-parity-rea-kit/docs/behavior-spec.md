@@ -50,3 +50,7 @@ Missing complete original report variants/fields and AudioChecker golden outputs
 ## v0.01.01 automatic output contract
 
 On Analyze/Stop completion, the program now writes reports **without an Export click** in every analyzed album's source folder, one DR `<folder>_log.txt` and/or one `audiochecker.log`, according to the analysis toggles. Input-order stable under concurrency. Existing unowned report files are preserved, with a recognizable fallback basename. UTF-8 no BOM and CRLF. Failures are surfaced in the GUI/CLI. Reports are not numerically guaranteed to match originals; experimental status is printed. Original per-folder output layout for the default seven DR columns has regression evidence; full original report variants and authenticity probability are NOT IMPLEMENTED.
+
+## Current compatibility status (2026-10-21)
+
+auCDtect engine 0.8.2 is reused and explicitly disclosed. It is not an independent replacement for AudioChecker's detector. AudioChecker GUI flags/PCM conversion and final numeric signed report verification value are unknown. Authenticity output now uses actual detector text and original-style compact report, but native Windows results are not yet verified. See docs/vultures-2-parity.md for the user's reference dataset. DR TPL and one SKY CITY DR differ on previous application; original full-output parity remains blocked.
