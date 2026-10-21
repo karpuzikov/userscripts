@@ -28,3 +28,12 @@ interface-completion claim has been made. Retain Under construction status.
 - Hover/click/drag-drop/resize/scroll/keyboard/cancel/restart/settings in Windows GUI: NOT RUN.
 - 100% original workflow parity/metric output: NOT RUN; known square-wave loudness mismatch.
 - No Windows exe built. Status **Under construction ⚠️**; visual QA is release-blocking.
+
+## v0.01.01 report-workflow QA (2026-10-21)
+
+- Primary action now writes adjacent original-style output files automatically. No Export click required.
+- Linux headless end-to-end on real audio and controlled rerun: PASS.
+- Preserved existing `<folder>_log.txt` and `audiochecker.log` originals through collision fallback: PASS.
+- Default 23-row original DR report table formatting (from captured original values): PASS.
+- Windows desktop GUI: **NOT RUN** (the current test host has no PySide6/Windows).
+- Entire app and original output content numerical parity: **NOT RUN / UNVERIFIED**; preserve Under construction ⚠️.
