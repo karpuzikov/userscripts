@@ -97,3 +97,11 @@ Resume by reading this file, REA_TASK.md, SOFTWARE_RULES.md and UI_UX_RULES.md
 from the canonical GitHub folder. Download/extract the 0.1.1 kit, verify it,
 and perform native REA/Ghidra investigation on Windows. Reuse the 23 existing
 reference measurements and collect only missing evidence before implementing.
+
+## Raw report preservation when publishing
+
+Reference/Audio Tests_log.txt is retained as the original 2,428-byte UTF-8
+file without BOM, with 30 CRLF line endings. Its verified Git blob identity
+is b018566c8398996c2bf9ddf7d156ab9b0e9e3dcd. Publish this report using raw
+bytes/base64; Python read_text() newline conversion changes the report bytes.
+The complete ZIP also preserves the original bytes.
