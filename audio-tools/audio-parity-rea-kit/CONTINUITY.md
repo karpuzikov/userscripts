@@ -1,7 +1,7 @@
 # Combined DROffline and AudioChecker app - continuity
 
 Checkpoint: 2026-10-21.
-Application: Audio_Analysis_Suite_v0.01.00.pyw, **Under construction ⚠️**; independent working prototype, not full parity.
+Application: Audio_Analysis_Suite_v0.01.01.pyw, **Under construction ⚠️**; experimental independent application, not full parity.
 Investigation kit: 0.1.1 (filename v0.01.01), Under construction.
 Native Windows exe: NOT BUILT. Native Windows GUI: NOT RUN.
 Status before this build: not implemented (historic investigation checkpoint).
@@ -122,3 +122,16 @@ The complete ZIP also preserves the original bytes.
 **NOT RUN:** real Windows double-click/automatic pip and winget, native GUI visual acceptance (all control actions/hover/keyboard/scaling), application Windows exe packaging, original engine parity, 27 column modes, file/folder report paths, original album aggregation, auCDtect authenticity, original logs, and optical CD mode.
 **Unimplemented compatibility:** original DROffline full metrics, all presets/columns/metadata, original report bytes and album aggregation; full original AudioChecker workflows, classification/confidence/unknown semantics, and reports. Do not claim full parity or a production release.
 **Next action:** run `.pyw` on Windows and record UI/interaction failures, capture complete original numeric/reference and AudioChecker outputs using REA_TASK.md, implement/report differential comparisons, then fix discrepant algorithms/features. Package a single Windows exe only after a native Windows build/test. Preserve original fixtures, never change GitHub Actions.
+
+## v0.01.01 - 2026-10-21 - automatic report file creation
+
+The user correctly identified that v0.01.00 did **not create the core output file automatically**. This was the main missing workflow and was not acceptable. v0.01.01 implements automatic per-album/folder reporting at the end of both GUI and headless runs without using Export.
+
+- **DR report:** adjacent to the analyzed audio under `<folder>_log.txt`; exact default-column table **layout** verified against 23 lines from `Reference/Audio Tests_log.txt`, including spacing, sign, non-ASCII, no BOM, CRLF. Prints 7 header fields, accepted track rows, album count. Uses an explicitly EXPERIMENTAL album average, **not** proven original aggregation. Any missing/unknown metric parity remains a blocker.
+- **Authenticity report:** `audiochecker.log` in each album folder. Experimental observations only. **Not original AudioChecker output or CDDA probability engine**; no invented probabilities.
+- Original reports never overwritten. If either expected filename already exists and does not contain this app's own signature, write `<name> (Audio Analysis Suite).<extension>` (and stable numeric variants if needed); reuses the app's own report files on repeated runs.
+- Cancellation preserves reports for completed/rejected rows if any; explicitly identifies partial state. Read-only destination produces an error instead of a fake success. Original source audio remains unchanged.
+- Regression test: `tests/test_reports_v0.01.01.py` checks original table layout and signed value formatting, names, collisions, repeat runs, grouping, partial/rejected scenarios. Local headless end-to-end test on 12-second PCM WAV produced both DR and authenticity reports and repeated without extra files.
+- Existing v0.01.00 synthetic-format audio tests still passed on Linux using v0.01.01 source: mono, stereo, silence, square, DC, FLAC, MP3, Opus, AAC/M4A, AIFF and 5.1 WAV. Windows GUI execution and native UI QA remain **NOT RUN**.
+- Published source: `Audio_Analysis_Suite_v0.01.01.pyw`. No Windows .exe. The correct report names/layout now work, but all metrics and authenticity conclusions are **NOT PARITY VERIFIED**.
+- Next work: actual original numerical/report differential tests (including missing original full columns, output bytes and auCDtect), then fix metrics/album aggregation and original authenticity semantics. Native Windows GUI double-click and report-generation acceptance is still mandatory. Do not create/modify GitHub Actions.
