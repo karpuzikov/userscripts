@@ -18,3 +18,13 @@ the requested compact dark Windows app, not visual acceptance evidence.
 Sources read: current canonical UI_UX_RULES.md and SOFTWARE_RULES.md;
 Microsoft Fluent 2 layout and accessibility pages. No screenshot or
 interface-completion claim has been made. Retain Under construction status.
+
+## Audio Analysis Suite v0.01.00 - 2026-10-21
+
+- Implemented controls: Add files, Add folder, DR/Loudness, Authenticity, Workers, Analyze/Stop, Export, results table, double-click reveal, status counter.
+- Python syntax and headless audio processing tests: PASS.
+- Actual Windows startup/double-click and missing-package bootstrap: NOT RUN.
+- Actual PySide6 native GUI screenshot inspection at representative resolutions/scale: NOT RUN.
+- Hover/click/drag-drop/resize/scroll/keyboard/cancel/restart/settings in Windows GUI: NOT RUN.
+- 100% original workflow parity/metric output: NOT RUN; known square-wave loudness mismatch.
+- No Windows exe built. Status **Under construction ⚠️**; visual QA is release-blocking.
