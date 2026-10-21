@@ -37,3 +37,15 @@ interface-completion claim has been made. Retain Under construction status.
 - Default 23-row original DR report table formatting (from captured original values): PASS.
 - Windows desktop GUI: **NOT RUN** (the current test host has no PySide6/Windows).
 - Entire app and original output content numerical parity: **NOT RUN / UNVERIFIED**; preserve Under construction ⚠️.
+
+## v0.01.02 report and engine change - 2026-10-21
+
+- GUI theme/layout unchanged except a specific Authenticity (auCDtect) label and tooltip; real native Windows GUI screenshot/hover/scaling tests: **NOT RUN**.
+- Pure reference-data test reproduces 16-track report ordering and 87,38% summary: **PASS**.
+- Actual WAV->FFmpeg temp PCM->simulated CLI output->report, preserved source audio: **PASS** on Linux.
+- Original auCDtect 0.8.2 binary native Windows execution and accurate mode/PCM reproduction: **NOT RUN**.
+- AudioChecker trailing 8-digit verification signature/checksum: **NOT IMPLEMENTED**, release blocker.
+- True peak parity: **FAIL** on supplied prior 15-track comparisons (average abs 0.062 dB).
+- DR parity: **FAIL** on SKY CITY in prior comparison (4 vs 5).
+- Full native Windows acceptance, exact original report formats: **NOT RUN**.
+- Status: v0.01.02 - Under construction ⚠️.
