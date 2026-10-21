@@ -1,6 +1,6 @@
 # Combined audio app: behavior specification, investigation checkpoint
 
-Date: 2026-10-21. Status: application v0.01.00 experimental implementation (not accepted); remaining original parity remains research.
+Date: 2026-10-21. Status: application v0.01.01 experimental implementation (not accepted); remaining original parity remains research.
 
 ## Goal
 
@@ -46,3 +46,7 @@ The recovered raw report is UTF-8 without BOM with 30 CRLF line endings, 23 metr
 
 Missing complete original report variants/fields and AudioChecker golden outputs; no successful native reference execution in this environment; no working REA native provider here; experimental DR/BS.1770/spectral modules now exist in Audio_Analysis_Suite_v0.01.00.pyw, but exact original algorithms and reporting remain unimplemented; PySide6 GUI exists as source but native Windows UI acceptance is NOT RUN. The earlier Audio File Metrics 0.1.0 is not a completed replacement.
 
+
+## v0.01.01 automatic output contract
+
+On Analyze/Stop completion, the program now writes reports **without an Export click** in every analyzed album's source folder, one DR `<folder>_log.txt` and/or one `audiochecker.log`, according to the analysis toggles. Input-order stable under concurrency. Existing unowned report files are preserved, with a recognizable fallback basename. UTF-8 no BOM and CRLF. Failures are surfaced in the GUI/CLI. Reports are not numerically guaranteed to match originals; experimental status is printed. Original per-folder output layout for the default seven DR columns has regression evidence; full original report variants and authenticity probability are NOT IMPLEMENTED.
