@@ -1,0 +1,184 @@
+{
+  "checkpoint": "2026-10-21",
+  "host": "Linux; native FFmpeg/ffprobe; GNU objdump",
+  "source_fixture_checks": [
+    {
+      "file": "Audio Tests/01 Silence.wav",
+      "sha256": "PASS",
+      "full_decode_frames": 529200,
+      "expected_frames": 529200
+    },
+    {
+      "file": "Audio Tests/02 Dual mono sine.wav",
+      "sha256": "PASS",
+      "full_decode_frames": 529200,
+      "expected_frames": 529200
+    },
+    {
+      "file": "Audio Tests/03 Mono sine.wav",
+      "sha256": "PASS",
+      "full_decode_frames": 529200,
+      "expected_frames": 529200
+    },
+    {
+      "file": "Audio Tests/04 Left channel only.wav",
+      "sha256": "PASS",
+      "full_decode_frames": 529200,
+      "expected_frames": 529200
+    },
+    {
+      "file": "Audio Tests/05 Opposite polarity.wav",
+      "sha256": "PASS",
+      "full_decode_frames": 529200,
+      "expected_frames": 529200
+    },
+    {
+      "file": "Audio Tests/06 Unequal channel levels.wav",
+      "sha256": "PASS",
+      "full_decode_frames": 529200,
+      "expected_frames": 529200
+    },
+    {
+      "file": "Audio Tests/07 Changing levels.wav",
+      "sha256": "PASS",
+      "full_decode_frames": 1323000,
+      "expected_frames": 1323000
+    },
+    {
+      "file": "Audio Tests/08 Deterministic noise.wav",
+      "sha256": "PASS",
+      "full_decode_frames": 529200,
+      "expected_frames": 529200
+    },
+    {
+      "file": "Audio Tests/09 Isolated peaks.wav",
+      "sha256": "PASS",
+      "full_decode_frames": 1323000,
+      "expected_frames": 1323000
+    },
+    {
+      "file": "Audio Tests/10 Square wave.wav",
+      "sha256": "PASS",
+      "full_decode_frames": 529200,
+      "expected_frames": 529200
+    },
+    {
+      "file": "Audio Tests/11 DC signal.wav",
+      "sha256": "PASS",
+      "full_decode_frames": 529200,
+      "expected_frames": 529200
+    },
+    {
+      "file": "Audio Tests/12 Very short.wav",
+      "sha256": "PASS",
+      "full_decode_frames": 4410,
+      "expected_frames": 4410
+    },
+    {
+      "file": "Audio Tests/13 Three second boundary.wav",
+      "sha256": "PASS",
+      "full_decode_frames": 132299,
+      "expected_frames": 132299
+    },
+    {
+      "file": "Audio Tests/14 Three second boundary.wav",
+      "sha256": "PASS",
+      "full_decode_frames": 132300,
+      "expected_frames": 132300
+    },
+    {
+      "file": "Audio Tests/15 Three second boundary.wav",
+      "sha256": "PASS",
+      "full_decode_frames": 132301,
+      "expected_frames": 132301
+    },
+    {
+      "file": "Audio Tests/16 48000Hz 24bit.wav",
+      "sha256": "PASS",
+      "full_decode_frames": 576000,
+      "expected_frames": 576000
+    },
+    {
+      "file": "Audio Tests/17 96000Hz 24bit.wav",
+      "sha256": "PASS",
+      "full_decode_frames": 1152000,
+      "expected_frames": 1152000
+    },
+    {
+      "file": "Audio Tests/18 192000Hz 24bit.wav",
+      "sha256": "PASS",
+      "full_decode_frames": 1152000,
+      "expected_frames": 1152000
+    },
+    {
+      "file": "Audio Tests/19 384000Hz 24bit.wav",
+      "sha256": "PASS",
+      "full_decode_frames": 1152000,
+      "expected_frames": 1152000
+    },
+    {
+      "file": "Audio Tests/20 Float32 sine.wav",
+      "sha256": "PASS",
+      "full_decode_frames": 529200,
+      "expected_frames": 529200
+    },
+    {
+      "file": "Audio Tests/21 Float32 over full scale.wav",
+      "sha256": "PASS",
+      "full_decode_frames": 529200,
+      "expected_frames": 529200
+    },
+    {
+      "file": "Audio Tests/22 Fixed32 sine.wav",
+      "sha256": "PASS",
+      "full_decode_frames": 529200,
+      "expected_frames": 529200
+    },
+    {
+      "file": "Audio Tests/23 Silent tail.wav",
+      "sha256": "PASS",
+      "full_decode_frames": 1323000,
+      "expected_frames": 1323000
+    },
+    {
+      "file": "Audio Tests/24 - Тест - é - 音.wav",
+      "sha256": "PASS",
+      "full_decode_frames": 529200,
+      "expected_frames": 529200
+    },
+    {
+      "file": "Audio Tests/25 16bit signal in 24bit.wav",
+      "sha256": "PASS",
+      "full_decode_frames": 529200,
+      "expected_frames": 529200
+    },
+    {
+      "file": "Audio Tests/26 Intersample peaks.wav",
+      "sha256": "PASS",
+      "full_decode_frames": 529200,
+      "expected_frames": 529200
+    },
+    {
+      "file": "Audio Tests/27 Lossless FLAC.flac",
+      "sha256": "PASS",
+      "full_decode_frames": 529200,
+      "expected_frames": 529200
+    },
+    {
+      "file": "Audio Tests/28 AIFF.aiff",
+      "sha256": "PASS",
+      "full_decode_frames": 529200,
+      "expected_frames": 529200
+    },
+    {
+      "file": "Audio Tests/29 Broadcast WAV.wav",
+      "sha256": "PASS",
+      "full_decode_frames": 529200,
+      "expected_frames": 529200
+    }
+  ],
+  "golden_rows": 23,
+  "original_native_execution": "NOT RUN",
+  "replacement_parity": "NOT RUN",
+  "windows_ui_acceptance": "NOT RUN"
+}

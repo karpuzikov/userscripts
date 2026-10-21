@@ -1,0 +1,352 @@
+[
+  {
+    "file": "CONTINUITY.md",
+    "bytes": 7841,
+    "sha256": "13e751c83eb2f5fe1fcf507f22c13c803641be1f716a3cf2d9199fe5f88371c9"
+  },
+  {
+    "file": "Findings/READ_ME.md",
+    "bytes": 224,
+    "sha256": "af134fc21335c5f5c6a1ed7830fd92826290e2076fc41dece6d71f5fa262c8da"
+  },
+  {
+    "file": "HANDOFF.md",
+    "bytes": 1974,
+    "sha256": "b2f66c73e2688bcaba9f2f42ddda894db7dfccd64e265094c9b2be491bd63c69"
+  },
+  {
+    "file": "READ_ME.md",
+    "bytes": 1418,
+    "sha256": "83f4b04e40163a576cf4c601a09640f99eee38d3023c66a11b2fc906f384a98b"
+  },
+  {
+    "file": "REA_TASK.md",
+    "bytes": 8793,
+    "sha256": "b0727768a8fa82b7f0a2e088421bc8a397fc0c403b8276e2c634fdf7a7582fa6"
+  },
+  {
+    "file": "Reference/Audio Tests/01 Silence.wav",
+    "bytes": 2116844,
+    "sha256": "6f9d38879c041d549646d87ddd563a34b95c14d77ec3df2f14bbebd317d794cb"
+  },
+  {
+    "file": "Reference/Audio Tests/02 Dual mono sine.wav",
+    "bytes": 2116844,
+    "sha256": "be6399afb5757c8423031834128aedcbfa20f415eb1820a8b9ed41322eccbed0"
+  },
+  {
+    "file": "Reference/Audio Tests/03 Mono sine.wav",
+    "bytes": 1058444,
+    "sha256": "aadfaff91e8d45d4f814cdf14ad874db4e120624285a0071b0cca4c45a9b6b59"
+  },
+  {
+    "file": "Reference/Audio Tests/04 Left channel only.wav",
+    "bytes": 2116844,
+    "sha256": "0aca08b871020e81032ae49135ada46e28982d1afb559f2a667781c52443b855"
+  },
+  {
+    "file": "Reference/Audio Tests/05 Opposite polarity.wav",
+    "bytes": 2116844,
+    "sha256": "6cb9a7217d9619ed14929750a4425fc4c780b5a0f724a59df839dbb29bbdc0c1"
+  },
+  {
+    "file": "Reference/Audio Tests/06 Unequal channel levels.wav",
+    "bytes": 2116844,
+    "sha256": "a4d626f718e51f36469dde1d7fa9d586c2c550da6772eabc32cca2a95bc36592"
+  },
+  {
+    "file": "Reference/Audio Tests/07 Changing levels.wav",
+    "bytes": 5292044,
+    "sha256": "ed82d567b32db079caa3fb498fe3a754fe774adfce4c28db3239d217c88bc519"
+  },
+  {
+    "file": "Reference/Audio Tests/08 Deterministic noise.wav",
+    "bytes": 2116844,
+    "sha256": "2803f840cba566133dad1edccde347eb95d5141a1177f616d7f197e77450276b"
+  },
+  {
+    "file": "Reference/Audio Tests/09 Isolated peaks.wav",
+    "bytes": 5292044,
+    "sha256": "4730ec4aacc77989b81b7bbe43c18c5d88a9428cbc2580ee96610153b8f3b902"
+  },
+  {
+    "file": "Reference/Audio Tests/10 Square wave.wav",
+    "bytes": 2116844,
+    "sha256": "5f030825d18cefc9abd20a14208edd4acca3a76cae9529410a6435ec9ea6e1aa"
+  },
+  {
+    "file": "Reference/Audio Tests/11 DC signal.wav",
+    "bytes": 2116844,
+    "sha256": "81896272b2efeb2020ef32c879cda8fab29995e9e0bc9f650e7f1cfc6a0e4b43"
+  },
+  {
+    "file": "Reference/Audio Tests/12 Very short.wav",
+    "bytes": 17684,
+    "sha256": "7f39ab24f9ff79baae26a6258f380c41f5ef157535ba67b348c3747e40f81b70"
+  },
+  {
+    "file": "Reference/Audio Tests/13 Three second boundary.wav",
+    "bytes": 529240,
+    "sha256": "a7dc711ad6537f456dadb0322696bb60920641b7719f7c7e8a8df350416c851a"
+  },
+  {
+    "file": "Reference/Audio Tests/14 Three second boundary.wav",
+    "bytes": 529244,
+    "sha256": "b42bcacc17560fe11a14c1098fb5ade4203ebb5c6c1c731e648ce6e91fef2e79"
+  },
+  {
+    "file": "Reference/Audio Tests/15 Three second boundary.wav",
+    "bytes": 529248,
+    "sha256": "d7778a4098dcfdd2cdf79de5340b8f535cdfd655a99e89200a06df5ef5ddbbe4"
+  },
+  {
+    "file": "Reference/Audio Tests/16 48000Hz 24bit.wav",
+    "bytes": 3456044,
+    "sha256": "25c176e72f3a36faccdb6bbf0521c608d933e23c3624957cd10d639032fa4d6b"
+  },
+  {
+    "file": "Reference/Audio Tests/17 96000Hz 24bit.wav",
+    "bytes": 6912044,
+    "sha256": "eeadcfae8c71011241f42b772db750d839a25b9e894f769237a2bf189e7d1a4a"
+  },
+  {
+    "file": "Reference/Audio Tests/18 192000Hz 24bit.wav",
+    "bytes": 6912044,
+    "sha256": "f8e95c3da726d0bd6be0d120459abfd2328a417162a276d78462d990c1df1ff8"
+  },
+  {
+    "file": "Reference/Audio Tests/19 384000Hz 24bit.wav",
+    "bytes": 6912044,
+    "sha256": "eedeb6e7ff3f4c9609b6cc37cfd108711dc02a3e63bd189018c8127ba67d7725"
+  },
+  {
+    "file": "Reference/Audio Tests/20 Float32 sine.wav",
+    "bytes": 4233656,
+    "sha256": "aca6f044716b63f9871466b9180e8127170365dae2a2683bc09a7411ab006a3a"
+  },
+  {
+    "file": "Reference/Audio Tests/21 Float32 over full scale.wav",
+    "bytes": 4233656,
+    "sha256": "4b4da586d5cd1da070be1a3caf0d84828e1780097b81709bfdbaf30225d3b759"
+  },
+  {
+    "file": "Reference/Audio Tests/22 Fixed32 sine.wav",
+    "bytes": 4233644,
+    "sha256": "133381cfd9f6f8ebcd11655e796afbb32a8a368f8e65d4b03ca3103930172d91"
+  },
+  {
+    "file": "Reference/Audio Tests/23 Silent tail.wav",
+    "bytes": 5292044,
+    "sha256": "20973bae5bb6f442b2471d67443c69b7c85b9f20b0c7ce137a3a92943f8c0cba"
+  },
+  {
+    "file": "Reference/Audio Tests/24 - Тест - é - 音.wav",
+    "bytes": 2116844,
+    "sha256": "be6399afb5757c8423031834128aedcbfa20f415eb1820a8b9ed41322eccbed0"
+  },
+  {
+    "file": "Reference/Audio Tests/25 16bit signal in 24bit.wav",
+    "bytes": 3175244,
+    "sha256": "c8686b685b4c8682e409b9593add528b5716b1062671c88f767b080318c4d4f9"
+  },
+  {
+    "file": "Reference/Audio Tests/26 Intersample peaks.wav",
+    "bytes": 2116844,
+    "sha256": "9057a1d069ce611b42f2be22b9d48d8fa675a3da3731ab84ee10bcdb96b548a7"
+  },
+  {
+    "file": "Reference/Audio Tests/27 Lossless FLAC.flac",
+    "bytes": 200080,
+    "sha256": "57da9e6af920587daf80b9bf23e5234b1bc0dafd816ce7494771ef1cdc42bbb0"
+  },
+  {
+    "file": "Reference/Audio Tests/28 AIFF.aiff",
+    "bytes": 2116854,
+    "sha256": "6bc48e44285f6d0bacde1fbf55216b2e2c8c056d6c4b4ccb67085b6f0dc64231"
+  },
+  {
+    "file": "Reference/Audio Tests/29 Broadcast WAV.wav",
+    "bytes": 2117488,
+    "sha256": "9ef2a0f8cdebf4fd22ddffdc4bf6117cdb6a3860de0d7f3e165b981b86561dd6"
+  },
+  {
+    "file": "Reference/Audio Tests_log.txt",
+    "bytes": 2428,
+    "sha256": "c03cd83c380141b57220d5efe6ee6d2e249e07286605248483cc40d6c1a1b590"
+  },
+  {
+    "file": "Reference/droffline-golden.json",
+    "bytes": 6098,
+    "sha256": "db55872935f4a617f8875b2b907ebcbf4bd158978f1cb89fdb5a788770db93a7"
+  },
+  {
+    "file": "Reference/manifest-original.json",
+    "bytes": 12836,
+    "sha256": "d28772bd127222b3633c91df30d4aa6ebc8595712c57e98943280a46dcadc59a"
+  },
+  {
+    "file": "SOFTWARE_RULES.md",
+    "bytes": 46839,
+    "sha256": "c655e70a74e03dad9bdb38197564295e65470d33194b8719f1d646688b982301"
+  },
+  {
+    "file": "Targets/AudioChecker/CDRip3.dll",
+    "bytes": 155648,
+    "sha256": "b36b10f2059ec22d8d09f207b860d10b353b837c3e03f7725f0c736b35010c1a"
+  },
+  {
+    "file": "Targets/AudioChecker/Codecs/APE/licence.txt",
+    "bytes": 1350,
+    "sha256": "b2a463f608bb661b9e45aefbcc9447a780f2c0dcea72a7629d4f247d4c1ac797"
+  },
+  {
+    "file": "Targets/AudioChecker/Codecs/APE/mac.exe",
+    "bytes": 163840,
+    "sha256": "4fc0844edbc118904a3924c0e56d69c853a98d35e9b9d8a06c18945f157f8733"
+  },
+  {
+    "file": "Targets/AudioChecker/Codecs/Analyzer/Readme",
+    "bytes": 1242,
+    "sha256": "6dfebdef58614151cf3ff009fb2ad6212affc643325637c46d379188a5d499fd"
+  },
+  {
+    "file": "Targets/AudioChecker/Codecs/Analyzer/aucdtect.exe",
+    "bytes": 147456,
+    "sha256": "efe47eec21c33431e7fceea4b171b8a15a729e3adcda967ee0fc165a6a41adba"
+  },
+  {
+    "file": "Targets/AudioChecker/Codecs/FLAC/COPYING.GPL",
+    "bytes": 17985,
+    "sha256": "0b1975de0a048180c5ea7179be1a3e751e05f79d225ac4be6481141970527e69"
+  },
+  {
+    "file": "Targets/AudioChecker/Codecs/FLAC/flac.exe",
+    "bytes": 217088,
+    "sha256": "1f3029590c568c369e1ea07c65e5a7987f900ddc48f6e030157a99bb964690cc"
+  },
+  {
+    "file": "Targets/AudioChecker/Codecs/LPAC/lpac.exe",
+    "bytes": 61440,
+    "sha256": "58e8f8dbe8ae8a4fac7ed3de5b0fb91902161028ad0956e69ed17da72d8c588a"
+  },
+  {
+    "file": "Targets/AudioChecker/Codecs/LPAC/lpac.txt",
+    "bytes": 2359,
+    "sha256": "7583879b760f986937a05925259bd11ee45fab0d2ac3b763542060dc9ee1ab05"
+  },
+  {
+    "file": "Targets/AudioChecker/Codecs/LPAC/lpaccodec.dll",
+    "bytes": 94208,
+    "sha256": "bb90c182fa2de7ef90bcd650b99f03dbf74bee002d7dc15e3e2c7382e379bba8"
+  },
+  {
+    "file": "Targets/AudioChecker/Codecs/SHN/Licence.txt",
+    "bytes": 12717,
+    "sha256": "a9b8d3594df989f390b72db9c8bfd018eaf13ebc157518af944f0a726ba1076a"
+  },
+  {
+    "file": "Targets/AudioChecker/Codecs/SHN/shortn32.exe",
+    "bytes": 100864,
+    "sha256": "a5c108f3de20f9e51d6b4e7855299b84c9809e4322d2605e2f225c1b3fe13f51"
+  },
+  {
+    "file": "Targets/AudioChecker/Language/Hungarian.lng",
+    "bytes": 11308,
+    "sha256": "e1c6babc77cef17ef9169869e1e69500cd45a8b2c0c6c829b67f2369c9d65f4f"
+  },
+  {
+    "file": "Targets/AudioChecker/Language/Russian.lng",
+    "bytes": 11065,
+    "sha256": "a25cf5b56490f1d625a99fa97d7a8f97d10e733dfb5ae6a85ef3d0660dab8f33"
+  },
+  {
+    "file": "Targets/AudioChecker/Presets/Seth1.pre",
+    "bytes": 204,
+    "sha256": "b2327771ae8417329d580ec8ec9991f5d26bf1630a6e1b121f557ed260f8cb0d"
+  },
+  {
+    "file": "Targets/AudioChecker/Presets/Seth2.pre",
+    "bytes": 200,
+    "sha256": "5f09b1568d6255896d55cf5cf78535437e70ad8aa96917e2b348b76464630ed9"
+  },
+  {
+    "file": "Targets/AudioChecker/Presets/Seth3.pre",
+    "bytes": 204,
+    "sha256": "b0684d70585121d8f415665027f53437a1ecf7a9d4023cf054839d0e0718a840"
+  },
+  {
+    "file": "Targets/AudioChecker/Presets/dark style.pre",
+    "bytes": 197,
+    "sha256": "c1259a2a496cbcc9972a4e8185df26bf1addcfa52427fe73e53d1321d85ca31e"
+  },
+  {
+    "file": "Targets/AudioChecker/Presets/default.pre",
+    "bytes": 203,
+    "sha256": "58d351942a8d24d3557c40faab0ffa22530b44eda6d6269771de27d141c3330a"
+  },
+  {
+    "file": "Targets/AudioChecker/achkgui.exe",
+    "bytes": 1085952,
+    "sha256": "ef61ab74ad4529f1808e8b75504d6891521787a07e2cb7c42f9a6f7ddc6ba074"
+  },
+  {
+    "file": "Targets/AudioChecker/whatsnew_hun.txt",
+    "bytes": 1077,
+    "sha256": "dc52057b690c3ef403814c059039101f9ed356761f018b742f3f7d0470e20661"
+  },
+  {
+    "file": "Targets/DROffline/DROffline MkII.exe",
+    "bytes": 4973936,
+    "sha256": "99f4e976d005ea02166903a624ff24ce987e035214c8043b1c645358fb1cc35b"
+  },
+  {
+    "file": "Targets/DROffline/Presets/Folder Log/05 All In for Stats Nerds.dro2p",
+    "bytes": 2453,
+    "sha256": "fadfde62e04a04f5850e925bdb9d4553e3bfa6c2e5853df946f007ae5a26c919"
+  },
+  {
+    "file": "Targets/DROffline/Presets/Main Log/01 Everything (default).dro2p",
+    "bytes": 271,
+    "sha256": "d9ebe54b23e6f6edf584cba9c5b5a360e0682669e660525a0890a433d9197667"
+  },
+  {
+    "file": "Targets/DROffline/libMAATDROffline2.dll",
+    "bytes": 1776640,
+    "sha256": "0db8fc4a4f709e3f4583276bd1cb08fcf24932b3ab8dc0cb870bb44612266ab5"
+  },
+  {
+    "file": "UI_UX_ACCEPTANCE.md",
+    "bytes": 1070,
+    "sha256": "09b31c95624f3f95abdf73d52e0290a1125eb10d2ce0c6e395bdca360a4b906d"
+  },
+  {
+    "file": "UI_UX_RULES.md",
+    "bytes": 12315,
+    "sha256": "a9b4069285de6f47566ccf8758cc63e4b204860c21e26b59b6d07d4374654c62"
+  },
+  {
+    "file": "docs/behavior-spec.md",
+    "bytes": 4860,
+    "sha256": "82dfb3e8d28af0e1786d3eba564e70552609a8d856cef614d3412908518db1a7"
+  },
+  {
+    "file": "evidence/archive-recovery.json",
+    "bytes": 696,
+    "sha256": "6e96a6be773c25a9d715aea9c569e655f053b5f9dfb3b592e1fedc65f31e8582"
+  },
+  {
+    "file": "evidence/static-inspection.json",
+    "bytes": 5418,
+    "sha256": "107a0ad4bc825bd43fd0058949848154fdb067d02693b355c4c10c632583cb65"
+  },
+  {
+    "file": "evidence/verification.json",
+    "bytes": 4813,
+    "sha256": "b0bbf5af8cb4f54b842cb4a58df35197007e2038055be08e2e0e6e74bd71acda"
+  },
+  {
+    "file": "verify_kit.py",
+    "bytes": 1106,
+    "sha256": "d45901593568d9745ab62009343c591d117e06bf3c1cb35c1dc5d49c05366efa"
+  }
+]

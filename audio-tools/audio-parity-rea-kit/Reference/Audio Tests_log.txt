@@ -1,0 +1,31 @@
+
+Folder Path:   C:\MySoft\!music\DR-Parity-Reference-Pack-v0.01.00\DR Parity Reference Pack\Audio Tests
+
+                 File Name | Format |    SR | Word Length | Max. TPL |   LUFSi | DR (PMF) | 
+
+                01 Silence |   .wav | 44.1k |          16 |  -100.00 | -128.00 |        0 | 
+         02 Dual mono sine |   .wav | 44.1k |          16 |    -6.01 |   -6.06 |        0 | 
+              03 Mono sine |   .wav | 44.1k |          16 |    -6.01 |   -9.07 |        0 | 
+      04 Left channel only |   .wav | 44.1k |          16 |    -6.01 |   -9.07 |        0 | 
+      05 Opposite polarity |   .wav | 44.1k |          16 |    -6.01 |   -6.06 |        0 | 
+ 06 Unequal channel levels |   .wav | 44.1k |          16 |    -6.01 |   -8.80 |        0 | 
+        07 Changing levels |   .wav | 44.1k |          16 |    -6.01 |   -8.52 |        0 | 
+    08 Deterministic noise |   .wav | 44.1k |          16 |    -2.75 |   -6.53 |        2 | 
+         09 Isolated peaks |   .wav | 44.1k |          16 |    -0.33 |  -30.12 |       28 | 
+            10 Square wave |   .wav | 44.1k |          16 |    -4.02 |   -3.04 |       -3 | 
+              11 DC signal |   .wav | 44.1k |          16 |   -11.09 |  -35.35 |       -3 | 
+          16 48000Hz 24bit |   .wav |   48k |          24 |    -6.01 |   -6.06 |        0 | 
+          17 96000Hz 24bit |   .wav |   96k |          24 |    -6.01 |   -6.05 |        0 | 
+           20 Float32 sine |   .wav | 44.1k |  32 (float) |    -6.01 |   -6.06 |        0 | 
+21 Float32 over full scale |   .wav | 44.1k |  32 (float) |    +1.03 |    0.99 |        0 | 
+           22 Fixed32 sine |   .wav | 44.1k |          32 |    -6.01 |   -6.06 |        0 | 
+            23 Silent tail |   .wav | 44.1k |          16 |    -6.01 |   -6.10 |        0 | 
+         24 - Тест - é - 音 |   .wav | 44.1k |          16 |    -6.01 |   -6.06 |        0 | 
+  25 16bit signal in 24bit |   .wav | 44.1k |          24 |    -6.01 |   -6.06 |        0 | 
+      26 Intersample peaks |   .wav | 44.1k |          16 |    +1.93 |    5.16 |       -1 | 
+          27 Lossless FLAC |  .flac | 44.1k |          16 |    -6.01 |   -6.06 |        0 | 
+                   28 AIFF |  .aiff | 44.1k |          16 |    -6.01 |   -6.06 |        0 | 
+          29 Broadcast WAV |   .wav | 44.1k |          16 |    -6.01 |   -6.06 |        0 | 
+
+Number of EP/Album Files: 23
+Official EP/Album DR: 1

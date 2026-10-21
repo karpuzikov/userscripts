@@ -1,0 +1,13 @@
+{
+  "archive_name": "Audio_Parity_REA_Kit_v0.01.01.zip",
+  "bytes": 6636273,
+  "sha256": "53fe1cc14353a7152177eba65cdb055632b56e8702245eddc07d054926ce43d7",
+  "git_blob_sha": "aee68e9c40d51d443a4c90a3261cf3f912d8ea57",
+  "zip_crc": "PASS",
+  "all_archived_file_hashes": "PASS",
+  "eocd_present": true,
+  "source_files": 71,
+  "application_implemented": false,
+  "uploaded_git_blob_sha": "aee68e9c40d51d443a4c90a3261cf3f912d8ea57",
+  "remote_blob_matches_local_bytes": "PASS"
+}

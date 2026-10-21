@@ -1,0 +1,14 @@
+{
+  "date": "2026-10-21",
+  "old_filename": "Audio_Parity_REA_Kit_v0.01.00.zip",
+  "old_observed_bytes": 6364623,
+  "old_observed_sha256": "3154bf45c3684e80881c1027489bdb440cea469285cabd82887d595578e5f397",
+  "old_eocd_present": false,
+  "initial_recorded_bytes": 6633377,
+  "initial_recorded_sha256": "c67dbddee6c1643048992f7b14b543976bb6c0ade36e1a0c2924bcd630b601f6",
+  "finding": "Later ZIP copy is truncated; where/when it changed is unknown.",
+  "extracted_original_manifest": "PASS (68 files)",
+  "new_kit_version": "0.1.1",
+  "new_finalization": "Write complete temporary archive, close, fsync, verify, atomic rename; do not expose in-progress path.",
+  "application_implemented": false
+}

@@ -1,0 +1,48 @@
+# Combined audio app: behavior specification, investigation checkpoint
+
+Date: 2026-10-21. Status: design/research only. No application version exists yet.
+
+## Goal
+
+One independent Windows application must perform the useful processing/reporting functions of DROffline MkII v2.2.3 and AudioChecker 2.0 build 457 with matching results. User requirements: full feature parity, identical outputs, broad audio-format support, dark UI, multithreading and a selectable worker count. Do not replace DR with crest factor or substitute generic FFmpeg metrics and call the result equivalent.
+
+## Architecture under investigation
+
+A shared input queue feeds two independent analysis modules and a deterministic report layer. The analysis implementation must follow measured original behavior. Input decoding must preserve native semantics; extended format adapters are a separate compatibility extension. The GUI is a compact PySide6 desktop window. Settings, dependencies, temporary work and operation logs are isolated under Documents/Karpuzikov Tools/Audio Analysis Suite.
+
+Reusing the original engines could preserve their calculations, but that is a different product architecture from the earlier independent-implementation request. It must not be silently substituted. Native DLL export inspection establishes promising analysis entry points; it does not establish callable ABI correctness or complete-pipeline equivalence.
+
+## Control contract for the proposed UI
+
+| Control | Unique purpose and interaction | State, geometry and persistence |
+| --- | --- | --- |
+| Add sources | Add files/folders; drag/drop uses the same queue path; keyboard shortcut | Shared 32px-minimum target, visible focus; remembers browse location |
+| DR / Authenticity toggles | Choose either or both requested analyses; Space toggles | Independent checked states; remembers selection; no duplicate mode selector |
+| Workers spinbox | Bound parallel jobs from 1 to detected available CPU threads | Labeled accessible spinbox; saved value validated on next launch |
+| Analyze / Stop | Explicitly starts work, then cancels active work and child processes | One changing action; disabled if queue empty/no analysis selected; cancellation retains completed results |
+| Results table | Ordered per-file metrics, detection, stage and errors | Multi-select, keyboard navigation, stable sort, long-name ellipsis; no color-only state |
+| Open location before displayed paths | Reveal exact source or containing directory | Shared adjacent icon/control with accessible label, 32px minimum target |
+| Export | Write requested original-compatible TXT/TSV reports | Enabled when appropriate; explicit destination and collision recovery |
+| Settings | Original compatibility parameters and report column/preset selection | Compact accessible panel; no speculative settings or repeated prompts |
+| Status/progress | Completed/total files, active work and failures | Necessary feedback, not duplicated percentages or tutorials |
+
+Exact controls and dimensions must be reconciled with the original full feature inventory before implementation. This contract is proposed, not a rendered/accepted UI.
+
+## Required original features
+
+DROffline: per-file/folder/recursive analysis, all documented measurements including channel values, original presets and column selection, text/TSV reports, main/folder report behavior, project/artist/engineer/studio metadata, destination control, cancellation, rejected-input behavior, album/file counts and aggregate DR.
+
+AudioChecker: same classification/confidence/unknown outcomes and detector settings, decoder and PCM preparation rules, batch/album conclusion, supported file/folder and optical CD workflows where present, logs, selection and cancellation. The full GUI inventory still needs native observation.
+
+Do not silently omit an original feature because it is difficult. Record remaining gaps.
+
+## Exact-output acceptance
+
+Numerical display strings and report bytes must match under the same inputs, settings, path and run context. No timestamps, headers, signs, Unicode text, whitespace, line endings or fields are implicitly normalized or ignored. Broader testing must include real audio, not only the 29 synthetic inputs.
+
+The recovered raw report is UTF-8 without BOM with 30 CRLF line endings, 23 metric rows, a file count of 23 and album DR 1. This describes that file only; it does not establish every report variant's encoding or metadata.
+
+## Open blockers
+
+Missing complete original report variants/fields and AudioChecker golden outputs; no successful native reference execution in the current environment; no working REA native provider here; no independent engine implementation; no native GUI. The prior Audio File Metrics 0.1.0 is a generic analyzer explicitly lacking official DR parity and must not be treated as a completed replacement.
+

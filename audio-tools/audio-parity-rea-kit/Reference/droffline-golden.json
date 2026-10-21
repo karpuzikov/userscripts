@@ -1,0 +1,235 @@
+{
+  "source": "Audio Tests_log.txt",
+  "source_sha256": "c03cd83c380141b57220d5efe6ee6d2e249e07286605248483cc40d6c1a1b590",
+  "reference_rows": 23,
+  "format": {
+    "encoding": "UTF-8",
+    "bom": false,
+    "line_endings": "CRLF"
+  },
+  "settings": "Default folder-log columns observed; complete app settings not supplied.",
+  "rows": [
+    {
+      "name": "01 Silence",
+      "format": ".wav",
+      "sample_rate_display": "44.1k",
+      "word_length_display": "16",
+      "max_tpl_display": "-100.00",
+      "lufsi_display": "-128.00",
+      "dr_display": "0"
+    },
+    {
+      "name": "02 Dual mono sine",
+      "format": ".wav",
+      "sample_rate_display": "44.1k",
+      "word_length_display": "16",
+      "max_tpl_display": "-6.01",
+      "lufsi_display": "-6.06",
+      "dr_display": "0"
+    },
+    {
+      "name": "03 Mono sine",
+      "format": ".wav",
+      "sample_rate_display": "44.1k",
+      "word_length_display": "16",
+      "max_tpl_display": "-6.01",
+      "lufsi_display": "-9.07",
+      "dr_display": "0"
+    },
+    {
+      "name": "04 Left channel only",
+      "format": ".wav",
+      "sample_rate_display": "44.1k",
+      "word_length_display": "16",
+      "max_tpl_display": "-6.01",
+      "lufsi_display": "-9.07",
+      "dr_display": "0"
+    },
+    {
+      "name": "05 Opposite polarity",
+      "format": ".wav",
+      "sample_rate_display": "44.1k",
+      "word_length_display": "16",
+      "max_tpl_display": "-6.01",
+      "lufsi_display": "-6.06",
+      "dr_display": "0"
+    },
+    {
+      "name": "06 Unequal channel levels",
+      "format": ".wav",
+      "sample_rate_display": "44.1k",
+      "word_length_display": "16",
+      "max_tpl_display": "-6.01",
+      "lufsi_display": "-8.80",
+      "dr_display": "0"
+    },
+    {
+      "name": "07 Changing levels",
+      "format": ".wav",
+      "sample_rate_display": "44.1k",
+      "word_length_display": "16",
+      "max_tpl_display": "-6.01",
+      "lufsi_display": "-8.52",
+      "dr_display": "0"
+    },
+    {
+      "name": "08 Deterministic noise",
+      "format": ".wav",
+      "sample_rate_display": "44.1k",
+      "word_length_display": "16",
+      "max_tpl_display": "-2.75",
+      "lufsi_display": "-6.53",
+      "dr_display": "2"
+    },
+    {
+      "name": "09 Isolated peaks",
+      "format": ".wav",
+      "sample_rate_display": "44.1k",
+      "word_length_display": "16",
+      "max_tpl_display": "-0.33",
+      "lufsi_display": "-30.12",
+      "dr_display": "28"
+    },
+    {
+      "name": "10 Square wave",
+      "format": ".wav",
+      "sample_rate_display": "44.1k",
+      "word_length_display": "16",
+      "max_tpl_display": "-4.02",
+      "lufsi_display": "-3.04",
+      "dr_display": "-3"
+    },
+    {
+      "name": "11 DC signal",
+      "format": ".wav",
+      "sample_rate_display": "44.1k",
+      "word_length_display": "16",
+      "max_tpl_display": "-11.09",
+      "lufsi_display": "-35.35",
+      "dr_display": "-3"
+    },
+    {
+      "name": "16 48000Hz 24bit",
+      "format": ".wav",
+      "sample_rate_display": "48k",
+      "word_length_display": "24",
+      "max_tpl_display": "-6.01",
+      "lufsi_display": "-6.06",
+      "dr_display": "0"
+    },
+    {
+      "name": "17 96000Hz 24bit",
+      "format": ".wav",
+      "sample_rate_display": "96k",
+      "word_length_display": "24",
+      "max_tpl_display": "-6.01",
+      "lufsi_display": "-6.05",
+      "dr_display": "0"
+    },
+    {
+      "name": "20 Float32 sine",
+      "format": ".wav",
+      "sample_rate_display": "44.1k",
+      "word_length_display": "32 (float)",
+      "max_tpl_display": "-6.01",
+      "lufsi_display": "-6.06",
+      "dr_display": "0"
+    },
+    {
+      "name": "21 Float32 over full scale",
+      "format": ".wav",
+      "sample_rate_display": "44.1k",
+      "word_length_display": "32 (float)",
+      "max_tpl_display": "+1.03",
+      "lufsi_display": "0.99",
+      "dr_display": "0"
+    },
+    {
+      "name": "22 Fixed32 sine",
+      "format": ".wav",
+      "sample_rate_display": "44.1k",
+      "word_length_display": "32",
+      "max_tpl_display": "-6.01",
+      "lufsi_display": "-6.06",
+      "dr_display": "0"
+    },
+    {
+      "name": "23 Silent tail",
+      "format": ".wav",
+      "sample_rate_display": "44.1k",
+      "word_length_display": "16",
+      "max_tpl_display": "-6.01",
+      "lufsi_display": "-6.10",
+      "dr_display": "0"
+    },
+    {
+      "name": "24 - Тест - é - 音",
+      "format": ".wav",
+      "sample_rate_display": "44.1k",
+      "word_length_display": "16",
+      "max_tpl_display": "-6.01",
+      "lufsi_display": "-6.06",
+      "dr_display": "0"
+    },
+    {
+      "name": "25 16bit signal in 24bit",
+      "format": ".wav",
+      "sample_rate_display": "44.1k",
+      "word_length_display": "24",
+      "max_tpl_display": "-6.01",
+      "lufsi_display": "-6.06",
+      "dr_display": "0"
+    },
+    {
+      "name": "26 Intersample peaks",
+      "format": ".wav",
+      "sample_rate_display": "44.1k",
+      "word_length_display": "16",
+      "max_tpl_display": "+1.93",
+      "lufsi_display": "5.16",
+      "dr_display": "-1"
+    },
+    {
+      "name": "27 Lossless FLAC",
+      "format": ".flac",
+      "sample_rate_display": "44.1k",
+      "word_length_display": "16",
+      "max_tpl_display": "-6.01",
+      "lufsi_display": "-6.06",
+      "dr_display": "0"
+    },
+    {
+      "name": "28 AIFF",
+      "format": ".aiff",
+      "sample_rate_display": "44.1k",
+      "word_length_display": "16",
+      "max_tpl_display": "-6.01",
+      "lufsi_display": "-6.06",
+      "dr_display": "0"
+    },
+    {
+      "name": "29 Broadcast WAV",
+      "format": ".wav",
+      "sample_rate_display": "44.1k",
+      "word_length_display": "16",
+      "max_tpl_display": "-6.01",
+      "lufsi_display": "-6.06",
+      "dr_display": "0"
+    }
+  ],
+  "album": {
+    "file_count_display": "23",
+    "dr_display": "1"
+  },
+  "rejected_case_ids_reported_by_user": [
+    12,
+    13,
+    14,
+    15,
+    18,
+    19
+  ],
+  "rejection_reason_reported_by_user": "Length is less than 10 seconds",
+  "all_column_report_available": false,
+  "audiochecker_golden_available": false
+}
