@@ -1,8 +1,10 @@
 # Combined DROffline and AudioChecker app - continuity
 
 Checkpoint: 2026-10-21.
-Application status: NOT IMPLEMENTED. No application version/repository/release created.
+Application: Audio_Analysis_Suite_v0.01.00.pyw, **Under construction ⚠️**; independent working prototype, not full parity.
 Investigation kit: 0.1.1 (filename v0.01.01), Under construction.
+Native Windows exe: NOT BUILT. Native Windows GUI: NOT RUN.
+Status before this build: not implemented (historic investigation checkpoint).
 
 ## User goal
 
@@ -10,7 +12,7 @@ Create one independent Windows application combining DROffline MkII v2.2.3 and A
 
 Never substitute an approximate meter. Never silently cap/clamp measurements, drop original features, invent unsupported format claims, or call finite regression coverage universal proof.
 
-## Work completed
+## Prior investigation work completed (research kit)
 
 - Read current canonical SOFTWARE_RULES.md, UI_UX_RULES.md and UI_UX_ACCEPTANCE.md using the GitHub connector. Root SOFTWARE_RULES.md and UI_UX_RULES.md in this kit retain those exact fetched contents.
 - Inspected the two current uploads. AudioChecker GUI file version is 2.0.0.457, and its included auCDtect binary advertises 0.8.2.
@@ -64,7 +66,7 @@ New application native Windows visual/interaction acceptance: NOT RUN.
 
 Do not label the new application complete, fixed, stable or accepted.
 
-## Exact next action
+## Prior investigation checkpoint's next action (historical)
 
 On the user's Windows PC, open the extracted kit in local Codex with REA/Ghidra configured and direct it to read REA_TASK.md. Retain the already collected 23 measurements, trace complete pipelines/report writing, collect only missing reference fields/outcomes, and save findings plus evidence/raw reports under Findings/. Return that folder to the current conversation. Then implement the independent modules and dark worker-selectable GUI and run differential/native acceptance.
 
@@ -105,3 +107,18 @@ file without BOM, with 30 CRLF line endings. Its verified Git blob identity
 is b018566c8398996c2bf9ddf7d156ab9b0e9e3dcd. Publish this report using raw
 bytes/base64; Python read_text() newline conversion changes the report bytes.
 The complete ZIP also preserves the original bytes.
+
+## Application v0.01.00 implementation checkpoint - 2026-10-21
+
+**Source:** `audio-tools/audio-parity-rea-kit/Audio_Analysis_Suite_v0.01.00.pyw` on main.
+**Tests:** `audio-tools/audio-parity-rea-kit/tests/test_app_v0.01.00.py`.
+**UI:** PySide6 dark, one toolbar (Add files, Add folder, DR/Loudness, Authenticity, Workers, Export, Analyze/Stop) and results table; double-click row reveals input. One .pyw entry point; no Tkinter. UI control contract remains in docs/behavior-spec.md.
+**Analysis:** FFmpeg decoding to temporary float32 PCM without touching source; 3s loudest-block experimental DR estimate; pyloudnorm coefficients + scipy streaming gated loudness; 4x/2x resample_poly experimental dBTP; independent spectral lowpass screening and known lossy codec detection, NOT AudioChecker / auCDtect replacement.
+**Architecture:** bounded ThreadPoolExecutor concurrent files in QThread; per-file TemporaryDirectory; progress updates and cancellation event; isolated run logs/settings/temp in Documents/Karpuzikov Tools/Audio Analysis Suite; FFmpeg winget-preferred/imageio-ffmpeg fallback, Python package auto-install on start. Worker count remembered. No original engines or activation behavior modified.
+**Reports:** application-specific UTF-8 text and TSV with CRLF line endings, explicitly marked experimental. Original TXT/TSV formatting remains unimplemented and unverified.
+**Source program inputs:** 29 saved fixtures and 23 original results preserved; no reinterpretation.
+**Unit/CLI checks PASS in Linux:** compiled .pyw; stereo and mono tone, square, DC, silence (5 datasets); converted FLAC, MP3, Opus, AAC/M4A, AIFF, 6-channel WAV, sub-10s rejection; independent CLI smoke and TSV. Existing sample benchmark examples: 1000Hz stereo sine ~-6.06 LUFS DR 0, mono ~-9.07 LUFS DR 0, square DR -3, DC DR -3, silence -128 LUFS / -100 dBTP. These are not full reference parity.
+**Known numerical mismatch:** square-wave LUFS -2.23 vs previously collected original -3.04. Other numerical and output differences unknown.
+**NOT RUN:** real Windows double-click/automatic pip and winget, native GUI visual acceptance (all control actions/hover/keyboard/scaling), application Windows exe packaging, original engine parity, 27 column modes, file/folder report paths, original album aggregation, auCDtect authenticity, original logs, and optical CD mode.
+**Unimplemented compatibility:** original DROffline full metrics, all presets/columns/metadata, original report bytes and album aggregation; full original AudioChecker workflows, classification/confidence/unknown semantics, and reports. Do not claim full parity or a production release.
+**Next action:** run `.pyw` on Windows and record UI/interaction failures, capture complete original numeric/reference and AudioChecker outputs using REA_TASK.md, implement/report differential comparisons, then fix discrepant algorithms/features. Package a single Windows exe only after a native Windows build/test. Preserve original fixtures, never change GitHub Actions.
