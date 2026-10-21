@@ -1,46 +1,43 @@
-# Audio Analysis Suite v0.01.01 - Under construction ⚠️
+# Audio Analysis Suite v0.01.02 - Under construction ⚠️
 
-## Application source
+**[Download application: Audio_Analysis_Suite_v0.01.02.pyw](Audio_Analysis_Suite_v0.01.02.pyw)**
 
-[**Download Audio_Analysis_Suite_v0.01.01.pyw**](Audio_Analysis_Suite_v0.01.01.pyw)
+Current app is a working **experimental Windows Python GUI**, not a verified independent replica of the proprietary programs. **No Windows .exe release is built.**
 
-This is an **operational, independent, experimental Python application**, not a completed DROffline or AudioChecker replacement.
+## What changed in v0.01.02
 
-- Dark PySide6 desktop UI; add files/folders or drag files/folders.
-- Concurrent analysis with selectable worker count; Stop requests cancellation and terminates active FFmpeg decoders.
-- Peak Music Foundation-style **experimental DR estimate** (not yet MAAT parity); BS.1770-weighted/gated integrated loudness; oversampled true peak.
-- **Experimental spectral screen**: identifies known lossy codecs, possible lowpass signatures, or indeterminate cases. **NOT auCDtect**, and not proof of losslessness.
-- TXT and TSV results, one per-run diagnostic log, remembered settings, no modification to source audio.
-- Supports WAV, FLAC, AIFF, MP3, AAC/M4A, Opus and other audio formats accepted by the active FFmpeg decoder. Tested formats are listed below.
+- Original-style AudioChecker compact per-track log: `NN -=- filename -=- CDDA/MPEG (percentage%)`.
+- Actual classification calls the **original auCDtect 0.8.2 Windows engine**, supplied in the user's verified research ZIP. This is a **disclosed compatibility dependency, not an independent detector**. On the first Windows authenticity run the app downloads the pinned 0.1.1 research kit and SHA-256 verifies both kit and executable, extracts the engine under `Documents/Karpuzikov Tools/Audio Analysis Suite/dependencies/` and reuses it on later runs. Requires network access for that first run. Original user audio and original applications are unchanged. Never claim the original AudioChecker GUI decoder/mode parity without tests.
+- User-supplied track probabilities can now produce exactly `Summary 87,38% CDDA` using CDDA p, MPEG 100-p, average, half-up rounding to two decimal places, and comma separator.
+- DR default-column report now sizes the name column to the longest accepted track and preserves signed -0.00. DR, LUFS and TPL algorithms remain experimental.
+- Original reports in the source folders are never overwritten unless an app-generated report has been recognized; repeat runs reuse only owned files.
+- A failed auCDtect invocation keeps available DR output and reports an error rather than inventing CDDA/MPEG probabilities.
 
-Python 3.10+ is required. On Windows, double-click the `.pyw`; it attempts to install missing Python packages automatically, uses FFmpeg already installed or tries `winget` first and then a bundled FFmpeg fallback. **Native Windows execution and GUI visual QA have not been run.** Do not represent it as a tested Windows `.exe`.
+**Known original-output blocker:** AudioChecker's final 8-digit log verification value is not reproduced (the example ends with `86168036`). Its algorithm is not recovered. The historical GUI's PCM decoder conversion and detection-mode flags also remain unverified. Format similarity is **not byte parity**.
 
-**Automatic report output (primary workflow):** Analyze creates reports in each source album/folder without clicking Export.
+**Known DROffline discrepancies:** See [VULTURES 2 reference comparison](docs/vultures-2-parity.md): 15 accepted tracks, mean absolute TPL difference 0.062 dB, one DR mismatch (`SKY CITY` original 4 vs app 5), slight LUFS rounding differences. Those are original v0.01.01 results. The 16 FLAC source files were not available in this environment for rerunning v0.01.02.
 
-- DR/Loudness enabled: `<Album folder name>_log.txt` with the original default-column table layout, per-file measurements, and an **experimental** album summary.
-- Authenticity enabled: `audiochecker.log` with the app's experimental observations, **not** AudioChecker CDDA probabilities.
-- If either filename is occupied by an original/user report, it is **never overwritten**; instead the app writes `(Audio Analysis Suite)` suffixed filenames. Repeated runs reuse only app-owned reports.
-- UTF-8 without BOM and CRLF; per-folder deterministic input ordering; partial cancellation states visible. Errors when saving reports are shown, not silently treated as success.
-- Original numerical/report-byte parity **remains unverified**; reports are explicitly marked EXPERIMENTAL. Original files are preserved.
+## Usage
 
-Headless example:
+Download and double-click the `.pyw` on Windows with Python 3.10+ installed. Missing Python modules and FFmpeg are installed or resolved automatically where supported. Drag album folders or add files, select DR and/or Authenticity, set workers, click Analyze. Reports are saved to the source folder automatically; Export is optional.
+
+- DR report: `<Album Folder>_log.txt`, preserving existing original file under fallback name.
+- Authenticity report: `audiochecker.log`, preserving an unowned original report under fallback name.
+- Separate diagnostics: `Documents/Karpuzikov Tools/Audio Analysis Suite/logs/`.
+- Original media files never altered.
+
+Headless:
 
 ```powershell
-py Audio_Analysis_Suite_v0.01.01.pyw --headless --dr --auth --workers 4 "D:\\Music\\test.wav" --output "D:\\Music\\analysis.tsv"
+py Audio_Analysis_Suite_v0.01.02.pyw --headless --dr --auth --workers 4 "D:\\Music\\test.wav"
 ```
 
-## Validation
+## Testing status
 
-- PASS: Python compilation; synthetic 12-second PCM stereo/mono sine, silence, square-wave, DC tests; basic expected DR/loudness/true-peak values; TSV export.
-- PASS: independent test files encoded as FLAC, MP3, Opus, AAC/M4A, AIFF and 5.1 WAV; sub-10-second DR-only rejection; CLI smoke report.
-- PASS (Linux): automatic original-style file naming and 23-row DR table **format**, dual-output headless processing of a real WAV, safe repeat-run file reuse, collision protection, UTF-8/CRLF, cancelled/rejected file handling. See [tests/test_reports_v0.01.01.py](tests/test_reports_v0.01.01.py).
-- NOT RUN: Windows GUI visual/interaction tests, native exe packaging, target-application full-column reports, auCDtect comparison, original-program differential numerical parity.
-- Known mismatch: synthetic square-wave loudness differs from the prior original report (-2.23 versus -3.04 LUFS). A successful few-metric comparison is **not** original parity.
+- PASS: compilation, text report/summary/parser regressions with 16 supplied reference observations; signed-zero formatting; safe report collisions.
+- PASS: controlled end-to-end real audio -> FFmpeg temporary WAV -> **stub classifier subprocess** -> CDDA/MPEG parser/report; audio file unchanged.
+- NOT RUN: actual Windows auCDtect executable invocation and first-run GitHub download, AudioChecker GUI side-by-side outputs, Windows GUI acceptance/screenshots, complete DROffline parity, full original TXT/TSV modes, native packaged .exe.
+- No GitHub Actions workflow changes.
 
-Tests: [tests/test_app_v0.01.01.py](tests/test_app_v0.01.01.py).
+[Detailed project continuity](CONTINUITY.md) | [Original REA investigation task](REA_TASK.md) | [Research kit v0.1.1](downloads/Audio_Parity_REA_Kit_v0.01.01.zip)
 
-## Investigation kit (separate)
-
-[Audio_Parity_REA_Kit_v0.01.01.zip](downloads/Audio_Parity_REA_Kit_v0.01.01.zip) contains original reference targets, 29 fixtures and 23 original rows. It is a research/test asset, **not an app download**.
-
-See [REA_TASK.md](REA_TASK.md), [CONTINUITY.md](CONTINUITY.md) and [docs/behavior-spec.md](docs/behavior-spec.md) for the remaining true-parity requirements. No GitHub Actions workflow was modified.
