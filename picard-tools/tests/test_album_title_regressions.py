@@ -370,6 +370,7 @@ class PicardAlbumRegressions(unittest.TestCase):
             ("Song", "Song (ft. Guest)"),
             ("Song (ft. Guest)", "Song (ft. Guest)"),
             ("Song (feat. Guest)", "Song (feat. Guest)"),
+            ("Song (featuring Guest)", "Song (featuring Guest)"),
         ):
             with self.subTest(title=initial_title):
                 metadata = Metadata()
@@ -381,6 +382,31 @@ class PicardAlbumRegressions(unittest.TestCase):
                 self.assertEqual(metadata["artist"], "Main")
                 ScriptParser().eval(source, metadata)
                 self.assertEqual(metadata["title"], expected_title)
+
+    def test_move_featured_credit_matches_full_featuring_joinphrase(self):
+        # Exercise the actual Picard regex from the published script, including
+        # Picard's escape layer, without requiring a GUI Picard installation.
+        source = (REPO / "picard-tools" / "scripts" / "Move_Featured_Artists_to_Title.txt").read_text(encoding="utf-8")
+        prefix = "$set(_feat_title,$rsearch(%artist%,"
+        lines = source.splitlines()
+        first_line = lines[0]
+        self.assertTrue(first_line.startswith(prefix))
+        pattern = re.sub(r"\\(.)", r"\1", first_line[len(prefix):-2])
+        normalize_prefix = "$set(_feat_title,$rreplace(%_feat_title%,"
+        artist_prefix = "$set(artist,$rreplace(%artist%,"
+        normalize_pattern = re.sub(r"\\(.)", r"\1", lines[1][len(normalize_prefix):-len(",ft.))")])
+        artist_pattern = re.sub(r"\\(.)", r"\1", lines[2][len(artist_prefix):-len(",))")])
+        for credit, expected_credit, expected_feature, expected_artist in (
+            ("Main ft. Guest", "ft. Guest", "ft. Guest", "Main"),
+            ("Main feat. Guest", "feat. Guest", "ft. Guest", "Main"),
+            ("Kanye West featuring Twista, Keyshia Cole and BJ", "featuring Twista, Keyshia Cole and BJ", "ft. Twista, Keyshia Cole and BJ", "Kanye West"),
+        ):
+            with self.subTest(credit=credit):
+                match = re.search(pattern, credit)
+                self.assertIsNotNone(match)
+                self.assertEqual(match.group(1), expected_credit)
+                self.assertEqual(re.sub(normalize_pattern, "ft.", match.group(1)), expected_feature)
+                self.assertEqual(re.sub(artist_pattern, "", credit), expected_artist)
 
     def test_artist_format_runs_before_unicode_normalization(self):
         module = ast.parse((REPO / "__init__.py").read_text(encoding="utf-8"))
@@ -665,7 +691,7 @@ class PicardAlbumRegressions(unittest.TestCase):
             ("Add_EP_Single_Suffix.txt", "Add_EP_Single_Suffix_v1.00.02.txt"),
             ("Dont_Use_This_Tags.txt", "Dont_Use_This_Tags_v1.00.00.txt"),
             ("Format_Multiple_Artists.txt", "Format_Multiple_Artists_v1.00.02.txt"),
-            ("Move_Featured_Artists_to_Title.txt", "Move_Featured_Artists_to_Title_v1.00.01.txt"),
+            ("Move_Featured_Artists_to_Title.txt", "Move_Featured_Artists_to_Title_v1.00.02.txt"),
         ):
             with self.subTest(stable=stable):
                 folder = REPO / "picard-tools" / "scripts"
