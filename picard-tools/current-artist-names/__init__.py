@@ -40,6 +40,13 @@ SKIP_TAGS = {
     "iswc",
     "musicip_puid",
     "musicip_fingerprint",
+    "date",
+    "originaldate",
+    "releasedate",
+    "originalyear",
+    "year",
+    "catalognumber",
+    "catalognumbers",
 }
 
 
@@ -91,12 +98,12 @@ class _ArtistMaps:
 
     def _add_name_variant(self, old: Any, current: str) -> None:
         old_name = self._clean(old)
-        if old_name and old_name != current:
+        if old_name and old_name != current and any(char.isalpha() for char in old_name):
             self._names[old_name].add(current)
 
     def _add_sort_variant(self, old: Any, current_sort: str) -> None:
         old_name = self._clean(old)
-        if old_name and old_name != current_sort:
+        if old_name and old_name != current_sort and any(char.isalpha() for char in old_name):
             self._sorts[old_name].add(current_sort)
 
     def finalize(self) -> tuple[dict[str, str], dict[str, str], set[str], set[str]]:
@@ -222,7 +229,7 @@ def _replace_text(
 
 def _skip_tag(tag: str) -> bool:
     lower = tag.lower().lstrip("~")
-    if lower in SKIP_TAGS:
+    if lower in SKIP_TAGS or lower.endswith("date"):
         return True
     return any(lower.startswith(prefix) for prefix in SKIP_TAG_PREFIXES)
 
