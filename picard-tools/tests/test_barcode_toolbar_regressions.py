@@ -64,6 +64,10 @@ class FakeToolbar:
     def deleteLater(self):
         self.deleted_later = True
 
+    def close(self):
+        self.closed = True
+
+
 
 class ToolbarLifecycleTests(unittest.TestCase):
     def test_first_action_avoids_right_edge_overflow(self):
@@ -307,6 +311,72 @@ class ToolbarLifecycleTests(unittest.TestCase):
         for name in ("_barcode_forms", "_barcodes_match", "_start_barcode_batch_lookup", "_barcode_only_lookup"):
             self.assertTrue(any(isinstance(n, ast.FunctionDef) and n.name == name for n in TREE.body))
 
+
+    def test_rebuild_hook_retires_detached_window_immediately(self):
+        watcher = next(node for node in TREE.body if isinstance(node, ast.ClassDef)
+                       and node.name == "_BarcodeToolbarWatcher")
+        method = next(node for node in watcher.body if isinstance(node, ast.FunctionDef)
+                      and node.name == "_install_rebuild_hook")
+        namespace = {"_BARCODE_TOOLBAR_ACTION": None}
+        exec(source_function("_retire_replaced_barcode_toolbar"), namespace)
+        retired = namespace["_retire_replaced_barcode_toolbar"]
+
+        class Window:
+            def __init__(self):
+                self.toolbar = FakeToolbar(FakeAction("Lookup"))
+                self.detached = []
+
+            def create_action_toolbar(self):
+                self.detached.append(self.toolbar)
+                self.toolbar = FakeToolbar(FakeAction("Lookup"))
+
+        class Watcher:
+            pass
+
+        api = object()
+        window = Window()
+        watcher_instance = Watcher()
+        watcher_instance.window = window
+        watcher_instance.api = api
+        watcher_instance.closing = False
+        watcher_instance.observed_toolbar = window.toolbar
+        watcher_instance._original_create_action_toolbar = None
+        watcher_instance._rebuild_wrapper = None
+
+        def observe_toolbar(toolbar):
+            previous = watcher_instance.observed_toolbar
+            if previous is not toolbar:
+                watcher_instance.observed_toolbar = toolbar
+                retired(previous, toolbar)
+
+        watcher_instance.observe_toolbar = observe_toolbar
+        installs = []
+        namespace.update({
+            "_LOOKUP_API": api,
+            "_install_barcode_lookup_button": installs.append,
+        })
+        exec(ast.unparse(method), namespace)
+        namespace["_install_rebuild_hook"](watcher_instance)
+        self.assertIsNotNone(watcher_instance._rebuild_wrapper)
+        for iteration in range(3):
+            old = window.toolbar
+            window.create_action_toolbar()
+            self.assertTrue(old.hidden)
+            self.assertTrue(old.closed)
+            self.assertTrue(old.deleted_later)
+            self.assertIs(watcher_instance.observed_toolbar, window.toolbar)
+            self.assertNotEqual(old, window.toolbar)
+        self.assertEqual(installs, [api, api, api])
+
+    def test_rebuild_hook_restored_on_disable_and_close_cleanup(self):
+        watcher = next(node for node in TREE.body if isinstance(node, ast.ClassDef)
+                       and node.name == "_BarcodeToolbarWatcher")
+        body = ast.unparse(watcher)
+        self.assertIn("self.window.create_action_toolbar = self._original_create_action_toolbar", body)
+        self.assertIn("self._install_rebuild_hook()", body)
+        self.assertIn("self.observe_toolbar(current)", body)
+        self.assertIn("self.observed_toolbar, getattr(self.window, 'toolbar', None)", body)
+        self.assertIn("toolbar.close()", source_function("_retire_replaced_barcode_toolbar"))
 
 if __name__ == "__main__":
     unittest.main()
