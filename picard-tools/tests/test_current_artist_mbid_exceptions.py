@@ -58,6 +58,75 @@ def artist_credit(mbid=YE, name="Ye (formerly Kanye West)", credited="Ye"):
 
 
 class MBIDOverrideTests(unittest.TestCase):
+    def test_unknown_artist_punctuation_alias_never_corrupts_hyphens(self):
+        """Regression: Yeezus JP date/catalog became 2013[unknown]07..."""
+        unknown = {
+            "artist-credit": [{
+                "name": "-",
+                "artist": {
+                    "id": "125ec42a-7229-4250-afc5-e057484327fe",
+                    "name": "[unknown]",
+                    "aliases": [{"name": "-"}, {"name": "—"}],
+                },
+            }],
+        }
+        fields = {
+            "artist": "-",
+            "date": "2013-07-10",
+            "originaldate": "2013-07-10",
+            "catalognumber": "UICD-6205",
+            "title": "Yeezus - Bonus Track",
+            "comment": "Japan - 2013-07-10",
+        }
+        metadata = FakeMetadata(fields)
+        normalize_track_artist_names(FakeAPI(""), metadata, unknown)
+        for tag, expected in fields.items():
+            with self.subTest(tag=tag):
+                self.assertEqual(metadata[tag], expected)
+
+    def test_dates_and_catalog_numbers_are_never_rewritten_by_name_aliases(self):
+        artist = {
+            "artist-credit": [{
+                "name": "Actual Artist",
+                "artist": {
+                    "id": OTHER,
+                    "name": "Canonical Artist",
+                    "aliases": [{"name": "UICD"}, {"name": "Jul"}],
+                },
+            }]
+        }
+        metadata = FakeMetadata({
+            "artist": "Actual Artist",
+            "title": "Actual Artist on Jul",
+            "date": "Jul-10",
+            "originaldate": "Jul-10",
+            "release_date": "Jul-10",
+            "catalognumber": "UICD-6205",
+        })
+        normalize_track_artist_names(FakeAPI(""), metadata, artist)
+        self.assertEqual(metadata["artist"], ["Canonical Artist"])
+        self.assertEqual(metadata["title"], ["Canonical Artist on Canonical Artist"])
+        self.assertEqual(metadata["date"], "Jul-10")
+        self.assertEqual(metadata["originaldate"], "Jul-10")
+        self.assertEqual(metadata["release_date"], "Jul-10")
+        self.assertEqual(metadata["catalognumber"], "UICD-6205")
+
+    def test_word_containing_alias_can_still_change_artist_hyphen(self):
+        node = {
+            "artist-credit": [{
+                "name": "AC-DC",
+                "artist": {
+                    "id": OTHER,
+                    "name": "AC/DC",
+                    "aliases": [{"name": "AC-DC"}],
+                },
+            }]
+        }
+        metadata = FakeMetadata({"artist": "AC-DC", "title": "AC-DC - Live"})
+        normalize_track_artist_names(FakeAPI(""), metadata, node)
+        self.assertEqual(metadata["artist"], ["AC/DC"])
+        self.assertEqual(metadata["title"], ["AC/DC - Live"])
+
     def test_accepts_only_valid_artist_mbids(self):
         self.assertEqual(
             _parse_exceptions(
