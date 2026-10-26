@@ -907,15 +907,23 @@ class ScriptsOptionsPage(OptionsPage):
             layout.addWidget(checkbox)
 
 
+        exceptions_label = QtWidgets.QLabel("Artist name exceptions (Current => Preferred)")
+        layout.addWidget(exceptions_label)
+        self.artist_exceptions = QtWidgets.QPlainTextEdit()
+        self.artist_exceptions.setPlaceholderText("Ye => Kanye West")
+        self.artist_exceptions.setMaximumHeight(90)
+        layout.addWidget(self.artist_exceptions)
         layout.addStretch()
 
     def load(self):
         for key, checkbox in self.checkboxes.items():
             checkbox.setChecked(self.api.plugin_config[key])
+        self.artist_exceptions.setPlainText(self.api.plugin_config["artist_name_exceptions"])
 
     def save(self):
         for key, checkbox in self.checkboxes.items():
             self.api.plugin_config[key] = checkbox.isChecked()
+        self.api.plugin_config["artist_name_exceptions"] = self.artist_exceptions.toPlainText()
 
 
 def _run_scripts(api, metadata, release_node=None):
@@ -956,6 +964,7 @@ def process_track(api, track, metadata, track_node, release_node=None):
 
 
 def enable(api):
+    api.plugin_config.register_option("artist_name_exceptions", "Ye => Kanye West")
     for key, _label in FEATURES:
         api.plugin_config.register_option(key, False)
     for key, _label, _script in SCRIPTS:
