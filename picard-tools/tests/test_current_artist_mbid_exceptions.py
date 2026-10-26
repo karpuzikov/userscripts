@@ -127,6 +127,59 @@ class MBIDOverrideTests(unittest.TestCase):
         self.assertEqual(metadata["artist"], ["AC/DC"])
         self.assertEqual(metadata["title"], ["AC/DC - Live"])
 
+    def test_yeezus_god_credit_is_preserved_in_title_and_artists(self):
+        unknown_mbid = "125ec42a-7229-4250-afc5-e057484327fe"
+        node = {
+            "artist-credit": [
+                {
+                    "name": "Kanye West",
+                    "artist": {
+                        "id": YE, "name": "Ye",
+                        "aliases": [{"name": "Kanye West"}],
+                    },
+                },
+                {
+                    "name": "God",
+                    "artist": {
+                        "id": unknown_mbid, "name": "[unknown]",
+                        "aliases": [{"name": "God"}, {"name": "-"}],
+                    },
+                },
+            ]
+        }
+        fields = {
+            "title": "I Am a God (ft. God)",
+            "artist": "Kanye West feat. God",
+            "artists": ["Kanye West", "God"],
+            "date": "2013-07-10",
+            "catalognumber": "UICD-6205",
+        }
+        metadata = FakeMetadata(fields)
+        for _ in range(2):
+            normalize_track_artist_names(FakeAPI(YE + " => Kanye West"), metadata, node)
+        for tag, expected in fields.items():
+            with self.subTest(tag=tag):
+                self.assertEqual(metadata[tag], expected)
+
+    def test_other_names_are_normalized_while_unknown_is_untouched(self):
+        node = {
+            "artist-credit": [
+                {"name": "Ubiquitous", "artist": {
+                    "id": OTHER, "name": "Ubi", "aliases": [{"name": "Ubiquitous"}]}},
+                {"name": "God", "artist": {
+                    "id": "125ec42a-7229-4250-afc5-e057484327fe",
+                    "name": "[unknown]", "aliases": [{"name": "God"}]}},
+            ]
+        }
+        metadata = FakeMetadata({
+            "artist": "Ubiquitous & God", "artists": ["Ubiquitous", "God"],
+            "title": "Ubiquitous (ft. God)",
+        })
+        normalize_track_artist_names(FakeAPI(""), metadata, node)
+        self.assertEqual(metadata["artist"], ["Ubi & God"])
+        self.assertEqual(metadata["artists"], ["Ubi", "God"])
+        self.assertEqual(metadata["title"], ["Ubi (ft. God)"])
+
     def test_accepts_only_valid_artist_mbids(self):
         self.assertEqual(
             _parse_exceptions(
