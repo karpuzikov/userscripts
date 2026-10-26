@@ -143,6 +143,38 @@ def _skip_tag(tag):
     return lower in _SKIP_TAGS or any(lower.startswith(p) for p in _SKIP_PREFIXES)
 
 
+def _parse_exceptions(text):
+    """One 'Current Name => Preferred Name' rule per line."""
+    rules = {}
+    for line in str(text or "").splitlines():
+        if "=>" not in line:
+            continue
+        current, preferred = (part.strip() for part in line.split("=>", 1))
+        if current and preferred and current != preferred:
+            rules[current] = preferred
+    return rules
+
+
+def _artist_exception_maps(exceptions, *nodes):
+    """Limit exceptions to actual MusicBrainz artists credited on this release."""
+    found = set()
+    def visit(node):
+        if isinstance(node, list):
+            for child in node:
+                visit(child)
+        elif isinstance(node, dict):
+            artist = node.get("artist")
+            if isinstance(artist, dict):
+                current = str(artist.get("name") or "").strip()
+                if current in exceptions:
+                    found.add(current)
+            for child in node.values():
+                visit(child)
+    for node in nodes:
+        visit(node)
+    return {name: exceptions[name] for name in found}
+
+
 def _build_maps(*nodes):
     maps = _ArtistMaps()
     for node in nodes:
@@ -153,6 +185,27 @@ def _build_maps(*nodes):
 
 def _normalize(api, metadata, *nodes):
     name_map, sort_map, canonical_names, canonical_sorts = _build_maps(*nodes)
+    config = getattr(api, "plugin_config", {})
+    try:
+        rule_text = config["artist_name_exceptions"]
+    except (KeyError, TypeError, AttributeError):
+        rule_text = ""
+    overrides = _artist_exception_maps(_parse_exceptions(rule_text), *nodes)
+    if overrides:
+        # Canonical current names are normally protected from substitutions.
+        # Explicit user overrides take precedence over that protection.
+        for name, preferred in overrides.items():
+            canonical_names.discard(name)
+            canonical_sorts.discard(name)
+            canonical_names.add(preferred)
+            canonical_sorts.add(preferred)
+            name_map[name] = preferred
+            sort_map[name] = preferred
+            # Also redirect credited names / aliases that resolve to this artist.
+            for mapping in (name_map, sort_map):
+                for old, target in list(mapping.items()):
+                    if target == name:
+                        mapping[old] = preferred
     if not name_map and not sort_map:
         return
 
