@@ -172,13 +172,15 @@ def _parse_exceptions(text):
 def _migrate_legacy_exceptions(text):
     """Upgrade the former shipped Ye rule without guessing other artist IDs."""
     before = str(text or "")
-    lines = before.splitlines()
-    changed = [
-        "164f0d73-1234-4e2c-8743-d77bf2191051 => Kanye West"
+    return "".join(
+        line.replace(
+            "Ye => Kanye West",
+            "164f0d73-1234-4e2c-8743-d77bf2191051 => Kanye West",
+            1,
+        )
         if line.strip() == "Ye => Kanye West" else line
-        for line in lines
-    ]
-    return "\n".join(changed) + ("\n" if before.endswith("\n") else "")
+        for line in before.splitlines(keepends=True)
+    )
 
 
 def _build_maps(*nodes, exceptions=None):
