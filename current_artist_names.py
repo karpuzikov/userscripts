@@ -16,6 +16,14 @@ _SKIP_TAGS = {
     "iswc",
     "musicip_puid",
     "musicip_fingerprint",
+    # Structured identifiers are never artist-name text.
+    "date",
+    "originaldate",
+    "releasedate",
+    "originalyear",
+    "year",
+    "catalognumber",
+    "catalognumbers",
 }
 
 
@@ -67,7 +75,9 @@ class _ArtistMaps:
 
     def _add(self, mapping, old, current):
         old = self._clean(old)
-        if old and old != current:
+        # MusicBrainz can credit [unknown] with a lone "-" or another symbol.
+        # Such aliases are not artist names safe to substitute in free text.
+        if old and old != current and any(char.isalpha() for char in old):
             mapping[old].add(current)
 
     def finalize(self):
@@ -154,7 +164,11 @@ def _replace(text, replacements, canonical_names):
 
 def _skip_tag(tag):
     lower = str(tag).lower().lstrip("~")
-    return lower in _SKIP_TAGS or any(lower.startswith(p) for p in _SKIP_PREFIXES)
+    return (
+        lower in _SKIP_TAGS
+        or lower.endswith("date")
+        or any(lower.startswith(p) for p in _SKIP_PREFIXES)
+    )
 
 
 def _parse_exceptions(text):
