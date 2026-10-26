@@ -8,6 +8,7 @@ from PyQt6 import QtCore, QtGui, QtWidgets
 from picard.plugin3.api import BaseAction, OptionsPage, ScriptParser
 
 from .current_artist_names import (
+    _migrate_legacy_exceptions,
     normalize_album_artist_names,
     normalize_track_artist_names,
 )
@@ -958,10 +959,10 @@ class ScriptsOptionsPage(OptionsPage):
             layout.addWidget(checkbox)
 
 
-        exceptions_label = QtWidgets.QLabel("Artist name exceptions (Current => Preferred)")
+        exceptions_label = QtWidgets.QLabel("Artist overrides (MBID => Preferred Name)")
         layout.addWidget(exceptions_label)
         self.artist_exceptions = QtWidgets.QPlainTextEdit()
-        self.artist_exceptions.setPlaceholderText("Ye => Kanye West")
+        self.artist_exceptions.setPlaceholderText("164f0d73-1234-4e2c-8743-d77bf2191051 => Kanye West")
         self.artist_exceptions.setMaximumHeight(90)
         layout.addWidget(self.artist_exceptions)
         layout.addStretch()
@@ -1015,7 +1016,16 @@ def process_track(api, track, metadata, track_node, release_node=None):
 
 
 def enable(api):
-    api.plugin_config.register_option("artist_name_exceptions", "Ye => Kanye West")
+    api.plugin_config.register_option(
+        "artist_name_exceptions",
+        "164f0d73-1234-4e2c-8743-d77bf2191051 => Kanye West",
+    )
+    # Preserve the user's old default setting by migrating this one verified ID.
+    # Other legacy name-based entries are kept verbatim but never applied.
+    stored = api.plugin_config["artist_name_exceptions"]
+    migrated = _migrate_legacy_exceptions(stored)
+    if migrated != stored:
+        api.plugin_config["artist_name_exceptions"] = migrated
     for key, _label in FEATURES:
         api.plugin_config.register_option(key, False)
     for key, _label, _script in SCRIPTS:
