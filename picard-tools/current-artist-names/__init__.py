@@ -26,6 +26,9 @@ from typing import Any
 
 PLUGIN_PRIORITY = -100  # Run late, after most metadata-modifying plugins.
 
+# Preserve release-specific credits attached to MusicBrainz [unknown].
+_UNKNOWN_ARTIST_MBID = "125ec42a-7229-4250-afc5-e057484327fe"
+
 # Tags where textual artist-name replacement would be inappropriate even if a
 # name happened to occur by chance. Most technical tags would never match, but
 # explicitly skipping identifiers is safer.
@@ -72,6 +75,8 @@ class _ArtistMaps:
         current_name = self._clean(artist.get("name"))
         if not current_name:
             return
+        if self._clean(artist.get("id")).lower() == _UNKNOWN_ARTIST_MBID:
+            return  # Never turn a credited artist such as "God" into "[unknown]".
 
         current_sort = self._clean(artist.get("sort-name")) or current_name
         self.canonical_names.add(current_name)
