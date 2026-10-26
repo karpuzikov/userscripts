@@ -2,7 +2,7 @@
 
 ## Product and state
 - Product: Karpuzikov Picard Scripts, a Picard 3.x Git-updatable MusicBrainz metadata plugin.
-- Current version: 1.5.31 - Under construction ⚠️ (not yet verified inside user Picard).
+- Current version: 1.5.32 - Under construction ⚠️ (not yet verified inside user Picard).
 - Git repository and active branch: `karpuzikov/userscripts`, `main`.
 - There is no additional project-specific `RULES.md` currently; the canonical repository root `SOFTWARE_RULES.md` governs this project.
 
@@ -277,3 +277,12 @@ Renamed 25 versioned user-downloadable snapshots, scripts and tools to filenames
 - Shared current_artist_names.py now rejects punctuation-only and numeric-only replacement keys and excludes date, year, and catalog number metadata from artist substitution. All other tools remain unchanged.
 - Three unit regressions added to picard-tools/tests/test_current_artist_mbid_exceptions.py covering unknown-artist hyphens, catalog/date protection, and legitimate hyphenated artist aliases. Equivalent safeguards were also applied to optional standalone Current Artist Names Everywhere v0.2.1; do not enable standalone and shared plugins together. No actual Windows Picard runtime tests performed. Version 1.5.31 - Under construction ⚠️.
 - Next: update plugin, reload Japanese Yeezus, confirm date and catalog are unchanged, and verify the Barcode toolbar lifecycle separately.
+
+## 2026-10-26 - God credited as [unknown] breaks track title (v1.5.32)
+
+- User screenshot from Japanese Yeezus release `141832c3-de98-4c4d-bcd7-1733b9141ba7` after upgrading to v1.5.31 shows track 3 `I Am a [unknown] (ft. [unknown])`, artist list `Kanye West; [unknown]`, despite original tags `I Am a God (ft. God)` and `Kanye West; God`. The earlier punctuation-only alias guard fixed date/catalog fields but did not prevent alphabetic `God` being globally changed to `[unknown]`.
+- The credited `God` entity has MusicBrainz special-purpose artist MBID `125ec42a-7229-4250-afc5-e057484327fe` (name `[unknown]`); this is not an ordinary performing artist whose canonical name should replace the credited string.
+- Shared plugin `current_artist_names.py` now bypasses automatic alias/name mappings originating from this exact special-purpose artist MBID, unless the user explicitly sets an MBID-targeted override. Normal artists and existing Ye MBID override are unchanged. Standalone plugin `picard-tools/current-artist-names/__init__.py` receives the equivalent unconditional special-artist bypass.
+- Added regressions to `picard-tools/tests/test_current_artist_mbid_exceptions.py`: original full title `I Am a God (ft. God)`, both artist name tags and structured date/catalog fields remain correct after multiple normalization passes, while an ordinary artist alias updates in the same release alongside the special-purpose entity.
+- Shared plugin version **1.5.32 - Under construction ⚠️** and standalone **0.2.2 - Under construction ⚠️**. GitHub source/static checks only; **test suite execution and real Picard Windows runtime NOT RUN**. Do not mark the UI issue verified without a real update and re-import of release.
+- Next user-side verification: update shared Karpuzikov Picard Scripts to v1.5.32, completely remove the existing imported Yeezus album, reopen release `141832c3-de98-4c4d-bcd7-1733b9141ba7`, verify track 3 title, artists, date, and catalog number. Do not enable both standalone and shared versions.
