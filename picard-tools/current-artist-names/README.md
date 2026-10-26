@@ -28,7 +28,8 @@ It also scans artist relationships that are present in the MusicBrainz nodes, so
 - Longer historical names are replaced before shorter ones.
 - Ambiguous aliases mapping to multiple linked artists are skipped.
 - Canonical names of other linked artists are protected.
-- MusicBrainz / AcoustID identifiers and other identifier tags are not modified.
+- MusicBrainz / AcoustID identifiers, dates and catalog numbers are not modified.
+- Punctuation-only and numeric-only aliases cannot act as global artist-name replacements.
 
 ## Interaction with tagging scripts
 
@@ -49,6 +50,10 @@ Recommended Git-updatable installation:
 The standalone plugin in this directory remains available for compatibility. Do not enable both copies at the same time.
 
 
+
+## 0.2.1
+
+Fixed metadata corruption caused by punctuation-only artist aliases (e.g. a hyphen credited to the special artist `[unknown]`). Preserves date fields and catalog numbers even when a linked artist has a conflicting text alias. Shared Picard plugin v1.5.31 contains the same safeguards.
 
 ## 0.2.0
 
