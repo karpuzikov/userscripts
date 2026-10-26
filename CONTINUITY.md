@@ -2,7 +2,7 @@
 
 ## Product and state
 - Product: Karpuzikov Picard Scripts, a Picard 3.x Git-updatable MusicBrainz metadata plugin.
-- Current version: 1.5.29 - Under construction ⚠️ (not yet verified inside user Picard).
+- Current version: 1.5.30 - Under construction ⚠️ (not yet verified inside user Picard).
 - Git repository and active branch: `karpuzikov/userscripts`, `main`.
 - There is no additional project-specific `RULES.md` currently; the canonical repository root `SOFTWARE_RULES.md` governs this project.
 
@@ -260,3 +260,12 @@ Renamed 25 versioned user-downloadable snapshots, scripts and tools to filenames
 - Publish `picard-tools/scripts/Move_Featured_Artists_to_Title.txt` and `Move_Featured_Artists_to_Title_v1.00.03.txt`, keeping embedded `SCRIPTS` code byte-for-byte identical when decoded. Existing separate `Format_Multiple_Artists.txt` v1.00.03 remains intact. Added source, parity and optional real Picard runtime regression tests.
 - Static source syntax and function arity checks passed; limited reference normalization cases passed outside Picard. **Real Picard script execution and Windows UI acceptance NOT RUN**, so maintain **1.5.29 - Under construction ⚠️**, `Move Featured Artists to Title 1.0.3 - Under construction ⚠️`. Do not claim verified Picard output without the user confirming.
 - Next action: update Picard Git plugin or install standalone 1.00.03; refresh release `ef0591d3-0a40-4d4a-b85d-5f311d710962`, verify track title ends in `Keyshia Cole & BJ the Chicago Kid)`. Also test artist names containing literal `and` and that existing feature suffixes are not duplicated. Independent Barcode toolbar orphan test remains pending on Windows.
+
+## 2026-10-26 - MBID-keyed Current Artist Names Everywhere overrides (plugin v1.5.30)
+
+- User rejected name-based `Ye => Kanye West` matching because it cannot distinguish artists sharing a display name. New setting uses `artist MBID => Preferred Name`, e.g. official Ye artist MBID `164f0d73-1234-4e2c-8743-d77bf2191051 => Kanye West`.
+- `current_artist_names.py` parses only well-formed UUID MBIDs, case-insensitive. At artist collection time, each MusicBrainz `artist.id` is compared directly against configured IDs. Matching artist canonical names, credited names, aliases and sort-tag mappings resolve to the preferred name; unmatched artist entities follow ordinary current-name normalization. Existing ambiguity and canonical-name guards prevent blindly rewriting another linked artist with the same display name.
+- The plugin options label and placeholder show the MBID format. The shipped/default historical line `Ye => Kanye West` is migrated once, without guessing MBIDs for arbitrary old name-based entries. Other old entries remain in settings but are inactive until manually converted to MBIDs. Existing configs and unrelated tools are preserved.
+- New `picard-tools/tests/test_current_artist_mbid_exceptions.py` covers MBID parsing, migration, exact-ID matching and mismatching, missing IDs, name-only-rule rejection, same-display-name ambiguity and aliases across metadata fields including titles and identifier exclusion.
+- GitHub changes and source checks performed. **Actual Windows Picard 3 GUI and integration tests NOT RUN**; **standalone plugin v0.2.0 unchanged** (the override UI belongs to the shared plugin). Status **v1.5.30 - Under construction ⚠️** pending real Picard validation.
+- Next action: update Karpuzikov Picard Scripts to v1.5.30, verify artist override list displays `164f0d73-1234-4e2c-8743-d77bf2191051 => Kanye West`, reload a Ye release and verify artist and titles use Kanye West. Verify unrelated same-named artist MBIDs are unaffected. Keep separate barcode toolbar issue QA pending.
