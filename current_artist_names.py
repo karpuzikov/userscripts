@@ -5,6 +5,9 @@ from collections import defaultdict
 import re
 
 
+_MBID_PATTERN = re.compile(r"^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$", re.I)
+
+
 _SKIP_PREFIXES = ("musicbrainz_", "acoustid_")
 _SKIP_TAGS = {
     "barcode",
@@ -17,7 +20,8 @@ _SKIP_TAGS = {
 
 
 class _ArtistMaps:
-    def __init__(self):
+    def __init__(self, exceptions=None):
+        self.exceptions = exceptions or {}
         self.names = defaultdict(set)
         self.sorts = defaultdict(set)
         self.canonical_names = set()
@@ -36,20 +40,30 @@ class _ArtistMaps:
             return
 
         current_sort = self._clean(artist.get("sort-name")) or current
-        self.canonical_names.add(current)
-        self.canonical_sorts.add(current_sort)
+        artist_mbid = self._clean(artist.get("id")).lower()
+        preferred = self.exceptions.get(artist_mbid)
+        target_name = preferred or current
+        target_sort = preferred or current_sort
+        self.canonical_names.add(target_name)
+        self.canonical_sorts.add(target_sort)
 
-        self._add(self.names, credited_name, current)
-        self._add(self.sorts, credited_name, current_sort)
+        if preferred:
+            # Only this exact MusicBrainz artist entity receives the override.
+            self._add(self.names, current, target_name)
+            self._add(self.sorts, current, target_sort)
+            self._add(self.sorts, current_sort, target_sort)
+
+        self._add(self.names, credited_name, target_name)
+        self._add(self.sorts, credited_name, target_sort)
 
         aliases = artist.get("aliases") or []
         if isinstance(aliases, list):
             for alias in aliases:
                 if not isinstance(alias, dict):
                     continue
-                self._add(self.names, alias.get("name"), current)
-                self._add(self.sorts, alias.get("name"), current_sort)
-                self._add(self.sorts, alias.get("sort-name"), current_sort)
+                self._add(self.names, alias.get("name"), target_name)
+                self._add(self.sorts, alias.get("name"), target_sort)
+                self._add(self.sorts, alias.get("sort-name"), target_sort)
 
     def _add(self, mapping, old, current):
         old = self._clean(old)
@@ -144,39 +158,31 @@ def _skip_tag(tag):
 
 
 def _parse_exceptions(text):
-    """One 'Current Name => Preferred Name' rule per line."""
+    """Parse only 'artist MBID => Preferred Name' entries, never name-based rules."""
     rules = {}
     for line in str(text or "").splitlines():
         if "=>" not in line:
             continue
-        current, preferred = (part.strip() for part in line.split("=>", 1))
-        if current and preferred and current != preferred:
-            rules[current] = preferred
+        mbid, preferred = (part.strip() for part in line.split("=>", 1))
+        if _MBID_PATTERN.fullmatch(mbid) and preferred:
+            rules[mbid.lower()] = preferred
     return rules
 
 
-def _artist_exception_maps(exceptions, *nodes):
-    """Limit exceptions to actual MusicBrainz artists credited on this release."""
-    found = set()
-    def visit(node):
-        if isinstance(node, list):
-            for child in node:
-                visit(child)
-        elif isinstance(node, dict):
-            artist = node.get("artist")
-            if isinstance(artist, dict):
-                current = str(artist.get("name") or "").strip()
-                if current in exceptions:
-                    found.add(current)
-            for child in node.values():
-                visit(child)
-    for node in nodes:
-        visit(node)
-    return {name: exceptions[name] for name in found}
+def _migrate_legacy_exceptions(text):
+    """Upgrade the former shipped Ye rule without guessing other artist IDs."""
+    before = str(text or "")
+    lines = before.splitlines()
+    changed = [
+        "164f0d73-1234-4e2c-8743-d77bf2191051 => Kanye West"
+        if line.strip() == "Ye => Kanye West" else line
+        for line in lines
+    ]
+    return "\n".join(changed) + ("\n" if before.endswith("\n") else "")
 
 
-def _build_maps(*nodes):
-    maps = _ArtistMaps()
+def _build_maps(*nodes, exceptions=None):
+    maps = _ArtistMaps(exceptions)
     for node in nodes:
         if node:
             _collect(node, maps)
@@ -184,28 +190,15 @@ def _build_maps(*nodes):
 
 
 def _normalize(api, metadata, *nodes):
-    name_map, sort_map, canonical_names, canonical_sorts = _build_maps(*nodes)
     config = getattr(api, "plugin_config", {})
     try:
         rule_text = config["artist_name_exceptions"]
     except (KeyError, TypeError, AttributeError):
         rule_text = ""
-    overrides = _artist_exception_maps(_parse_exceptions(rule_text), *nodes)
-    if overrides:
-        # Canonical current names are normally protected from substitutions.
-        # Explicit user overrides take precedence over that protection.
-        for name, preferred in overrides.items():
-            canonical_names.discard(name)
-            canonical_sorts.discard(name)
-            canonical_names.add(preferred)
-            canonical_sorts.add(preferred)
-            name_map[name] = preferred
-            sort_map[name] = preferred
-            # Also redirect credited names / aliases that resolve to this artist.
-            for mapping in (name_map, sort_map):
-                for old, target in list(mapping.items()):
-                    if target == name:
-                        mapping[old] = preferred
+    exceptions = _parse_exceptions(rule_text)
+    name_map, sort_map, canonical_names, canonical_sorts = _build_maps(
+        *nodes, exceptions=exceptions
+    )
     if not name_map and not sort_map:
         return
 
