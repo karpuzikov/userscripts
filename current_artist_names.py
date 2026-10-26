@@ -7,6 +7,9 @@ import re
 
 _MBID_PATTERN = re.compile(r"^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$", re.I)
 
+# Special-purpose artist: preserve its release-specific credited names such as "God".
+_UNKNOWN_ARTIST_MBID = "125ec42a-7229-4250-afc5-e057484327fe"
+
 
 _SKIP_PREFIXES = ("musicbrainz_", "acoustid_")
 _SKIP_TAGS = {
@@ -50,6 +53,8 @@ class _ArtistMaps:
         current_sort = self._clean(artist.get("sort-name")) or current
         artist_mbid = self._clean(artist.get("id")).lower()
         preferred = self.exceptions.get(artist_mbid)
+        if artist_mbid == _UNKNOWN_ARTIST_MBID and not preferred:
+            return  # Do not turn "God" or other credited names into "[unknown]".
         target_name = preferred or current
         target_sort = preferred or current_sort
         self.canonical_names.add(target_name)
