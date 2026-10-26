@@ -690,12 +690,79 @@ class PicardAlbumRegressions(unittest.TestCase):
             ("English_Title_Capitalization.txt", "English_Title_Capitalization_v1.01.09.txt"),
             ("Add_EP_Single_Suffix.txt", "Add_EP_Single_Suffix_v1.00.02.txt"),
             ("Dont_Use_This_Tags.txt", "Dont_Use_This_Tags_v1.00.00.txt"),
-            ("Format_Multiple_Artists.txt", "Format_Multiple_Artists_v1.00.02.txt"),
-            ("Move_Featured_Artists_to_Title.txt", "Move_Featured_Artists_to_Title_v1.00.02.txt"),
+            ("Format_Multiple_Artists.txt", "Format_Multiple_Artists_v1.00.03.txt"),
+            ("Move_Featured_Artists_to_Title.txt", "Move_Featured_Artists_to_Title_v1.00.03.txt"),
         ):
             with self.subTest(stable=stable):
                 folder = REPO / "picard-tools" / "scripts"
                 self.assertEqual((folder / stable).read_bytes(), (folder / versioned).read_bytes())
+
+    def test_featured_artist_join_source_uses_artist_boundary(self):
+        source = (REPO / "picard-tools" / "scripts" /
+                  "Move_Featured_Artists_to_Title.txt").read_text(encoding="utf-8")
+        self.assertIn("$getmulti(%artists%,-1)", source)
+        self.assertIn("$gt($lenmulti(%artists%),2)", source)
+        self.assertIn("$endswith(%_feat_title%, and %_feat_last%)", source)
+        self.assertIn("$set(title,$replace(%title%,%_feat_original%,%_feat_title%))", source)
+        self.assertNotIn("$replace(%title%, and , & )", source)
+
+    def test_featured_artist_join_picard_runtime(self):
+        try:
+            from picard.metadata import Metadata
+            from picard.script import ScriptParser
+        except ImportError:
+            self.skipTest("Picard runtime unavailable; run inside Picard's Python environment")
+        source = (REPO / "picard-tools" / "scripts" /
+                  "Move_Featured_Artists_to_Title.txt").read_text(encoding="utf-8")
+        cases = (
+            (
+                "Impossible",
+                "Kanye West featuring Twista, Keyshia Cole and BJ the Chicago Kid",
+                ["Kanye West", "Twista", "Keyshia Cole", "BJ the Chicago Kid"],
+                "Impossible (ft. Twista, Keyshia Cole & BJ the Chicago Kid)",
+            ),
+            (
+                "Impossible (ft. Twista, Keyshia Cole and BJ the Chicago Kid)",
+                "Kanye West featuring Twista, Keyshia Cole and BJ the Chicago Kid",
+                ["Kanye West", "Twista", "Keyshia Cole", "BJ the Chicago Kid"],
+                "Impossible (ft. Twista, Keyshia Cole & BJ the Chicago Kid)",
+            ),
+            (
+                "Impossible (ft. Twista, Keyshia Cole & BJ the Chicago Kid)",
+                "Kanye West featuring Twista, Keyshia Cole and BJ the Chicago Kid",
+                ["Kanye West", "Twista", "Keyshia Cole", "BJ the Chicago Kid"],
+                "Impossible (ft. Twista, Keyshia Cole & BJ the Chicago Kid)",
+            ),
+            (
+                "Time and Tide",
+                "Main featuring Bob and Alice",
+                ["Main", "Bob", "Alice"],
+                "Time and Tide (ft. Bob & Alice)",
+            ),
+            (
+                "Song",
+                "Main featuring Simon and Garfunkel",
+                ["Main", "Simon and Garfunkel"],
+                "Song (ft. Simon and Garfunkel)",
+            ),
+            (
+                "Song",
+                "Main featuring First and The Black and Whites",
+                ["Main", "First", "The Black and Whites"],
+                "Song (ft. First & The Black and Whites)",
+            ),
+        )
+        for before, credit, artists, expected in cases:
+            with self.subTest(title=before, credit=credit):
+                data = Metadata()
+                data["title"] = before
+                data["artist"] = credit
+                data["albumartist"] = credit
+                data["artists"] = artists
+                ScriptParser().eval(source, data)
+                self.assertEqual(data["title"], expected)
+                ScriptParser().eval(source, data)
+                self.assertEqual(data["title"], expected)
 
     def test_manual_script_function_arity(self):
         # Scan Picard's escaped commas and nested function arguments; catches
