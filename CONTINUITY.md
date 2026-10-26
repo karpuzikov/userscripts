@@ -2,7 +2,7 @@
 
 ## Product and state
 - Product: Karpuzikov Picard Scripts, a Picard 3.x Git-updatable MusicBrainz metadata plugin.
-- Current version: 1.5.30 - Under construction ⚠️ (not yet verified inside user Picard).
+- Current version: 1.5.31 - Under construction ⚠️ (not yet verified inside user Picard).
 - Git repository and active branch: `karpuzikov/userscripts`, `main`.
 - There is no additional project-specific `RULES.md` currently; the canonical repository root `SOFTWARE_RULES.md` governs this project.
 
@@ -269,3 +269,11 @@ Renamed 25 versioned user-downloadable snapshots, scripts and tools to filenames
 - New `picard-tools/tests/test_current_artist_mbid_exceptions.py` covers MBID parsing, migration, exact-ID matching and mismatching, missing IDs, name-only-rule rejection, same-display-name ambiguity and aliases across metadata fields including titles and identifier exclusion.
 - GitHub changes and source checks performed. **Actual Windows Picard 3 GUI and integration tests NOT RUN**; **standalone plugin v0.2.0 unchanged** (the override UI belongs to the shared plugin). Status **v1.5.30 - Under construction ⚠️** pending real Picard validation.
 - Next action: update Karpuzikov Picard Scripts to v1.5.30, verify artist override list displays `164f0d73-1234-4e2c-8743-d77bf2191051 => Kanye West`, reload a Ye release and verify artist and titles use Kanye West. Verify unrelated same-named artist MBIDs are unaffected. Keep separate barcode toolbar issue QA pending.
+
+## 2026-10-26 - Picard date and catalog fields regression v1.5.31
+
+- Reported on Japanese Yeezus MusicBrainz release 141832c3-de98-4c4d-bcd7-1733b9141ba7: date 2013-07-10 became 2013[unknown]07[unknown]10; catalog UICD-6205 became UICD[unknown]6205. Source release page confirms correct original fields.
+- A punctuation-only artist alias can create a global hyphen replacement in the Current Artist Names Everywhere processor. Exact release alias data could not be fetched, so treat this as a reproducing code path, not a verified trace of loaded Picard data.
+- Shared current_artist_names.py now rejects punctuation-only and numeric-only replacement keys and excludes date, year, and catalog number metadata from artist substitution. All other tools remain unchanged.
+- Three unit regressions added to picard-tools/tests/test_current_artist_mbid_exceptions.py covering unknown-artist hyphens, catalog/date protection, and legitimate hyphenated artist aliases. No actual Windows Picard runtime tests performed. Version 1.5.31 - Under construction ⚠️.
+- Next: update plugin, reload Japanese Yeezus, confirm date and catalog are unchanged, and verify the Barcode toolbar lifecycle separately.
