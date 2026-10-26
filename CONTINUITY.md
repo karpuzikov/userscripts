@@ -2,7 +2,7 @@
 
 ## Product and state
 - Product: Karpuzikov Picard Scripts, a Picard 3.x Git-updatable MusicBrainz metadata plugin.
-- Current version: 1.5.27 - Under construction ⚠️ (not yet verified inside user Picard).
+- Current version: 1.5.28 - Under construction ⚠️ (not yet verified inside user Picard).
 - Git repository and active branch: `karpuzikov/userscripts`, `main`.
 - There is no additional project-specific `RULES.md` currently; the canonical repository root `SOFTWARE_RULES.md` governs this project.
 
@@ -241,3 +241,13 @@ Renamed 25 versioned user-downloadable snapshots, scripts and tools to filenames
 
 - **Total successful source-blob-preserving renames: 229 file paths** across accessible repository branches. Default branches: MCC 21, TRRNT-project 20, userscripts 25 = 66. Branches: TRRNT-project `mlo-v0.3.6-checker-results-fixes` 27, `audit-test-fixes` 20, `dea-tests` 20, `repo-hygiene` 20 = 87. userscripts `dea-lightweight-modern` 17, `dea-lightweight-ascii-ui-test` 10, `dea-native-light-test` 7, `archivemedia-rclone` 11, `add-duplicate-edit-checker` 1, `feat/beatport-release-musicbrainz-logo` 4, `feature/beatport-catalog-number-finder-0.1.0` 22, `fix/apple-music-upc-validation-v1.2.9` 4 = 76. Versions within file bodies remain the same; no source code behavior changed by filename migrations. The global `SOFTWARE_RULES.md` two-digit naming rule was synchronized to all 12 migrated branches and the 8 currently reachable default branches.
 - **Pending/blocked** unchanged: versioned GitHub Releases executable/ZIP assets require release-asset write capability not available in current connected GitHub tools; four previously listed repositories currently 404/inaccessible. These are NOT claimed as migrated. Runtime execution/tests not run on Windows. No GitHub Actions workflows were modified.
+
+## 2026-10-26 - Barcode toolbar orphan still reproduced (v1.5.28)
+
+- User screenshot confirms that a tiny independent Picard taskbar window with the Barcode button survives after the main Picard window has closed. Earlier mitigations (v1.5.18 through v1.5.25) were insufficient.
+- Upstream Picard `MainWindow.create_action_toolbar()` calls `clear()` and `removeToolBar()` on the previous toolbar, then creates a parentless new `QToolBar` without destroying the removed instance. Delayed refresh/Close-only retirement can miss a detached top-level window, which can keep the process alive and prevent `aboutToQuit` from firing.
+- v1.5.28 adds a guarded instance-level wrapper for `create_action_toolbar` while the plugin is active. Immediately after each host toolbar rebuild, dispose the exact previous toolbar (hide, close, deleteLater), track the new toolbar, and reattach Barcode once at the front. On disable, restore the original method and remove the hook. Existing event/timer cleanup remains fallback if the host method cannot be wrapped.
+- Shutdown and plugin-disable handlers additionally retire any superseded toolbar still referenced by the watcher. On cancelled quit, the active toolbar remains untouched and normal refresh resumes. Preserve barcode/UPC exact-equivalent matching and native Lookup unchanged.
+- Added Qt-independent tests of repeated synchronous toolbar replacement, wrapper restoration, and cleanup hooks. These tests were committed but **NOT RUN** in this environment; actual Windows Picard 3 launch, taskbar visual inspection, toolbar customization, exit confirmation cancellation, and plugin update QA are also **NOT RUN**. Version is **1.5.28 - Under construction ⚠️**. Do not claim that the reported symptom is resolved before user tests.
+- Also synchronized the embedded `Format Multiple Artists` script with standalone `Format_Multiple_Artists.txt` v1.00.03 (which falls back to `%_albumartists%` where required); standalone and embedded sources must remain equivalent.
+- Next action: update Karpuzikov Picard Scripts in Picard; rebuild Actions toolbar a few times using Toolbar options; close Picard and verify the orphan taskbar window and Picard process both disappear. Repeat with quit confirmation cancelled and accepted.
