@@ -2,7 +2,7 @@
 
 ## Product and state
 - Product: Karpuzikov Picard Scripts, a Picard 3.x Git-updatable MusicBrainz metadata plugin.
-- Current version: 1.5.28 - Under construction ⚠️ (not yet verified inside user Picard).
+- Current version: 1.5.29 - Under construction ⚠️ (not yet verified inside user Picard).
 - Git repository and active branch: `karpuzikov/userscripts`, `main`.
 - There is no additional project-specific `RULES.md` currently; the canonical repository root `SOFTWARE_RULES.md` governs this project.
 
@@ -251,3 +251,12 @@ Renamed 25 versioned user-downloadable snapshots, scripts and tools to filenames
 - Added Qt-independent tests of repeated synchronous toolbar replacement, wrapper restoration, and cleanup hooks. These tests were committed but **NOT RUN** in this environment; actual Windows Picard 3 launch, taskbar visual inspection, toolbar customization, exit confirmation cancellation, and plugin update QA are also **NOT RUN**. Version is **1.5.28 - Under construction ⚠️**. Do not claim that the reported symptom is resolved before user tests.
 - Also synchronized the embedded `Format Multiple Artists` script with standalone `Format_Multiple_Artists.txt` v1.00.03 (which falls back to `%_albumartists%` where required); standalone and embedded sources must remain equivalent.
 - Next action: update Karpuzikov Picard Scripts in Picard; rebuild Actions toolbar a few times using Toolbar options; close Picard and verify the orphan taskbar window and Picard process both disappear. Repeat with quit confirmation cancelled and accepted.
+
+## 2026-10-26 - Featured-artist title separator fix (plugin v1.5.29, standalone v1.00.03)
+
+- Regression example: MusicBrainz release `ef0591d3-0a40-4d4a-b85d-5f311d710962`, artist credit Kanye West featuring Twista, Keyshia Cole and BJ the Chicago Kid. User's generated title `Impossible (ft. Twista, Keyshia Cole and BJ the Chicago Kid)` must become `Impossible (ft. Twista, Keyshia Cole & BJ the Chicago Kid)`.
+- Root cause: `Move Featured Artists to Title` extracts a featured-artist substring from `artist`, normalizes `featuring` to `ft.`, and appends the substring unchanged to `title`. `Format Multiple Artists` only changes artist/albumartist tags, never the appended `title`.
+- Source patch uses the last item in Picard's multi-valued `artists` tag to verify the **final join boundary** ` and <lastartist>` before replacing it with ` & <lastartist>`; requires at least three credited artists (main + two feature credits), protecting names like `Simon and Garfunkel` and `The Black and Whites`. Existing titles with the original exact featured credit are normalized in-place before duplicate prevention, so they do not get a second parenthetical.
+- Publish `picard-tools/scripts/Move_Featured_Artists_to_Title.txt` and `Move_Featured_Artists_to_Title_v1.00.03.txt`, keeping embedded `SCRIPTS` code byte-for-byte identical when decoded. Existing separate `Format_Multiple_Artists.txt` v1.00.03 remains intact. Added source, parity and optional real Picard runtime regression tests.
+- Static source syntax and function arity checks passed; limited reference normalization cases passed outside Picard. **Real Picard script execution and Windows UI acceptance NOT RUN**, so maintain **1.5.29 - Under construction ⚠️**, `Move Featured Artists to Title 1.0.3 - Under construction ⚠️`. Do not claim verified Picard output without the user confirming.
+- Next action: update Picard Git plugin or install standalone 1.00.03; refresh release `ef0591d3-0a40-4d4a-b85d-5f311d710962`, verify track title ends in `Keyshia Cole & BJ the Chicago Kid)`. Also test artist names containing literal `and` and that existing feature suffixes are not duplicated. Independent Barcode toolbar orphan test remains pending on Windows.
