@@ -51,9 +51,13 @@ The standalone plugin in this directory remains available for compatibility. Do 
 
 
 
+## 0.2.2
+
+Special-purpose MusicBrainz artist `[unknown]` (MBID `125ec42a-7229-4250-afc5-e057484327fe`) can be credited as `God` on Kanye West's `I Am a God` track. Such credits should remain verbatim, including in the title `I Am a God (ft. God)`. This version no longer maps credited names of that special-purpose entity to `[unknown]`.
+
 ## 0.2.1
 
-Fixed metadata corruption caused by punctuation-only artist aliases (e.g. a hyphen credited to the special artist `[unknown]`). Preserves date fields and catalog numbers even when a linked artist has a conflicting text alias. Shared Picard plugin v1.5.31 contains the same safeguards.
+Fixed metadata corruption caused by punctuation-only artist aliases (e.g. a hyphen credited to the special artist `[unknown]`). Preserves date fields and catalog numbers even when a linked artist has a conflicting text alias. Shared Picard plugin v1.5.32 contains the same safeguards.
 
 ## 0.2.0
 
