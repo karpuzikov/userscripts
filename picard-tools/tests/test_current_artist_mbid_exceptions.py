@@ -77,6 +77,13 @@ class MBIDOverrideTests(unittest.TestCase):
         )
         self.assertEqual(_migrate_legacy_exceptions(before.replace("Ye => Kanye West", YE + " => Kanye West")), YE + " => Kanye West\nOther artist => Keep untouched\n")
 
+    def test_migration_does_not_reformat_existing_rules(self):
+        original = "Other artist => Preferred\\r\\n" + YE + " => Kanye West\\r\\n"
+        self.assertEqual(_migrate_legacy_exceptions(original), original)
+        with_legacy = "Other artist => Preferred\\r\\nYe => Kanye West\\r\\n"
+        expected = "Other artist => Preferred\\r\\n" + YE + " => Kanye West\\r\\n"
+        self.assertEqual(_migrate_legacy_exceptions(with_legacy), expected)
+
     def test_override_uses_matching_artist_id_not_name(self):
         metadata = FakeMetadata({
             "artist": "Ye", "albumartist": "Ye",
