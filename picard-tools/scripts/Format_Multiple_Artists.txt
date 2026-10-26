@@ -5,11 +5,14 @@ $if($eq(%_artistcount%,1),$set(artist,$getmulti(%_mainartists%,0)),$if($eq(%_art
 $unset(_mainartists)
 $unset(_artistcount)
 
-$if($gt($lenmulti(%albumartists%),0),
-$setmulti(_mainalbumartists,%albumartists%)
-$foreach(%albumartists%,$if($not($if($inmulti(%albumartists%,%albumartist%),$eq(%albumartist%,%_loop_value%),$in(%albumartist%,%_loop_value%))),$setmulti(_mainalbumartists,$replacemulti(%_mainalbumartists%,%_loop_value%,))))
+$setmulti(_albumartists_source,%albumartists%)
+$if($eq($lenmulti(%_albumartists_source%),0),$setmulti(_albumartists_source,%_albumartists%))
+$if($gt($lenmulti(%_albumartists_source%),0),
+$setmulti(_mainalbumartists,%_albumartists_source%)
+$foreach(%_albumartists_source%,$if($not($if($inmulti(%_albumartists_source%,%albumartist%),$eq(%albumartist%,%_loop_value%),$in(%albumartist%,%_loop_value%))),$setmulti(_mainalbumartists,$replacemulti(%_mainalbumartists%,%_loop_value%,))))
 $set(_albumartistcount,$lenmulti(%_mainalbumartists%))
 $if($eq(%_albumartistcount%,1),$set(albumartist,$getmulti(%_mainalbumartists%,0)),$if($eq(%_albumartistcount%,2),$set(albumartist,$join(%_mainalbumartists%, & )),$if($gt(%_albumartistcount%,2),$set(albumartist,$join($slice(%_mainalbumartists%,0,-1),\, ) & $getmulti(%_mainalbumartists%,-1)))))
 $unset(_mainalbumartists)
 $unset(_albumartistcount)
 )
+$unset(_albumartists_source)
