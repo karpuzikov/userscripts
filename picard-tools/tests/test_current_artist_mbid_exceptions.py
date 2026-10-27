@@ -59,6 +59,69 @@ def artist_credit(mbid=YE, name="Ye (formerly Kanye West)", credited="Ye"):
 
 
 class MBIDOverrideTests(unittest.TestCase):
+    def test_camron_alias_apostrophes_do_not_expand_inside_name(self):
+        """Late Registration: Cam'ron must never become Cam'ron'ron."""
+        camron = "ea6b7199-901d-4c0e-8242-6d7bc2bf62b7"
+        node = {
+            "artist-credit": [{
+                "name": "Cam'ron",
+                "artist": {
+                    "id": camron,
+                    "name": "Cam’ron",
+                    "aliases": [
+                        {"name": "Cam"},
+                        {"name": "Camron"},
+                        {"name": "Killa Cam"},
+                    ],
+                },
+            }]
+        }
+        cases = (
+            ("Cam'ron", "Cam’ron"),
+            ("Cam’ron", "Cam’ron"),
+            ("Cam feat. Juelz Santana", "Cam’ron feat. Juelz Santana"),
+            ("Cam'ron feat. Juelz Santana", "Cam’ron feat. Juelz Santana"),
+            ("Cam’s song", "Cam’s song"),
+            ("Cam's song", "Cam's song"),
+            ("Camera and Cam", "Camera and Cam’ron"),
+        )
+        for original, expected in cases:
+            with self.subTest(original=original):
+                metadata = FakeMetadata({
+                    "artist": original,
+                    "title": original,
+                    "album": "Late Registration",
+                    "musicbrainz_artistid": camron,
+                })
+                for _ in range(3):
+                    normalize_track_artist_names(FakeAPI(""), metadata, node)
+                self.assertEqual(metadata["artist"], [expected] if expected != original else original)
+                self.assertEqual(metadata["title"], [expected] if expected != original else original)
+                self.assertEqual(metadata["album"], "Late Registration")
+                self.assertNotIn("ron'ron", str(metadata).lower())
+                self.assertNotIn("ron’ron", str(metadata).lower())
+
+    def test_camron_apostrophe_variant_also_works_for_standalone_plugin(self):
+        import ast
+        import re
+        root = Path(__file__).resolve().parents[2]
+        source = (root / "picard-tools" / "current-artist-names" /
+                  "__init__.py").read_text(encoding="utf-8")
+        module = ast.parse(source)
+        function = next(
+            node for node in module.body
+            if isinstance(node, ast.FunctionDef) and node.name == "_make_pattern"
+        )
+        namespace = {"re": re}
+        exec(compile(ast.Module(body=[function], type_ignores=[]),
+                     "<standalone-pattern>", "exec"), namespace)
+        pattern = namespace["_make_pattern"]
+        self.assertIsNone(pattern("Cam").search("Cam'ron"))
+        self.assertIsNone(pattern("Cam").search("Cam’ron"))
+        self.assertIsNotNone(pattern("Cam").search("Cam and friends"))
+        self.assertIsNotNone(pattern("Cam'ron").search("Cam'ron feat. Juelz"))
+        self.assertIn("current_name.replace(\"’\", \"'\")", source)
+
     def test_unknown_artist_punctuation_alias_never_corrupts_hyphens(self):
         """Regression: Yeezus JP date/catalog became 2013[unknown]07..."""
         unknown = {
