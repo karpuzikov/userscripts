@@ -80,6 +80,12 @@ class _ArtistMaps:
         self._add(names, credited_name, target_name)
         self._add(sorts, credited_name, target_sort)
 
+        # Normalize straight/typographic apostrophes as complete artist names
+        # before considering shorter search aliases such as "Cam".
+        for variant in {current.replace("’", "'"), current.replace("'", "’")}:
+            self._add(names, variant, target_name)
+            self._add(sorts, variant, target_sort)
+
         aliases = artist.get("aliases") or []
         if isinstance(aliases, list):
             for alias in aliases:
@@ -170,8 +176,10 @@ def _collect(node, maps):
 
 def _pattern(name):
     escaped = re.escape(name)
-    left = r"(?<!\w)" if name and (name[0].isalnum() or name[0] == "_") else ""
-    right = r"(?!\w)" if name and (name[-1].isalnum() or name[-1] == "_") else ""
+    # Both straight and typographic apostrophes belong to artist-name
+    # tokens: "Cam" must not match the prefix of "Cam'ron" or "Cam’ron".
+    left = r"(?<![\w'’])" if name and (name[0].isalnum() or name[0] == "_") else ""
+    right = r"(?![\w'’])" if name and (name[-1].isalnum() or name[-1] == "_") else ""
     return re.compile(left + escaped + right)
 
 
