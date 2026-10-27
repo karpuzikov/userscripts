@@ -2,7 +2,7 @@
 
 ## Product and state
 - Product: Karpuzikov Picard Scripts, a Picard 3.x Git-updatable MusicBrainz metadata plugin.
-- Current version: 1.5.32 - Under construction ⚠️ (not yet verified inside user Picard).
+- Current version: 1.5.33 - Under construction ⚠️ (not yet verified inside user Picard).
 - Git repository and active branch: `karpuzikov/userscripts`, `main`.
 - There is no additional project-specific `RULES.md` currently; the canonical repository root `SOFTWARE_RULES.md` governs this project.
 
@@ -286,3 +286,13 @@ Renamed 25 versioned user-downloadable snapshots, scripts and tools to filenames
 - Added regressions to `picard-tools/tests/test_current_artist_mbid_exceptions.py`: original full title `I Am a God (ft. God)`, both artist name tags and structured date/catalog fields remain correct after multiple normalization passes, while an ordinary artist alias updates in the same release alongside the special-purpose entity.
 - Shared plugin version **1.5.32 - Under construction ⚠️** and standalone **0.2.2 - Under construction ⚠️**. GitHub source/static checks only; **test suite execution and real Picard Windows runtime NOT RUN**. Do not mark the UI issue verified without a real update and re-import of release.
 - Next user-side verification: update shared Karpuzikov Picard Scripts to v1.5.32, completely remove the existing imported Yeezus album, reopen release `141832c3-de98-4c4d-bcd7-1733b9141ba7`, verify track 3 title, artists, date, and catalog number. Do not enable both standalone and shared versions.
+
+## 2026-10-27 - Artist MBID override incorrectly replaced release title (v1.5.33)
+
+- User rule `793e220b-64f8-46d9-954d-e033dbcfeef4 => Kanye West & Kid Cudi` rewrote the independent release title on MusicBrainz release `fc8d8f0d-5b6d-403e-b850-0c8188d9d9bc`. The intended album title is `Kids See Ghosts`, while the corresponding artist credit may be displayed as `Kanye West & Kid Cudi`.
+- Root cause: existing `current_artist_names.py` keyed replacements to an artist ID only when collecting aliases, but `_normalize` indiscriminately applied the resulting text substitutions to `album`, `title`, and every other string metadata field. Having the target artist MBID somewhere in the release tree is not proof that same text in a title denotes that artist entity.
+- Fix: separate ordinary automatic artist-name normalization maps from explicit MBID override maps. Override maps are only applied to six known artist-role tags `artist`, `artists`, `artistsort`, `albumartist`, `albumartists`, `albumartistsort`, and only when `musicbrainz_artistid` or `musicbrainz_albumartistid` for the respective role contains the exact configured MBID. Missing IDs = no override. Also protect the `album` and `albumsort` title fields from **all** artist-name textual substitutions; explicit overrides also cannot change independent `title` values. Ordinary automatic current-name normalization remains available on previously supported free-text fields such as `title` for other non-overridden artist aliases.
+- Overrides are declined when the same source name is another linked artist's canonical name or alias; existing punctuation-only and unknown-special-purpose safeguards retained. No standalone plugin change: it does not have the custom override feature.
+- Three MBID regression tests added under `picard-tools/tests/test_current_artist_mbid_exceptions.py` for Kids See Ghosts album/title preservation, matching track vs release artist IDs, missing-ID safety, repeated idempotent processing and identifier preservation. Previous tests adjusted to the new policy that a title is never rewritten merely by an MBID override.
+- GitHub source checks only. Automated runtime tests and Windows/Picard visual/interaction acceptance **NOT RUN**. Status `1.5.33 - Under construction ⚠️` until user reloads the specific release and verifies the output.
+- Next: user updates the shared Picard Git plugin, removes/re-imports the affected album within Picard, checks `album = Kids See Ghosts`, `albumartist = Kanye West & Kid Cudi` (as applicable), unaffected song titles and unrelated artist MBIDs. Independently verify earlier Barcode toolbar issue.
