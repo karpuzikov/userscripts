@@ -333,12 +333,17 @@ def musicbrainz_english_title_case(title: str) -> str:
             if (previous, lower) in _PHRASAL_VERBS:
                 force_major = True
 
-        replacement = _style_word(
-            word,
-            segment_start=index in segment_starts,
-            segment_end=index in segment_ends,
-            force_major=force_major,
-        )
+        # Preserve original casing of stylized dollar-prefixed words.
+        # Example: Ty Dolla $ign must not become Ty Dolla $Ign.
+        if match.start() > 0 and working[match.start() - 1] == "$":
+            replacement = word
+        else:
+            replacement = _style_word(
+                word,
+                segment_start=index in segment_starts,
+                segment_end=index in segment_ends,
+                force_major=force_major,
+            )
 
         chunks.append(working[cursor:match.start()])
         chunks.append(replacement)
@@ -436,7 +441,9 @@ def _sentence_case_title(
 
         lower = word.lower()
 
-        if _looks_like_acronym(word):
+        if match.start() > 0 and title[match.start() - 1] == "$":
+            replacement = word
+        elif _looks_like_acronym(word):
             replacement = word
         elif _is_mixed_case(word):
             replacement = word
