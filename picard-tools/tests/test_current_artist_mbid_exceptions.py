@@ -181,6 +181,101 @@ class MBIDOverrideTests(unittest.TestCase):
         self.assertEqual(metadata["artists"], ["Ubi", "God"])
         self.assertEqual(metadata["title"], ["Ubi (ft. God)"])
 
+    def test_symbol_only_ye_dollar_group_mbid_override(self):
+        group = "58daf317-be5f-439f-a04d-0d6727f1a3b2"
+        preferred = "Kanye West & Ty Dolla $ign"
+        rules = group + " => " + preferred
+        node = {
+            "artist-credit": [{
+                "name": "¥$",
+                "artist": {
+                    "id": group,
+                    "name": "¥$",
+                    "sort-name": "¥$",
+                    "aliases": [{"name": "¥$"}],
+                },
+            }],
+            "title": "VULTURES 1",
+        }
+        data = FakeMetadata({
+            "album": "VULTURES 1",
+            "title": "¥$ Theme",
+            "artist": "¥$",
+            "artists": ["¥$"],
+            "artistsort": "¥$",
+            "albumartist": "¥$",
+            "albumartists": ["¥$"],
+            "albumartistsort": "¥$",
+            "musicbrainz_artistid": [group],
+            "musicbrainz_albumartistid": [group],
+            "comment": "¥$",
+            "date": "2024-02-09",
+            "catalognumber": "¥$-2024",
+        })
+        for _ in range(2):
+            normalize_album_artist_names(FakeAPI(rules), data, node)
+            normalize_track_artist_names(FakeAPI(rules), data, node, node)
+        for field in ("artist", "artists", "artistsort",
+                      "albumartist", "albumartists", "albumartistsort"):
+            with self.subTest(tag=field):
+                self.assertEqual(data[field], [preferred])
+        for field, expected in (
+            ("album", "VULTURES 1"),
+            ("title", "¥$ Theme"),
+            ("comment", "¥$"),
+            ("date", "2024-02-09"),
+            ("catalognumber", "¥$-2024"),
+        ):
+            with self.subTest(tag=field):
+                self.assertEqual(data[field], expected)
+        self.assertEqual(data["musicbrainz_artistid"], [group])
+        self.assertEqual(data["musicbrainz_albumartistid"], [group])
+
+    def test_symbol_only_artist_override_at_credit_boundaries(self):
+        group = "58daf317-be5f-439f-a04d-0d6727f1a3b2"
+        node = {"artist-credit": [{
+            "name": "¥$", "artist": {"id": group, "name": "¥$"},
+        }]}
+        rules = group + " => Kanye West & Ty Dolla $ign"
+        cases = (
+            ("¥$ feat. North West", "Kanye West & Ty Dolla $ign feat. North West"),
+            ("¥$ & Rich the Kid", "Kanye West & Ty Dolla $ign & Rich the Kid"),
+            ("Rich the Kid & ¥$", "Rich the Kid & Kanye West & Ty Dolla $ign"),
+            ("¥$, North West", "Kanye West & Ty Dolla $ign, North West"),
+            ("Mixed¥$Credit", "Mixed¥$Credit"),
+            ("¥$-Remix", "¥$-Remix"),
+            ("A $ign of ¥$money", "A $ign of ¥$money"),
+        )
+        for original, expected in cases:
+            with self.subTest(artist=original):
+                data = FakeMetadata({
+                    "artist": original, "musicbrainz_artistid": [group],
+                    "title": original,
+                })
+                normalize_track_artist_names(FakeAPI(rules), data, node)
+                self.assertEqual(data.get("artist"), [expected] if expected != original else original)
+                self.assertEqual(data["title"], original)
+
+    def test_symbol_only_artist_override_must_match_artist_role_mbid(self):
+        group = "58daf317-be5f-439f-a04d-0d6727f1a3b2"
+        other = "00000000-0000-4000-8000-000000000003"
+        node = {"artist-credit": [{
+            "name": "¥$", "artist": {"id": group, "name": "¥$"},
+        }]}
+        data = FakeMetadata({
+            "artist": "¥$",
+            "albumartist": "¥$",
+            "musicbrainz_artistid": [other],
+            "musicbrainz_albumartistid": [group],
+            "album": "¥$",
+            "title": "¥$",
+        })
+        normalize_track_artist_names(FakeAPI(group + " => Kanye West & Ty Dolla $ign"), data, node)
+        self.assertEqual(data["artist"], "¥$")
+        self.assertEqual(data["albumartist"], ["Kanye West & Ty Dolla $ign"])
+        self.assertEqual(data["album"], "¥$")
+        self.assertEqual(data["title"], "¥$")
+
     def test_kids_see_ghosts_mbid_only_rewrites_artist_credits(self):
         group = "793e220b-64f8-46d9-954d-e033dbcfeef4"
         rules = group + " => Kanye West & Kid Cudi"
