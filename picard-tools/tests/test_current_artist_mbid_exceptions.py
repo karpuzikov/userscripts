@@ -70,6 +70,7 @@ class MBIDOverrideTests(unittest.TestCase):
                     "name": "Cam’ron",
                     "aliases": [
                         {"name": "Cam"},
+                        {"name": "Cam'ron"},
                         {"name": "Camron"},
                         {"name": "Killa Cam"},
                     ],
@@ -77,10 +78,10 @@ class MBIDOverrideTests(unittest.TestCase):
             }]
         }
         cases = (
-            ("Cam'ron", "Cam’ron"),
+            ("Cam'ron", "Cam'ron"),
             ("Cam’ron", "Cam’ron"),
             ("Cam feat. Juelz Santana", "Cam’ron feat. Juelz Santana"),
-            ("Cam'ron feat. Juelz Santana", "Cam’ron feat. Juelz Santana"),
+            ("Cam'ron feat. Juelz Santana", "Cam'ron feat. Juelz Santana"),
             ("Cam’s song", "Cam’s song"),
             ("Cam's song", "Cam's song"),
             ("Camera and Cam", "Camera and Cam’ron"),
@@ -120,7 +121,28 @@ class MBIDOverrideTests(unittest.TestCase):
         self.assertIsNone(pattern("Cam").search("Cam’ron"))
         self.assertIsNotNone(pattern("Cam").search("Cam and friends"))
         self.assertIsNotNone(pattern("Cam'ron").search("Cam'ron feat. Juelz"))
-        self.assertIn("current_name.replace(\"’\", \"'\")", source)
+        self.assertIn("old_name.replace(\"’\", \"'\")", source)
+        self.assertNotIn("for variant in {current_name.replace", source)
+
+    def test_unicode_to_ascii_script_owns_apostrophe_conversion(self):
+        """Apostrophe normalization must be opt-in and never recursive."""
+        root = Path(__file__).resolve().parents[2]
+        unicode_script = (root / "picard-tools" / "scripts" /
+                          "Unicode_to_ASCII.txt").read_text(encoding="utf-8")
+        self.assertIn("[‘’‚‛],'", unicode_script)
+        try:
+            from picard.metadata import Metadata
+            from picard.script import ScriptParser
+        except ImportError:
+            self.skipTest("Picard runtime unavailable")
+        data = Metadata()
+        data["artist"] = "Cam’ron"
+        data["albumartist"] = "Cam’ron"
+        data["title"] = "Featuring Cam’ron"
+        ScriptParser().eval(unicode_script, data)
+        self.assertEqual(data["artist"], "Cam'ron")
+        self.assertEqual(data["albumartist"], "Cam'ron")
+        self.assertEqual(data["title"], "Featuring Cam'ron")
 
     def test_unknown_artist_punctuation_alias_never_corrupts_hyphens(self):
         """Regression: Yeezus JP date/catalog became 2013[unknown]07..."""
