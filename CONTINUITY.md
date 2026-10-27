@@ -2,7 +2,7 @@
 
 ## Product and state
 - Product: Karpuzikov Picard Scripts, a Picard 3.x Git-updatable MusicBrainz metadata plugin.
-- Current version: 1.5.34 - Under construction ⚠️ (not yet verified inside user Picard).
+- Current version: 1.5.35 - Under construction ⚠️ (not yet verified inside user Picard).
 - Git repository and active branch: `karpuzikov/userscripts`, `main`.
 - There is no additional project-specific `RULES.md` currently; the canonical repository root `SOFTWARE_RULES.md` governs this project.
 
@@ -305,3 +305,12 @@ Renamed 25 versioned user-downloadable snapshots, scripts and tools to filenames
 - Fixed manual `picard-tools/scripts/English_Title_Capitalization.txt` by restoring exact official `Ty Dolla $ign` capitalization after its `$title()` call. Published versioned `English_Title_Capitalization_v1.01.10.txt`, synchronized embedded script in root `__init__.py` exactly. Updated parity tests and added Python direct-title and optional Picard ScriptParser regressions.
 - Current shared plugin **v1.5.34 - Under construction ⚠️**. Real Picard runtime execution/visual testing **NOT RUN**. If actual `artist` tag changes, obtain original/new tag comparison and review any *other* installed or active scripts; neither of the maintained title-capitalization modules directly assigns `artist`.
 - Next: update the shared plugin; reload a release with Ty Dolla $ign in a title and confirm `$ign` stays lowercase; also confirm `artist` and `albumartist` tag exact spelling and unrelated casing behavior, avoiding duplicate title-capitalization scripts.
+
+## 2026-10-27 - ¥$ group MBID override ignored (shared plugin v1.5.35)
+
+- User entered `58daf317-be5f-439f-a04d-0d6727f1a3b2 => Kanye West & Ty Dolla $ign`, but the current-artist override did not apply. MusicBrainz confirms this MBID identifies the duo `¥$`, the group credited on VULTURES releases.
+- Root cause in `current_artist_names.py`: helper `_ArtistMaps._add` rejects any source name without alphabetic characters. The group's canonical name `¥$` has none, so the new override never populates `override_names` or `override_sorts`. This guard was introduced to stop punctuation-only aliases from globally rewriting unrelated titles, dates and catalog numbers.
+- Fix keeps alphabetic-only matching for *automatic* alias normalization but accepts symbol-only names in the two separate *explicit MBID override* mapping dictionaries. These maps remain restricted to artist-credit tags and matching role IDs. New `_replace_artist_override` handles symbolic names only at exact role-value / recognized artist join boundaries (comma, semicolon, ampersand, and, featuring/feat./ft./with); it cannot replace embedded currency signs in other artist names. All non-artist tags, including `title`, `album`, `date`, `catalognumber` and `comment`, are never affected by the explicit override.
+- Added three tests to `picard-tools/tests/test_current_artist_mbid_exceptions.py` for `¥$` on plain artist and album-artist roles, formatted multi-artist credits and substring protection, matching vs nonmatching MBIDs, and idempotent reloads. Existing Ye and Kids See Ghosts overrides remain supported.
+- Source inspection and pattern checks performed; **full Python repository tests and actual Picard 3 Windows GUI integration NOT RUN**. Version `1.5.35 - Under construction ⚠️` until user retests.
+- Next action: update shared Git plugin to 1.5.35, reload VULTURES 1 or 2 and confirm `albumartist` and applicable `artist` tags become `Kanye West & Ty Dolla $ign`, but titles, catalog number, other artist IDs and literal dollar signs remain unchanged. Do not enable standalone Current Artist Names Everywhere simultaneously.
