@@ -210,7 +210,7 @@ def _replace_artist_override(text, replacements, canonical_names):
     # "¥$" is a valid artist entity. For symbol-only names, require a
     # standalone credit delimited by a known artist-joining phrase; never
     # substitute currency or punctuation inside another name.
-    join = r"(?:,\\s*|;\\s*|\\s+&\\s+|\\s+and\\s+|\\s+(?:feat\\.?|ft\\.?|featuring|with)\\s+)"
+    join = r"(?:,\s*|;\s*|\s+&\s+|\s+and\s+|\s+(?:feat\.?|ft\.?|featuring|with)\s+)"
     for name, target in replacements.items():
         if any(char.isalnum() for char in name):
             continue
