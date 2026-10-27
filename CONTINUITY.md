@@ -2,7 +2,7 @@
 
 ## Product and state
 - Product: Karpuzikov Picard Scripts, a Picard 3.x Git-updatable MusicBrainz metadata plugin.
-- Current version: 1.5.36 - Under construction ⚠️ (not yet verified inside user Picard).
+- Current version: 1.5.37 - Under construction ⚠️ (not yet verified inside user Picard).
 - Git repository and active branch: `karpuzikov/userscripts`, `main`.
 - There is no additional project-specific `RULES.md` currently; the canonical repository root `SOFTWARE_RULES.md` governs this project.
 
@@ -323,3 +323,10 @@ Renamed 25 versioned user-downloadable snapshots, scripts and tools to filenames
 - Equivalent fix applied to standalone `picard-tools/current-artist-names/__init__.py`, version `0.2.3`. Added shared plugin regression fixtures and source-level standalone matcher test in `picard-tools/tests/test_current_artist_mbid_exceptions.py` covering straight/curly names, standalone Cam, titles, idempotence and possessive boundaries.
 - GitHub code and logic spot-check completed; **full project unit-test execution and Windows Picard integration NOT RUN**. Shared version **1.5.36 - Under construction ⚠️**. Do not claim user-visible fix until tested against release.
 - Next: update shared Picard Git plugin to 1.5.36, reload Late Registration release, verify Cam'ron is not expanded to Cam'ron'ron, and check that title/artist tags are correct. Avoid enabling standalone and shared plugin simultaneously.
+
+## 2026-10-27 - Correction to apostrophe behavior (shared v1.5.37, standalone v0.2.4)
+
+- User correctly pointed out that the prior stated expected result `Cam'ron -> Cam’ron` contradicts the enabled optional Unicode to ASCII tagging script. The prior v1.5.36 fix mistakenly added straight-to-curly apostrophe normalization for the canonical Cam’ron entity. The correct output when Unicode to ASCII is enabled is `Cam'ron`.
+- Keep the apostrophe-aware word-boundary regex in both artist-name normalizers to prevent the short alias `Cam` matching the prefix of `Cam'ron`. Remove synthetic straight/curly apostrophe variant mappings that forcibly rewrote the credited spelling; additionally skip automatic *name* substitutions where source and destination differ only by apostrophe glyph. Explicit artist-MBID overrides and sort-name handling retain their separate semantics.
+- Update regression cases for straight-apostrophe preservation, long credited names, standalone short alias matching, and optional Picard Unicode to ASCII ScriptParser conversion test. Six boundary/same-spelling checks passed using an isolated Python test. Full repository unit suite and Windows Picard runtime **NOT RUN**.
+- Version status: shared **1.5.37 - Under construction ⚠️**, optional standalone **0.2.4 - Under construction ⚠️**. Next: update only the installed shared plugin, reload the Late Registration release, confirm Cam'ron remains Cam'ron without the duplicated suffix and verify Unicode to ASCII remains enabled if ASCII punctuation is desired.
