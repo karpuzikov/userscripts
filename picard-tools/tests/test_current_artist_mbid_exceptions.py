@@ -301,7 +301,7 @@ class MBIDOverrideTests(unittest.TestCase):
         self.assertEqual(metadata["artist"], ["Kanye West"])
         self.assertEqual(metadata["albumartist"], ["Kanye West"])
         self.assertEqual(metadata["artists"], ["Kanye West"])
-        self.assertEqual(metadata["title"], ["Kanye West with Kanye West"])
+        self.assertEqual(metadata["title"], "Ye with Ye")
         self.assertEqual(metadata["artistsort"], ["Kanye West"])
         self.assertEqual(metadata["musicbrainz_artistid"], YE)
 
