@@ -207,12 +207,18 @@ def _replace_artist_override(text, replacements, canonical_names):
     words = {name: target for name, target in replacements.items()
              if any(char.isalnum() for char in name)}
     result = _replace(text, words, canonical_names)
-    # "¥$" is a valid artist entity; replacing a bare "$" in a larger
-    # artist-credit string would corrupt an unrelated credited artist.
-    # Symbol-only names therefore need a complete artist-tag value.
+    # "¥$" is a valid artist entity. For symbol-only names, require a
+    # standalone credit delimited by a known artist-joining phrase; never
+    # substitute currency or punctuation inside another name.
+    join = r"(?:,\\s*|;\\s*|\\s+&\\s+|\\s+and\\s+|\\s+(?:feat\\.?|ft\\.?|featuring|with)\\s+)"
     for name, target in replacements.items():
-        if not any(char.isalnum() for char in name) and result.strip() == name:
-            return target
+        if any(char.isalnum() for char in name):
+            continue
+        pattern = re.compile(
+            r"(^|" + join + r")" + re.escape(name) + r"(?=$|" + join + r")",
+            re.IGNORECASE,
+        )
+        result = pattern.sub(lambda match: match.group(1) + target, result)
     return result
 
 
