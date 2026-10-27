@@ -51,6 +51,10 @@ The standalone plugin in this directory remains available for compatibility. Do 
 
 
 
+## 0.2.4
+
+Corrected apostrophe handling: `Cam'ron` remains `Cam'ron` during artist-name normalization. The short alias `Cam` is still blocked from changing the prefix of an apostrophized name. Changing typographic apostrophes (`’`) into ASCII apostrophes (`'`) is exclusively the job of the optional `Unicode to ASCII` tagging script. Shared plugin v1.5.37 includes the correction.
+
 ## 0.2.3
 
 Fixed short alias expansion inside apostrophized artist names. For example, `Cam` no longer expands within `Cam'ron` to create `Cam'ron'ron`; instead, straight and curly apostrophe variants of complete canonical names are recognized before short aliases. Shared plugin v1.5.36 includes the same fix.
