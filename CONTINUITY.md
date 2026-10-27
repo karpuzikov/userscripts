@@ -2,7 +2,7 @@
 
 ## Product and state
 - Product: Karpuzikov Picard Scripts, a Picard 3.x Git-updatable MusicBrainz metadata plugin.
-- Current version: 1.5.37 - Under construction ⚠️ (not yet verified inside user Picard).
+- Current version: 1.5.38 - Under construction ⚠️ (not yet verified inside user Picard).
 - Git repository and active branch: `karpuzikov/userscripts`, `main`.
 - There is no additional project-specific `RULES.md` currently; the canonical repository root `SOFTWARE_RULES.md` governs this project.
 
@@ -330,3 +330,13 @@ Renamed 25 versioned user-downloadable snapshots, scripts and tools to filenames
 - Keep the apostrophe-aware word-boundary regex in both artist-name normalizers to prevent the short alias `Cam` matching the prefix of `Cam'ron`. Remove synthetic straight/curly apostrophe variant mappings that forcibly rewrote the credited spelling; additionally skip automatic *name* substitutions where source and destination differ only by apostrophe glyph. Explicit artist-MBID overrides and sort-name handling retain their separate semantics.
 - Update regression cases for straight-apostrophe preservation, long credited names, standalone short alias matching, and optional Picard Unicode to ASCII ScriptParser conversion test. Six boundary/same-spelling checks passed using an isolated Python test. Full repository unit suite and Windows Picard runtime **NOT RUN**.
 - Version status: shared **1.5.37 - Under construction ⚠️**, optional standalone **0.2.4 - Under construction ⚠️**. Next: update only the installed shared plugin, reload the Late Registration release, confirm Cam'ron remains Cam'ron without the duplicated suffix and verify Unicode to ASCII remains enabled if ASCII punctuation is desired.
+
+## 2026-10-27 - Explicit MBID overrides in all linked artist relationship roles (v1.5.38)
+
+- User reported MusicBrainz release `70dc104d-6136-4dcd-bd8c-2b7035c43feb`: `producer` displayed `Shawn Carter` despite rule `f82bcf78-5b69-4622-a5ef-73800768d9ac => Jay-Z` for that same MusicBrainz artist. User explicitly requires MBID overrides to apply wherever the artist entity appears, including relationship credits, not only `artist` / `albumartist`.
+- Root cause: prior `_matching_override_ids` only checked a handful of Picard MBID tags for the matching field, so `producer` was never eligible. Picard's upstream `picard/mbjson.py` source shows producer, mixer, writer, etc. are derived from MusicBrainz `relations` artist nodes and are generally not accompanied by corresponding role-MBID output tags. Composer is an exception (`musicbrainz_composerid`).
+- Fixed shared `current_artist_names.py` with `_relationship_credit_index`: read linked artist MBIDs, target credits and aliases from recording/track and nested work relationships, and direct release-level relationships separately. Match the actual role via Picard's own relationship type/tag mapping, including dynamic `performer:*` and writer/composer/lyricist sort tags. No network calls or guessed identity from name alone.
+- `_relation_override_maps` constructs role-local mappings from the artist identity supplied by the relation, preferring the user's explicit MBID rule and using normal current-name normalization for non-overridden linked artists. If a credited name maps to multiple different entities in the same role, skip it rather than guessing. Once a role has authoritative relationships, suppress global alias substitution for that role to prevent misattribution.
+- Existing MBID tag handling for track/release artist, and direct composer/original-artist IDs, remains enabled. Album and track titles, structured identifiers, apostrophe behavior and symbolic override rules remain protected.
+- Added six regression tests to `picard-tools/tests/test_current_artist_mbid_exceptions.py`: Jay-Z producer from relation despite unrelated track artist ID; unrelated track isolation; release-level relations; ambiguous producer names; nested work roles plus performer/mixer; composer ID-only fallback. Current shared plugin **1.5.38 - Under construction ⚠️**. **Real Picard execution NOT RUN.** Standalone plugin remains v0.2.4 (it does not have explicit MBID rules).
+- Next: update shared Karpuzikov Picard Scripts to v1.5.38, completely reload release `70dc104d-6136-4dcd-bd8c-2b7035c43feb`, confirm `producer = Jay-Z` and unrelated titles/artists unchanged. When testing, ensure `Use track relationships` is enabled and avoid enabling the standalone artist-name plugin concurrently.
