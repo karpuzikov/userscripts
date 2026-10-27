@@ -2,7 +2,7 @@
 
 ## Product and state
 - Product: Karpuzikov Picard Scripts, a Picard 3.x Git-updatable MusicBrainz metadata plugin.
-- Current version: 1.5.35 - Under construction ⚠️ (not yet verified inside user Picard).
+- Current version: 1.5.36 - Under construction ⚠️ (not yet verified inside user Picard).
 - Git repository and active branch: `karpuzikov/userscripts`, `main`.
 - There is no additional project-specific `RULES.md` currently; the canonical repository root `SOFTWARE_RULES.md` governs this project.
 
@@ -314,3 +314,12 @@ Renamed 25 versioned user-downloadable snapshots, scripts and tools to filenames
 - Added three tests to `picard-tools/tests/test_current_artist_mbid_exceptions.py` for `¥$` on plain artist and album-artist roles, formatted multi-artist credits and substring protection, matching vs nonmatching MBIDs, and idempotent reloads. Existing Ye and Kids See Ghosts overrides remain supported.
 - Source inspection and pattern checks performed; **full Python repository tests and actual Picard 3 Windows GUI integration NOT RUN**. Version `1.5.35 - Under construction ⚠️` until user retests.
 - Next action: update shared Git plugin to 1.5.35, reload VULTURES 1 or 2 and confirm `albumartist` and applicable `artist` tags become `Kanye West & Ty Dolla $ign`, but titles, catalog number, other artist IDs and literal dollar signs remain unchanged. Do not enable standalone Current Artist Names Everywhere simultaneously.
+
+## 2026-10-27 - Cam'ron double suffix from short alias (v1.5.36)
+
+- User reports that a track artist on Late Registration release `755c8536-f9c4-4c13-beef-9ba4b087e2a3` becomes `Cam'ron'ron` instead of `Cam'ron`. MusicBrainz artist `ea6b7199-901d-4c0e-8242-6d7bc2bf62b7` is `Cam’ron` with aliases `Cam`, `Camron`, and other forms; apostrophe in the credited form can be straight or curly.
+- Root cause: automatic name normalization treats apostrophes as non-word boundaries via `(?<!\\w)` / `(?!\\w)`; short alias `Cam` can match at the start of `Cam'ron`, expanding the prefix and duplicating the suffix. Canonical span protection is only exact-string and therefore does not protect straight-apostrophe text when canonical uses a curly apostrophe.
+- Fix `current_artist_names.py`: treat both straight and curly apostrophes as part of word-boundary checks, and add canonical artist-name quote variants as longer full-name replacements before short aliases are considered. `Cam'ron` normalizes to the current spelling `Cam’ron` without duplicate text; `Cam` alone still expands to `Cam’ron`; `Cam's` is not rewritten. No broad changes to other metadata processing or MBID-scoped override rules.
+- Equivalent fix applied to standalone `picard-tools/current-artist-names/__init__.py`, version `0.2.3`. Added shared plugin regression fixtures and source-level standalone matcher test in `picard-tools/tests/test_current_artist_mbid_exceptions.py` covering straight/curly names, standalone Cam, titles, idempotence and possessive boundaries.
+- GitHub code and logic spot-check completed; **full project unit-test execution and Windows Picard integration NOT RUN**. Shared version **1.5.36 - Under construction ⚠️**. Do not claim user-visible fix until tested against release.
+- Next: update shared Picard Git plugin to 1.5.36, reload Late Registration release, verify Cam'ron is not expanded to Cam'ron'ron, and check that title/artist tags are correct. Avoid enabling standalone and shared plugin simultaneously.
