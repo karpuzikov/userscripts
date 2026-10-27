@@ -281,6 +281,118 @@ def _build_maps_with_overrides(*nodes, exceptions=None):
     return (*maps.finalize(), *maps.finalize_overrides())
 
 
+# Picard's mbjson.py relationship type -> output-tag mapping. Most roles,
+# including producer, have no corresponding role-MBID output tag.
+_RELATION_TAGS = {
+    "arranger": "arranger",
+    "audio": "engineer",
+    "chorus master": "performer:",
+    "composer": "composer",
+    "concertmaster": "performer:",
+    "conductor": "conductor",
+    "engineer": "engineer",
+    "instrument arranger": "arranger",
+    "librettist": "lyricist",
+    "live sound": "engineer",
+    "lyricist": "lyricist",
+    "mix-DJ": "djmixer",
+    "mix": "mixer",
+    "orchestrator": "arranger",
+    "performing orchestra": "performer:",
+    "producer": "producer",
+    "remixer": "remixer",
+    "sound": "engineer",
+    "audio director": "director",
+    "video director": "director",
+    "vocal arranger": "arranger",
+    "writer": "writer",
+    "vocal": "performer:",
+    "instrument": "performer:",
+    "performer": "performer:",
+}
+
+
+def _relationship_credit_index(track_node, release_node=None):
+    """Index (role, written artist name) to its actual linked artist MBIDs.
+
+    Picard emits producer, mixer, etc. from relations but usually does not
+    persist their MBIDs as separate tags. Never infer ownership from a name
+    elsewhere in a release or from unrelated track artist IDs.
+    """
+    credits = defaultdict(lambda: defaultdict(set))
+
+    def read_relation(rel):
+        if not isinstance(rel, dict) or not isinstance(rel.get("artist"), dict):
+            return
+        role = _RELATION_TAGS.get(rel.get("type"))
+        if role is None:
+            return
+        artist = rel["artist"]
+        mbid = str(artist.get("id") or "").lower()
+        if not _MBID_PATTERN.fullmatch(mbid):
+            return
+        variants = [artist.get("name"), rel.get("target-credit")]
+        for alias in artist.get("aliases") or ():
+            if isinstance(alias, dict):
+                variants.append(alias.get("name"))
+        for value in variants:
+            name = str(value or "").strip()
+            if name:
+                credits[role][name].add(mbid)
+
+    def walk(node):
+        if isinstance(node, list):
+            for child in node:
+                walk(child)
+        elif isinstance(node, dict):
+            for rel in node.get("relations") or ():
+                read_relation(rel)
+            # Track nodes include recording and sometimes work relationships.
+            # Do not descend through a release's other tracks.
+            for key, value in node.items():
+                if key != "relations":
+                    walk(value)
+
+    if release_node is None:
+        # Album processor: only relations directly on the release.
+        if isinstance(track_node, dict):
+            for rel in track_node.get("relations") or ():
+                read_relation(rel)
+    else:
+        walk(track_node)
+        if isinstance(release_node, dict):
+            for rel in release_node.get("relations") or ():
+                read_relation(rel)
+    return credits
+
+
+def _relation_override_maps(metadata, role, relation_credits, exceptions,
+                            override_names, override_sorts):
+    """Return safe tag-local aliases whose source relationship MBID matches."""
+    names, sorts = {}, {}
+    relation = relation_credits.get(role)
+    if relation is None and str(role).startswith("performer:"):
+        relation = relation_credits.get("performer:")
+    if not relation:
+        return names, sorts
+    for credited, ids in relation.items():
+        if len(ids) != 1:
+            continue  # Ambiguous name belongs to multiple MBID entities.
+        mbid = next(iter(ids))
+        preferred = exceptions.get(mbid)
+        if not preferred:
+            continue
+        # The relationship proves the MBID. Preserve an exact credited form
+        # even if it was not listed among the artist aliases returned by MB.
+        if any(char.isalnum() for char in credited):
+            names[credited] = preferred
+            sorts[credited] = preferred
+        else:
+            names[credited] = preferred
+            sorts[credited] = preferred
+    return names, sorts
+
+
 _ARTIST_ID_TAGS = {
     "artist": "musicbrainz_artistid",
     "artists": "musicbrainz_artistid",
@@ -288,6 +400,9 @@ _ARTIST_ID_TAGS = {
     "albumartist": "musicbrainz_albumartistid",
     "albumartists": "musicbrainz_albumartistid",
     "albumartistsort": "musicbrainz_albumartistid",
+    "composer": "musicbrainz_composerid",
+    "composersort": "musicbrainz_composerid",
+    "originalartist": "musicbrainz_originalartistid",
 }
 
 
@@ -311,6 +426,12 @@ def _normalize(api, metadata, *nodes):
     except (KeyError, TypeError, AttributeError):
         rule_text = ""
     exceptions = _parse_exceptions(rule_text)
+    # Role-specific data is read from the same MusicBrainz entity relationships
+    # Picard used to generate contributor fields such as producer.
+    if len(nodes) > 1:
+        relation_credits = _relationship_credit_index(nodes[0], nodes[1])
+    else:
+        relation_credits = _relationship_credit_index(nodes[0]) if nodes else {}
     (name_map, sort_map, canonical_names, canonical_sorts,
      override_names, override_sorts) = _build_maps_with_overrides(
         *nodes, exceptions=exceptions
@@ -335,7 +456,13 @@ def _normalize(api, metadata, *nodes):
         allow_override = bool(overrides) and _matching_override_ids(
             metadata, tag, exceptions
         )
-        if not replacements and not allow_override:
+        role = str(tag).lower().lstrip("~")
+        relation_names, relation_sorts = _relation_override_maps(
+            metadata, role, relation_credits, exceptions, override_names,
+            override_sorts,
+        )
+        relation_overrides = relation_sorts if is_sort else relation_names
+        if not replacements and not allow_override and not relation_overrides:
             continue
 
         new_values = []
@@ -345,6 +472,10 @@ def _normalize(api, metadata, *nodes):
             new_text = _replace(text, replacements, protected)
             if allow_override:
                 new_text = _replace_artist_override(new_text, overrides, protected)
+            if relation_overrides:
+                new_text = _replace_artist_override(
+                    new_text, relation_overrides, protected
+                )
             new_values.append(new_text)
             changed = changed or new_text != text
 
