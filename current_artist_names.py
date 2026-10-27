@@ -80,12 +80,6 @@ class _ArtistMaps:
         self._add(names, credited_name, target_name)
         self._add(sorts, credited_name, target_sort)
 
-        # Normalize straight/typographic apostrophes as complete artist names
-        # before considering shorter search aliases such as "Cam".
-        for variant in {current.replace("’", "'"), current.replace("'", "’")}:
-            self._add(names, variant, target_name)
-            self._add(sorts, variant, target_sort)
-
         aliases = artist.get("aliases") or []
         if isinstance(aliases, list):
             for alias in aliases:
@@ -97,6 +91,12 @@ class _ArtistMaps:
 
     def _add(self, mapping, old, current):
         old = self._clean(old)
+        # Typographic and straight apostrophes are presentation differences.
+        # Do not rewrite a correctly credited artist name just to swap quotes;
+        # Unicode to ASCII handles that independently when enabled.
+        if (mapping is self.names and
+                old.replace("’", "'") == current.replace("’", "'")):
+            return
         # MusicBrainz can credit [unknown] with a lone "-" or another symbol.
         # Such aliases are not artist names safe to substitute in free text.
         if old and old != current and (
