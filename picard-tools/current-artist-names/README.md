@@ -51,6 +51,10 @@ The standalone plugin in this directory remains available for compatibility. Do 
 
 
 
+## 0.2.3
+
+Fixed short alias expansion inside apostrophized artist names. For example, `Cam` no longer expands within `Cam'ron` to create `Cam'ron'ron`; instead, straight and curly apostrophe variants of complete canonical names are recognized before short aliases. Shared plugin v1.5.36 includes the same fix.
+
 ## 0.2.2
 
 Special-purpose MusicBrainz artist `[unknown]` (MBID `125ec42a-7229-4250-afc5-e057484327fe`) can be credited as `God` on Kanye West's `I Am a God` track. Such credits should remain verbatim, including in the title `I Am a God (ft. God)`. This version no longer maps credited names of that special-purpose entity to `[unknown]`.
