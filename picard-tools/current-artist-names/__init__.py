@@ -86,13 +86,6 @@ class _ArtistMaps:
         self._add_name_variant(credited_name, current_name)
         self._add_sort_variant(credited_name, current_sort)
 
-        # A straight apostrophe is an orthographic variant of the typographic
-        # apostrophe in a current artist name; convert whole names first.
-        for variant in {current_name.replace("’", "'"),
-                        current_name.replace("'", "’")}:
-            self._add_name_variant(variant, current_name)
-            self._add_sort_variant(variant, current_sort)
-
         # Include aliases supplied by MusicBrainz for linked artists. Some old
         # credits are short aliases (e.g. "Kaliko" -> "Krizz Kaliko"), so the
         # replacement stage must protect already-canonical names from recursive
@@ -110,6 +103,10 @@ class _ArtistMaps:
 
     def _add_name_variant(self, old: Any, current: str) -> None:
         old_name = self._clean(old)
+        # Apostrophe style is not an artist-name change. The optional Unicode
+        # to ASCII script owns this formatting choice.
+        if old_name.replace("’", "'") == current.replace("’", "'"):
+            return
         if old_name and old_name != current and any(char.isalpha() for char in old_name):
             self._names[old_name].add(current)
 
