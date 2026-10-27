@@ -59,6 +59,149 @@ def artist_credit(mbid=YE, name="Ye (formerly Kanye West)", credited="Ye"):
 
 
 class MBIDOverrideTests(unittest.TestCase):
+    def test_jay_z_producer_credit_from_relationship_mbid(self):
+        """Regression: Shawn Carter producer must honor Jay-Z's artist MBID."""
+        jay_z = "f82bcf78-5b69-4622-a5ef-73800768d9ac"
+        producer = {
+            "type": "producer",
+            "target-type": "artist",
+            "target-credit": "Shawn Carter",
+            "artist": {
+                "id": jay_z,
+                "name": "JAY-Z",
+                "sort-name": "JAY-Z",
+                "aliases": [{"name": "Shawn Carter"}],
+            },
+        }
+        track = {"recording": {"relations": [producer]}}
+        metadata = FakeMetadata({
+            "producer": ["Shawn Carter", "Another Producer"],
+            "artist": "Unrelated Artist",
+            "musicbrainz_artistid": [OTHER],
+            "albumartist": "Unrelated Album Artist",
+            "musicbrainz_albumartistid": [OTHER],
+            "title": "Shawn Carter (Original Mix)",
+            "album": "Shawn Carter",
+            "catalognumber": "SC-123",
+            "date": "2010-01-02",
+        })
+        rules = jay_z + " => Jay-Z"
+        for _ in range(3):
+            normalize_track_artist_names(FakeAPI(rules), metadata, track, {})
+        self.assertEqual(metadata["producer"], ["Jay-Z", "Another Producer"])
+        self.assertEqual(metadata["title"], "Shawn Carter (Original Mix)")
+        self.assertEqual(metadata["album"], "Shawn Carter")
+        self.assertEqual(metadata["artist"], "Unrelated Artist")
+        self.assertEqual(metadata["albumartist"], "Unrelated Album Artist")
+        self.assertEqual(metadata["catalognumber"], "SC-123")
+        self.assertEqual(metadata["date"], "2010-01-02")
+
+    def test_producer_must_not_be_inferred_from_other_track_mbid(self):
+        jay_z = "f82bcf78-5b69-4622-a5ef-73800768d9ac"
+        producer = {"type": "producer", "target-type": "artist",
+                    "target-credit": "Shawn Carter",
+                    "artist": {"id": jay_z, "name": "JAY-Z"}}
+        release = {"artist-credit": [], "media": [{"tracks": [
+            {"recording": {"relations": [producer]}}
+        ]}]}
+        track = {"recording": {"relations": []}}
+        metadata = FakeMetadata({
+            "producer": ["Shawn Carter"],
+            "musicbrainz_artistid": [jay_z],
+            "title": "Shawn Carter",
+        })
+        normalize_track_artist_names(FakeAPI(jay_z + " => Jay-Z"),
+                                     metadata, track, release)
+        # A related artist on a different track does not own this producer.
+        self.assertEqual(metadata["producer"], ["Shawn Carter"])
+        self.assertEqual(metadata["title"], "Shawn Carter")
+
+    def test_release_producer_relationship_applies_on_release_and_track(self):
+        jay_z = "f82bcf78-5b69-4622-a5ef-73800768d9ac"
+        release = {"relations": [{
+            "type": "producer", "target-type": "artist",
+            "target-credit": "Shawn Carter",
+            "artist": {"id": jay_z, "name": "JAY-Z"},
+        }]}
+        for track in (None, {"recording": {"relations": []}}):
+            with self.subTest(track=track):
+                metadata = FakeMetadata({"producer": "Shawn Carter"})
+                api = FakeAPI(jay_z + " => Jay-Z")
+                if track is None:
+                    normalize_album_artist_names(api, metadata, release)
+                else:
+                    normalize_track_artist_names(api, metadata, track, release)
+                self.assertEqual(metadata["producer"], ["Jay-Z"])
+
+    def test_producer_alias_ambiguity_does_not_guess_identity(self):
+        jay_z = "f82bcf78-5b69-4622-a5ef-73800768d9ac"
+        different = "00000000-0000-4000-8000-000000000004"
+        relations = [
+            {"type": "producer", "target-type": "artist",
+             "target-credit": "Shawn Carter",
+             "artist": {"id": jay_z, "name": "JAY-Z"}},
+            {"type": "producer", "target-type": "artist",
+             "target-credit": "Shawn Carter",
+             "artist": {"id": different, "name": "Another Artist"}},
+        ]
+        metadata = FakeMetadata({"producer": ["Shawn Carter"]})
+        normalize_track_artist_names(
+            FakeAPI(jay_z + " => Jay-Z"), metadata,
+            {"recording": {"relations": relations}}, {})
+        self.assertEqual(metadata["producer"], ["Shawn Carter"])
+
+    def test_writer_composer_and_performer_mbid_relationships(self):
+        jay_z = "f82bcf78-5b69-4622-a5ef-73800768d9ac"
+        def rel(role):
+            return {
+                "type": role, "target-type": "artist",
+                "target-credit": "Shawn Carter",
+                "artist": {"id": jay_z, "name": "JAY-Z"},
+            }
+        track = {"recording": {"relations": [
+            {"type": "performance", "target-type": "work",
+             "work": {"relations": [rel("writer"), rel("composer")]}},
+            rel("vocal"),
+            rel("mix"),
+            rel("producer"),
+        ]}}
+        metadata = FakeMetadata({
+            "writer": ["Shawn Carter"],
+            "~writersort": ["Shawn Carter"],
+            "composer": ["Shawn Carter"],
+            "composersort": ["Shawn Carter"],
+            "performer:vocal": ["Shawn Carter"],
+            "mixer": ["Shawn Carter"],
+            "producer": ["Shawn Carter"],
+            "title": "Shawn Carter",
+        })
+        normalize_track_artist_names(FakeAPI(jay_z + " => Jay-Z"),
+                                     metadata, track, {})
+        for tag in ("writer", "~writersort", "composer", "composersort",
+                    "performer:vocal", "mixer", "producer"):
+            with self.subTest(tag=tag):
+                self.assertEqual(metadata[tag], ["Jay-Z"])
+        self.assertEqual(metadata["title"], "Shawn Carter")
+
+    def test_composer_id_explicit_mbid_without_relation_node(self):
+        jay_z = "f82bcf78-5b69-4622-a5ef-73800768d9ac"
+        node = {"artist-credit": [{
+            "name": "Shawn Carter", "artist": {
+                "id": jay_z, "name": "JAY-Z",
+                "aliases": [{"name": "Shawn Carter"}],
+            },
+        }]}
+        metadata = FakeMetadata({
+            "composer": ["Shawn Carter"],
+            "musicbrainz_composerid": [jay_z],
+            "musicbrainz_artistid": [OTHER],
+            "title": "Shawn Carter",
+        })
+        normalize_track_artist_names(FakeAPI(jay_z + " => Jay-Z"),
+                                     metadata, node, {})
+        self.assertEqual(metadata["composer"], ["Jay-Z"])
+        self.assertEqual(metadata["title"], "Shawn Carter")
+
     def test_camron_alias_apostrophes_do_not_expand_inside_name(self):
         """Late Registration: Cam'ron must never become Cam'ron'ron."""
         camron = "ea6b7199-901d-4c0e-8242-6d7bc2bf62b7"
