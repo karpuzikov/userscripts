@@ -93,7 +93,13 @@ class _ArtistMaps:
         old = self._clean(old)
         # MusicBrainz can credit [unknown] with a lone "-" or another symbol.
         # Such aliases are not artist names safe to substitute in free text.
-        if old and old != current and any(char.isalpha() for char in old):
+        if old and old != current and (
+            any(char.isalpha() for char in old)
+            or mapping is self.override_names
+            or mapping is self.override_sorts
+        ):
+            # Punctuation-only artist names are permitted *only* for explicit
+            # MBID overrides, which are limited to artist-credit fields.
             mapping[old].add(current)
 
     def finalize(self):
@@ -193,6 +199,20 @@ def _replace(text, replacements, canonical_names):
             return replacement
 
         result = _pattern(old).sub(repl, result)
+    return result
+
+
+def _replace_artist_override(text, replacements, canonical_names):
+    """Apply MBID-scoped overrides without substring-matching symbolic names."""
+    words = {name: target for name, target in replacements.items()
+             if any(char.isalnum() for char in name)}
+    result = _replace(text, words, canonical_names)
+    # "¥$" is a valid artist entity; replacing a bare "$" in a larger
+    # artist-credit string would corrupt an unrelated credited artist.
+    # Symbol-only names therefore need a complete artist-tag value.
+    for name, target in replacements.items():
+        if not any(char.isalnum() for char in name) and result.strip() == name:
+            return target
     return result
 
 
@@ -310,7 +330,7 @@ def _normalize(api, metadata, *nodes):
             text = str(value)
             new_text = _replace(text, replacements, protected)
             if allow_override:
-                new_text = _replace(new_text, overrides, protected)
+                new_text = _replace_artist_override(new_text, overrides, protected)
             new_values.append(new_text)
             changed = changed or new_text != text
 
