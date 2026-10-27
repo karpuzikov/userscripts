@@ -684,10 +684,58 @@ class PicardAlbumRegressions(unittest.TestCase):
         ScriptParser().eval(source, metadata)
         self.assertEqual(metadata["releasecountry"], "EU")
 
+    def test_dollar_prefixed_artist_styling_is_preserved_in_titles(self):
+        examples = (
+            "Ty Dolla $ign",
+            "Featuring Ty Dolla $ign",
+            "Song (ft. Ty Dolla $ign)",
+            "Ty Dolla $ign & Friends",
+        )
+        for title in examples:
+            for mode in ("english", "sentence", "unknown", "french"):
+                with self.subTest(title=title, mode=mode):
+                    result = standardize_title_case(title, mode)
+                    self.assertIn("Ty", result)
+                    self.assertIn("$ign", result)
+                    self.assertNotIn("$Ign", result)
+                    self.assertEqual(standardize_title_case(result, mode), result)
+        self.assertEqual(
+            musicbrainz_english_title_case("Song (ft. Ty Dolla $ign)"),
+            "Song (ft. Ty Dolla $ign)",
+        )
+
+    def test_standalone_capitalization_restores_dollar_sign_name(self):
+        source = (REPO / "picard-tools" / "scripts" /
+                  "English_Title_Capitalization.txt").read_text(encoding="utf-8")
+        self.assertIn("$replace(%_case%,Ty Dolla $Ign,Ty Dolla $ign)", source)
+        self.assertLess(
+            source.index("$replace(%_case%,Ty Dolla $Ign,Ty Dolla $ign)"),
+            source.index("$set(%_loop_value%,%_case%)"),
+        )
+
+    def test_ty_dolla_standalone_runtime_if_installed(self):
+        try:
+            from picard.metadata import Metadata
+            from picard.script import ScriptParser
+        except ImportError:
+            self.skipTest("Picard runtime unavailable")
+        source = (REPO / "picard-tools" / "scripts" /
+                  "English_Title_Capitalization.txt").read_text(encoding="utf-8")
+        for value in ("Featuring Ty Dolla $ign", "Song (ft. Ty Dolla $ign)"):
+            with self.subTest(value=value):
+                data = Metadata()
+                data["title"] = value
+                data["album"] = "Test Album"
+                data["artist"] = "Ty Dolla $ign"
+                data["language"] = "eng"
+                ScriptParser().eval(source, data)
+                self.assertIn("Ty Dolla $ign", data["title"])
+                self.assertEqual(data["artist"], "Ty Dolla $ign")
+
     def test_published_script_versions_match_stable_sources(self):
         for stable, versioned in (
             ("Unicode_to_ASCII.txt", "Unicode_to_ASCII_v1.00.01.txt"),
-            ("English_Title_Capitalization.txt", "English_Title_Capitalization_v1.01.09.txt"),
+            ("English_Title_Capitalization.txt", "English_Title_Capitalization_v1.01.10.txt"),
             ("Add_EP_Single_Suffix.txt", "Add_EP_Single_Suffix_v1.00.02.txt"),
             ("Dont_Use_This_Tags.txt", "Dont_Use_This_Tags_v1.00.00.txt"),
             ("Format_Multiple_Artists.txt", "Format_Multiple_Artists_v1.00.03.txt"),
