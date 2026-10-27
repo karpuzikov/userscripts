@@ -27,6 +27,9 @@ _SKIP_TAGS = {
     "year",
     "catalognumber",
     "catalognumbers",
+    # Release titles are independent of artist identity, even if text matches.
+    "album",
+    "albumsort",
 }
 
 
@@ -35,6 +38,8 @@ class _ArtistMaps:
         self.exceptions = exceptions or {}
         self.names = defaultdict(set)
         self.sorts = defaultdict(set)
+        self.override_names = defaultdict(set)
+        self.override_sorts = defaultdict(set)
         self.canonical_names = set()
         self.canonical_sorts = set()
 
@@ -61,22 +66,28 @@ class _ArtistMaps:
         self.canonical_sorts.add(target_sort)
 
         if preferred:
-            # Only this exact MusicBrainz artist entity receives the override.
-            self._add(self.names, current, target_name)
-            self._add(self.sorts, current, target_sort)
-            self._add(self.sorts, current_sort, target_sort)
+            # Store explicit MBID overrides separately; free-text tags must
+            # never inherit the replacement just because their words match.
+            self._add(self.override_names, current, target_name)
+            self._add(self.override_sorts, current, target_sort)
+            self._add(self.override_sorts, current_sort, target_sort)
+            names = self.override_names
+            sorts = self.override_sorts
+        else:
+            names = self.names
+            sorts = self.sorts
 
-        self._add(self.names, credited_name, target_name)
-        self._add(self.sorts, credited_name, target_sort)
+        self._add(names, credited_name, target_name)
+        self._add(sorts, credited_name, target_sort)
 
         aliases = artist.get("aliases") or []
         if isinstance(aliases, list):
             for alias in aliases:
                 if not isinstance(alias, dict):
                     continue
-                self._add(self.names, alias.get("name"), target_name)
-                self._add(self.sorts, alias.get("name"), target_sort)
-                self._add(self.sorts, alias.get("sort-name"), target_sort)
+                self._add(names, alias.get("name"), target_name)
+                self._add(sorts, alias.get("name"), target_sort)
+                self._add(sorts, alias.get("sort-name"), target_sort)
 
     def _add(self, mapping, old, current):
         old = self._clean(old)
@@ -106,6 +117,24 @@ class _ArtistMaps:
             sort_map[old] = target
 
         return name_map, sort_map, self.canonical_names, self.canonical_sorts
+
+    def finalize_overrides(self):
+        # Do not replace names also used by another credited artist.
+        name_map = {}
+        sort_map = {}
+        for source, targets in self.override_names.items():
+            if (len(targets) == 1 and
+                    source not in self.canonical_names and
+                    source not in self.names and
+                    source not in self.sorts):
+                name_map[source] = next(iter(targets))
+        for source, targets in self.override_sorts.items():
+            if (len(targets) == 1 and
+                    source not in self.canonical_sorts and
+                    source not in self.sorts and
+                    source not in self.names):
+                sort_map[source] = next(iter(targets))
+        return name_map, sort_map
 
 
 def _collect(node, maps):
@@ -210,6 +239,37 @@ def _build_maps(*nodes, exceptions=None):
     return maps.finalize()
 
 
+def _build_maps_with_overrides(*nodes, exceptions=None):
+    maps = _ArtistMaps(exceptions)
+    for node in nodes:
+        if node:
+            _collect(node, maps)
+    return (*maps.finalize(), *maps.finalize_overrides())
+
+
+_ARTIST_ID_TAGS = {
+    "artist": "musicbrainz_artistid",
+    "artists": "musicbrainz_artistid",
+    "artistsort": "musicbrainz_artistid",
+    "albumartist": "musicbrainz_albumartistid",
+    "albumartists": "musicbrainz_albumartistid",
+    "albumartistsort": "musicbrainz_albumartistid",
+}
+
+
+def _matching_override_ids(metadata, tag, exceptions):
+    id_tag = _ARTIST_ID_TAGS.get(str(tag).lower().lstrip("~"))
+    if not id_tag:
+        return False
+    try:
+        values = metadata.getall(id_tag)
+    except (AttributeError, TypeError):
+        values = metadata.get(id_tag, ())
+    if isinstance(values, str):
+        values = [values]
+    return bool(set(str(value).lower() for value in (values or ())) & exceptions.keys())
+
+
 def _normalize(api, metadata, *nodes):
     config = getattr(api, "plugin_config", {})
     try:
@@ -217,10 +277,11 @@ def _normalize(api, metadata, *nodes):
     except (KeyError, TypeError, AttributeError):
         rule_text = ""
     exceptions = _parse_exceptions(rule_text)
-    name_map, sort_map, canonical_names, canonical_sorts = _build_maps(
+    (name_map, sort_map, canonical_names, canonical_sorts,
+     override_names, override_sorts) = _build_maps_with_overrides(
         *nodes, exceptions=exceptions
     )
-    if not name_map and not sort_map:
+    if not name_map and not sort_map and not override_names and not override_sorts:
         return
 
     try:
@@ -235,8 +296,12 @@ def _normalize(api, metadata, *nodes):
 
         is_sort = "sort" in str(tag).lower()
         replacements = sort_map if is_sort else name_map
+        overrides = override_sorts if is_sort else override_names
         protected = canonical_sorts if is_sort else canonical_names
-        if not replacements:
+        allow_override = bool(overrides) and _matching_override_ids(
+            metadata, tag, exceptions
+        )
+        if not replacements and not allow_override:
             continue
 
         new_values = []
@@ -244,6 +309,8 @@ def _normalize(api, metadata, *nodes):
         for value in values:
             text = str(value)
             new_text = _replace(text, replacements, protected)
+            if allow_override:
+                new_text = _replace(new_text, overrides, protected)
             new_values.append(new_text)
             changed = changed or new_text != text
 
