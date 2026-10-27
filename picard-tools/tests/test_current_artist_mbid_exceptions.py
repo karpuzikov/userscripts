@@ -12,6 +12,7 @@ from current_artist_names import (  # noqa: E402
     _build_maps,
     _migrate_legacy_exceptions,
     _parse_exceptions,
+    normalize_album_artist_names,
     normalize_track_artist_names,
 )
 
@@ -180,6 +181,86 @@ class MBIDOverrideTests(unittest.TestCase):
         self.assertEqual(metadata["artists"], ["Ubi", "God"])
         self.assertEqual(metadata["title"], ["Ubi (ft. God)"])
 
+    def test_kids_see_ghosts_mbid_only_rewrites_artist_credits(self):
+        group = "793e220b-64f8-46d9-954d-e033dbcfeef4"
+        rules = group + " => Kanye West & Kid Cudi"
+        node = {
+            "artist-credit": [{
+                "name": "KIDS SEE GHOSTS",
+                "artist": {
+                    "id": group,
+                    "name": "KIDS SEE GHOSTS",
+                    "aliases": [{"name": "Kids See Ghosts"}],
+                },
+            }],
+            "title": "Kids See Ghosts",
+        }
+        data = FakeMetadata({
+            "album": "Kids See Ghosts",
+            "title": "Kids See Ghosts",
+            "albumsort": "Kids See Ghosts",
+            "artist": "KIDS SEE GHOSTS",
+            "artists": ["KIDS SEE GHOSTS"],
+            "albumartist": "KIDS SEE GHOSTS",
+            "albumartists": ["KIDS SEE GHOSTS"],
+            "musicbrainz_artistid": [group],
+            "musicbrainz_albumartistid": [group],
+            "comment": "Kids See Ghosts",
+            "date": "2018-06-08",
+        })
+        for _ in range(2):
+            normalize_album_artist_names(FakeAPI(rules), data, node)
+            normalize_track_artist_names(FakeAPI(rules), data, node, node)
+        for field in ("album", "title", "albumsort", "comment"):
+            self.assertEqual(data[field], "Kids See Ghosts", field)
+        for field in ("artist", "albumartist", "artists", "albumartists"):
+            self.assertEqual(data[field], ["Kanye West & Kid Cudi"], field)
+        self.assertEqual(data["musicbrainz_artistid"], [group])
+        self.assertEqual(data["musicbrainz_albumartistid"], [group])
+        self.assertEqual(data["date"], "2018-06-08")
+
+    def test_override_requires_matching_role_mbid_in_metadata(self):
+        group = "793e220b-64f8-46d9-954d-e033dbcfeef4"
+        unrelated_id = "00000000-0000-4000-8000-000000000002"
+        node = {
+            "artist-credit": [{
+                "name": "KIDS SEE GHOSTS",
+                "artist": {"id": group, "name": "KIDS SEE GHOSTS"},
+            }]
+        }
+        data = FakeMetadata({
+            "artist": "KIDS SEE GHOSTS",
+            "albumartist": "KIDS SEE GHOSTS",
+            "artists": ["KIDS SEE GHOSTS"],
+            "album": "KIDS SEE GHOSTS",
+            "title": "KIDS SEE GHOSTS",
+            "musicbrainz_artistid": [unrelated_id],
+            "musicbrainz_albumartistid": [group],
+        })
+        normalize_track_artist_names(
+            FakeAPI(group + " => Kanye West & Kid Cudi"), data, node, node
+        )
+        self.assertEqual(data["artist"], "KIDS SEE GHOSTS")
+        self.assertEqual(data["artists"], ["KIDS SEE GHOSTS"])
+        self.assertEqual(data["albumartist"], ["Kanye West & Kid Cudi"])
+        self.assertEqual(data["album"], "KIDS SEE GHOSTS")
+        self.assertEqual(data["title"], "KIDS SEE GHOSTS")
+
+    def test_override_requires_artist_role_id_even_if_node_has_artist(self):
+        group = "793e220b-64f8-46d9-954d-e033dbcfeef4"
+        node = {
+            "artist-credit": [{
+                "name": "KIDS SEE GHOSTS",
+                "artist": {"id": group, "name": "KIDS SEE GHOSTS"},
+            }]
+        }
+        data = FakeMetadata({"artist": "KIDS SEE GHOSTS", "title": "Kids See Ghosts"})
+        normalize_track_artist_names(
+            FakeAPI(group + " => Kanye West & Kid Cudi"), data, node
+        )
+        self.assertEqual(data["artist"], "KIDS SEE GHOSTS")
+        self.assertEqual(data["title"], "Kids See Ghosts")
+
     def test_accepts_only_valid_artist_mbids(self):
         self.assertEqual(
             _parse_exceptions(
@@ -212,6 +293,7 @@ class MBIDOverrideTests(unittest.TestCase):
             "title": "Ye with Ye", "artists": ["Ye"],
             "artistsort": "West, Kanye",
             "musicbrainz_artistid": YE,
+            "musicbrainz_albumartistid": YE,
         })
         normalize_track_artist_names(
             FakeAPI(YE + " => Kanye West"), metadata, artist_credit()
@@ -254,14 +336,14 @@ class MBIDOverrideTests(unittest.TestCase):
         self.assertIn("Ye", protected)
 
     def test_alias_of_artist_with_matching_mbid_uses_preferred_name(self):
-        metadata = FakeMetadata({"artist": "Kanye", "title": "Kanye"})
+        metadata = FakeMetadata({"artist": "Kanye", "title": "Kanye", "musicbrainz_artistid": YE})
         node = artist_credit()
         node["artist-credit"][0]["artist"]["aliases"].append({"name": "Kanye"})
         normalize_track_artist_names(
             FakeAPI(YE + " => Kanye West"), metadata, node
         )
         self.assertEqual(metadata["artist"], ["Kanye West"])
-        self.assertEqual(metadata["title"], ["Kanye West"])
+        self.assertEqual(metadata["title"], "Kanye")
 
 
 if __name__ == "__main__":
