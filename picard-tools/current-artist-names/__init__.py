@@ -86,6 +86,13 @@ class _ArtistMaps:
         self._add_name_variant(credited_name, current_name)
         self._add_sort_variant(credited_name, current_sort)
 
+        # A straight apostrophe is an orthographic variant of the typographic
+        # apostrophe in a current artist name; convert whole names first.
+        for variant in {current_name.replace("’", "'"),
+                        current_name.replace("'", "’")}:
+            self._add_name_variant(variant, current_name)
+            self._add_sort_variant(variant, current_sort)
+
         # Include aliases supplied by MusicBrainz for linked artists. Some old
         # credits are short aliases (e.g. "Kaliko" -> "Krizz Kaliko"), so the
         # replacement stage must protect already-canonical names from recursive
@@ -174,8 +181,8 @@ def _make_pattern(name: str) -> re.Pattern[str]:
 
     # Only require a word boundary on a side when the name begins / ends in a
     # word character. This still handles artist names ending in punctuation.
-    left = r"(?<!\w)" if name and (name[0].isalnum() or name[0] == "_") else ""
-    right = r"(?!\w)" if name and (name[-1].isalnum() or name[-1] == "_") else ""
+    left = r"(?<![\w'’])" if name and (name[0].isalnum() or name[0] == "_") else ""
+    right = r"(?![\w'’])" if name and (name[-1].isalnum() or name[-1] == "_") else ""
     return re.compile(left + escaped + right)
 
 
