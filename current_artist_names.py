@@ -347,6 +347,10 @@ def _relationship_credit_index(track_node, release_node=None):
         elif isinstance(node, dict):
             for rel in node.get("relations") or ():
                 read_relation(rel)
+                # Work credits (composer, lyricist, writer) can be nested under
+                # a recording-to-work relation rather than on the track node.
+                if isinstance(rel, dict):
+                    walk(rel.get("work"))
             # Track nodes include recording and sometimes work relationships.
             # Do not descend through a release's other tracks.
             for key, value in node.items():
@@ -366,11 +370,15 @@ def _relationship_credit_index(track_node, release_node=None):
     return credits
 
 
-def _relation_override_maps(metadata, role, relation_credits, exceptions,
-                            override_names, override_sorts):
+def _relation_override_maps(role, relation_credits, exceptions):
     """Return safe tag-local aliases whose source relationship MBID matches."""
     names, sorts = {}, {}
-    relation = relation_credits.get(role)
+    relation_role = {
+        "composersort": "composer",
+        "lyricistsort": "lyricist",
+        "writersort": "writer",
+    }.get(role, role)
+    relation = relation_credits.get(relation_role)
     if relation is None and str(role).startswith("performer:"):
         relation = relation_credits.get("performer:")
     if not relation:
@@ -458,8 +466,7 @@ def _normalize(api, metadata, *nodes):
         )
         role = str(tag).lower().lstrip("~")
         relation_names, relation_sorts = _relation_override_maps(
-            metadata, role, relation_credits, exceptions, override_names,
-            override_sorts,
+            role, relation_credits, exceptions
         )
         relation_overrides = relation_sorts if is_sort else relation_names
         if not replacements and not allow_override and not relation_overrides:
