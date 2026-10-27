@@ -2,7 +2,7 @@
 
 ## Product and state
 - Product: Karpuzikov Picard Scripts, a Picard 3.x Git-updatable MusicBrainz metadata plugin.
-- Current version: 1.5.33 - Under construction ⚠️ (not yet verified inside user Picard).
+- Current version: 1.5.34 - Under construction ⚠️ (not yet verified inside user Picard).
 - Git repository and active branch: `karpuzikov/userscripts`, `main`.
 - There is no additional project-specific `RULES.md` currently; the canonical repository root `SOFTWARE_RULES.md` governs this project.
 
@@ -296,3 +296,12 @@ Renamed 25 versioned user-downloadable snapshots, scripts and tools to filenames
 - Three MBID regression tests added under `picard-tools/tests/test_current_artist_mbid_exceptions.py` for Kids See Ghosts album/title preservation, matching track vs release artist IDs, missing-ID safety, repeated idempotent processing and identifier preservation. Previous tests adjusted to the new policy that a title is never rewritten merely by an MBID override.
 - GitHub source checks only. Automated runtime tests and Windows/Picard visual/interaction acceptance **NOT RUN**. Status `1.5.33 - Under construction ⚠️` until user reloads the specific release and verifies the output.
 - Next: user updates the shared Picard Git plugin, removes/re-imports the affected album within Picard, checks `album = Kids See Ghosts`, `albumartist = Kanye West & Kid Cudi` (as applicable), unaffected song titles and unrelated artist MBIDs. Independently verify earlier Barcode toolbar issue.
+
+## 2026-10-27 - Ty Dolla $ign capitalization regression (v1.5.34)
+
+- User reports proposed artist-name change `Ty Dolla $ign` -> `Ty Dolla $Ign`. MusicBrainz's canonical artist is `Ty Dolla $ign` (MBID `7bd66c18-cb33-49aa-9279-140acedbdb49`).
+- Audited maintained scripts: the Python MusicBrainz title formatter and manual English title capitalization script modify title/album tags only, not `artist` tags. In titles containing the artist name (e.g. `Song (ft. Ty Dolla $ign)`), Python regex `_WORD_RE` tokenizes `ign` immediately after `$` as a regular word. English title case capitalizes it to `Ign`; the legacy manual Picard `$title()` has the analogous behavior. Whether the user's change is in the literal artist tag or in an artist name embedded in a title remains **unverified** without host-side tag comparison. Do not claim to have identified a separate artist-tag mutator.
+- Fixed Python `musicbrainz_title_capitalization.py`: in both English and sentence-style token casing passes, preserve original case of words directly following `$`, including featured-artist information. No general artist metadata mutation added.
+- Fixed manual `picard-tools/scripts/English_Title_Capitalization.txt` by restoring exact official `Ty Dolla $ign` capitalization after its `$title()` call. Published versioned `English_Title_Capitalization_v1.01.10.txt`, synchronized embedded script in root `__init__.py` exactly. Updated parity tests and added Python direct-title and optional Picard ScriptParser regressions.
+- Current shared plugin **v1.5.34 - Under construction ⚠️**. Real Picard runtime execution/visual testing **NOT RUN**. If actual `artist` tag changes, obtain original/new tag comparison and review any *other* installed or active scripts; neither of the maintained title-capitalization modules directly assigns `artist`.
+- Next: update the shared plugin; reload a release with Ty Dolla $ign in a title and confirm `$ign` stays lowercase; also confirm `artist` and `albumartist` tag exact spelling and unrelated casing behavior, avoiding duplicate title-capitalization scripts.
