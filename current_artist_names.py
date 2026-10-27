@@ -331,14 +331,16 @@ def _relationship_credit_index(track_node, release_node=None):
         mbid = str(artist.get("id") or "").lower()
         if not _MBID_PATTERN.fullmatch(mbid):
             return
-        variants = [artist.get("name"), rel.get("target-credit")]
+        current = str(artist.get("name") or "").strip()
+        current_sort = str(artist.get("sort-name") or current).strip()
+        variants = [current, rel.get("target-credit")]
         for alias in artist.get("aliases") or ():
             if isinstance(alias, dict):
                 variants.append(alias.get("name"))
         for value in variants:
             name = str(value or "").strip()
             if name:
-                credits[role][name].add(mbid)
+                credits[role][name].add((mbid, current, current_sort))
 
     def walk(node):
         if isinstance(node, list):
@@ -371,8 +373,8 @@ def _relationship_credit_index(track_node, release_node=None):
 
 
 def _relation_override_maps(role, relation_credits, exceptions):
-    """Return safe tag-local aliases whose source relationship MBID matches."""
-    names, sorts = {}, {}
+    """Normalize role credits by the MBID in each actual artist relationship."""
+    name_map, sort_map = {}, {}
     relation_role = {
         "composersort": "composer",
         "lyricistsort": "lyricist",
@@ -382,23 +384,26 @@ def _relation_override_maps(role, relation_credits, exceptions):
     if relation is None and str(role).startswith("performer:"):
         relation = relation_credits.get("performer:")
     if not relation:
-        return names, sorts
-    for credited, ids in relation.items():
-        if len(ids) != 1:
-            continue  # Ambiguous name belongs to multiple MBID entities.
-        mbid = next(iter(ids))
+        return name_map, sort_map
+    for credited, entities in relation.items():
+        if len(entities) != 1:
+            continue  # Identical credit associated with different identities.
+        mbid, current, current_sort = next(iter(entities))
         preferred = exceptions.get(mbid)
-        if not preferred:
+        if mbid == _UNKNOWN_ARTIST_MBID and not preferred:
             continue
-        # The relationship proves the MBID. Preserve an exact credited form
-        # even if it was not listed among the artist aliases returned by MB.
-        if any(char.isalnum() for char in credited):
-            names[credited] = preferred
-            sorts[credited] = preferred
-        else:
-            names[credited] = preferred
-            sorts[credited] = preferred
-    return names, sorts
+        if not preferred and not any(char.isalpha() for char in credited):
+            continue
+        name_target = preferred or current
+        sort_target = preferred or current_sort
+        # Apostrophe glyph changes are owned by Unicode to ASCII.
+        if credited != name_target and (
+                preferred or credited.replace("’", "'") !=
+                name_target.replace("’", "'")):
+            name_map[credited] = name_target
+        if credited != sort_target:
+            sort_map[credited] = sort_target
+    return name_map, sort_map
 
 
 _ARTIST_ID_TAGS = {
@@ -469,6 +474,14 @@ def _normalize(api, metadata, *nodes):
             role, relation_credits, exceptions
         )
         relation_overrides = relation_sorts if is_sort else relation_names
+        # Relationship-derived contributor tags already have linked MBIDs.
+        # Never apply a release-wide alias map before identity-based matching.
+        role_id = {"composersort": "composer", "lyricistsort": "lyricist",
+                   "writersort": "writer"}.get(role, role)
+        if role_id in relation_credits or (
+                role.startswith("performer:") and
+                "performer:" in relation_credits):
+            replacements = {}
         if not replacements and not allow_override and not relation_overrides:
             continue
 
