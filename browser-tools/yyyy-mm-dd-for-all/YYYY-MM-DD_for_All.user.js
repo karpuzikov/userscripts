@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         YYYY-MM-DD for All
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.0.4
+// @version      1.0.5
 // @description  Converts dates to YYYY-MM-DD on supported websites. Built to make adding more websites easy.
 // @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/browser-tools/yyyy-mm-dd-for-all/YYYY-MM-DD_for_All.user.js
 // @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/browser-tools/yyyy-mm-dd-for-all/YYYY-MM-DD_for_All.user.js
@@ -11,6 +11,8 @@
 // @match        https://www.setlist.fm/*
 // @match        https://www.blu-ray.com/*
 // @match        https://www.patreon.com/*
+// @match        https://www.youtube.com/*
+// @match        https://youtube.com/*
 // @grant        none
 // @run-at       document-idle
 // ==/UserScript==
@@ -183,6 +185,34 @@
                 let node;
                 while ((node = walker.nextNode())) nodes.push(node);
                 nodes.forEach(processTextNode);
+            }
+        },
+        {
+            name: 'YouTube',
+            matches: () => /(^|\.)youtube\.com$/i.test(location.hostname),
+            run(root) {
+                const selector = 'ytd-watch-metadata #info, ytd-watch-info-text, ytd-video-primary-info-renderer #date, ytd-video-description-header-renderer';
+                const element = root.nodeType === Node.TEXT_NODE ? root.parentElement : root;
+                const targets = element?.closest?.(selector) ? [root] : queryWithin(root, selector);
+
+                for (const target of targets) {
+                    const processTextNode = node => {
+                        if (node.nodeType !== Node.TEXT_NODE) return;
+                        if (node.parentElement?.closest('script, style, textarea, input, select, option')) return;
+
+                        const replacement = replaceMonthDateText(node.nodeValue);
+                        if (replacement !== node.nodeValue) node.nodeValue = replacement;
+                    };
+
+                    if (target.nodeType === Node.TEXT_NODE) {
+                        processTextNode(target);
+                        continue;
+                    }
+
+                    const walker = document.createTreeWalker(target, NodeFilter.SHOW_TEXT);
+                    let node;
+                    while ((node = walker.nextNode())) processTextNode(node);
+                }
             }
         },
         {
