@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         RuTracker Digital Release Linker
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.1.25
+// @version      1.1.26
 // @description  Links verified digital release pages and merges new releases with catalog-matched FastPic covers.
 // @author       karpuzikov
 // @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/browser-tools/rutracker-digital-release-linker/RuTracker_Digital_Release_Linker.user.js
@@ -1309,6 +1309,11 @@
         return date && ids.length ? { date: date[1], id: ids[ids.length - 1][1].trim() } : null;
     }
 
+    function releaseKey(id) {
+        // Leading zeros are insignificant for numeric barcodes, not catalog numbers.
+        return /^\d+$/.test(id) ? id.replace(/^0+(?=\d)/, '') : id;
+    }
+
     function directImageUrls(raw) {
         return [...new Set(raw.match(DIRECT_IMAGE_RE) || [])];
     }
@@ -1349,15 +1354,29 @@
         if (!existing.length) throw new Error('No release blocks were found in the current post.');
         if (!incoming.length) throw new Error('No [spoiler] blocks were found in the updated post.');
 
-        const originalKeys = new Set(existing.map(identity).filter(Boolean).map(item => item.id));
-        const incomingKeys = new Set(incoming.map(identity).filter(Boolean).map(item => item.id));
+        const existingByKey = new Map(existing.map(block => [identity(block), block])
+            .filter(([key]) => key).map(([key, block]) => [releaseKey(key.id), block]));
+        const originalKeys = new Set(existingByKey.keys());
+        const incomingKeys = new Set(incoming.map(identity).filter(Boolean).map(item => releaseKey(item.id)));
         const seen = new Set(originalKeys);
         const additions = [];
+        const barcodeUpdates = new Map();
+        const renamedTitles = [];
         const eol = original.includes('\r\n') ? '\r\n' : '\n';
         for (const block of incoming) {
             const key = identity(block);
-            if (!key || seen.has(key.id)) continue;
-            seen.add(key.id);
+            if (!key) continue;
+            const normalized = releaseKey(key.id);
+            if (seen.has(normalized)) {
+                const previous = existingByKey.get(normalized);
+                if (previous && identity(previous).id !== key.id && /^\d+$/.test(key.id)) {
+                    const newTitle = previous.title.replace(/\[[^\]]+\]\s*$/, `[${key.id}]`);
+                    barcodeUpdates.set(previous.start, previous.body.replace(previous.title, newTitle));
+                    renamedTitles.push({ from: previous.title, to: newTitle });
+                }
+                continue;
+            }
+            seen.add(normalized);
             const cover = covers.get(key.id);
             const hasPlaceholder = block.body.includes(PLACEHOLDER);
             // Never alter source links, metadata, title, tracklists, or tags.
@@ -1379,10 +1398,10 @@
 
         // Missing entries are highlighted for review only, never deleted.
         const absent = hasDatedOriginals.filter(block =>
-            !incomingKeys.has(identity(block).id)).map(block => block.title);
+            !incomingKeys.has(releaseKey(identity(block).id))).map(block => block.title);
 
-        // Append fragments from ORIGINAL verbatim, only adding new blocks at release boundaries.
-        // This preserves the entirety of each old release and all pre-existing links.
+        // Keep existing release blocks intact apart from numeric barcode padding in titles.
+        // Insert genuinely new blocks at release boundaries without changing existing links.
         const segments = [];
         let offset = 0;
         let inserted = 0;
@@ -1392,7 +1411,7 @@
                 segments.push(additions[inserted].body, eol, eol);
                 inserted++;
             }
-            segments.push(original.slice(block.start, block.end));
+            segments.push(barcodeUpdates.get(block.start) || original.slice(block.start, block.end));
             offset = block.end;
         }
         // Newer releases belong after the last existing release but before any original footer.
@@ -1422,7 +1441,8 @@
         }
         const resultBlocks = parseTopLevelSpoilers(merged);
         for (const originalBlock of existing) {
-            if (!resultBlocks.some(current => current.body === originalBlock.body)) {
+            const expectedBody = barcodeUpdates.get(originalBlock.start) || originalBlock.body;
+            if (!resultBlocks.some(current => current.body === expectedBody)) {
                 throw new Error(`Safety check failed: original block changed (${originalBlock.title}).`);
             }
         }
@@ -1431,6 +1451,7 @@
         }
         return { text: merged, added: additions.length,
             addedTitles: additions.map(item => item.title),
+            renamedTitles,
             covers: additions.filter(item => item.matched).length,
             missing: additions.filter(item => item.missing).map(item => item.title),
             absent, durationChange };
@@ -1530,6 +1551,8 @@
         const rows = [];
         if (result.durationChange) rows.push(['Duration ' + result.durationChange.from +
             ' -> ' + result.durationChange.to, '#bad4ff']);
+        for (const update of result.renamedTitles)
+            rows.push(['~ ' + update.from + ' -> ' + update.to, '#bad4ff']);
         for (const title of result.addedTitles) rows.push(['+ ' + title, '#a9e2b7']);
         for (const title of result.absent)
             rows.push(['- Absent from updated post (kept): ' + title, '#ffb1a8']);
@@ -1590,6 +1613,7 @@
             GM_setValue('discography-merge:sessions', ui.sessionsInput.value);
             ui.status.classList.remove('rdl-error');
             const changes = ['Added ' + result.added, 'Covers ' + result.covers];
+            if (result.renamedTitles.length) changes.push('Barcodes updated ' + result.renamedTitles.length);
             if (result.durationChange) changes.push('Duration ' + result.durationChange.to);
             if (result.absent.length) changes.push('Absent from updated: ' + result.absent.length);
             if (result.missing.length) changes.push('Missing covers: ' + result.missing.length);

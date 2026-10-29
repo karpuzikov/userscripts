@@ -1,7 +1,7 @@
 # RuTracker Digital Release Linker - Continuity
 
 ## Product
-- Version: 1.1.25 - Under construction ⚠️ (needs user testing in Tampermonkey).
+- Version: 1.1.26 - Under construction ⚠️ (needs user testing in Tampermonkey).
 - Repository: `karpuzikov/userscripts`, branch `main`.
 - Main file: `browser-tools/rutracker-digital-release-linker/RuTracker_Digital_Release_Linker.user.js`.
 - Applicable rules: repository-root `SOFTWARE_RULES.md`. No project-specific `RULES.md` currently exists.
@@ -17,8 +17,8 @@
 ## Important contracts
 - Recognize both old source BBCode formats and unfilled `CD/WEB|[url=ссылкаНаИсточник]Источник[/url]` placeholders.
 - Convert confirmed matches to `WEB|[url=<exact page>]Deezer[/url]` or `WEB|[url=<exact page>]Beatport[/url]`. Unverified or unmatched releases retain their original data.
-- **Artwork separation:** Both original linking buttons (`Link digital release pages` and `Force link all web releases`) MUST NEVER alter `[img]...[/img]`, including placeholders. The user later explicitly requested integration of the separate Discography Merge function: only the manually triggered `Insert new releases` action may substitute catalog-matched FastPic URLs into `[img=right]ссылка[/img]` within **newly inserted** release blocks. The original blocks remain byte-for-byte unchanged. The previous rule against artwork changes still applies fully to the two source-linking modes.
-- Preserve spoiler titles, tracklists, timestamps, existing concrete source URLs, unrelated BBCode and nested-spoiler boundaries.
+- **Artwork separation:** Both original linking buttons (`Link digital release pages` and `Force link all web releases`) MUST NEVER alter `[img]...[/img]`, including placeholders. The user later explicitly requested integration of the separate Discography Merge function: only the manually triggered `Insert new releases` action may substitute catalog-matched FastPic URLs into `[img=right]ссылка[/img]` within **newly inserted** release blocks. Existing artwork, sources, tracklists and BBCode remain byte-for-byte unchanged; merge may update only an existing top-level spoiler title's numeric barcode when the incoming barcode differs exclusively by leading zeros. The previous rule against artwork changes still applies fully to the two source-linking modes.
+- Preserve existing spoiler dates, names and other title text, tracklists, timestamps, existing concrete source URLs, unrelated BBCode and nested-spoiler boundaries.
 - Rerunning either button must be idempotent. Report release-link counts and unresolved release titles; never report or manipulate artwork.
 - Second button exactly `Force link all web releases` searches Deezer for every spoiler whose media label is `WEB` (plain or `[url=...]WEB[/url]`) or placeholder `CD/WEB`, including already linked releases. Exclude `CD`-only entries.
 - **Mandatory permanent forced-mode search rule (user wording):** The script in forced mode should search Deezer for all WEB releases, even when they already have sources. Every WEB (including a Beatport-linked WEB, Deezer-linked WEB, tracker/redacted source, or unlinked WEB) must be included in the force scan. First try exact Deezer UPC/catalog/MusicBrainz resolution, and if no Deezer result, **always perform Deezer title-and-artist album search even when a barcode/catalog number exists**. Search candidates conservatively against title, primary artist, track count, date/year and first track; reject ambiguous results rather than guess. Never let an existing source or metadata identifier suppress the Deezer search. Force mode never substitutes Beatport for Deezer. CD-only items are excluded. On an unresolved match, leave the source unchanged.
@@ -125,3 +125,12 @@ Open a disposable RuTracker edit post in Chrome with Tampermonkey. Run all three
 
 ### Next step
 Open a disposable RuTracker edit post with the new integrated userscript. Paste a full updated discography where one previous catalog is missing, verify warning row without deletion, verify the updated total duration, confirm original links/images unchanged, Undo, and test both original link actions. Disable/remove any previously installed standalone `Discography Merge` userscript to prevent competing injection. 
+
+## v1.1.26 - Ignore numeric barcode padding in discography merge (2026-10-29)
+- `Insert new releases` treats numeric identifiers with different leading-zero padding as the same barcode. Non-numeric catalog numbers still compare literally; e.g. `0ABC123` and `ABC123` remain distinct.
+- When the existing and incoming numeric identifiers differ only by leading zeros, replace only the final `[barcode]` in the existing top-level spoiler title with the incoming spelling. Preserve the existing release date, title, artwork, source and tracklist. Do not insert a duplicate; do not falsely report the original as absent. Normal unrelated additions and total-duration updates still apply.
+- User regression: `2006-05-05 - Impossible - Single [602498597736]` becomes `2006-05-05 - Impossible - Single [00602498597736]` in-place with one spoiler. Do not replace its original artwork or tracklist with placeholder data from the incoming BBCode.
+- A barcode update is listed in the existing `Changes` disclosure and counted in the existing status line, with no new controls or clicks. Undo restores the entire original textarea.
+- **PASS - Node 24 test runner:** `node browser-tools/rutracker-digital-release-linker/tests/merge-discography.test.cjs` - original-to-padded merge, preservation of existing release metadata, nonnumeric catalog exclusion, and different numeric barcode insertion. Red test reproduced the former duplicate before the change.
+- **NOT RUN - target host:** real RuTracker editor, Tampermonkey/Chrome UI and Undo, actual FastPic, Deezer/MusicBrainz API, visual screenshots and native keyboard/resize acceptance. Status remains **Under construction ⚠️**.
+- Next action: In a disposable RuTracker edit post, paste the provided Kanye West original and updated BBCode, run `Insert new releases`, confirm exactly one updated `Impossible` spoiler with the original image/source/tracklist, inspect the `Changes` disclosure and Undo, then test the two independent link actions.
