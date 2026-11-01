@@ -1,9 +1,11 @@
 // ==UserScript==
 // @name         Rozetka - Only in stock
 // @namespace    https://rozetka.com.ua/
-// @version      1.0.0
+// @version      1.1.0
 // @description  Add an Only in stock toggle to Rozetka's catalog filters.
 // @match        https://*.rozetka.com.ua/*
+// @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/browser-tools/rozetka-only-in-stock/Rozetka_Only_in_Stock.user.js
+// @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/browser-tools/rozetka-only-in-stock/Rozetka_Only_in_Stock.user.js
 // @run-at       document-idle
 // @grant        none
 // ==/UserScript==
@@ -14,7 +16,14 @@
     const BUTTON_ID = 'rz-only-in-stock';
     const STORAGE_KEY = 'rz-only-in-stock-enabled';
     const HIDDEN_CLASS = 'rz-stock-hidden';
+    const PAGER_HIDDEN_CLASS = 'rz-stock-paginator-hidden';
+    const MAX_LOADED_TILES = 1200;
     let enabled = false;
+    let loading = false;
+    let previousCount = 0;
+    let stopped = false;
+    let requestNumber = 0;
+    let route = location.href;
 
     try {
         enabled = localStorage.getItem(STORAGE_KEY) === '1';
@@ -24,6 +33,7 @@
     style.id = 'rz-stock-filter-style';
     style.textContent = `
         .${HIDDEN_CLASS} { display: none !important; }
+        .${PAGER_HIDDEN_CLASS} { display: none !important; }
         #${BUTTON_ID} {
             display: flex;
             align-items: center;
@@ -35,6 +45,8 @@
             border-bottom: 1px solid var(--global-black-10, #e5e5e5);
             color: inherit;
             font: inherit;
+            font-size: 14px;
+            line-height: 20px;
             font-weight: 600;
             text-align: left;
             cursor: pointer;
@@ -67,23 +79,34 @@
         if (product?.classList.contains('tile-disabled')) return true;
 
         const status = tile.querySelector('rz-tile-sell-status')?.textContent || '';
-        return /немає\s+в\s+наявності|нет\s+в\s+наличии|out\s+of\s+stock/i.test(status);
+        return /немає\s+в\s+наявності|нет\s+в\s+наличии|out\s+of\s+stock|закінчився/i.test(status);
     }
 
     function updateProducts() {
+        let availableCount = 0;
         for (const tile of document.querySelectorAll('rz-catalog-tile-placeholder')) {
-            tile.classList.toggle(HIDDEN_CLASS, enabled && isUnavailable(tile));
+            const unavailable = isUnavailable(tile);
+            tile.classList.toggle(HIDDEN_CLASS, enabled && unavailable);
+            if (tile.querySelector('rz-product-tile') && !unavailable) availableCount++;
         }
+        return availableCount;
+    }
+
+    function resetLoading() {
+        loading = false;
+        stopped = false;
+        requestNumber++;
     }
 
     function setEnabled(value) {
         enabled = value;
+        resetLoading();
         const button = document.getElementById(BUTTON_ID);
         if (button) button.setAttribute('aria-pressed', String(enabled));
         try {
             localStorage.setItem(STORAGE_KEY, enabled ? '1' : '0');
         } catch { /* Storage may be disabled. */ }
-        updateProducts();
+        refresh();
     }
 
     function mountButton() {
@@ -96,12 +119,57 @@
         button.textContent = 'Only in stock';
         button.setAttribute('aria-pressed', String(enabled));
         button.addEventListener('click', () => setEnabled(!enabled));
-        filters.prepend(button);
+        // Stay outside Angular's own filter stack, which it controls on updates.
+        filters.before(button);
+    }
+
+    function loadRemainingPages(count) {
+        if (route !== location.href) {
+            route = location.href;
+            resetLoading();
+        }
+
+        const paginator = document.querySelector('rz-paginator');
+        const more = paginator?.querySelector('[data-testid="show_more_btn"]');
+        if (!enabled) {
+            paginator?.classList.remove(PAGER_HIDDEN_CLASS);
+            const button = document.getElementById(BUTTON_ID);
+            if (button) button.textContent = 'Only in stock';
+            return;
+        }
+
+        const total = document.querySelectorAll('rz-catalog-tile-placeholder').length;
+        if (loading && total > previousCount) loading = false;
+        if (total >= MAX_LOADED_TILES) stopped = true;
+        paginator?.classList.toggle(PAGER_HIDDEN_CLASS, !more && !stopped);
+
+        const button = document.getElementById(BUTTON_ID);
+        if (button) {
+            button.textContent = stopped ? `Only in stock (${count}, partial)` :
+                more || loading ? 'Only in stock (loading...)' : `Only in stock (${count})`;
+        }
+
+        if (!more || more.disabled || loading || stopped) return;
+        loading = true;
+        previousCount = total;
+        const currentRequest = ++requestNumber;
+        more.click(); // Use Rozetka's own pagination, preserving its product controls.
+        setTimeout(() => {
+            if (!enabled || currentRequest !== requestNumber || !loading) return;
+            if (document.querySelectorAll('rz-catalog-tile-placeholder').length > previousCount) {
+                loading = false;
+            } else {
+                stopped = true; // Do not retry indefinitely on a failed request.
+                loading = false;
+            }
+            refresh();
+        }, 15000);
     }
 
     function refresh() {
         mountButton();
-        updateProducts();
+        const count = updateProducts();
+        loadRemainingPages(count);
     }
 
     refresh();
