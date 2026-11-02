@@ -17,7 +17,7 @@
 // @name:zh-CN         IG小助手
 // @name:zh-TW         IG小精靈
 // @namespace          https://www.instagram.com/
-// @version            4.4.0
+// @version            4.4.1
 // @description        IG Helper with highest-quality Instagram Media API/DASH fetching enabled by default.
 // @description:ar     نزّل صورًا ومقاطع فيديو من منشورات Instagram بنقرة واحدة، بما في ذلك القصص وReels وصور الملف الشخصي.
 // @description:de     Lade Fotos und Videos aus Instagram-Beiträgen mit einem Klick herunter, einschließlich Stories, Reels und Profilbildern.
@@ -185,6 +185,13 @@
     // initialization script
     initSettings();
     GM_addStyle(style);
+    GM_addStyle(`
+        /* Allow image context menus without hiding carousel slides or media. */
+        article .x1n2onr6:nth-child(2) .xtijo5x:nth-child(2):not(:has(img, video, picture, canvas)),
+        .xyri2b:nth-child(2) > div > div > .x1i10hfl .xtijo5x:not(:has(img, video, picture, canvas)) {
+            pointer-events: none !important;
+        }
+    `);
     registerMenuCommand();
 
     getTranslationText(state.lang).then((res) => {
