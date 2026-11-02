@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name               Instagram Force Full Quality Media
 // @namespace          https://www.instagram.com/
-// @version            4.4.4
+// @version            4.4.5
 // @description        Download original-quality Instagram photos and videos, including carousels, Reels and Stories.
 // @description:ar     نزّل صورًا ومقاطع فيديو من منشورات Instagram بنقرة واحدة، بما في ذلك القصص وReels وصور الملف الشخصي.
 // @description:de     Lade Fotos und Videos aus Instagram-Beiträgen mit einem Klick herunter, einschließlich Stories, Reels und Profilbildern.
@@ -190,6 +190,8 @@
     line-height: 0;
     background: transparent;
     color: #ffffff;
+    border: 0;
+    font: inherit;
     border-radius: 6px;
     cursor: pointer;
     display: inline-flex;
@@ -233,10 +235,23 @@
     height: 18px;
     display: block;
 }
+.button_wrapper > button:focus-visible {
+    outline: 2px solid rgba(255, 255, 255, 0.95);
+    outline-offset: 2px;
+}
 
 #_SNLOAD {
     text-align: center;
     font-size: 20px;
+}
+.IG_POPUP_DIG.igdm-picker .igdm-error {
+    grid-column: 1 / -1;
+    margin: 16px;
+    padding: 12px;
+    color: #ffb4a7;
+    text-align: center;
+    font-size: 13px;
+    line-height: 1.4;
 }
 
 .IG_REELS,
@@ -1264,9 +1279,19 @@ div[class]:hover+.volume_slider>div,
     GM_addStyle(`
         /* Allow image context menus without hiding carousel slides or media. */
         article .x1n2onr6:nth-child(2) .xtijo5x:nth-child(2):not(:has(img, video, picture, canvas)),
-        .xyri2b:nth-child(2) > div > div > .x1i10hfl .xtijo5x:not(:has(img, video, picture, canvas)) {
+        .xyri2b:nth-child(2) > div > div > .x1i10hfl .xtijo5x:not(:has(img, video, picture, canvas)),
+        ._aa20 > .xtijo5x {
             pointer-events: none !important;
         }
+        /* Preserve pointer targeting for actual media and the userscript's own overlay controls. */
+        ._aa20 > .xtijo5x img,
+        ._aa20 > .xtijo5x video,
+        ._aa20 > .xtijo5x picture,
+        .button_wrapper,
+        .button_wrapper > button {
+            pointer-events: auto !important;
+        }
+        .button_wrapper svg { pointer-events: none !important; }
     `);
     registerMenuCommand();
 
@@ -2307,10 +2332,10 @@ div[class]:hover+.volume_slider>div,
                     $childElement.eq((tagName === "DIV") ? 0 : $childElement.length - 2).append(`<div class="button_wrapper">`);
 
                     // Add icons
-                    const DownloadElement = `<div data-ih-locale-title="DW" title="${_i18n("DW")}" class="IG_DW_MAIN">${SVG.DOWNLOAD}</div>`;
-                    const NewTabElement = `<div data-ih-locale-title="NEW_TAB" title="${_i18n("NEW_TAB")}" class="IG_NEWTAB_MAIN">${SVG.NEW_TAB}</div>`;
-                    const ThumbnailElement = `<div data-ih-locale-title="VIDEO_THUMBNAIL" title="${_i18n("VIDEO_THUMBNAIL")}" class="IG_THUMBNAIL_MAIN">${SVG.THUMBNAIL}</div>`;
-                    const ViewerElement = `<div data-ih-locale-title="IMAGE_VIEWER" title="${_i18n("IMAGE_VIEWER")}" class="IG_IMAGE_VIEWER">${SVG.FULLSCREEN}</div>`;
+                    const DownloadElement = `<button type="button" data-ih-locale-title="DW" data-ih-locale-aria="DW" aria-label="${_i18n("DW")}" title="${_i18n("DW")}" class="IG_DW_MAIN">${SVG.DOWNLOAD}</button>`;
+                    const NewTabElement = `<button type="button" data-ih-locale-title="NEW_TAB" data-ih-locale-aria="NEW_TAB" aria-label="${_i18n("NEW_TAB")}" title="${_i18n("NEW_TAB")}" class="IG_NEWTAB_MAIN">${SVG.NEW_TAB}</button>`;
+                    const ThumbnailElement = `<button type="button" data-ih-locale-title="VIDEO_THUMBNAIL" data-ih-locale-aria="VIDEO_THUMBNAIL" aria-label="${_i18n("VIDEO_THUMBNAIL")}" title="${_i18n("VIDEO_THUMBNAIL")}" class="IG_THUMBNAIL_MAIN">${SVG.THUMBNAIL}</button>`;
+                    const ViewerElement = `<button type="button" data-ih-locale-title="IMAGE_VIEWER" data-ih-locale-aria="IMAGE_VIEWER" aria-label="${_i18n("IMAGE_VIEWER")}" title="${_i18n("IMAGE_VIEWER")}" class="IG_IMAGE_VIEWER">${SVG.FULLSCREEN}</button>`;
 
                     // OPTIMIZATION: cache .button_wrapper inside $childElement (used 5+ times)
                     const $buttonWrapper = $childElement.find(".button_wrapper");
@@ -2510,7 +2535,8 @@ div[class]:hover+.volume_slider>div,
                 const totalInserted = await createMediaListDOM(
                     state.GL_postPath,
                     ".IG_POPUP_DIG .IG_POPUP_DIG_MAIN .IG_POPUP_DIG_BODY",
-                    ""
+                    "",
+                    $article
                 );
 
                 if (!totalInserted || totalInserted < 1) {
@@ -2561,7 +2587,8 @@ div[class]:hover+.volume_slider>div,
                 const totalInserted = await createMediaListDOM(
                     state.GL_postPath,
                     ".IG_POPUP_DIG .IG_POPUP_DIG_MAIN .IG_POPUP_DIG_BODY",
-                    ""
+                    "",
+                    $article
                 );
 
                 if (!totalInserted || totalInserted < 1) {
@@ -2664,7 +2691,8 @@ div[class]:hover+.volume_slider>div,
                         const totalInserted = await createMediaListDOM(
                             state.GL_postPath,
                             ".IG_POPUP_DIG .IG_POPUP_DIG_MAIN .IG_POPUP_DIG_BODY",
-                            ""
+                            "",
+                            $article
                         );
 
                         if (!totalInserted || totalInserted < 1) {
@@ -2719,7 +2747,8 @@ div[class]:hover+.volume_slider>div,
                             await createMediaListDOM(
                                 state.GL_postPath,
                                 ".IG_POPUP_DIG .IG_POPUP_DIG_MAIN .IG_POPUP_DIG_BODY",
-                                _i18n("LOAD_BLOB_MULTIPLE")
+                                _i18n("LOAD_BLOB_MULTIPLE"),
+                                $article
                             );
                         }
                         else {
@@ -2741,10 +2770,11 @@ div[class]:hover+.volume_slider>div,
 
                             if (blob) {
                                 await createMediaListDOM(
-                                    state.GL_postPath,
-                                    ".IG_POPUP_DIG .IG_POPUP_DIG_MAIN .IG_POPUP_DIG_BODY",
-                                    _i18n("LOAD_BLOB_RELOAD")
-                                );
+                                        state.GL_postPath,
+                                        ".IG_POPUP_DIG .IG_POPUP_DIG_MAIN .IG_POPUP_DIG_BODY",
+                                        _i18n("LOAD_BLOB_RELOAD"),
+                                        $article
+                                    );
                             }
                         }
                     }
@@ -2753,7 +2783,8 @@ div[class]:hover+.volume_slider>div,
                             await createMediaListDOM(
                                 state.GL_postPath,
                                 ".IG_POPUP_DIG .IG_POPUP_DIG_MAIN .IG_POPUP_DIG_BODY",
-                                _i18n("LOAD_BLOB_MULTIPLE")
+                                _i18n("LOAD_BLOB_MULTIPLE"),
+                                $article
                             );
                         }
                         else {
@@ -2766,7 +2797,8 @@ div[class]:hover+.volume_slider>div,
                                 await createMediaListDOM(
                                     state.GL_postPath,
                                     ".IG_POPUP_DIG .IG_POPUP_DIG_MAIN .IG_POPUP_DIG_BODY",
-                                    _i18n("LOAD_BLOB_ONE")
+                                    _i18n("LOAD_BLOB_ONE"),
+                                    $article
                                 );
                             }
                             if (element_images && imgLink) {
@@ -2851,14 +2883,45 @@ div[class]:hover+.volume_slider>div,
      * @param  {String}  message - i18n display loading message
      * @return {Promise<number>}  The number of <a> elements inserted into the DOM
      */
-    async function createMediaListDOM(postURL, selector, message) {
+    async function createMediaListDOM(postURL, selector, message, fallbackArticle = null) {
+        const $fallbackArticle = fallbackArticle ? $(fallbackArticle).first() : $();
         try {
             // OPTIMIZATION: cache the popup body selection used many times below
             const $target = $(selector);
             $target.find('a').remove();
             $target.append('<p id="_SNLOAD">' + message + '</p>');
             $('.IG_POPUP_DIG #batch_download_selected, .IG_POPUP_DIG #batch_download_direct').prop('disabled', true);
-            let result = await getBlobMedia(postURL);
+            let result = null;
+            let apiError = null;
+            try {
+                result = await getBlobMedia(postURL);
+            } catch (err) {
+                apiError = err;
+            }
+
+            const hasMediaSource = (data) => {
+                const item = data?.shortcode_media ?? data;
+                return Boolean(
+                    item?.video_url || item?.display_resources?.length ||
+                    item?.image_versions2?.candidates?.length || item?.video_versions?.length ||
+                    item?.carousel_media?.length || item?.edge_sidecar_to_children?.edges?.length
+                );
+            };
+
+            if (!result || !hasMediaSource(result.data)) {
+                const fallbackResource = $fallbackArticle.length
+                    ? getCurrentVisibleMediaFromDOM($fallbackArticle, postURL)
+                    : null;
+                if (fallbackResource) {
+                    logger('getBlobMedia() failed or returned no media; using current visible media from DOM', apiError?.message || apiError || 'No media source');
+                    result = { type: 'query_id', data: fallbackResource };
+                } else if (apiError) {
+                    throw apiError;
+                } else {
+                    throw new Error('No media source returned by Instagram.');
+                }
+            }
+
             let resource = filterResourceData(result.data);
 
             if (result.type === 'query_hash') {
@@ -2931,7 +2994,7 @@ div[class]:hover+.volume_slider>div,
                     });
                 }
                 else {
-                    let idx = 1;
+                    let idx = Number(resource.__snCurrentIndex) || 1;
                     // Image
                     if (resource.video_versions == null) {
                         resource.image_versions2.candidates.sort(function (a, b) {
@@ -2982,6 +3045,9 @@ div[class]:hover+.volume_slider>div,
             logger('createMediaListDOM', err);
             $("#_SNLOAD").remove();
             $('.IG_POPUP_DIG #batch_download_selected, .IG_POPUP_DIG #batch_download_direct').prop('disabled', false);
+            if ($fallbackArticle.length > 0) {
+                $(selector).append('<p class="igdm-error" role="alert">No direct media URL found. Reload the post and retry.</p>');
+            }
             return 0;
         }
     }
@@ -4908,6 +4974,171 @@ div[class]:hover+.volume_slider>div,
         };
     }
 
+    // Fallback: use the media URL Instagram has already rendered in the active post.
+    // This intentionally returns only the current slide; it must not masquerade as a full carousel listing.
+    function getCurrentVisibleMediaFromDOM($article, shortcode) {
+        const $root = $($article).first();
+        if ($root.length === 0) return null;
+
+        const toMediaURL = (value) => {
+            if (typeof value !== 'string' || !value.trim()) return null;
+            try {
+                const parsed = new URL(value.trim(), location.href);
+                return (parsed.protocol === 'https:' || parsed.protocol === 'http:' || parsed.protocol === 'blob:')
+                    ? parsed.href
+                    : null;
+            } catch (_) {
+                return null;
+            }
+        };
+
+        const parseSrcset = (srcset) => {
+            return String(srcset || '').split(',').map((part) => {
+                const match = part.trim().match(/^(\S+)\s+([\d.]+)(w|x)$/i);
+                if (!match) return null;
+                const size = parseFloat(match[2]) || 0;
+                return {
+                    url: toMediaURL(match[1]),
+                    width: match[3].toLowerCase() === 'w' ? size : size * 10000
+                };
+            }).filter(candidate => candidate && candidate.url)
+                .sort((a, b) => b.width - a.width);
+        };
+
+        const getImageCandidate = (img) => {
+            const srcset = img.getAttribute('srcset') || img.srcset || '';
+            const candidates = parseSrcset(srcset);
+            if (candidates.length > 0) return candidates[0];
+
+            const url = toMediaURL(img.currentSrc || img.getAttribute('src') || img.src);
+            if (!url) return null;
+            return {
+                url,
+                width: img.naturalWidth || 0,
+                height: img.naturalHeight || 0
+            };
+        };
+
+        let bestImage = null;
+        $root.find('img:visible').each(function () {
+            const rect = this.getBoundingClientRect();
+            const area = rect.width * rect.height;
+            if (rect.width < 100 || rect.height < 100 || area < 20000) return;
+
+            const candidate = getImageCandidate(this);
+            if (!candidate) return;
+            if (!bestImage || area > bestImage.area) {
+                bestImage = {
+                    ...candidate,
+                    area,
+                    element: this
+                };
+            }
+        });
+
+        const storedImageURL = toMediaURL($root.data('igMedia_displayResourceURL'));
+        if (!bestImage && storedImageURL) {
+            bestImage = { url: storedImageURL, width: 0, height: 0, area: 0, element: null };
+        }
+
+        let bestVideo = null;
+        $root.find('video:visible').each(function () {
+            const rect = this.getBoundingClientRect();
+            const area = rect.width * rect.height;
+            if (rect.width < 100 || rect.height < 100 || area < 20000) return;
+
+            const source = this.querySelector('source[src]');
+            const videoURL = toMediaURL(
+                this.currentSrc || this.getAttribute('src') || source?.getAttribute('src')
+            );
+            if (!videoURL) return;
+
+            const posterURL = toMediaURL(this.getAttribute('poster')) || bestImage?.url || null;
+            if (!posterURL) return;
+
+            if (!bestVideo || area > bestVideo.area) {
+                bestVideo = {
+                    url: videoURL,
+                    poster: posterURL,
+                    area,
+                    width: this.videoWidth || rect.width,
+                    height: this.videoHeight || rect.height
+                };
+            }
+        });
+
+        let globalIndex = 1;
+        const routeMatch = location.pathname.match(/^\/(?:p|reel)\/([^/]+)/i);
+        const routeIndex = new URLSearchParams(location.search).get('img_index');
+        if (routeMatch && routeMatch[1] === shortcode && routeIndex !== null) {
+            const parsedIndex = Number(routeIndex);
+            if (Number.isInteger(parsedIndex) && parsedIndex >= 1) {
+                // Instagram's img_index is one-based; userscript data-globalIndex is also one-based.
+                globalIndex = parsedIndex;
+            } else {
+                globalIndex = Math.max(0, getVisibleNodeIndex($root)) + 1;
+            }
+        } else {
+            globalIndex = Math.max(0, getVisibleNodeIndex($root)) + 1;
+        }
+
+        const username = String(
+            $root.data('username') || state.GL_username ||
+            $root.find('header a[href^="/"]').first().text() || 'NONE'
+        ).trim();
+
+        const datetime = $root.find('time[datetime]').first().attr('datetime');
+        let takenAt = 0;
+        if (datetime) {
+            const numeric = Number(datetime);
+            if (Number.isFinite(numeric) && numeric > 0) {
+                takenAt = Math.floor(numeric > 1000000000000 ? numeric / 1000 : numeric);
+            } else {
+                const parsedDate = Date.parse(datetime);
+                if (Number.isFinite(parsedDate)) takenAt = Math.floor(parsedDate / 1000);
+            }
+        }
+        if (!takenAt) takenAt = Math.floor(Date.now() / 1000);
+
+        if (bestVideo) {
+            return {
+                pk: '',
+                code: shortcode,
+                taken_at: takenAt,
+                owner: { username },
+                __snCurrentIndex: globalIndex,
+                image_versions2: {
+                    candidates: [{
+                        url: bestVideo.poster,
+                        width: bestVideo.width,
+                        height: bestVideo.height
+                    }]
+                },
+                video_versions: [{ url: bestVideo.url }]
+            };
+        }
+
+        if (bestImage) {
+            return {
+                pk: '',
+                code: shortcode,
+                taken_at: takenAt,
+                owner: { username },
+                __snCurrentIndex: globalIndex,
+                image_versions2: {
+                    candidates: [{
+                        url: bestImage.url,
+                        width: bestImage.width || bestImage.element?.naturalWidth || 0,
+                        height: bestImage.height || bestImage.element?.naturalHeight || 0
+                    }]
+                },
+                video_versions: null
+            };
+        }
+
+        return null;
+    }
+
     /**
      * getBlobMedia
      * @description Get list of all media files in post with post shortcode.
@@ -4986,9 +5217,9 @@ div[class]:hover+.volume_slider>div,
                         logger(obj);
 
                         if (obj.status === 'fail') {
-                            alert(`getBlobMediaWithQueryID(): Request failed with API response:\n${obj.message}: ${obj.feedback_message}`);
-                            logger(`Request failed with API response ${obj.message}: ${obj.feedback_message}`);
-                            reject(response);
+                            const errorMessage = 'Request failed with API response ' + obj.message + ': ' + obj.feedback_message;
+                            logger('getBlobMediaWithQueryID()', errorMessage);
+                            reject(new Error(errorMessage));
                         }
                         else {
                             logger('getBlobMediaWithQueryID()', obj.data);
@@ -6343,13 +6574,30 @@ div[class]:hover+.volume_slider>div,
      * @return {void}
      */
     function openNewTab(link) {
-        var a = document.createElement('a');
-        a.href = link;
-        a.target = '_blank';
+        if (typeof link !== 'string' || !link.trim()) return;
 
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
+        try {
+            if (typeof GM_openInTab === 'function') {
+                GM_openInTab(link, { active: true, insert: true });
+            } else {
+                const a = document.createElement('a');
+                a.href = link;
+                a.target = '_blank';
+                a.rel = 'noopener';
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+            }
+        } catch (err) {
+            logger('GM_openInTab failed; using anchor fallback', err);
+            const a = document.createElement('a');
+            a.href = link;
+            a.target = '_blank';
+            a.rel = 'noopener';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+        }
 
         setTimeout(() => { updateLoadingBar(false); }, 125);
     }
@@ -7372,6 +7620,10 @@ div[class]:hover+.volume_slider>div,
         $('[data-ih-locale-title]').each(function () {
             const $this = $(this);
             $this.attr('title', _i18n($this.data('ih-locale-title')));
+        });
+        $('[data-ih-locale-aria]').each(function () {
+            const $this = $(this);
+            $this.attr('aria-label', _i18n($this.data('ih-locale-aria')));
         });
     }
 

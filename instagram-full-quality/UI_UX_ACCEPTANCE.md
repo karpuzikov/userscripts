@@ -21,12 +21,14 @@ Target: the userscript's media overlay controls and native image context menu on
 - If the click-through layer contains actual media or the userscript controls, explicitly preserve pointer targeting for media and controls.
 - No new modal, menu, or confirmation step for direct Open in new tab/Download actions.
 
-## Acceptance results (pending implementation)
-- Source-level and automated tests: NOT RUN.
+## Acceptance results (v4.4.5 source checkpoint)
+- Full userscript JavaScript syntax parse: PASS.
+- DOM fallback helper tests: PASS (highest srcset candidate selection, one-based `img_index` mapping, image resource normalization, direct video URL plus poster normalization).
+- Static regression assertions: PASS (overlay pass-through rule, native button markup and aria localization, API alert removed, current-item article context supplied, `GM_openInTab` path, README version rows).
 - Real Instagram browser testing: NOT RUN.
 - Target browser/device: user's Windows 11 desktop Chrome/Tampermonkey; browser integration was not available from this ChatGPT session.
 - Required user test: open `https://www.instagram.com/p/DT5angriDSP/?img_index=1`; right-click image and Copy image; click Open in new tab; click Download; then check carousel posts remain visible and test a video post.
-- Status remains `Under construction ⚠️` until native browser interaction and visual acceptance pass.
+- Browser integration could not read the connected local browser in this session. Native interaction and visual acceptance remain NOT RUN; status remains `Under construction ⚠️` until the user confirms the supplied URL and representative carousel/video posts.
 
 ## UXDT references rechecked 2026-11-02
 - [UXDT Accessibility](https://www.uxdt.nic.in/guidelines/understanding-ux/accessibility/): operable input methods, keyboard navigation, visible focus, simple predictable behavior.
