@@ -17,7 +17,7 @@
 // @name:zh-CN         IG小助手
 // @name:zh-TW         IG小精靈
 // @namespace          https://www.instagram.com/
-// @version            4.4.1
+// @version            4.4.2
 // @description        IG Helper with highest-quality Instagram Media API/DASH fetching enabled by default.
 // @description:ar     نزّل صورًا ومقاطع فيديو من منشورات Instagram بنقرة واحدة، بما في ذلك القصص وReels وصور الملف الشخصي.
 // @description:de     Lade Fotos und Videos aus Instagram-Beiträgen mit einem Klick herunter, einschließlich Stories, Reels und Profilbildern.
@@ -3778,6 +3778,63 @@
         });
     }
 
+    // Reuse media data already loaded by Instagram before calling its API.
+    function findEmbeddedPostMedia(shortcode, scripts, fallbackUsername) {
+        if (!shortcode || !scripts) return null;
+    
+        let best = null;
+        let bestScore = 0;
+        let scanned = 0;
+        const isURL = value => typeof value === 'string' && /^https?:\/\//i.test(value);
+        const hasImage = media => media?.image_versions2?.candidates?.some(c => isURL(c?.url));
+        const hasVideo = media => media?.video_versions?.some(v => isURL(v?.url));
+    
+        function inspect(value, depth, seen) {
+            if (depth > 45 || scanned++ > 150000 || value == null) return;
+            if (typeof value === 'string') {
+                if (value.length > 2 && value.length < 2000000 && value.includes(shortcode)) {
+                    const trimmed = value.trim();
+                    if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+                        try { inspect(JSON.parse(trimmed), depth + 1, seen); } catch (_) { /* not JSON */ }
+                    }
+                }
+                return;
+            }
+            if (typeof value !== 'object' || seen.has(value)) return;
+            seen.add(value);
+    
+            const code = value.code || value.shortcode;
+            if (code === shortcode) {
+                const carousel = Array.isArray(value.carousel_media)
+                    ? value.carousel_media.filter(m => hasImage(m) || hasVideo(m)) : [];
+                const score = (hasVideo(value) ? 3 : 0) + (hasImage(value) ? 2 : 0) + carousel.length * 4;
+                if (score > bestScore) {
+                    best = value;
+                    bestScore = score;
+                }
+            }
+            for (const child of Object.values(value)) inspect(child, depth + 1, seen);
+        }
+    
+        for (const script of scripts) {
+            if (scanned > 150000) break;
+            let content = script?.textContent || '';
+            if (!content.includes(shortcode) || content.length > 4000000) continue;
+            content = content.trim().replace(/^for\s*\(\s*;\s*;\s*\)\s*;?/, '').trim();
+            if (!content.startsWith('{') && !content.startsWith('[')) continue;
+            try { inspect(JSON.parse(content), 0, new WeakSet()); } catch (_) { /* not JSON */ }
+        }
+    
+        if (!best) return null;
+        const owner = best.owner || best.user || {};
+        return {
+            ...best,
+            code: best.code || best.shortcode || shortcode,
+            pk: best.pk || best.id,
+            owner: { ...owner, username: owner.username || fallbackUsername || 'NONE' },
+        };
+    }
+
     /**
      * getBlobMedia
      * @description Get list of all media files in post with post shortcode.
@@ -3786,6 +3843,8 @@
      * @return {Object}
      */
     function getBlobMedia(postPath) {
+        const embedded = findEmbeddedPostMedia(postPath, document.scripts, state.GL_username);
+        if (embedded) return Promise.resolve({ type: 'query_id', data: embedded });
         return new Promise((resolve, reject) => {
             if (!postPath) reject("NOPATH");
             const postShortCode = postPath;
