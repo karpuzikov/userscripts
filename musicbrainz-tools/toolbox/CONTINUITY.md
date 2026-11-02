@@ -1,7 +1,7 @@
 # MusicBrainz ToolBox - Continuity
 
-Last reviewed: 2026-10-15
-Current version: 1.0.61 - Under construction ⚠️ (pending browser verification)
+Last reviewed: 2026-11-02
+Current version: 1.0.65 - Under construction ⚠️ (pending browser verification)
 Repository: `karpuzikov/userscripts`, branch `main`
 Global rules: `/SOFTWARE_RULES.md`; no separate ToolBox `RULES.md` exists.
 
@@ -76,3 +76,10 @@ Global rules: `/SOFTWARE_RULES.md`; no separate ToolBox `RULES.md` exists.
 - UI/control contract: existing 18px icon; hover and keyboard focus expose a destination label. Click/Enter opens a MusicBrainz release or Harmony lookup in new tab, with broken-chain badge for barcode-matched but unlinked release. No data changes and no extra user-facing controls. Cache, global unlimited HTTP 503 retry and MB throttling unchanged.
 - Automated: full userscript syntax PASS; simulated repeated scans, single request/render, completion cleanup, recycled title DOM target and stale-lookup suppression PASS. **NOT RUN**: actual Chrome/Tampermonkey Apple Music page, screenshot validation, scroll/lazy-load, zoom and keyboard/pointer tests, live MusicBrainz responses and errors. Remains **1.0.61 - Under construction ⚠️**.
 - Next: Tampermonkey > Check for userscript updates. Reload GIMS artist page and verify logo placement on multiple tiles, Harmony fallback for unmatched albums, no duplicate icons and continued progress under rate-limited requests. Confirm ordinary Apple album title icon unchanged.
+
+## 2026-11-02 - v1.0.65 - Release-page track attributions behind "..."
+- Request: reuse the existing label-disambiguation "..." collapse on `/release/<MBID>` pages, where relationship rows ("purchase for download:", "stream for free:", "streaming page:" and credits) carry hundreds of "(track N)" comments.
+- Change (relationship-shortcuts module only): the toggle code from `collapseLabelDisambiguations` moved into `hideCommentBehindEllipsisToggle(comment, commentDescription)`; the label path calls it unchanged in behavior. New `collapseTrackAttributions` hides every `table.details td > span.comment` that has no `<bdi>` (artist disambiguations wrap text in `<bdi>` and stay visible; language-independent). `init` runs it on release pages before the early return that previously skipped them. Click toggles; hover title and aria-label carry the full text.
+- Automated: Chromium on a saved release page (2362 comments): 2348 collapsed, 14 artist disambiguations visible, second run adds nothing, toggle open/close PASS, 15 ms; synthetic label table (element and plain-text comment) PASS; syntax PASS. **NOT RUN**: real Tampermonkey on live musicbrainz.org, beta site, keyboard/zoom checks. Remains **1.0.65 - Under construction ⚠️**.
+- Known limit: also hides "(track N)" in credit rows, not only URL rows; per-item buttons (no delegation) are fine at ~2.3k.
+- Next: Tampermonkey > Check for userscript updates, reload a large release page (e.g. `/release/1b807741-7dca-4282-8b17-e64baabfe4ee`), confirm "..." appears after each link and expands to the track text.
