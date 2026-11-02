@@ -21122,7 +21122,7 @@ ${lines}
 // ============================================================================
 // Compact release-level external relationship lists
 // ============================================================================
-if (/^\/release\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\\/?$/i.test(location.pathname)) {
+if (/^\/release\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/?$/i.test(location.pathname)) {
     const STYLE_ID = 'mbtb-release-link-collapse-style';
     if (!document.getElementById(STYLE_ID)) {
         const style = document.createElement('style');
