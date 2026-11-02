@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MusicBrainz ToolBox
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.0.61
+// @version      1.0.62
 // @description  Combined MusicBrainz release-editor, recording, barcode, Spotify/Apple Music linking, search, cover-art, Disc ID, and duplicate-edit tools.
 // @author       karpuzikov
 // @license      MIT
@@ -21119,4 +21119,98 @@ ${lines}
   }
 })();
     }
+// ============================================================================
+// Compact release-level external relationship lists
+// ============================================================================
+if (/^\/release\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\\/?$/i.test(location.pathname)) {
+    const STYLE_ID = 'mbtb-release-link-collapse-style';
+    if (!document.getElementById(STYLE_ID)) {
+        const style = document.createElement('style');
+        style.id = STYLE_ID;
+        style.textContent = [
+            '#release-relationships table.details tr.mbtb-release-links-collapsible:not(.mbtb-release-links-expanded) > td > :not(.mbtb-release-link-toggle) {',
+            '    display: none !important;',
+            '}',
+            '#release-relationships table.details .mbtb-release-link-toggle {',
+            '    appearance: none;',
+            '    border: 0;',
+            '    background: transparent;',
+            '    color: inherit;',
+            '    cursor: pointer;',
+            '    font: inherit;',
+            '    line-height: inherit;',
+            '    margin: 0 0.5em 0 0;',
+            '    padding: 0;',
+            '    text-decoration: underline;',
+            '    white-space: nowrap;',
+            '}',
+            '#release-relationships table.details .mbtb-release-link-toggle:focus-visible {',
+            '    outline: 2px solid currentColor;',
+            '    outline-offset: 2px;',
+            '    border-radius: 2px;',
+            '}'
+        ].join('\n');
+        document.head.appendChild(style);
+    }
+
+    function enhanceReleaseRelationshipLinks() {
+        const container = document.querySelector('#release-relationships');
+        if (!container) return;
+
+        const rows = container.querySelectorAll(
+            'table.details > tbody > tr, table.details > tr'
+        );
+        for (const row of rows) {
+            const label = row.querySelector(':scope > th');
+            const cell = row.querySelector(':scope > td');
+            if (!label || !cell || cell.querySelector(':scope > button.mbtb-release-link-toggle')) {
+                continue;
+            }
+
+            const externalLinks = [...cell.querySelectorAll('a[href]')].filter(anchor => {
+                try {
+                    const url = new URL(anchor.href, location.href);
+                    return (url.protocol === 'http:' || url.protocol === 'https:') &&
+                        !/(^|\.)musicbrainz\.org$/i.test(url.hostname);
+                } catch (_) {
+                    return false;
+                }
+            });
+            if (!externalLinks.length) continue;
+
+            const phrase = label.textContent.replace(/\s+/g, ' ').trim().replace(/:\s*$/, '');
+            if (!phrase) continue;
+
+            const toggle = document.createElement('button');
+            toggle.type = 'button';
+            toggle.className = 'mbtb-release-link-toggle';
+
+            const setExpanded = expanded => {
+                row.classList.add('mbtb-release-links-collapsible');
+                row.classList.toggle('mbtb-release-links-expanded', expanded);
+                toggle.textContent = expanded ? 'less' : '...';
+                toggle.setAttribute('aria-expanded', String(expanded));
+                const verb = expanded ? 'Hide' : 'Show';
+                toggle.setAttribute('aria-label', verb + ' links for ' + phrase);
+                toggle.title = verb + ' links for ' + phrase;
+            };
+
+            toggle.addEventListener('click', () => {
+                setExpanded(!row.classList.contains('mbtb-release-links-expanded'));
+            });
+            cell.insertBefore(toggle, cell.firstChild);
+            setExpanded(false);
+        }
+    }
+
+    const releaseRelationshipObserver = new MutationObserver(() => {
+        enhanceReleaseRelationshipLinks();
+    });
+    releaseRelationshipObserver.observe(document.body, {
+        childList: true,
+        subtree: true,
+    });
+    enhanceReleaseRelationshipLinks();
+}
+
 })();
