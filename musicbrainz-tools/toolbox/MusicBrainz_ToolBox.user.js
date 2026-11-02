@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MusicBrainz ToolBox
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.0.63
+// @version      1.0.64
 // @description  Combined MusicBrainz release-editor, recording, barcode, Spotify/Apple Music linking, search, cover-art, Disc ID, and duplicate-edit tools.
 // @author       karpuzikov
 // @license      MIT
@@ -21120,18 +21120,19 @@ ${lines}
 })();
     }
 // ============================================================================
+// ============================================================================
 // Compact release-level external relationship lists
 // ============================================================================
-if (/^\/release\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/?$/i.test(location.pathname)) {
+if (/^\/release\//i.test(location.pathname)) {
     const STYLE_ID = 'mbtb-release-link-collapse-style';
     if (!document.getElementById(STYLE_ID)) {
         const style = document.createElement('style');
         style.id = STYLE_ID;
         style.textContent = [
-            '#release-relationships table.details tr.mbtb-release-links-collapsible:not(.mbtb-release-links-expanded) > td > :not(.mbtb-release-link-toggle) {',
+            '.mbtb-release-links-collapsible:not(.mbtb-release-links-expanded) .mbtb-release-links-content {',
             '    display: none !important;',
             '}',
-            '#release-relationships table.details .mbtb-release-link-toggle {',
+            '.mbtb-release-link-toggle {',
             '    appearance: none;',
             '    border: 0;',
             '    background: transparent;',
@@ -21144,7 +21145,7 @@ if (/^\/release\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/?
             '    text-decoration: underline;',
             '    white-space: nowrap;',
             '}',
-            '#release-relationships table.details .mbtb-release-link-toggle:focus-visible {',
+            '.mbtb-release-link-toggle:focus-visible {',
             '    outline: 2px solid currentColor;',
             '    outline-offset: 2px;',
             '    border-radius: 2px;',
@@ -21153,30 +21154,37 @@ if (/^\/release\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/?
         document.head.appendChild(style);
     }
 
-    function enhanceReleaseRelationshipLinks() {
-        const container = document.querySelector('#release-relationships');
-        if (!container) return;
+    const linkCategoryPattern = /^(?:purchase\b|stream\b|streaming\b|download\b|mail[\s-]?order\b|discography\b|license\b|get the music\b|production\b|crowdfunding\b|show notes\b|other databases\b|discogs\b|vgmdb\b|secondhandsongs\b|allmusic\b|bookbrainz\b|lyrics\b|official\b|music video\b)/i;
 
-        const rows = container.querySelectorAll(
-            'table.details > tbody > tr, table.details > tr'
-        );
-        for (const row of rows) {
-            const label = row.querySelector(':scope > th');
-            const cell = row.querySelector(':scope > td');
-            if (!label || !cell || cell.querySelector(':scope > button.mbtb-release-link-toggle')) {
+    function enhanceReleaseRelationshipLinks() {
+        // MusicBrainz has rendered these rows in different wrappers over time.
+        // Identify the URL relationship rows by their visible phrase instead
+        // of relying on one container ID or a specific table nesting.
+        for (const row of document.querySelectorAll('table tr')) {
+            const cells = [...row.children];
+            const label = cells.find(cell => cell.tagName === 'TH');
+            const content = cells.find(cell => cell.tagName === 'TD');
+            if (!label || !content ||
+                content.querySelector('button.mbtb-release-link-toggle')) {
                 continue;
             }
 
-            // MusicBrainz URL entities may link through /url/<MBID>.
-            // Do not filter by hostname: these anchors are the relationship links.
-            if (!cell.querySelector('a[href]')) continue;
-
-            const phrase = label.textContent.replace(/\s+/g, ' ').trim().replace(/:\s*$/, '');
-            if (!phrase) continue;
+            const phrase = label.textContent
+                .replace(/\s+/g, ' ')
+                .trim()
+                .replace(/:\s*$/, '');
+            if (!linkCategoryPattern.test(phrase)) continue;
+            if (!content.querySelector('a[href]')) continue;
 
             const toggle = document.createElement('button');
             toggle.type = 'button';
             toggle.className = 'mbtb-release-link-toggle';
+
+            const linksContent = document.createElement('span');
+            linksContent.className = 'mbtb-release-links-content';
+            while (content.firstChild) {
+                linksContent.appendChild(content.firstChild);
+            }
 
             const setExpanded = expanded => {
                 row.classList.add('mbtb-release-links-collapsible');
@@ -21191,7 +21199,8 @@ if (/^\/release\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/?
             toggle.addEventListener('click', () => {
                 setExpanded(!row.classList.contains('mbtb-release-links-expanded'));
             });
-            cell.insertBefore(toggle, cell.firstChild);
+
+            content.append(toggle, linksContent);
             setExpanded(false);
         }
     }
@@ -21199,11 +21208,12 @@ if (/^\/release\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/?
     const releaseRelationshipObserver = new MutationObserver(() => {
         enhanceReleaseRelationshipLinks();
     });
-    releaseRelationshipObserver.observe(document.body, {
+    releaseRelationshipObserver.observe(document.documentElement, {
         childList: true,
         subtree: true,
     });
     enhanceReleaseRelationshipLinks();
 }
+
 
 })();
