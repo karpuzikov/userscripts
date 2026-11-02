@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MusicBrainz ToolBox
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.0.62
+// @version      1.0.63
 // @description  Combined MusicBrainz release-editor, recording, barcode, Spotify/Apple Music linking, search, cover-art, Disc ID, and duplicate-edit tools.
 // @author       karpuzikov
 // @license      MIT
@@ -21167,16 +21167,9 @@ if (/^\/release\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/?
                 continue;
             }
 
-            const externalLinks = [...cell.querySelectorAll('a[href]')].filter(anchor => {
-                try {
-                    const url = new URL(anchor.href, location.href);
-                    return (url.protocol === 'http:' || url.protocol === 'https:') &&
-                        !/(^|\.)musicbrainz\.org$/i.test(url.hostname);
-                } catch (_) {
-                    return false;
-                }
-            });
-            if (!externalLinks.length) continue;
+            // MusicBrainz URL entities may link through /url/<MBID>.
+            // Do not filter by hostname: these anchors are the relationship links.
+            if (!cell.querySelector('a[href]')) continue;
 
             const phrase = label.textContent.replace(/\s+/g, ' ').trim().replace(/:\s*$/, '');
             if (!phrase) continue;
