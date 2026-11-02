@@ -21,10 +21,10 @@ Target: the userscript's media overlay controls and native image context menu on
 - If the click-through layer contains actual media or the userscript controls, explicitly preserve pointer targeting for media and controls.
 - No new modal, menu, or confirmation step for direct Open in new tab/Download actions.
 
-## Acceptance results (v4.4.5 source checkpoint)
+## Acceptance results (v4.4.6 source checkpoint)
 - Full userscript JavaScript syntax parse: PASS.
 - DOM fallback helper tests: PASS (highest srcset candidate selection, one-based `img_index` mapping, image resource normalization, direct video URL plus poster normalization).
-- Static regression assertions: PASS (overlay pass-through rule, native button markup and aria localization, API alert removed, current-item article context supplied, `GM_openInTab` path, README version rows).
+- Static regression assertions: PASS (overlay pass-through rule, native button markup and aria localization, API alert removed, current-item article context supplied, `GM_openInTab` path, image host preserved/video host rewrite conditional, direct fallback `data-dom-fallback` marker and `GM_download` routing, README version rows).
 - Real Instagram browser testing: NOT RUN.
 - Target browser/device: user's Windows 11 desktop Chrome/Tampermonkey; browser integration was not available from this ChatGPT session.
 - Required user test: open `https://www.instagram.com/p/DT5angriDSP/?img_index=1`; right-click image and Copy image; click Open in new tab; click Download; then check carousel posts remain visible and test a video post.

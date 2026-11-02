@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name               Instagram Force Full Quality Media
 // @namespace          https://www.instagram.com/
-// @version            4.4.5
+// @version            4.4.6
 // @description        Download original-quality Instagram photos and videos, including carousels, Reels and Stories.
 // @description:ar     نزّل صورًا ومقاطع فيديو من منشورات Instagram بنقرة واحدة، بما في ذلك القصص وReels وصور الملف الشخصي.
 // @description:de     Lade Fotos und Videos aus Instagram-Beiträgen mit einem Klick herunter, einschließlich Stories, Reels und Profilbildern.
@@ -2610,7 +2610,8 @@ div[class]:hover+.volume_slider>div,
                 else {
                     const href = $linkElement.data('href');
                     if (href) {
-                        openNewTab(replaceSameOriginHost(href));
+                        const tabURL = $linkElement.data('name') === 'video' ? replaceSameOriginHost(href) : href;
+                        openNewTab(tabURL);
                     }
                     else {
                         alert('Cannot find open tab URL.');
@@ -2995,6 +2996,7 @@ div[class]:hover+.volume_slider>div,
                 }
                 else {
                     let idx = Number(resource.__snCurrentIndex) || 1;
+                    const domFallbackAttribute = resource.__snCurrentIndex != null ? ' data-dom-fallback="true"' : '';
                     // Image
                     if (resource.video_versions == null) {
                         resource.image_versions2.candidates.sort(function (a, b) {
@@ -3013,14 +3015,14 @@ div[class]:hover+.volume_slider>div,
                             return 0;
                         });
 
-                        $target.append(`<a media-id="${resource.pk}" datetime="${resource.taken_at}" data-blob="true" data-needed="direct" data-path="${resource.code}" data-name="photo" data-type="jpg" data-username="${resource.owner.username}" data-globalIndex="${idx}" href="javascript:;" data-href="${resource.image_versions2.candidates[0].url}"><img src="${resource.image_versions2.candidates[0].url}" alt="" loading="lazy" /><span class="igdm-caption"><span data-ih-locale="IMG">${_i18n("IMG")}</span> ${idx}</span></a>`);
+                        $target.append(`<a media-id="${resource.pk}"${domFallbackAttribute} datetime="${resource.taken_at}" data-blob="true" data-needed="direct" data-path="${resource.code}" data-name="photo" data-type="jpg" data-username="${resource.owner.username}" data-globalIndex="${idx}" href="javascript:;" data-href="${resource.image_versions2.candidates[0].url}"><img src="${resource.image_versions2.candidates[0].url}" alt="" loading="lazy" /><span class="igdm-caption"><span data-ih-locale="IMG">${_i18n("IMG")}</span> ${idx}</span></a>`);
                     }
                     // Video
                     else {
                         if (resource.video_dash_manifest) {
                             state.GL_mediaDataCache[resource.pk] = resource;
                         }
-                        $target.append(`<a media-id="${resource.pk}" datetime="${resource.taken_at}" data-blob="true" data-needed="direct" data-path="${resource.code}" data-name="video" data-type="mp4" data-username="${resource.owner.username}" data-globalIndex="${idx}" href="javascript:;" data-href="${resource.video_versions[0].url}"><img src="${resource.image_versions2.candidates[0].url}" alt="" loading="lazy" /><span class="igdm-caption"><span data-ih-locale="VID">${_i18n("VID")}</span> ${idx}</span></a>`);
+                        $target.append(`<a media-id="${resource.pk}"${domFallbackAttribute} datetime="${resource.taken_at}" data-blob="true" data-needed="direct" data-path="${resource.code}" data-name="video" data-type="mp4" data-username="${resource.owner.username}" data-globalIndex="${idx}" href="javascript:;" data-href="${resource.video_versions[0].url}"><img src="${resource.image_versions2.candidates[0].url}" alt="" loading="lazy" /><span class="igdm-caption"><span data-ih-locale="VID">${_i18n("VID")}</span> ${idx}</span></a>`);
                     }
                 }
             }
@@ -5673,6 +5675,7 @@ div[class]:hover+.volume_slider>div,
      * @param  {String}  metadata.shortcode
      * @param  {Integer|null}  metadata.index
      * @param  {String|null}  metadata.uid
+     * @param  {Boolean}  metadata.useGMDownload - Force privileged download for direct page-DOM media fallback.
      * @return {Promise}
      */
     function saveFiles(downloadLink, metadata) {
@@ -5702,7 +5705,7 @@ div[class]:hover+.volume_slider>div,
                             resolve(false);
                         });
                 } else {
-                    if (USER_SETTING.USE_EXTERNAL_DOWNLOAD_MODE) {
+                    if (USER_SETTING.USE_EXTERNAL_DOWNLOAD_MODE || metadata.useGMDownload === true) {
                         GM_download({
                             url: downloadLink,
                             name: downloadName,
@@ -6412,6 +6415,7 @@ div[class]:hover+.volume_slider>div,
             const filetype = $el.data('type') || 'jpg';
             const shortcode = $el.data('path');
             const href = $el.data('href');
+            const useGMDownload = $el.attr('data-dom-fallback') === 'true' && !String(href || '').startsWith('blob:');
 
             const downloadOnly = !isPreview;
 
@@ -6493,7 +6497,8 @@ div[class]:hover+.volume_slider>div,
                     }
 
                     if (!downloadOnly && isPreview) {
-                        openNewTab(replaceSameOriginHost(resource_url));
+                        const tabURL = filetype === 'mp4' ? replaceSameOriginHost(resource_url) : resource_url;
+                        openNewTab(tabURL);
                     } else {
                         await saveFiles(resource_url, {
                             username,
@@ -6509,7 +6514,8 @@ div[class]:hover+.volume_slider>div,
 
                 if (USER_SETTING.FALLBACK_TO_BLOB_FETCH_IF_MEDIA_API_THROTTLED && href) {
                     if (!downloadOnly && isPreview) {
-                        openNewTab(replaceSameOriginHost(href));
+                        const tabURL = filetype === 'mp4' ? replaceSameOriginHost(href) : href;
+                    openNewTab(tabURL);
                     } else {
                         await saveFiles(href, {
                             username,
@@ -6517,7 +6523,8 @@ div[class]:hover+.volume_slider>div,
                             timestamp,
                             filetype,
                             shortcode,
-                            index
+                            index,
+                            useGMDownload
                         });
                     }
                     return;
@@ -6530,16 +6537,18 @@ div[class]:hover+.volume_slider>div,
 
             if (href) {
                 if (!downloadOnly && isPreview) {
-                    openNewTab(replaceSameOriginHost(href));
+                    const tabURL = filetype === 'mp4' ? replaceSameOriginHost(href) : href;
+                    openNewTab(tabURL);
                 } else {
                     await saveFiles(href, {
-                        username,
-                        sourceType,
-                        timestamp,
-                        filetype,
-                        shortcode,
-                        index
-                    });
+                            username,
+                            sourceType,
+                            timestamp,
+                            filetype,
+                            shortcode,
+                            index,
+                            useGMDownload
+                        });
                 }
                 return;
             }
@@ -7849,7 +7858,9 @@ div[class]:hover+.volume_slider>div,
                 triggerLinkElement($linkA.first()[0], true);
             }
             else {
-                openNewTab(replaceSameOriginHost($linkA.data('href')));
+                const href = $linkA.data('href');
+                const tabURL = $linkA.data('name') === 'video' ? replaceSameOriginHost(href) : href;
+                openNewTab(tabURL);
             }
         });
 

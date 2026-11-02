@@ -2,7 +2,7 @@
 
 ## Product and status
 - Product: Instagram Force Full Quality Media, a Tampermonkey userscript for downloading Instagram media and exposing image context-menu actions.
-- Current published version: 4.4.5 - Under construction ⚠️ (source-level tests passed; real Instagram browser QA NOT RUN).
+- Current published version: 4.4.6 - Under construction ⚠️ (source-level tests passed; real Instagram browser QA NOT RUN).
 - Repository and active branch: `karpuzikov/userscripts`, `main`.
 - Product root: `instagram-full-quality/`.
 - Canonical source: `instagram-full-quality/Instagram_Force_Full_Quality_Media.user.js`.
@@ -21,8 +21,8 @@
 - Image context menu must reach the actual image so browser-native Copy image / Save image actions work. Do not hide or remove the media container; broad `display:none` selectors previously caused black carousel posts.
 - The compact picker supports selected/all downloads, previews, and per-item new-tab/video-thumbnail actions.
 - Preserve user settings, existing download naming, cache behavior, and all media workflows when changing post-page fallback behavior.
-- Resolved in source v4.4.5, pending browser confirmation: on post pages such as `https://www.instagram.com/p/DT5angriDSP/?img_index=1`, selector `._aa20 > .xtijo5x` was intercepting image context menu; open-tab/download could fail after Instagram returned `feedback_required`. CSS now makes the layer click-through, media already present in the visible post DOM is used as a fallback, and `getBlobMediaWithQueryID` no longer raises a blocking alert before recovery.
-- Implemented in v4.4.5: click-through CSS for the exact overlay, native button semantics/localized aria labels for injected controls, direct extraction of the currently displayed image/video URL from the post DOM when API requests fail, `GM_openInTab` for new-tab opens, and removal of the blocking API failure alert. For a carousel fallback, only the currently visible slide is available from DOM; do not falsely claim a full carousel listing.
+- Resolved in source v4.4.6, pending browser confirmation: on post pages such as `https://www.instagram.com/p/DT5angriDSP/?img_index=1`, selector `._aa20 > .xtijo5x` was intercepting image context menu; open-tab/download could fail after Instagram returned `feedback_required`. CSS now makes the layer click-through, media already present in the visible post DOM is used as a fallback, image tab URLs keep their original CDN host, video-only host rewriting is retained, direct fallback downloads use `GM_download` for non-blob URLs, and `getBlobMediaWithQueryID` no longer raises a blocking alert before recovery.
+- Implemented in v4.4.6: click-through CSS for the exact overlay, native button semantics/localized aria labels for injected controls, direct extraction of the currently displayed image/video URL from the post DOM when API requests fail, `GM_openInTab` for new-tab opens, removal of the blocking API failure alert, original image CDN host preservation for new tabs, video-only host rewriting, and privileged `GM_download` for HTTP(S) DOM-fallback links. For a carousel fallback, only the currently visible slide is available from DOM; do not falsely claim a full carousel listing.
 
 ## Persistent data and dependencies
 - Settings/cache are managed by Tampermonkey GM storage; no product-owned filesystem files.
@@ -36,6 +36,6 @@
 - Do not mark stable/fixed until real browser tests pass. If browser QA is unavailable, explicitly mark it NOT RUN and retain `Under construction ⚠️`.
 
 ## Current work and next action
-- v4.4.5 source implementation is published after the post-page overlay/API-throttle bug report dated 2026-11-02.
+- v4.4.6 source implementation is published after the post-page overlay/API-throttle bug report dated 2026-11-02.
 - Source syntax, direct-media fallback helper cases, and static regression checks passed in this session. The connected local browser was unavailable; actual Instagram interaction/visual acceptance is NOT RUN.
 - Exact next action: update Tampermonkey to v4.4.5 and test `https://www.instagram.com/p/DT5angriDSP/?img_index=1` for native Copy image, Open in new tab, and Download. Then test a carousel and a video post. Keep status Under construction ⚠️ until the user confirms.
