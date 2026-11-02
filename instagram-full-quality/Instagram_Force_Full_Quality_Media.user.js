@@ -17,8 +17,8 @@
 // @name:zh-CN         IG小助手
 // @name:zh-TW         IG小精靈
 // @namespace          https://www.instagram.com/
-// @version            4.4.2
-// @description        IG Helper with highest-quality Instagram Media API/DASH fetching enabled by default.
+// @version            4.4.3
+// @description        Download original-quality Instagram photos and videos, including carousels, Reels and Stories.
 // @description:ar     نزّل صورًا ومقاطع فيديو من منشورات Instagram بنقرة واحدة، بما في ذلك القصص وReels وصور الملف الشخصي.
 // @description:de     Lade Fotos und Videos aus Instagram-Beiträgen mit einem Klick herunter, einschließlich Stories, Reels und Profilbildern.
 // @description:es     Descarga fotos y videos de publicaciones de Instagram con un clic, incluyendo Stories, Reels y fotos de perfil.
@@ -185,6 +185,323 @@
     // initialization script
     initSettings();
     GM_addStyle(style);
+    GM_addStyle(`
+
+    /* Media download picker: scoped so settings and debug dialogs keep their layout. */
+    .IG_POPUP_DIG.igdm-picker {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        color: #f3f5fb;
+    }
+    .IG_POPUP_DIG.igdm-picker .IG_POPUP_DIG_BG {
+        background: rgba(5, 7, 12, .76);
+        -webkit-backdrop-filter: blur(3px);
+        backdrop-filter: blur(3px);
+    }
+    .IG_POPUP_DIG.igdm-picker .IG_POPUP_DIG_MAIN {
+        box-sizing: border-box;
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        display: flex;
+        flex-direction: column;
+        width: min(560px, calc(100vw - 32px));
+        max-height: min(690px, calc(100dvh - 32px));
+        min-height: 0;
+        overflow: hidden;
+        padding: 0;
+        border: 1px solid #373c49;
+        border-radius: 16px;
+        background: #1c2029;
+        color: #f3f5fb;
+        box-shadow: 0 24px 80px rgba(0, 0, 0, .55);
+    }
+    .IG_POPUP_DIG.igdm-picker .IG_POPUP_DIG_TITLE {
+        flex: none;
+        padding: 20px 20px 14px;
+        border-bottom: 1px solid #343945;
+    }
+    .IG_POPUP_DIG.igdm-picker .igdm-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 16px;
+    }
+    .IG_POPUP_DIG.igdm-picker .igdm-title {
+        margin: 0;
+        color: #f8f9fc;
+        font-size: 19px;
+        font-weight: 650;
+        line-height: 1.3;
+        letter-spacing: -.02em;
+    }
+    .IG_POPUP_DIG.igdm-picker #post_info {
+        margin-top: 5px;
+        color: #a6adbd;
+        font-size: 12px;
+        line-height: 1.5;
+    }
+    .IG_POPUP_DIG.igdm-picker #post_info a {
+        color: #a5b8ff;
+        text-decoration: none;
+        font-size: inherit;
+    }
+    .IG_POPUP_DIG.igdm-picker #post_info a:hover { text-decoration: underline; }
+    .IG_POPUP_DIG.igdm-picker .IG_POPUP_DIG_BTN {
+        position: static;
+        flex: 0 0 34px;
+        display: grid;
+        place-items: center;
+        width: 34px;
+        height: 34px;
+        margin: -5px -5px 0 0;
+        padding: 0;
+        border: 0;
+        border-radius: 9px;
+        background: transparent;
+        color: #adb4c2;
+        cursor: pointer;
+    }
+    .IG_POPUP_DIG.igdm-picker .IG_POPUP_DIG_BTN:hover {
+        background: #303644;
+        color: #fff;
+    }
+    .IG_POPUP_DIG.igdm-picker .IG_POPUP_DIG_BTN svg {
+        width: 18px;
+        height: 18px;
+    }
+    .IG_POPUP_DIG.igdm-picker .igdm-selection {
+        margin-top: 17px;
+    }
+    .IG_POPUP_DIG.igdm-picker .checkbox {
+        display: inline-flex;
+        align-items: center;
+        gap: 9px;
+        margin: 0;
+        color: #dce0ea;
+        font-size: 13px;
+        font-weight: 500;
+        line-height: 20px;
+        cursor: pointer;
+    }
+    .IG_POPUP_DIG.igdm-picker .checkbox input {
+        flex: none;
+        width: 16px;
+        height: 16px;
+        margin: 0;
+        transform: none;
+        accent-color: #9cadff;
+        cursor: pointer;
+    }
+    .IG_POPUP_DIG.igdm-picker .item-count {
+        padding: 2px 7px;
+        border: 1px solid #444b59;
+        border-radius: 6px;
+        color: #aab1bf;
+        font-size: 11px;
+        font-variant-numeric: tabular-nums;
+        line-height: 16px;
+    }
+    .IG_POPUP_DIG.igdm-picker .IG_POPUP_DIG_BODY {
+        flex: 1 1 auto;
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(138px, 1fr));
+        align-content: start;
+        gap: 12px;
+        box-sizing: border-box;
+        min-height: 0;
+        max-height: none;
+        overflow-y: auto;
+        padding: 18px 20px;
+        scrollbar-color: #515867 transparent;
+        scrollbar-width: thin;
+    }
+    .IG_POPUP_DIG.igdm-picker .IG_POPUP_DIG_BODY #_SNLOAD {
+        grid-column: 1 / -1;
+        margin: 16px 0;
+        color: #b5bdca;
+        font-size: 13px;
+        text-align: center;
+    }
+    .IG_POPUP_DIG.igdm-picker .IG_POPUP_DIG_BODY > .igdm-media-card {
+        position: relative;
+        box-sizing: border-box;
+        min-width: 0;
+        margin: 0;
+        overflow: hidden;
+        border: 1px solid #3b414f;
+        border-radius: 12px;
+        background: #252a35;
+        transition: border-color .16s ease, background .16s ease;
+    }
+    .IG_POPUP_DIG.igdm-picker .IG_POPUP_DIG_BODY > .igdm-media-card:hover {
+        border-color: #6779af;
+        background: #2b3040;
+    }
+    .IG_POPUP_DIG.igdm-picker .IG_POPUP_DIG_BODY > .igdm-media-card:has(.inner_box:checked) {
+        border-color: #9cacff;
+        box-shadow: inset 0 0 0 1px #9cacff;
+    }
+    .IG_POPUP_DIG.igdm-picker .IG_POPUP_DIG_BODY .igdm-media-card > a {
+        display: flex;
+        flex-direction: column;
+        gap: 0;
+        padding: 0;
+        color: #e8ebf5;
+        font-size: 12px;
+        font-weight: 550;
+        line-height: 1.4;
+        text-align: left;
+        text-decoration: none;
+        cursor: pointer;
+    }
+    .IG_POPUP_DIG.igdm-picker .igdm-media-card > a > img {
+        display: block;
+        box-sizing: border-box;
+        width: 100%;
+        height: 170px;
+        margin: 0;
+        border-radius: 0;
+        background: #10131a;
+        object-fit: contain;
+    }
+    .IG_POPUP_DIG.igdm-picker .igdm-caption {
+        display: block;
+        min-height: 17px;
+        padding: 11px 33px 11px 12px;
+    }
+    .IG_POPUP_DIG.igdm-picker .igdm-caption::after {
+        position: absolute;
+        right: 12px;
+        bottom: 10px;
+        color: #b3bfff;
+        content: "↓";
+        font-size: 18px;
+        font-weight: 400;
+    }
+    .IG_POPUP_DIG.igdm-picker .inner_box_wrapper {
+        z-index: 4;
+        display: grid;
+        place-items: center;
+        box-sizing: border-box;
+        position: absolute;
+        top: 9px;
+        left: 9px;
+        width: 29px;
+        height: 29px;
+        border: 1px solid #686f7e;
+        border-radius: 8px;
+        background: rgba(18, 21, 29, .88);
+        cursor: pointer;
+    }
+    .IG_POPUP_DIG.igdm-picker .inner_box_wrapper:hover { border-color: #b5bfff; }
+    .IG_POPUP_DIG.igdm-picker .inner_box {
+        position: static;
+        display: block;
+        width: 16px;
+        height: 16px;
+        margin: 0;
+        padding: 0;
+        opacity: 1;
+        appearance: auto;
+        transform: none;
+        accent-color: #9cacff;
+        cursor: pointer;
+    }
+    .IG_POPUP_DIG.igdm-picker .inner_box ~ span { display: none; }
+    .IG_POPUP_DIG.igdm-picker .IG_POPUP_DIG_BODY .newTab,
+    .IG_POPUP_DIG.igdm-picker .IG_POPUP_DIG_BODY .videoThumbnail {
+        display: grid;
+        place-items: center;
+        box-sizing: border-box;
+        position: absolute;
+        right: 9px;
+        top: 9px;
+        width: 29px;
+        height: 29px;
+        padding: 5px;
+        border: 1px solid #686f7e;
+        border-radius: 8px;
+        background: rgba(18, 21, 29, .88);
+        color: #e0e5ef;
+        line-height: 0;
+        cursor: pointer;
+    }
+    .IG_POPUP_DIG.igdm-picker .IG_POPUP_DIG_BODY .videoThumbnail { top: 46px; }
+    .IG_POPUP_DIG.igdm-picker .IG_POPUP_DIG_BODY .newTab:hover,
+    .IG_POPUP_DIG.igdm-picker .IG_POPUP_DIG_BODY .videoThumbnail:hover {
+        border-color: #b5bfff;
+        background: #353e56;
+    }
+    .IG_POPUP_DIG.igdm-picker .igdm-actions {
+        flex: none;
+        display: flex;
+        justify-content: flex-end;
+        gap: 9px;
+        padding: 15px 20px;
+        border-top: 1px solid #343945;
+        background: #1c2029;
+    }
+    .IG_POPUP_DIG.igdm-picker .igdm-actions button {
+        box-sizing: border-box;
+        min-height: 39px;
+        margin: 0;
+        padding: 0 16px;
+        border: 1px solid #4b5363;
+        border-radius: 9px;
+        background: #303645;
+        color: #f2f3f9;
+        font: inherit;
+        font-size: 13px;
+        font-weight: 600;
+        line-height: 1.3;
+        cursor: pointer;
+        transition: background .16s ease, border-color .16s ease;
+    }
+    .IG_POPUP_DIG.igdm-picker .igdm-actions button:hover:not(:disabled) {
+        background: #3e465b;
+        border-color: #747f9a;
+    }
+    .IG_POPUP_DIG.igdm-picker .igdm-actions #batch_download_direct {
+        border-color: #aab9ff;
+        background: #9aafff;
+        color: #101628;
+    }
+    .IG_POPUP_DIG.igdm-picker .igdm-actions #batch_download_direct:hover:not(:disabled) {
+        border-color: #cad2ff;
+        background: #bfcbff;
+    }
+    .IG_POPUP_DIG.igdm-picker .igdm-actions button:disabled { opacity: .42; }
+    .IG_POPUP_DIG.igdm-picker.igdm-single .igdm-selection,
+    .IG_POPUP_DIG.igdm-picker.igdm-single #batch_download_selected { display: none; }
+    .IG_POPUP_DIG.igdm-picker.igdm-single .IG_POPUP_DIG_BODY {
+        grid-template-columns: 1fr;
+        justify-items: center;
+    }
+    .IG_POPUP_DIG.igdm-picker.igdm-single .IG_POPUP_DIG_BODY > .igdm-media-card {
+        width: min(240px, 100%);
+    }
+    .IG_POPUP_DIG.igdm-picker.igdm-single .igdm-media-card > a > img { height: 270px; }
+    .IG_POPUP_DIG.igdm-picker button:focus-visible,
+    .IG_POPUP_DIG.igdm-picker a:focus-visible,
+    .IG_POPUP_DIG.igdm-picker input:focus-visible {
+        outline: 2px solid #b2bdff;
+        outline-offset: 2px;
+    }
+    @media (max-width: 440px) {
+        .IG_POPUP_DIG.igdm-picker .IG_POPUP_DIG_TITLE { padding: 16px 16px 12px; }
+        .IG_POPUP_DIG.igdm-picker .IG_POPUP_DIG_BODY {
+            grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
+            gap: 10px;
+            padding: 14px 16px;
+        }
+        .IG_POPUP_DIG.igdm-picker .igdm-media-card > a > img { height: 148px; }
+        .IG_POPUP_DIG.igdm-picker .igdm-actions { padding: 12px 16px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+        .IG_POPUP_DIG.igdm-picker * { transition: none !important; }
+    }
+    `);
     GM_addStyle(`
         /* Allow image context menus without hiding carousel slides or media. */
         article .x1n2onr6:nth-child(2) .xtijo5x:nth-child(2):not(:has(img, video, picture, canvas)),
@@ -1662,7 +1979,7 @@
                                     blob = true;
                                 }
                                 if (element_images && imgLink) {
-                                    $popupBody.append(`<a datetime="${publish_time}" data-needed="direct" data-path="${state.GL_postPath}" data-name="photo" data-type="jpg" data-username="${state.GL_username || ''}" data-globalIndex="${s}" href="javascript:;" data-href="${imgLink}"><img width="100" src="${imgLink}" /><br/>- <span data-ih-locale="IMG">${_i18n("IMG")}</span> ${s} -</a>`);
+                                    $popupBody.append(`<a datetime="${publish_time}" data-needed="direct" data-path="${state.GL_postPath}" data-name="photo" data-type="jpg" data-username="${state.GL_username || ''}" data-globalIndex="${s}" href="javascript:;" data-href="${imgLink}"><img src="${imgLink}" alt="" loading="lazy" /><span class="igdm-caption"><span data-ih-locale="IMG">${_i18n("IMG")}</span> ${s}</span></a>`);
                                 }
                             });
 
@@ -1697,7 +2014,7 @@
                                 );
                             }
                             if (element_images && imgLink) {
-                                $('.IG_POPUP_DIG .IG_POPUP_DIG_MAIN .IG_POPUP_DIG_BODY').append(`<a datetime="${publish_time}" data-needed="direct" data-path="${state.GL_postPath}" data-name="photo" data-type="jpg" data-username="${state.GL_username || ''}" data-globalIndex="${s}" href="javascript:;" data-href="${imgLink}"><img width="100" src="${imgLink}" /><br/>- <span data-ih-locale="IMG">${_i18n("IMG")}</span> ${s} -</a>`);
+                                $('.IG_POPUP_DIG .IG_POPUP_DIG_MAIN .IG_POPUP_DIG_BODY').append(`<a datetime="${publish_time}" data-needed="direct" data-path="${state.GL_postPath}" data-name="photo" data-type="jpg" data-username="${state.GL_username || ''}" data-globalIndex="${s}" href="javascript:;" data-href="${imgLink}"><img src="${imgLink}" alt="" loading="lazy" /><span class="igdm-caption"><span data-ih-locale="IMG">${_i18n("IMG")}</span> ${s}</span></a>`);
                             }
                         }
                     }
@@ -1709,12 +2026,12 @@
                         return;
                     }
 
-                    $a.wrap('<div></div>');
-                    $a.before('<label class="inner_box_wrapper"><input class="inner_box" type="checkbox"><span></span></label>');
-                    $a.after(`<div data-ih-locale-title="NEW_TAB" title="${_i18n("NEW_TAB")}" class="newTab">${SVG.NEW_TAB}</div>`);
+                    $a.wrap('<div class="igdm-media-card"></div>');
+                    $a.before('<label class="inner_box_wrapper"><input class="inner_box" type="checkbox" aria-label="Select media"><span></span></label>');
+                    $a.after(`<button type="button" data-ih-locale-title="NEW_TAB" aria-label="${_i18n("NEW_TAB")}" title="${_i18n("NEW_TAB")}" class="newTab">${SVG.NEW_TAB}</button>`);
 
                     if ($a.data('name') == 'video') {
-                        $a.after(`<div data-ih-locale-title="VIDEO_THUMBNAIL" title="${_i18n("VIDEO_THUMBNAIL")}" class="videoThumbnail">${SVG.THUMBNAIL}</div>`);
+                        $a.after(`<button type="button" data-ih-locale-title="VIDEO_THUMBNAIL" aria-label="${_i18n("VIDEO_THUMBNAIL")}" title="${_i18n("VIDEO_THUMBNAIL")}" class="videoThumbnail">${SVG.THUMBNAIL}</button>`);
                     }
                 });
 
@@ -1793,7 +2110,7 @@
 
                 // GraphVideo
                 if (resource.__typename == "GraphVideo" && resource.video_url) {
-                    $target.append(`<a media-id="${resource.id}" datetime="${resource.taken_at_timestamp}" data-blob="true" data-needed="direct" data-path="${resource.shortcode}" data-name="video" data-type="mp4" data-username="${resource.owner.username}" data-globalIndex="${idx}" href="javascript:;" data-href="${resource.video_url}"><img width="100" src="${resource.display_resources[1].src}" /><br/>- <span data-ih-locale="VID">${_i18n("VID")}</span> ${idx} -</a>`);
+                    $target.append(`<a media-id="${resource.id}" datetime="${resource.taken_at_timestamp}" data-blob="true" data-needed="direct" data-path="${resource.shortcode}" data-name="video" data-type="mp4" data-username="${resource.owner.username}" data-globalIndex="${idx}" href="javascript:;" data-href="${resource.video_url}"><img src="${resource.display_resources[1].src}" alt="" loading="lazy" /><span class="igdm-caption"><span data-ih-locale="VID">${_i18n("VID")}</span> ${idx}</span></a>`);
                     idx++;
 
                     if (resource.video_dash_manifest) {
@@ -1802,21 +2119,21 @@
                 }
                 // GraphImage
                 if (resource.__typename == "GraphImage") {
-                    $target.append(`<a media-id="${resource.id}" datetime="${resource.taken_at_timestamp}" data-blob="true" data-needed="direct" data-path="${resource.shortcode}" data-name="photo" data-type="jpg" data-username="${resource.owner.username}" data-globalIndex="${idx}" href="javascript:;" data-href="${resource.display_resources[resource.display_resources.length - 1].src}"><img width="100" src="${resource.display_resources[1].src}" /><br/>- <span data-ih-locale="IMG">${_i18n("IMG")}</span> ${idx} -</a>`);
+                    $target.append(`<a media-id="${resource.id}" datetime="${resource.taken_at_timestamp}" data-blob="true" data-needed="direct" data-path="${resource.shortcode}" data-name="photo" data-type="jpg" data-username="${resource.owner.username}" data-globalIndex="${idx}" href="javascript:;" data-href="${resource.display_resources[resource.display_resources.length - 1].src}"><img src="${resource.display_resources[1].src}" alt="" loading="lazy" /><span class="igdm-caption"><span data-ih-locale="IMG">${_i18n("IMG")}</span> ${idx}</span></a>`);
                     idx++;
                 }
                 // GraphSidecar
                 if (resource.__typename == "GraphSidecar" && resource.edge_sidecar_to_children) {
                     for (let e of resource.edge_sidecar_to_children.edges) {
                         if (e.node.__typename == "GraphVideo") {
-                            $target.append(`<a media-id="${e.node.id}" datetime="${resource.taken_at_timestamp}" data-blob="true" data-needed="direct" data-path="${resource.shortcode}" data-name="video" data-type="mp4" data-username="${resource.owner.username}" data-globalIndex="${idx}" href="javascript:;" data-href="${e.node.video_url}"><img width="100" src="${e.node.display_resources[1].src}" /><br/>- <span data-ih-locale-title="VID">${_i18n("VID")}</span> ${idx} -</a>`);
+                            $target.append(`<a media-id="${e.node.id}" datetime="${resource.taken_at_timestamp}" data-blob="true" data-needed="direct" data-path="${resource.shortcode}" data-name="video" data-type="mp4" data-username="${resource.owner.username}" data-globalIndex="${idx}" href="javascript:;" data-href="${e.node.video_url}"><img src="${e.node.display_resources[1].src}" alt="" loading="lazy" /><span class="igdm-caption"><span data-ih-locale="VID">${_i18n("VID")}</span> ${idx}</span></a>`);
                             if (e.node.video_dash_manifest) {
                                 state.GL_mediaDataCache[e.node.id] = e.node;
                             }
                         }
 
                         if (e.node.__typename == "GraphImage") {
-                            $target.append(`<a media-id="${e.node.id}" datetime="${resource.taken_at_timestamp}" data-blob="true" data-needed="direct" data-path="${resource.shortcode}" data-name="photo" data-type="jpg" data-username="${resource.owner.username}" data-globalIndex="${idx}" href="javascript:;" data-href="${e.node.display_resources[e.node.display_resources.length - 1].src}"><img width="100" src="${e.node.display_resources[1].src}" /><br/>- <span data-ih-locale="IMG">${_i18n("IMG")}</span> ${idx} -</a>`);
+                            $target.append(`<a media-id="${e.node.id}" datetime="${resource.taken_at_timestamp}" data-blob="true" data-needed="direct" data-path="${resource.shortcode}" data-name="photo" data-type="jpg" data-username="${resource.owner.username}" data-globalIndex="${idx}" href="javascript:;" data-href="${e.node.display_resources[e.node.display_resources.length - 1].src}"><img src="${e.node.display_resources[1].src}" alt="" loading="lazy" /><span class="igdm-caption"><span data-ih-locale="IMG">${_i18n("IMG")}</span> ${idx}</span></a>`);
                         }
                         idx++;
                     }
@@ -1846,11 +2163,11 @@
                                 return 0;
                             });
 
-                            $target.append(`<a media-id="${mda.pk}" datetime="${mda.taken_at}" data-blob="true" data-needed="direct" data-path="${resource.code}" data-name="photo" data-type="jpg" data-username="${resource.owner.username}" data-globalIndex="${idx}" href="javascript:;" data-href="${mda.image_versions2.candidates[0].url}"><img width="100" src="${mda.image_versions2.candidates[0].url}" /><br/>- <span data-ih-locale="IMG">${_i18n("IMG")}</span> ${idx} -</a>`);
+                            $target.append(`<a media-id="${mda.pk}" datetime="${mda.taken_at}" data-blob="true" data-needed="direct" data-path="${resource.code}" data-name="photo" data-type="jpg" data-username="${resource.owner.username}" data-globalIndex="${idx}" href="javascript:;" data-href="${mda.image_versions2.candidates[0].url}"><img src="${mda.image_versions2.candidates[0].url}" alt="" loading="lazy" /><span class="igdm-caption"><span data-ih-locale="IMG">${_i18n("IMG")}</span> ${idx}</span></a>`);
                         }
                         // Video
                         else {
-                            $target.append(`<a media-id="${mda.pk}" datetime="${mda.taken_at}" data-blob="true" data-needed="direct" data-path="${resource.code}" data-name="video" data-type="mp4" data-username="${resource.owner.username}" data-globalIndex="${idx}" href="javascript:;" data-href="${mda.video_versions[0].url}"><img width="100" src="${mda.image_versions2.candidates[0].url}" /><br/>- <span data-ih-locale="VID">${_i18n("VID")}</span> ${idx} -</a>`);
+                            $target.append(`<a media-id="${mda.pk}" datetime="${mda.taken_at}" data-blob="true" data-needed="direct" data-path="${resource.code}" data-name="video" data-type="mp4" data-username="${resource.owner.username}" data-globalIndex="${idx}" href="javascript:;" data-href="${mda.video_versions[0].url}"><img src="${mda.image_versions2.candidates[0].url}" alt="" loading="lazy" /><span class="igdm-caption"><span data-ih-locale="VID">${_i18n("VID")}</span> ${idx}</span></a>`);
                             if (mda.video_dash_manifest) {
                                 state.GL_mediaDataCache[mda.pk] = mda;
                             }
@@ -1877,14 +2194,14 @@
                             return 0;
                         });
 
-                        $target.append(`<a media-id="${resource.pk}" datetime="${resource.taken_at}" data-blob="true" data-needed="direct" data-path="${resource.code}" data-name="photo" data-type="jpg" data-username="${resource.owner.username}" data-globalIndex="${idx}" href="javascript:;" data-href="${resource.image_versions2.candidates[0].url}"><img width="100" src="${resource.image_versions2.candidates[0].url}" /><br/>- <span data-ih-locale="IMG">${_i18n("IMG")}</span> ${idx} -</a>`);
+                        $target.append(`<a media-id="${resource.pk}" datetime="${resource.taken_at}" data-blob="true" data-needed="direct" data-path="${resource.code}" data-name="photo" data-type="jpg" data-username="${resource.owner.username}" data-globalIndex="${idx}" href="javascript:;" data-href="${resource.image_versions2.candidates[0].url}"><img src="${resource.image_versions2.candidates[0].url}" alt="" loading="lazy" /><span class="igdm-caption"><span data-ih-locale="IMG">${_i18n("IMG")}</span> ${idx}</span></a>`);
                     }
                     // Video
                     else {
                         if (resource.video_dash_manifest) {
                             state.GL_mediaDataCache[resource.pk] = resource;
                         }
-                        $target.append(`<a media-id="${resource.pk}" datetime="${resource.taken_at}" data-blob="true" data-needed="direct" data-path="${resource.code}" data-name="video" data-type="mp4" data-username="${resource.owner.username}" data-globalIndex="${idx}" href="javascript:;" data-href="${resource.video_versions[0].url}"><img width="100" src="${resource.image_versions2.candidates[0].url}" /><br/>- <span data-ih-locale="VID">${_i18n("VID")}</span> ${idx} -</a>`);
+                        $target.append(`<a media-id="${resource.pk}" datetime="${resource.taken_at}" data-blob="true" data-needed="direct" data-path="${resource.code}" data-name="video" data-type="mp4" data-username="${resource.owner.username}" data-globalIndex="${idx}" href="javascript:;" data-href="${resource.video_versions[0].url}"><img src="${resource.image_versions2.candidates[0].url}" alt="" loading="lazy" /><span class="igdm-caption"><span data-ih-locale="VID">${_i18n("VID")}</span> ${idx}</span></a>`);
                     }
                 }
             }
@@ -1893,12 +2210,12 @@
             $('.IG_POPUP_DIG #batch_download_selected, .IG_POPUP_DIG #batch_download_direct').prop('disabled', false);
             $('.IG_POPUP_DIG .IG_POPUP_DIG_MAIN .IG_POPUP_DIG_BODY a').each(function () {
                 const $a = $(this);
-                $a.wrap('<div></div>');
-                $a.before('<label class="inner_box_wrapper"><input class="inner_box" type="checkbox"><span></span></label>');
-                $a.after(`<div data-ih-locale-title="NEW_TAB" title="${_i18n("NEW_TAB")}" class="newTab">${SVG.NEW_TAB}</div>`);
+                $a.wrap('<div class="igdm-media-card"></div>');
+                $a.before('<label class="inner_box_wrapper"><input class="inner_box" type="checkbox" aria-label="Select media"><span></span></label>');
+                $a.after(`<button type="button" data-ih-locale-title="NEW_TAB" aria-label="${_i18n("NEW_TAB")}" title="${_i18n("NEW_TAB")}" class="newTab">${SVG.NEW_TAB}</button>`);
 
                 if ($a.data('name') == 'video') {
-                    $a.after(`<div data-ih-locale-title="VIDEO_THUMBNAIL" title="${_i18n("VIDEO_THUMBNAIL")}" class="videoThumbnail">${SVG.THUMBNAIL}</div>`);
+                    $a.after(`<button type="button" data-ih-locale-title="VIDEO_THUMBNAIL" aria-label="${_i18n("VIDEO_THUMBNAIL")}" title="${_i18n("VIDEO_THUMBNAIL")}" class="videoThumbnail">${SVG.THUMBNAIL}</button>`);
                 }
             });
             updatePopupSelectionSummary();
@@ -2557,26 +2874,26 @@
                 });
 
                 if (item.is_video) {
-                    $selector.append(`<a media-id="${item.id}" datetime="${timestamp}" data-blob="true" data-needed="direct" data-name="${type}" data-type="mp4" data-username="${username}" data-path="${item.id}" data-globalIndex="${idx + 1}" href="javascript:;" data-href="${item.video_resources[0].src}"><img width="100" src="${item.display_resources[0].src}" /><br/>- <span data-ih-locale-title="VID">${_i18n("VID")}</span> ${idx} -</a>`);
+                    $selector.append(`<a media-id="${item.id}" datetime="${timestamp}" data-blob="true" data-needed="direct" data-name="${type}" data-type="mp4" data-username="${username}" data-path="${item.id}" data-globalIndex="${idx + 1}" href="javascript:;" data-href="${item.video_resources[0].src}"><img src="${item.display_resources[0].src}" alt="" loading="lazy" /><span class="igdm-caption"><span data-ih-locale="VID">${_i18n("VID")}</span> ${idx}</span></a>`);
                 }
                 else {
-                    $selector.append(`<a media-id="${item.id}" datetime="${timestamp}" data-blob="true" data-needed="direct" data-name="${type}" data-type="jpg" data-username="${username}" data-path="${item.id}" data-globalIndex="${idx + 1}" href="javascript:;" data-href="${item.display_resources[0].src}"><img width="100" src="${item.display_resources[0].src}" /><br/>- <span data-ih-locale-title="IMG">${_i18n("IMG")}</span> ${idx} -</a>`);
+                    $selector.append(`<a media-id="${item.id}" datetime="${timestamp}" data-blob="true" data-needed="direct" data-name="${type}" data-type="jpg" data-username="${username}" data-path="${item.id}" data-globalIndex="${idx + 1}" href="javascript:;" data-href="${item.display_resources[0].src}"><img src="${item.display_resources[0].src}" alt="" loading="lazy" /><span class="igdm-caption"><span data-ih-locale="IMG">${_i18n("IMG")}</span> ${idx}</span></a>`);
                 }
             });
 
             $selector.find('a').each(function () {
                 const $a = $(this);
-                $a.wrap('<div></div>');
-                $a.before('<label class="inner_box_wrapper"><input class="inner_box" type="checkbox"><span></span></label>');
-                $a.after(`<div data-ih-locale-title="NEW_TAB" title="${_i18n("NEW_TAB")}" class="newTab">${SVG.NEW_TAB}</div>`);
+                $a.wrap('<div class="igdm-media-card"></div>');
+                $a.before('<label class="inner_box_wrapper"><input class="inner_box" type="checkbox" aria-label="Select media"><span></span></label>');
+                $a.after(`<button type="button" data-ih-locale-title="NEW_TAB" aria-label="${_i18n("NEW_TAB")}" title="${_i18n("NEW_TAB")}" class="newTab">${SVG.NEW_TAB}</button>`);
 
                 if ($a.data('type') == 'mp4') {
-                    $a.after(`<div data-ih-locale-title="VIDEO_THUMBNAIL" title="${_i18n("VIDEO_THUMBNAIL")}" class="videoThumbnail">${SVG.THUMBNAIL}</div>`);
+                    $a.after(`<button type="button" data-ih-locale-title="VIDEO_THUMBNAIL" aria-label="${_i18n("VIDEO_THUMBNAIL")}" title="${_i18n("VIDEO_THUMBNAIL")}" class="videoThumbnail">${SVG.THUMBNAIL}</button>`);
                 }
             });
 
+            $('.IG_POPUP_DIG #batch_download_direct').prop('disabled', false);
             updatePopupSelectionSummary();
-            $('.IG_POPUP_DIG #batch_download_selected, .IG_POPUP_DIG #batch_download_direct').prop('disabled', false);
             updateLoadingBar(false);
         }
         catch (err) {
@@ -5566,18 +5883,10 @@
 
         $titleCheckbox.find('input').prop('checked', total > 0 && selected === total);
 
-        const formatCount = (count, singularKey, pluralKey) => {
-            const key = count === 1 ? singularKey : pluralKey;
-            const template = _i18n(key);
-            return (typeof template === 'string')
-                ? template.replace('%COUNT%', count)
-                : String(count);
-        };
-
-        const totalLabel = formatCount(total, 'ITEM_COUNT_SINGULAR', 'ITEM_COUNT_PLURAL');
-        const selectedLabel = formatCount(selected, 'SELECTED_COUNT_SINGULAR', 'SELECTED_COUNT_PLURAL');
-
-        $countSpan.text(` (${selectedLabel} / ${totalLabel})`);
+        $countSpan.text(`${selected} / ${total}`);
+        $root.toggleClass('igdm-single', total === 1);
+        $root.find('#batch_download_selected').prop('disabled', selected === 0 || $root.find('#_SNLOAD').length > 0);
+        $root.find('#batch_download_direct').text(total === 1 ? 'Download' : 'Download all');
     }
 
     /**
@@ -5589,18 +5898,22 @@
      * @return {void}
      */
     function IG_createDM(hasHidden, hasCheckbox) {
-        let isHidden = (hasHidden) ? "hidden" : "";
-        $body.append('<div class="IG_POPUP_DIG ' + isHidden + '"><div class="IG_POPUP_DIG_BG"></div><div class="IG_POPUP_DIG_MAIN"><div class="IG_POPUP_DIG_TITLE"></div><div class="IG_POPUP_DIG_BODY"></div></div></div>');
-        // OPTIMIZATION: cache popup title element used 3+ times in this function
-        const $title = $('.IG_POPUP_DIG .IG_POPUP_DIG_MAIN .IG_POPUP_DIG_TITLE');
-        $title.append(`<div style="position:relative;min-height:36px;text-align:center;margin-bottom: 7px;"><div style="position:absolute;left:0px;line-height: 18px;"><kbd>${getPlatformModifierKey()}</kbd>+<kbd>Q</kbd> [<span data-ih-locale="CLOSE">${_i18n("CLOSE")}</span>]</div><div style="line-height: 18px;">IG Helper v${GM_info.script.version}</div><div id="post_info" style="line-height: 14px;font-size:14px;">Post ID: <span id="article-id"></span></div><div class="IG_POPUP_DIG_BTN">${SVG.CLOSE}</div></div>`);
+        const isHidden = hasHidden ? "hidden" : "";
+        const pickerClass = hasCheckbox ? " igdm-picker" : "";
+        $body.append('<div class="IG_POPUP_DIG' + pickerClass + ' ' + isHidden + '"><div class="IG_POPUP_DIG_BG"></div><div class="IG_POPUP_DIG_MAIN"><div class="IG_POPUP_DIG_TITLE"></div><div class="IG_POPUP_DIG_BODY"></div></div></div>');
+        const $popup = $('.IG_POPUP_DIG').last();
+        const $title = $popup.find('.IG_POPUP_DIG_TITLE');
 
         if (hasCheckbox) {
-            $title.append(`<div style="text-align: center;" id="button_group"></div>`);
-            const $btnGroup = $title.find('> div#button_group');
-            $btnGroup.append(`<button id="batch_download_selected" disabled data-ih-locale="BATCH_DOWNLOAD_SELECTED">${_i18n('BATCH_DOWNLOAD_SELECTED')}</button>`);
-            $btnGroup.append(`<button id="batch_download_direct" disabled data-ih-locale="BATCH_DOWNLOAD_DIRECT">${_i18n('BATCH_DOWNLOAD_DIRECT')}</button>`);
-            $title.append(`<label class="checkbox"><input value="yes" type="checkbox" /><span data-ih-locale="ALL_CHECK">${_i18n('ALL_CHECK')}</span><span class="item-count"></span></label>`);
+            $title.append('<div class="igdm-header"><div><h2 class="igdm-title">Download media</h2><div id="post_info">Post <span id="article-id"></span></div></div><button type="button" class="IG_POPUP_DIG_BTN" aria-label="Close" title="Close">' + SVG.CLOSE + '</button></div>');
+            $title.append('<div class="igdm-selection"><label class="checkbox"><input value="yes" type="checkbox" /><span data-ih-locale="ALL_CHECK">' + _i18n('ALL_CHECK') + '</span><span class="item-count">0 / 0</span></label></div>');
+            const $actions = $('<div id="button_group" class="igdm-actions"></div>');
+            $actions.append('<button type="button" id="batch_download_selected" disabled>Download selected</button>');
+            $actions.append('<button type="button" id="batch_download_direct" disabled>Download all</button>');
+            $popup.find('.IG_POPUP_DIG_MAIN').append($actions);
+        }
+        else {
+            $title.append('<div style="position:relative;min-height:36px;text-align:center;margin-bottom:7px;"><div style="position:absolute;left:0;line-height:18px;"><kbd>' + getPlatformModifierKey() + '</kbd>+<kbd>Q</kbd></div><div style="line-height:18px;">Instagram tools</div><div id="post_info" style="line-height:14px;font-size:14px;"></div><div class="IG_POPUP_DIG_BTN">' + SVG.CLOSE + '</div></div>');
         }
     }
 
@@ -6810,7 +7123,7 @@
             updatePopupSelectionSummary();
         });
 
-        $body.on('click', '.IG_POPUP_DIG_TITLE #batch_download_selected', function () {
+        $body.on('click', '.IG_POPUP_DIG #batch_download_selected', function () {
             if ($('.IG_POPUP_DIG #_SNLOAD').length > 0) return;
 
             let index = 0;
@@ -6852,7 +7165,7 @@
             }
         });
 
-        $body.on('click', '.IG_POPUP_DIG_TITLE #batch_download_direct', function () {
+        $body.on('click', '.IG_POPUP_DIG #batch_download_direct', function () {
             if ($('.IG_POPUP_DIG #_SNLOAD').length > 0) return;
 
             let links = [];
