@@ -1,23 +1,7 @@
 // ==UserScript==
 // @name               Instagram Force Full Quality Media
-// @name:ar            أداة IG
-// @name:de            IG-Helfer
-// @name:es            Ayudante de IG
-// @name:fr            Assistant IG
-// @name:id            Asisten IG
-// @name:it            Assistente IG
-// @name:ja            IG助手
-// @name:ko            IG조수
-// @name:pt-BR         Assistente do IG
-// @name:ro            IG Helper
-// @name:ru            Помощник IG
-// @name:th            ตัวช่วย IG
-// @name:tr            IG Yardımcısı
-// @name:vi            Trợ lý IG
-// @name:zh-CN         IG小助手
-// @name:zh-TW         IG小精靈
 // @namespace          https://www.instagram.com/
-// @version            4.4.3
+// @version            4.4.4
 // @description        Download original-quality Instagram photos and videos, including carousels, Reels and Stories.
 // @description:ar     نزّل صورًا ومقاطع فيديو من منشورات Instagram بنقرة واحدة، بما في ذلك القصص وReels وصور الملف الشخصي.
 // @description:de     Lade Fotos und Videos aus Instagram-Beiträgen mit einem Klick herunter, einschließlich Stories, Reels und Profilbildern.
@@ -41,24 +25,17 @@
 // @updateURL           https://raw.githubusercontent.com/karpuzikov/userscripts/main/instagram-full-quality/Instagram_Force_Full_Quality_Media.user.js
 // @grant              GM_addStyle
 // @grant              GM_download
-// @grant              GM_getResourceText
 // @grant              GM_getValue
 // @grant              GM_info
-// @grant              GM_notification
 // @grant              GM_openInTab
 // @grant              GM_registerMenuCommand
 // @grant              GM_setValue
 // @grant              GM_unregisterMenuCommand
 // @grant              GM_xmlhttpRequest
-// @connect            cdn.jsdelivr.net
 // @connect            i.instagram.com
-// @connect            raw.githubusercontent.com
 // @require            https://cdn.jsdelivr.net/npm/mediabunny@1.34.5/dist/bundles/mediabunny.min.cjs#sha256-wUFR+x2bDvpqgMAVGy2CvGvULyjTGvGy4UUAm8rae5U=
 // @require            https://code.jquery.com/jquery-4.0.0.min.js#sha256-OaVG6prZf4v69dPg6PhVattBXkcOWQB62pdZ3ORyrao=
-// @resource           INTERNAL_CSS https://cdn.jsdelivr.net/gh/SN-Koarashi/ig-helper@master/style.css
-// @resource           LOCALE_MANIFEST https://cdn.jsdelivr.net/gh/SN-Koarashi/ig-helper@master/locale/manifest.json
-// @supportURL         https://github.com/SN-Koarashi/ig-helper/
-// @contributionURL    https://ko-fi.com/snkoarashi
+// @supportURL         https://github.com/karpuzikov/userscripts/issues
 // @icon               https://www.google.com/s2/favicons?domain=www.instagram.com&sz=32
 // @compatible         chrome >= 100
 // @compatible         edge >= 100
@@ -79,7 +56,6 @@
     const USER_SETTING = {
         'AUTO_RENAME': true,
         'CAPTURE_IMAGE_VIA_MEDIA_CACHE': true,
-        'CHECK_FOR_UPDATE': true,
         'DIRECT_DOWNLOAD_ALL': false,
         'DIRECT_DOWNLOAD_STORY': false,
         'DIRECT_DOWNLOAD_VISIBLE_RESOURCE': false,
@@ -137,8 +113,791 @@
 
     /*******************************/
     const checkInterval = 250;
-    const style = GM_getResourceText("INTERNAL_CSS");
-    const locale_manifest = JSON.parse(GM_getResourceText("LOCALE_MANIFEST"));
+    // Bundle the original GPL-3.0-licensed stylesheet and translations so this fork works independently.
+    const style = String.raw`[data-ih-locale-title] svg {
+    vertical-align: middle;
+}
+
+.IG_POPUP_DIG {
+    position: fixed;
+    left: 0px;
+    right: 0px;
+    bottom: 0px;
+    top: 0px;
+    z-index: 500;
+}
+
+.IG_POPUP_DIG.hidden {
+    display: none;
+}
+
+.IG_POPUP_DIG button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+.IG_POPUP_DIG_BG {
+    position: fixed;
+    left: 0px;
+    right: 0px;
+    bottom: 0px;
+    top: 0px;
+    z-index: 502;
+    background: rgba(0, 0, 0, .75);
+}
+
+.IG_POPUP_DIG_MAIN {
+    z-index: 510;
+    padding: 10px 15px;
+    top: 7%;
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 500px;
+    background: #fff;
+    background: rgb(var(--ig-secondary-background));
+    color: #000;
+    color: rgb(var(--ig-primary-text));
+    border-radius: 7px;
+}
+
+.IG_POPUP_DIG_BODY {
+    min-height: 100px;
+    max-height: 70vh;
+    overflow-y: auto;
+}
+
+.IG_POPUP_DIG_BODY a {
+    display: block;
+    padding: 5px 0px;
+    color: #111;
+    color: rgb(var(--ig-primary-text));
+    font-size: 1rem;
+    line-height: 1rem;
+    text-align: center;
+    border-radius: 5px;
+}
+
+.IG_DW_MAIN,
+.IG_NEWTAB_MAIN,
+.IG_THUMBNAIL_MAIN,
+.IG_DW_ALL_MAIN,
+.IG_IMAGE_VIEWER {
+    position: relative;
+    top: 0px;
+    padding: 4px;
+    line-height: 0;
+    background: transparent;
+    color: #ffffff;
+    border-radius: 6px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    box-sizing: border-box;
+    transition: background 0.2s ease;
+}
+
+.IG_DW_MAIN:hover,
+.IG_NEWTAB_MAIN:hover,
+.IG_THUMBNAIL_MAIN:hover,
+.IG_DW_ALL_MAIN:hover,
+.IG_IMAGE_VIEWER:hover {
+    background: rgba(255, 255, 255, 0.25);
+}
+
+.button_wrapper {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    line-height: 0;
+    display: flex;
+    flex-flow: row-reverse;
+    gap: 8px;
+    z-index: 1;
+    background: rgba(0, 0, 0, 0.35);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    padding: 6px 8px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* SVG scaling */
+.button_wrapper svg {
+    width: 18px;
+    height: 18px;
+    display: block;
+}
+
+#_SNLOAD {
+    text-align: center;
+    font-size: 20px;
+}
+
+.IG_REELS,
+.IG_DWSTORY,
+.IG_DWHISTORY,
+.IG_DWSTORY_ALL,
+.IG_DWHISTORY_ALL {
+    position: absolute;
+    right: 40px;
+    top: 15px;
+    padding: 2px;
+    line-height: 0;
+    background: #fff;
+    border-radius: 5px;
+    cursor: pointer;
+    z-index: 5;
+}
+
+.IG_REELS_NEWTAB,
+.IG_DWNEWTAB,
+.IG_DWHINEWTAB {
+    position: absolute;
+    right: 40px;
+    top: 47px;
+    padding: 2px;
+    line-height: 0;
+    background: #fff;
+    border-radius: 5px;
+    cursor: pointer;
+    z-index: 5;
+    color: #000;
+}
+
+.IG_REELS_THUMBNAIL,
+.IG_DWSTORY_THUMBNAIL,
+.IG_DWHISTORY_THUMBNAIL {
+    position: absolute;
+    right: 40px;
+    top: 79px;
+    padding: 2px;
+    line-height: 1;
+    background: #fff;
+    border-radius: 5px;
+    cursor: pointer;
+    z-index: 5;
+}
+
+.IG_DWSTORY_POSITION,
+.IG_DWHISTORY_POSITION {
+    position: absolute;
+    right: -24px;
+    top: 47px;
+    width: 28px;
+    height: 28px;
+    padding: 2px;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #fff;
+    border-radius: 5px;
+    color: #000;
+    cursor: default;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: -0.4px;
+    white-space: nowrap;
+    z-index: 5;
+    user-select: none;
+}
+
+*:not(:has(> section[class]))>.IG_DWSTORY,
+*:not(:has(> section[class]))>.IG_DWHISTORY,
+*:not(:has(> section[class]))>.IG_DWSTORY_THUMBNAIL,
+*:not(:has(> section[class]))>.IG_DWHISTORY_THUMBNAIL,
+*:not(:has(> section[class]))>.IG_DWNEWTAB,
+*:not(:has(> section[class]))>.IG_DWHINEWTAB {
+    right: -40px;
+    color: #000;
+}
+
+*:not(:has(> section[class]))>.IG_DWSTORY_ALL,
+*:not(:has(> section[class]))>.IG_DWHISTORY_ALL,
+*:not(:has(> section[class]))>.IG_DWSTORY_POSITION,
+*:not(:has(> section[class]))>.IG_DWHISTORY_POSITION {
+    right: -70px;
+    color: #000;
+}
+
+.IG_DWSTORY,
+.IG_DWHISTORY,
+.IG_DWSTORY_THUMBNAIL,
+.IG_DWHISTORY_THUMBNAIL,
+.IG_DWNEWTAB,
+.IG_DWHINEWTAB {
+    right: 6px;
+    color: #000;
+}
+
+.IG_DWSTORY_ALL,
+.IG_DWHISTORY_ALL {
+    right: -24px;
+    color: #000;
+}
+
+.IG_DWPROFILE {
+    position: absolute;
+    right: 0px;
+    top: 0px;
+    padding: 2px;
+    line-height: 1;
+    background: #fff;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 1px solid #ccc
+}
+
+.IG_DWPROFILE svg {
+    color: #000;
+}
+
+.globalSettings {
+    position: relative;
+    display: inline-block;
+    color: #000;
+    color: rgb(var(--ig-primary-text));
+    text-decoration: none;
+    text-align: left;
+    width: 100%;
+    min-height: 30px;
+    padding: 5px;
+    padding-right: 60px;
+    line-height: 18px;
+    font-size: 18px;
+    box-sizing: border-box;
+    border-radius: 5px;
+    vertical-align: middle;
+    outline: none;
+    cursor: pointer;
+    -ms-user-select: none;
+    -moz-user-select: none;
+    -webkit-user-select: none;
+    user-select: none;
+    margin: 5px 0px;
+}
+
+.globalSettings:hover {
+    background: #e7e7e7;
+    background: rgb(var(--ig-secondary-button-hover));
+}
+
+.globalSettings:hover>span {
+    cursor: help;
+}
+
+.globalSettings input:not(#date_format) {
+    display: none;
+}
+
+.globalSettings input#date_format {
+    width: calc(100% - 50px);
+    background: rgb(var(--ig-secondary-background));
+    border: 1px solid;
+    position: relative;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.globalSettings .chbtn {
+    width: 40px;
+    height: 15px;
+    background: #9c9c9c;
+    display: inline-block;
+    vertical-align: middle;
+    border-radius: 7px;
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transition: background 0.2s;
+    transform: translateY(-50%);
+}
+
+.globalSettings .chbtn .rounds {
+    width: 20px;
+    height: 20px;
+    background: #777;
+    display: inline-block;
+    vertical-align: middle;
+    border-radius: 50%;
+    position: absolute;
+    left: 0px;
+    top: -3px;
+    transition: left 0.15s, background 0.15s;
+}
+
+.globalSettings input:checked~.chbtn {
+    background: #004c5a;
+}
+
+.globalSettings input:checked~.chbtn .rounds {
+    left: 20px;
+    background: #048aa4;
+}
+
+.checkbox {
+    font-size: 18px;
+    vertical-align: middle;
+    margin: 0px 7px;
+    user-select: none;
+    margin-left: 0px;
+}
+
+.checkbox input {
+    transform: scale(1.5);
+    margin-right: 10px;
+}
+
+.inner_box_wrapper {
+    display: block;
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    width: 50px;
+    height: 100%;
+    border-right: 1px solid;
+    background: #e7e7e7;
+    background: rgb(var(--ig-secondary-button-hover));
+    cursor: pointer;
+    border-radius: 7px 0px 0px 7px;
+}
+
+.inner_box~span {
+    position: relative;
+    height: 100%;
+    width: 100%;
+    display: block;
+    border-radius: 7px 0px 0px 7px;
+}
+
+.inner_box:checked~span {
+    background: rgb(var(--ig-success));
+}
+
+.inner_box~span:after {
+    content: "";
+    position: absolute;
+    display: none;
+    left: 12px;
+    top: 50%;
+    width: 10px;
+    height: 20px;
+    margin-top: -8px;
+    border: solid black;
+    border: solid rgb(var(--ig-primary-text));
+    border-width: 0 3px 3px 0;
+    -webkit-transform: rotate(45deg) translateY(-50%);
+    -ms-transform: rotate(45deg) translateY(-50%);
+    transform: rotate(45deg) translateY(-50%);
+}
+
+.inner_box:checked~span:after {
+    display: block;
+}
+
+.inner_box {
+    position: absolute;
+    top: 10px;
+    left: 50%;
+    transform: scale(2.5) translateY(-50%);
+    cursor: pointer;
+    appearance: none;
+    opacity: 0;
+}
+
+.IG_POPUP_DIG_BODY>div {
+    position: relative;
+    border: 1px solid #000;
+    border: 1px solid rgb(var(--ig-primary-text));
+    margin: 5px 0px;
+    border-radius: 7px;
+}
+
+.IG_POPUP_DIG_BODY>div:hover {
+    background: rgba(var(--ig-hover-overlay));
+}
+
+.IG_POPUP_DIG_TITLE {
+    padding-bottom: 5px;
+}
+
+.IG_POPUP_DIG_TITLE button {
+    font-size: 14px;
+    vertical-align: middle;
+    margin: 0px 7px;
+}
+
+kbd {
+    font-weight: bold;
+    padding: 4px 5px;
+    background: rgb(var(--ig-primary-background));
+    border-radius: 3px;
+    border: 1px solid rgb(var(--ig-primary-text));
+}
+
+.globalSettings #tempWrapper {
+    position: absolute;
+    top: 0px;
+    left: 0px;
+    right: 0px;
+    height: 100%;
+    background: #fff;
+    background: rgb(var(--ig-secondary-background));
+}
+
+.globalSettings #tempWrapper input[type="range"] {
+    display: inline-block;
+    width: 80%;
+    position: relative;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.globalSettings #tempWrapper input[type="number"] {
+    display: inline-block;
+    width: 50px;
+    border-radius: 7px;
+    outline: 0px;
+    background: transparent;
+    border: 1px solid;
+    position: relative;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.globalSettings.child {
+    margin-left: 15px;
+    width: calc(100% - 15px);
+}
+
+#scrollWrapper {
+    position: fixed;
+    right: 15px;
+    bottom: 15px;
+}
+
+#scrollWrapper .button-up,
+#scrollWrapper .button-down {
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    background-color: rgba(0, 0, 0, 0.25);
+    background-color: rgba(var(--ig-banner-background));
+    cursor: pointer;
+    margin: 5px 0px;
+    border: 1px solid;
+    border-color: rgb(var(--ig-separator));
+}
+
+#scrollWrapper .button-up:hover,
+#scrollWrapper .button-down:hover {
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    background-color: rgba(0, 0, 0, 0.25);
+    background-color: rgba(var(--ig-hover-overlay));
+    cursor: pointer;
+    margin: 5px 0px;
+}
+
+#scrollWrapper .button-up>div,
+#scrollWrapper .button-down>div {
+    position: relative;
+    border: solid #000;
+    border: solid rgb(var(--ig-primary-text));
+    border-width: 0 4px 4px 0;
+    display: inline-block;
+    padding: 4px;
+    left: 9.5px;
+}
+
+#scrollWrapper .button-up>div {
+    transform: rotate(-135deg);
+    -webkit-transform: rotate(-135deg);
+    top: 9px;
+}
+
+#scrollWrapper .button-down>div {
+    transform: rotate(45deg);
+    -webkit-transform: rotate(45deg);
+    top: 6px;
+}
+
+.IG_POPUP_DIG_BODY .newTab {
+    position: absolute;
+    right: 0px;
+    top: 0px;
+    z-index: 3;
+    padding: 7px;
+    cursor: pointer;
+    line-height: 0;
+    border-radius: 5px;
+}
+
+.IG_POPUP_DIG_BODY .videoThumbnail {
+    position: absolute;
+    right: 0px;
+    top: 40px;
+    z-index: 3;
+    padding: 7px;
+    cursor: pointer;
+    line-height: 0;
+    border-radius: 5px;
+}
+
+.IG_POPUP_DIG_BODY .newTab:hover,
+.IG_POPUP_DIG_BODY .videoThumbnail:hover {
+    background: rgb(var(--ig-secondary-button-hover));
+}
+
+.IG_POPUP_DIG_BTN {
+    cursor: pointer;
+    position: absolute;
+    right: 0px;
+    top: 0px;
+    line-height: 0;
+}
+
+#tempWrapper .IG_POPUP_DIG_BTN {
+    right: 5px;
+    transform: translateY(-50%);
+    top: 50%;
+}
+
+#tempWrapper #locatePreview {
+    margin-left: 5px;
+    display: inline-block;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    width: 60%;
+    white-space: nowrap;
+    vertical-align: middle;
+    position: relative;
+    transform: translateY(-50%);
+    top: 50%;
+}
+
+#tempWrapper #locateSelect {
+    transform: translateY(-50%);
+    top: 50%;
+    position: relative;
+    vertical-align: middle;
+}
+
+.volume_slider>div {
+    display: none;
+}
+
+div[class]:hover+.volume_slider>div,
+.volume_slider:hover>div {
+    display: block;
+}
+
+.volume_slider {
+    position: absolute;
+    height: 30px;
+    left: 0px;
+    right: 40px;
+}
+
+.volume_slider.bottom {
+    left: 50px;
+    right: 45px;
+    bottom: 15px;
+}
+
+.volume_slider.vertical {
+    top: 80px;
+    right: 25px;
+    transform: rotate(-90deg);
+    transform-origin: right center;
+}
+
+.volume_slider>div {
+    width: calc(100% - 20px);
+    position: absolute;
+    right: 10px;
+    top: 0px;
+    height: 30px;
+    background: rgba(0, 0, 0, 0.25);
+    border-radius: 25px;
+    text-align: center;
+}
+
+.volume_slider input[type="range"] {
+    overflow: hidden;
+    width: 90%;
+    height: inherit;
+    margin: 0 auto;
+    -webkit-appearance: none;
+    appearance: none;
+    background: transparent;
+    cursor: pointer;
+}
+
+.volume_slider input[type="range"]::-webkit-slider-runnable-track {
+    background: rgba(255, 255, 255, 0.35);
+    height: 6px;
+    border-radius: 7px;
+    background: linear-gradient(to right, #fff 0%, #fff var(--ig-track-progress), rgba(255, 255, 255, 0.35) var(--ig-track-progress), rgba(255, 255, 255, 0.35) 100%);
+}
+
+.volume_slider input[type="range"]::-moz-range-track {
+    background: rgba(255, 255, 255, 0.35);
+    height: 6px;
+    border-radius: 7px;
+}
+
+.volume_slider input[type="range"]::-moz-range-progress {
+    background-color: #fff;
+    height: 6px;
+    border-radius: 7px;
+}
+
+.volume_slider input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    margin-top: -5px;
+    background-color: #fff;
+    height: 16px;
+    width: 16px;
+    border-radius: 50%;
+}
+
+.volume_slider input[type="range"]::-moz-range-thumb {
+    border: none;
+    border-radius: 0;
+    background-color: #fff;
+    height: 16px;
+    width: 16px;
+    border-radius: 50%;
+}
+
+.circle_wrapper {
+    position: fixed;
+    display: flex;
+    right: 15px;
+    bottom: 15px;
+    z-index: 50000;
+    width: fit-content;
+    align-items: center;
+    flex-direction: row;
+    padding: 7px;
+    border-radius: 7px;
+    box-shadow: 0 0 5px #202020;
+    background: rgb(var(--ig-secondary-background));
+}
+
+.circle_wrapper circle {
+    display: inline-block;
+    border: 2px solid rgba(255, 152, 0, 0.9);
+    opacity: .9;
+    border-left: 2px solid rgba(0, 0, 0, 0);
+    border-right: 2px solid rgba(0, 0, 0, 0);
+    border-radius: 50px;
+    width: 24px;
+    height: 24px;
+    margin: 0 5px;
+    animation: spinoffPulse 0.5s infinite linear;
+}
+
+.circle_wrapper span {
+    font-size: 16px;
+    font-family: monospace;
+    color: rgb(var(--ig-primary-text));
+}
+
+@keyframes spinoffPulse {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+#imageViewer {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.8);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 600001;
+    transform: scale(1);
+    transition: transform 0.15s;
+
+    @starting-style {
+        transform: scale(0);
+    }
+}
+
+#imageViewer>div {
+    position: absolute;
+    top: 0px;
+    left: 0px;
+    right: 0px;
+    height: 35px;
+    background: rgba(0, 0, 0, 0.2);
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    z-index: 2;
+    color: #fff;
+    padding: 0px 15px;
+}
+
+#imageViewer>div>div#iv_close {
+    cursor: pointer;
+}
+
+#imageViewer>section {
+    width: auto;
+    height: auto;
+}
+
+#iv_image {
+    max-width: none;
+    max-height: 80svh;
+    width: auto;
+    height: 100%;
+    user-select: none;
+    cursor: grab;
+}
+
+#iv_close {
+    filter: invert(1);
+}`;
+    const locale_manifest = {"ar":"العربية (Arabic)","de":"Deutsch (German)","en-US":"English","es":"Español (Spanish)","fr":"Français (French)","id":"Bahasa Indonesia (Indonesian)","it":"Italiano (Italian)","ja":"日本語 (Japanese)","ko":"한국어 (Korean)","pt-BR":"Português (Brazilian Portuguese)","ro":"Română (Romanian)","ru":"Русский (Russian)","th":"ไทย (Thai)","tr":"Türkçe (Turkish)","vi":"Tiếng Việt (Vietnamese)","zh-CN":"简体中文 (Simplified Chinese)","zh-TW":"繁體中文 (Traditional Chinese)"};
+    const EMBEDDED_TRANSLATIONS = {
+        "ar": {"RELOAD_SCRIPT":"إعادة تحميل السكربت","IMAGE_VIEWER":"فتح الصورة في العارض","NEW_TAB":"فتح في علامة تبويب جديدة","SHOW_DOM_TREE":"عرض شجرة DOM","SELECT_AND_COPY":"تحديد الكل والنسخ من مربع الإدخال","DOWNLOAD_DOM_TREE":"تنزيل شجرة DOM كملف نصي","REPORT_GITHUB":"الإبلاغ عن مشكلة على GitHub","DEBUG":"نافذة التصحيح","CLOSE":"إغلاق","ALL_CHECK":"تحديد الكل","ITEM_COUNT_SINGULAR":"%COUNT% عنصر","ITEM_COUNT_PLURAL":"%COUNT% عناصر","ITEM_POSITION":"العنصر %CURRENT% من %TOTAL%","SELECTED_COUNT_SINGULAR":"تم تحديد %COUNT%","SELECTED_COUNT_PLURAL":"تم تحديد %COUNT%","BATCH_DOWNLOAD_SELECTED":"تنزيل الموارد المحددة","BATCH_DOWNLOAD_DIRECT":"تنزيل جميع الموارد","IMG":"صورة","VID":"فيديو","DW":"تنزيل","DW_ALL":"تنزيل جميع الموارد","VIDEO_THUMBNAIL":"تنزيل الصورة المصغرة للفيديو","LOAD_BLOB_ONE":"جارٍ تحميل وسائط Blob...","LOAD_BLOB_MULTIPLE":"جارٍ تحميل وسائط Blob وغيرها...","LOAD_BLOB_RELOAD":"جارٍ اكتشاف وسائط Blob، تتم إعادة التحميل...","NO_CHECK_RESOURCE":"تحتاج إلى تحديد مورد لتنزيله.","NO_VID_URL":"يتعذر العثور على عنوان URL للفيديو.","SETTING":"الإعدادات","AUTO_RENAME":"إعادة تسمية الملفات تلقائيًا (انقر بزر الماوس الأيمن للضبط)","RENAME_PUBLISH_DATE":"تعيين الطابع الزمني للملفات المعاد تسميتها إلى تاريخ نشر الموارد","RENAME_LOCATE_DATE":"تعديل تنسيق تاريخ الطابع الزمني للملفات المعاد تسميتها (انقر بزر الماوس الأيمن للضبط)","DISABLE_VIDEO_LOOPING":"تعطيل التكرار التلقائي للفيديو","HTML5_VIDEO_CONTROL":"عرض وحدة تحكم فيديو HTML5","REDIRECT_CLICK_USER_STORY_PICTURE":"إعادة التوجيه عند النقر على صورة قصة المستخدم","FORCE_FETCH_ALL_RESOURCES":"فرض جلب جميع الموارد في المنشور","DIRECT_DOWNLOAD_VISIBLE_RESOURCE":"تنزيل الموارد المرئية في المنشور مباشرةً","DIRECT_DOWNLOAD_ALL":"تنزيل جميع الموارد في المنشور مباشرةً","DIRECT_DOWNLOAD_STORY":"تنزيل جميع الموارد في القصة/الهايلايت مباشرةً","MODIFY_VIDEO_VOLUME":"تعديل مستوى صوت الفيديو (انقر بزر الماوس الأيمن للضبط)","MODIFY_RESOURCE_EXIF":"تعديل خصائص EXIF للموارد","SCROLL_BUTTON":"تمكين أزرار التمرير لصفحة Reels","FORCE_RESOURCE_VIA_MEDIA":"فرض جلب الموارد عبر Media API","PREFER_DASH_MANIFEST":"تفضيل بيان DASH (فيديو بجودة أعلى عبر Media API)","FALLBACK_TO_BLOB_FETCH_IF_MEDIA_API_THROTTLED":"استخدام طرق بديلة للتنزيل عندما لا يكون Media API متاحًا","NEW_TAB_ALWAYS_FORCE_MEDIA_IN_POST":"استخدام Media API دائمًا لـ [فتح في علامة تبويب جديدة] في المنشورات","SKIP_VIEW_STORY_CONFIRM":"تخطي صفحة التأكيد لعرض قصة/هايلايت","SKIP_SHARED_WITH_YOU_DIALOG":"تخطي مربع حوار «شارك هذا معك» في روابط الملفات الشخصية المشتركة","CAPTURE_IMAGE_VIA_MEDIA_CACHE":"التقاط موارد الصور باستخدام ذاكرة التخزين المؤقت للوسائط","AUTO_RENAME_INTRO":["إعادة تسمية الملف تلقائيًا إلى تنسيق مخصص:","قائمة التنسيقات المخصصة:","%USERNAME% - اسم المستخدم","%SOURCE_TYPE% - مصدر التنزيل","%SHORTCODE% - الرمز القصير للمنشور","%YEAR% - سنة التنزيل/النشر","%2-YEAR% - السنة (آخر رقمين) للتنزيل/النشر","%MONTH% - شهر التنزيل/النشر","%DAY% - يوم التنزيل/النشر","%HOUR% - ساعة التنزيل/النشر","%MINUTE% - دقيقة التنزيل/النشر","%SECOND% - ثانية التنزيل/النشر","%ORIGINAL_NAME% - الاسم الأصلي للملف الذي تم تنزيله","%ORIGINAL_NAME_FIRST% - الاسم الأصلي للملف الذي تم تنزيله (الجزء الأول من الاسم)","%INDEX% - فهرس المورد","%UID% - المعرّف الفريد لحساب المستخدم","","إذا تم ضبطه على false، فسيبقى اسم الملف دون تغيير.","مثال: instagram_321565527_679025940443063_4318007696887450953_n.jpg"],"RENAME_PUBLISH_DATE_INTRO":"يضبط الطابع الزمني في تنسيق إعادة تسمية الملفات إلى تاريخ نشر الموارد (المنطقة الزمنية للمتصفح).\n\nتعمل هذه الميزة فقط عندما يتم ضبط [إعادة تسمية الملفات تلقائيًا] على TRUE.","RENAME_LOCATE_DATE_INTRO":"يعدّل تنسيق تاريخ الطابع الزمني للملفات المعاد تسميتها إلى الوقت المحلي للمتصفح، وينسّقه وفق تنسيق التاريخ الإقليمي المفضل لديك.\n\nتعمل هذه الميزة فقط عندما يتم ضبط [إعادة تسمية الملفات تلقائيًا] على TRUE.","DISABLE_VIDEO_LOOPING_INTRO":"يعطّل التكرار التلقائي للفيديو في Reels والمنشورات.","HTML5_VIDEO_CONTROL_INTRO":"يعرض وحدة تحكم فيديو HTML5 في موارد الفيديو.\n\nسيؤدي ذلك إلى إخفاء شريط تمرير مستوى الصوت المخصص واستبداله بوحدة تحكم HTML5. يمكن إخفاء وحدة تحكم HTML5 بالنقر بزر الماوس الأيمن على الفيديو لإظهار التفاصيل الأصلية.","REDIRECT_CLICK_USER_STORY_PICTURE_INTRO":"يعيد التوجيه إلى صفحة الملف الشخصي للمستخدم عند النقر بزر الماوس الأيمن على صورته الرمزية في منطقة القصص على الصفحة الرئيسية.\nإذا استخدمت زر الماوس الأوسط للنقر، فسيتم فتحها في علامة تبويب جديدة.","FORCE_FETCH_ALL_RESOURCES_INTRO":"يفرض جلب جميع الموارد (الصور ومقاطع الفيديو) في منشور عبر واجهة Instagram API لإزالة حد ثلاثة موارد لكل منشور.","DIRECT_DOWNLOAD_VISIBLE_RESOURCE_INTRO":"ينزّل الموارد الحالية المتاحة في المنشور مباشرةً.","DIRECT_DOWNLOAD_ALL_INTRO":"عند النقر على زر التنزيل، سيتم جلب جميع الموارد في المنشور قسرًا وتنزيلها.","MODIFY_VIDEO_VOLUME_INTRO":"يعدّل مستوى صوت تشغيل الفيديو في Reels والمنشورات (انقر بزر الماوس الأيمن لفتح شريط تمرير إعداد مستوى الصوت).","SCROLL_BUTTON_INTRO":"يمكّن أزرار التمرير في الزاوية اليمنى السفلية من صفحة Reels.","FORCE_RESOURCE_VIA_MEDIA_INTRO":"سيحاول Media API الحصول على الصورة أو الفيديو بأعلى جودة ممكنة، لكن التحميل قد يستغرق وقتًا أطول.","PREFER_DASH_MANIFEST_INTRO":"يفضّل بيان DASH لموارد الفيديو عبر Media API. إذا كان بيان DASH متاحًا، فسيتم تنزيل تدفقات الفيديو والصوت بشكل منفصل للحصول على أفضل جودة ممكنة.","FALLBACK_TO_BLOB_FETCH_IF_MEDIA_API_THROTTLED_INTRO":"عندما يصل Media API إلى حد المعدل أو لا يمكن استخدامه لأسباب أخرى، سيتم استخدام Forced Fetch API لتنزيل الموارد (قد تكون جودة الموارد أقل قليلًا).","NEW_TAB_ALWAYS_FORCE_MEDIA_IN_POST_INTRO":"سيستخدم زر [فتح في علامة تبويب جديدة] في المنشورات Media API دائمًا للحصول على موارد عالية الدقة.","SKIP_VIEW_STORY_CONFIRM_INTRO":"يتخطى تلقائيًا عند عرض صفحة التأكيد في قصة أو هايلايت.","SKIP_SHARED_WITH_YOU_DIALOG_INTRO":"ينقر تلقائيًا على «ليس الآن» في مربع حوار «شارك X هذا معك» عند فتح أي روابط ?igsh=.","MODIFY_RESOURCE_EXIF_INTRO":"يعدّل سمات EXIF لموارد الصور لتضمين بيانات وصفية مثل رابط المنشور وتاريخ الالتقاط والمؤلف.","DIRECT_DOWNLOAD_STORY_INTRO":"عند النقر على [تنزيل جميع الموارد]، يتم تنزيل جميع القصص/الهايلايت مباشرةً دون عرض مربع حوار اختيار الصور.","CAPTURE_IMAGE_VIA_MEDIA_CACHE_INTRO":"يستخدم مراقبًا لالتقاط أي عناوين URL لصور عالية الجودة من شجرة DOM إلى مساحة تخزين السكربت، بحيث يمكن استخراجها عند توفرها وبناءً على إدخال المستخدم.","HOTKEY_DEBUG_KEY":"نافذة التصحيح","HOTKEY_SETTINGS_KEY":"إعدادات التفضيلات","HOTKEY_KEY_SETTINGS_KEY":"إعدادات مفاتيح الاختصار","HOTKEY_DOWNLOAD_STORY_KEY":"تنزيل القصة","HOTKEY_CONFLICT_WARNING":"قد يتعارض مفتاح الاختصار هذا مع إعدادات أخرى.","HOTKEY_RESET":"إعادة تعيين","USE_EXTERNAL_DOWNLOAD_MODE":"استخدم وضع التنزيل الخارجي","USE_EXTERNAL_DOWNLOAD_MODE_INTRO":"سيؤدي تفعيل هذه الميزة إلى جعل البرنامج النصي يستخدم وظائف تنزيل موسعة (مثل GM_download) لتنزيل الملفات، مما يحل مشكلة الملفات المفقودة عند تنزيل عدة ملفات.\n\nيرجى ملاحظة: قد يؤدي تفعيل هذه الميزة إلى تعطل وظيفة إعادة تسمية الملفات. يرجى التأكد من أن وضع التنزيل في إعدادات الميزات الموسعة مضبوط على الوضع الأصلي."},
+        "de": {"RELOAD_SCRIPT":"Skript neu laden","IMAGE_VIEWER":"Bild im Betrachter öffnen","NEW_TAB":"In neuem Tab öffnen","SHOW_DOM_TREE":"DOM-Baum anzeigen","SELECT_AND_COPY":"Alles auswählen und aus dem Eingabefeld kopieren","DOWNLOAD_DOM_TREE":"DOM-Baum als Textdatei herunterladen","REPORT_GITHUB":"Problem auf GitHub melden","DEBUG":"Debug-Fenster","CLOSE":"Schließen","ALL_CHECK":"Alle auswählen","ITEM_COUNT_SINGULAR":"%COUNT% Element","ITEM_COUNT_PLURAL":"%COUNT% Elemente","ITEM_POSITION":"Element %CURRENT% von %TOTAL%","SELECTED_COUNT_SINGULAR":"%COUNT% ausgewählt","SELECTED_COUNT_PLURAL":"%COUNT% ausgewählt","BATCH_DOWNLOAD_SELECTED":"Ausgewählte Ressourcen herunterladen","BATCH_DOWNLOAD_DIRECT":"Alle Ressourcen herunterladen","IMG":"Bild","VID":"Video","DW":"Herunterladen","DW_ALL":"Alle Ressourcen herunterladen","VIDEO_THUMBNAIL":"Video-Miniaturansicht herunterladen","LOAD_BLOB_ONE":"Blob-Medien werden geladen...","LOAD_BLOB_MULTIPLE":"Blob-Medien und andere Ressourcen werden geladen...","LOAD_BLOB_RELOAD":"Blob-Medien werden erkannt, wird neu geladen...","NO_CHECK_RESOURCE":"Du musst eine Ressource zum Herunterladen auswählen.","NO_VID_URL":"Video-URL kann nicht gefunden werden.","SETTING":"Einstellungen","AUTO_RENAME":"Dateien automatisch umbenennen (Rechtsklick zum Festlegen)","RENAME_PUBLISH_DATE":"Zeitstempel der umbenannten Datei auf das Veröffentlichungsdatum der Ressource setzen","RENAME_LOCATE_DATE":"Datumsformat des Zeitstempels umbenannter Dateien ändern (Rechtsklick zum Festlegen)","DISABLE_VIDEO_LOOPING":"Automatische Videowiedergabe in Schleife deaktivieren","HTML5_VIDEO_CONTROL":"HTML5-Videosteuerung anzeigen","REDIRECT_CLICK_USER_STORY_PICTURE":"Beim Klicken auf das Story-Bild des Benutzers weiterleiten","FORCE_FETCH_ALL_RESOURCES":"Abruf aller Ressourcen im Beitrag erzwingen","DIRECT_DOWNLOAD_VISIBLE_RESOURCE":"Sichtbare Ressourcen im Beitrag direkt herunterladen","DIRECT_DOWNLOAD_ALL":"Alle Ressourcen im Beitrag direkt herunterladen","DIRECT_DOWNLOAD_STORY":"Alle Ressourcen in der Story/im Highlight direkt herunterladen","MODIFY_VIDEO_VOLUME":"Videolautstärke ändern (Rechtsklick zum Festlegen)","MODIFY_RESOURCE_EXIF":"EXIF-Eigenschaften der Ressource ändern","SCROLL_BUTTON":"Scroll-Schaltflächen für die Reels-Seite aktivieren","FORCE_RESOURCE_VIA_MEDIA":"Abruf der Ressource über die Media API erzwingen","PREFER_DASH_MANIFEST":"DASH-Manifest bevorzugen (Video in höherer Qualität über die Media API)","FALLBACK_TO_BLOB_FETCH_IF_MEDIA_API_THROTTLED":"Alternative Download-Methoden verwenden, wenn die Media API nicht zugänglich ist","NEW_TAB_ALWAYS_FORCE_MEDIA_IN_POST":"Für [In neuem Tab öffnen] in Beiträgen immer die Media API verwenden","SKIP_VIEW_STORY_CONFIRM":"Bestätigungsseite beim Ansehen einer Story/eines Highlights überspringen","SKIP_SHARED_WITH_YOU_DIALOG":"Dialog „hat dies mit dir geteilt“ bei geteilten Profillinks überspringen","CAPTURE_IMAGE_VIA_MEDIA_CACHE":"Bildressource über den Mediencache erfassen","AUTO_RENAME_INTRO":["Dateien automatisch in ein benutzerdefiniertes Format umbenennen:","Liste benutzerdefinierter Formate:","%USERNAME% - Benutzername","%SOURCE_TYPE% - Download-Quelle","%SHORTCODE% - Kurzcode des Beitrags","%YEAR% - Jahr des Downloads/der Veröffentlichung","%2-YEAR% - Jahr (letzte zwei Ziffern) des Downloads/der Veröffentlichung","%MONTH% - Monat des Downloads/der Veröffentlichung","%DAY% - Tag des Downloads/der Veröffentlichung","%HOUR% - Stunde des Downloads/der Veröffentlichung","%MINUTE% - Minute des Downloads/der Veröffentlichung","%SECOND% - Sekunde des Downloads/der Veröffentlichung","%ORIGINAL_NAME% - Ursprünglicher Name der heruntergeladenen Datei","%ORIGINAL_NAME_FIRST% - Ursprünglicher Name der heruntergeladenen Datei (erster Teil des Namens)","%INDEX% - Index der Ressource","%UID% - Eindeutige ID des Benutzerkontos","","Wenn auf falsch gesetzt, bleibt der Dateiname unverändert.","Beispiel: instagram_321565527_679025940443063_4318007696887450953_n.jpg"],"RENAME_PUBLISH_DATE_INTRO":"Setzt den Zeitstempel im Dateiumbenennungsformat auf das Veröffentlichungsdatum der Ressource (Zeitzone des Browsers).\n\nDiese Funktion funktioniert nur, wenn [Dateien automatisch umbenennen] auf WAHR gesetzt ist.","RENAME_LOCATE_DATE_INTRO":"Ändert das Datumsformat des Zeitstempels der umbenannten Datei auf die lokale Zeit des Browsers und formatiert es in dein bevorzugtes regionales Datumsformat.\n\nDiese Funktion funktioniert nur, wenn [Dateien automatisch umbenennen] auf WAHR gesetzt ist.","DISABLE_VIDEO_LOOPING_INTRO":"Deaktiviert die automatische Videowiedergabe in Schleife in Reels und Beiträgen.","HTML5_VIDEO_CONTROL_INTRO":"Zeigt die HTML5-Videosteuerung in der Videoressource an.\n\nDadurch wird der benutzerdefinierte Lautstärkeregler ausgeblendet und durch die HTML5-Steuerung ersetzt. Die HTML5-Steuerung kann ausgeblendet werden, indem du mit der rechten Maustaste auf das Video klickst, um die ursprünglichen Details anzuzeigen.","REDIRECT_CLICK_USER_STORY_PICTURE_INTRO":"Leitet zur Profilseite eines Benutzers weiter, wenn du mit der rechten Maustaste auf dessen Avatar im Story-Bereich der Startseite klickst.\nWenn du mit der mittleren Maustaste klickst, wird die Seite in einem neuen Tab geöffnet.","FORCE_FETCH_ALL_RESOURCES_INTRO":"Erzwingt den Abruf aller Ressourcen (Fotos und Videos) in einem Beitrag über die Instagram-API, um die Begrenzung auf drei Ressourcen pro Beitrag zu entfernen.","DIRECT_DOWNLOAD_VISIBLE_RESOURCE_INTRO":"Lädt die aktuell im Beitrag verfügbaren Ressourcen direkt herunter.","DIRECT_DOWNLOAD_ALL_INTRO":"Wenn du auf die Download-Schaltfläche klickst, werden alle Ressourcen im Beitrag zwangsweise abgerufen und heruntergeladen.","MODIFY_VIDEO_VOLUME_INTRO":"Ändert die Wiedergabelautstärke von Videos in Reels und Beiträgen (Rechtsklick, um den Lautstärkeregler zu öffnen).","SCROLL_BUTTON_INTRO":"Aktiviert Scroll-Schaltflächen in der unteren rechten Ecke der Reels-Seite.","FORCE_RESOURCE_VIA_MEDIA_INTRO":"Die Media API versucht, Fotos oder Videos in der höchstmöglichen Qualität zu erhalten, das Laden kann jedoch länger dauern.","PREFER_DASH_MANIFEST_INTRO":"Bevorzugt das DASH-Manifest für Videoressourcen über die Media API. Wenn ein DASH-Manifest verfügbar ist, werden die Video- und Audiostreams SEPARAT heruntergeladen, um die bestmögliche Qualität zu erhalten.","FALLBACK_TO_BLOB_FETCH_IF_MEDIA_API_THROTTLED_INTRO":"Wenn die Media API ihre Ratenbegrenzung erreicht oder aus anderen Gründen nicht verwendet werden kann, wird die Forced Fetch API zum Herunterladen der Ressourcen verwendet (die Ressourcenqualität kann etwas niedriger sein).","NEW_TAB_ALWAYS_FORCE_MEDIA_IN_POST_INTRO":"Die Schaltfläche [In neuem Tab öffnen] in Beiträgen verwendet immer die Media API, um hochauflösende Ressourcen zu erhalten.","SKIP_VIEW_STORY_CONFIRM_INTRO":"Überspringt automatisch, wenn die Bestätigungsseite in einer Story oder einem Highlight angezeigt wird.","SKIP_SHARED_WITH_YOU_DIALOG_INTRO":"Klickt beim Öffnen beliebiger ?igsh=-Links automatisch auf „Jetzt nicht“ im Dialog „X hat dies mit dir geteilt“.","MODIFY_RESOURCE_EXIF_INTRO":"Ändert die EXIF-Attribute der Bildressource, um Metadaten wie Beitragslink, Aufnahmedatum und Autor einzuschließen.","DIRECT_DOWNLOAD_STORY_INTRO":"Wenn du auf [Alle Ressourcen herunterladen] klickst, werden alle Storys/Highlights direkt heruntergeladen, ohne den Bildauswahldialog anzuzeigen.","CAPTURE_IMAGE_VIA_MEDIA_CACHE_INTRO":"Verwendet einen Beobachter, um alle URLs hochwertiger Bilder aus dem DOM-Baum im Speicher des Skripts zu erfassen, damit sie extrahiert werden können, sobald sie verfügbar sind und der Benutzer dies anfordert.","HOTKEY_DEBUG_KEY":"Debug-Fenster","HOTKEY_SETTINGS_KEY":"Voreinstellungen","HOTKEY_KEY_SETTINGS_KEY":"Tastenkürzel-Einstellungen","HOTKEY_DOWNLOAD_STORY_KEY":"Story herunterladen","HOTKEY_CONFLICT_WARNING":"Dieses Tastenkürzel kann mit anderen Einstellungen in Konflikt stehen.","HOTKEY_RESET":"Zurücksetzen","USE_EXTERNAL_DOWNLOAD_MODE":"Externen Downloadmodus verwenden","USE_EXTERNAL_DOWNLOAD_MODE_INTRO":"Durch das Aktivieren dieser Funktion verwendet das Skript erweiterte Downloadfunktionen (wie GM_download), um Dateien herunterzuladen. Dadurch wird das Problem fehlender Dateien beim Herunterladen mehrerer Dateien behoben.\n\nBitte beachte: Das Aktivieren dieser Funktion kann dazu führen, dass die Funktion zum Umbenennen von Dateien nicht ordnungsgemäß funktioniert. Stelle sicher, dass der Downloadmodus in den Einstellungen der erweiterten Funktionen auf „Nativ“ eingestellt ist."},
+        "es": {"RELOAD_SCRIPT":"Recargar script","IMAGE_VIEWER":"Abrir imagen en el visor","NEW_TAB":"Abrir en una pestaña nueva","SHOW_DOM_TREE":"Mostrar árbol DOM","SELECT_AND_COPY":"Seleccionar todo y copiar desde el cuadro de entrada","DOWNLOAD_DOM_TREE":"Descargar árbol DOM como archivo de texto","REPORT_GITHUB":"Reportar un problema en GitHub","DEBUG":"Ventana de depuración","CLOSE":"Cerrar","ALL_CHECK":"Seleccionar todo","ITEM_COUNT_SINGULAR":"%COUNT% elemento","ITEM_COUNT_PLURAL":"%COUNT% elementos","ITEM_POSITION":"Elemento %CURRENT% de %TOTAL%","SELECTED_COUNT_SINGULAR":"%COUNT% seleccionado","SELECTED_COUNT_PLURAL":"%COUNT% seleccionados","BATCH_DOWNLOAD_SELECTED":"Descargar recursos seleccionados","BATCH_DOWNLOAD_DIRECT":"Descargar todos los recursos","IMG":"Imagen","VID":"Vídeo","DW":"Descargar","DW_ALL":"Descargar todos los recursos","VIDEO_THUMBNAIL":"Descargar miniatura del vídeo","LOAD_BLOB_ONE":"Cargando contenido multimedia en formato Blob...","LOAD_BLOB_MULTIPLE":"Cargando contenido multimedia en formato Blob y otros...","LOAD_BLOB_RELOAD":"Detectando contenido multimedia en formato Blob, recargando...","NO_CHECK_RESOURCE":"Necesitas seleccionar un recurso para descargar.","NO_VID_URL":"No se puede encontrar la URL del vídeo.","SETTING":"Ajustes","AUTO_RENAME":"Renombrar archivos automáticamente (clic derecho para configurar)","RENAME_PUBLISH_DATE":"Establecer la marca de tiempo de los archivos renombrados en la fecha de publicación de los recursos","RENAME_LOCATE_DATE":"Modificar el formato de fecha de la marca de tiempo de los archivos renombrados (clic derecho para configurar)","DISABLE_VIDEO_LOOPING":"Desactivar la reproducción automática en bucle de los vídeos","HTML5_VIDEO_CONTROL":"Mostrar el controlador de vídeo HTML5","REDIRECT_CLICK_USER_STORY_PICTURE":"Redirigir al hacer clic en la foto de perfil en la historia del usuario","FORCE_FETCH_ALL_RESOURCES":"Forzar la obtención de todos los recursos de la publicación","DIRECT_DOWNLOAD_VISIBLE_RESOURCE":"Descargar directamente los recursos visibles de la publicación","DIRECT_DOWNLOAD_ALL":"Descargar directamente todos los recursos de la publicación","DIRECT_DOWNLOAD_STORY":"Descargar directamente todos los recursos de la historia/destacado","MODIFY_VIDEO_VOLUME":"Modificar el volumen del vídeo (clic derecho para configurar)","MODIFY_RESOURCE_EXIF":"Modificar las propiedades EXIF del recurso","SCROLL_BUTTON":"Habilitar botones de desplazamiento para la página de Reels","FORCE_RESOURCE_VIA_MEDIA":"Forzar la obtención de recursos a través de la API de Media","PREFER_DASH_MANIFEST":"Preferir manifiesto DASH (vídeo de mayor calidad vía la API de Media)","FALLBACK_TO_BLOB_FETCH_IF_MEDIA_API_THROTTLED":"Usar métodos alternativos para descargar cuando la API de Media no sea accesible","NEW_TAB_ALWAYS_FORCE_MEDIA_IN_POST":"Usar siempre la API de Media para [Abrir en una pestaña nueva] en publicaciones","SKIP_VIEW_STORY_CONFIRM":"Omitir la página de confirmación al ver una historia/destacado","SKIP_SHARED_WITH_YOU_DIALOG":"Omitir el diálogo \"compartió esto contigo\" en enlaces de perfil compartidos","CAPTURE_IMAGE_VIA_MEDIA_CACHE":"Capturar recursos de imagen usando la caché multimedia","AUTO_RENAME_INTRO":["Renombrar archivos automáticamente a un formato personalizado:","Lista de formatos personalizados:","%USERNAME% - Nombre de usuario","%SOURCE_TYPE% - Fuente de la descarga","%SHORTCODE% - Código corto de la publicación","%YEAR% - Año de descarga/publicación","%2-YEAR% - Año (últimos dos dígitos) de descarga/publicación","%MONTH% - Mes de descarga/publicación","%DAY% - Día de descarga/publicación","%HOUR% - Hora de descarga/publicación","%MINUTE% - Minuto de descarga/publicación","%SECOND% - Segundo de descarga/publicación","%ORIGINAL_NAME% - Nombre original del archivo descargado","%ORIGINAL_NAME_FIRST% - Nombre original del archivo descargado (primera parte del nombre)","%INDEX% - Índice del recurso","%UID% - ID único de la cuenta de usuario","","Si se establece en falso, el nombre del archivo permanecerá sin cambios.","Ejemplo: instagram_321565527_679025940443063_4318007696887450953_n.jpg"],"RENAME_PUBLISH_DATE_INTRO":"Establece la marca de tiempo en el formato de renombramiento de archivos en la fecha de publicación de los recursos (zona horaria del navegador).\n\nEsta función solo funciona cuando [Renombrar archivos automáticamente] está establecido en VERDADERO.","RENAME_LOCATE_DATE_INTRO":"Modifica el formato de fecha de la marca de tiempo de los archivos renombrados a la hora local del navegador y dale el formato regional de fecha que prefieras.\n\nEsta función solo funciona cuando [Renombrar archivos automáticamente] está establecido en VERDADERO.","DISABLE_VIDEO_LOOPING_INTRO":"Desactiva la reproducción automática en bucle de los vídeos en Reels y publicaciones.","HTML5_VIDEO_CONTROL_INTRO":"Muestra el controlador de vídeo HTML5 en los recursos de vídeo.\n\nEsto ocultará el control deslizante de volumen de vídeo personalizado y lo reemplazará con el controlador HTML5. El controlador HTML5 se puede ocultar haciendo clic derecho en el vídeo para revelar los detalles originales.","REDIRECT_CLICK_USER_STORY_PICTURE_INTRO":"Redirige a la página de perfil de un usuario al hacer clic derecho en su avatar en el área de historias de la página de inicio.\nSi usas el botón central del ratón para hacer clic, se abrirá en una pestaña nueva.","FORCE_FETCH_ALL_RESOURCES_INTRO":"Fuerza la obtención de todos los recursos (fotos y vídeos) de una publicación a través de la API de Instagram para eliminar el límite de tres recursos por publicación.","DIRECT_DOWNLOAD_VISIBLE_RESOURCE_INTRO":"Descarga directamente los recursos actuales disponibles en la publicación.","DIRECT_DOWNLOAD_ALL_INTRO":"Al hacer clic en el botón de descarga, todos los recursos de la publicación se obtendrán y descargarán de forma forzada.","MODIFY_VIDEO_VOLUME_INTRO":"Modifica el volumen de reproducción de vídeo en Reels y publicaciones (haz clic derecho para abrir el control deslizante de configuración del volumen).","SCROLL_BUTTON_INTRO":"Habilita botones de desplazamiento para la esquina inferior derecha de la página de Reels.","FORCE_RESOURCE_VIA_MEDIA_INTRO":"La API de Media intentará obtener la foto o el vídeo de mayor calidad posible, pero puede tardar más en cargarse.","PREFER_DASH_MANIFEST_INTRO":"Prefiere el manifiesto DASH para recursos de vídeo vía la API de Media. Si hay un manifiesto DASH disponible, descargará los flujos de vídeo y audio POR SEPARADO para obtener la mejor calidad posible.","FALLBACK_TO_BLOB_FETCH_IF_MEDIA_API_THROTTLED_INTRO":"Cuando la API de Media alcance su límite de frecuencia o no pueda usarse por otros motivos, se utilizará la API de obtención forzada para descargar recursos (la calidad del recurso puede ser ligeramente inferior).","NEW_TAB_ALWAYS_FORCE_MEDIA_IN_POST_INTRO":"El botón [Abrir en una pestaña nueva] de las publicaciones siempre usará la API de Media para obtener recursos de alta resolución.","SKIP_VIEW_STORY_CONFIRM_INTRO":"Omite automáticamente la página de confirmación cuando se muestra en una historia o destacado.","SKIP_SHARED_WITH_YOU_DIALOG_INTRO":"Al abrir cualquier enlace ?igsh=, haz clic automáticamente en \"Ahora no\" en el diálogo \"X compartió esto contigo\".","MODIFY_RESOURCE_EXIF_INTRO":"Modifica los atributos EXIF del recurso de imagen para incluir metadatos como el enlace de la publicación, la fecha de captura y el autor.","DIRECT_DOWNLOAD_STORY_INTRO":"Al hacer clic en [Descargar todos los recursos], todas las historias/destacados se descargan directamente, sin mostrar el cuadro de diálogo de selección de imágenes.","CAPTURE_IMAGE_VIA_MEDIA_CACHE_INTRO":"Usa un observador para capturar cualquier URL de imágenes de alta calidad del árbol DOM en el almacenamiento del script, de modo que puedan extraerse cuando estén disponibles y a petición del usuario.","HOTKEY_DEBUG_KEY":"Ventana de depuración","HOTKEY_SETTINGS_KEY":"Ajustes de preferencias","HOTKEY_KEY_SETTINGS_KEY":"Configuración de atajos de teclado","HOTKEY_DOWNLOAD_STORY_KEY":"Descargar historia","HOTKEY_CONFLICT_WARNING":"Este atajo de teclado puede entrar en conflicto con otras configuraciones.","HOTKEY_RESET":"Restablecer","USE_EXTERNAL_DOWNLOAD_MODE":"Usar el modo de descarga externo","USE_EXTERNAL_DOWNLOAD_MODE_INTRO":"Al activar esta función, el script utilizará funciones de descarga ampliadas (como GM_download) para descargar archivos, resolviendo el problema de los archivos que faltan al descargar varios archivos.\n\nTen en cuenta: Activar esta función puede hacer que la función de cambio de nombre de archivos no funcione correctamente. Asegúrate de que el modo de descarga en la configuración de las funciones ampliadas esté establecido en Nativo."},
+        "fr": {"RELOAD_SCRIPT":"Recharger le script","IMAGE_VIEWER":"Ouvrir l'image dans la visionneuse","NEW_TAB":"Ouvrir dans un nouvel onglet","SHOW_DOM_TREE":"Afficher l'arborescence DOM","SELECT_AND_COPY":"Tout sélectionner et copier depuis la zone de saisie","DOWNLOAD_DOM_TREE":"Télécharger l'arborescence DOM en tant que fichier texte","REPORT_GITHUB":"Signaler un problème sur GitHub","DEBUG":"Fenêtre de débogage","CLOSE":"Fermer","ALL_CHECK":"Tout sélectionner","ITEM_COUNT_SINGULAR":"%COUNT% élément","ITEM_COUNT_PLURAL":"%COUNT% éléments","ITEM_POSITION":"Élément %CURRENT% sur %TOTAL%","SELECTED_COUNT_SINGULAR":"%COUNT% sélectionné","SELECTED_COUNT_PLURAL":"%COUNT% sélectionnés","BATCH_DOWNLOAD_SELECTED":"Télécharger les ressources sélectionnées","BATCH_DOWNLOAD_DIRECT":"Télécharger toutes les ressources","IMG":"Image","VID":"Vidéo","DW":"Télécharger","DW_ALL":"Télécharger toutes les ressources","VIDEO_THUMBNAIL":"Télécharger la miniature de la vidéo","LOAD_BLOB_ONE":"Chargement du média Blob...","LOAD_BLOB_MULTIPLE":"Chargement du média Blob et des autres ressources...","LOAD_BLOB_RELOAD":"Détection du média Blob, rechargement...","NO_CHECK_RESOURCE":"Vous devez sélectionner une ressource à télécharger.","NO_VID_URL":"Impossible de trouver l'URL de la vidéo.","SETTING":"Paramètres","AUTO_RENAME":"Renommer automatiquement les fichiers (clic droit pour configurer)","RENAME_PUBLISH_DATE":"Définir l'horodatage des fichiers renommés à la date de publication de la ressource","RENAME_LOCATE_DATE":"Modifier le format de date de l'horodatage des fichiers renommés (clic droit pour configurer)","DISABLE_VIDEO_LOOPING":"Désactiver la lecture automatique en boucle des vidéos","HTML5_VIDEO_CONTROL":"Afficher le contrôleur vidéo HTML5","REDIRECT_CLICK_USER_STORY_PICTURE":"Rediriger lors d'un clic sur la photo de story de l'utilisateur","FORCE_FETCH_ALL_RESOURCES":"Forcer la récupération de toutes les ressources du post","DIRECT_DOWNLOAD_VISIBLE_RESOURCE":"Télécharger directement les ressources visibles dans le post","DIRECT_DOWNLOAD_ALL":"Télécharger directement toutes les ressources du post","DIRECT_DOWNLOAD_STORY":"Télécharger directement toutes les ressources de la story/du contenu à la une","MODIFY_VIDEO_VOLUME":"Modifier le volume de la vidéo (clic droit pour configurer)","MODIFY_RESOURCE_EXIF":"Modifier les propriétés EXIF de la ressource","SCROLL_BUTTON":"Activer les boutons de défilement pour la page des Reels","FORCE_RESOURCE_VIA_MEDIA":"Forcer la récupération des ressources via l'API Media","PREFER_DASH_MANIFEST":"Préférer le manifeste DASH (vidéo de meilleure qualité via l'API Media)","FALLBACK_TO_BLOB_FETCH_IF_MEDIA_API_THROTTLED":"Utiliser des méthodes alternatives de téléchargement lorsque l'API Media n'est pas accessible","NEW_TAB_ALWAYS_FORCE_MEDIA_IN_POST":"Toujours utiliser l'API Media pour [Ouvrir dans un nouvel onglet] dans les posts","SKIP_VIEW_STORY_CONFIRM":"Ignorer la page de confirmation pour afficher une story/un contenu à la une","SKIP_SHARED_WITH_YOU_DIALOG":"Ignorer la boîte de dialogue « a partagé ceci avec vous » sur les liens de profil partagés","CAPTURE_IMAGE_VIA_MEDIA_CACHE":"Capturer les ressources image à l'aide du cache multimédia","AUTO_RENAME_INTRO":["Renommer automatiquement les fichiers dans un format personnalisé :","Liste des formats personnalisés :","%USERNAME% - Nom d'utilisateur","%SOURCE_TYPE% - Source du téléchargement","%SHORTCODE% - Code court du post","%YEAR% - Année de téléchargement/publication","%2-YEAR% - Année (deux derniers chiffres) de téléchargement/publication","%MONTH% - Mois de téléchargement/publication","%DAY% - Jour de téléchargement/publication","%HOUR% - Heure de téléchargement/publication","%MINUTE% - Minute de téléchargement/publication","%SECOND% - Seconde de téléchargement/publication","%ORIGINAL_NAME% - Nom original du fichier téléchargé","%ORIGINAL_NAME_FIRST% - Nom original du fichier téléchargé (première partie du nom)","%INDEX% - Index de la ressource","%UID% - ID unique du compte utilisateur","","Si défini sur faux, le nom du fichier restera inchangé.","Exemple : instagram_321565527_679025940443063_4318007696887450953_n.jpg"],"RENAME_PUBLISH_DATE_INTRO":"Définit l'horodatage dans le format de renommage du fichier à la date de publication de la ressource (fuseau horaire du navigateur).\n\nCette fonctionnalité fonctionne uniquement lorsque [Renommer automatiquement les fichiers] est défini sur VRAI.","RENAME_LOCATE_DATE_INTRO":"Modifie le format de date de l'horodatage du fichier renommé selon l'heure locale du navigateur et le formate dans votre format de date régional préféré.\n\nCette fonctionnalité fonctionne uniquement lorsque [Renommer automatiquement les fichiers] est défini sur VRAI.","DISABLE_VIDEO_LOOPING_INTRO":"Désactiver la lecture automatique en boucle des vidéos dans les Reels et les posts.","HTML5_VIDEO_CONTROL_INTRO":"Afficher le contrôleur vidéo HTML5 dans la ressource vidéo.\n\nCela masquera le curseur de volume vidéo personnalisé et le remplacera par le contrôleur HTML5. Le contrôleur HTML5 peut être masqué en faisant un clic droit sur la vidéo pour révéler les détails d'origine.","REDIRECT_CLICK_USER_STORY_PICTURE_INTRO":"Rediriger vers la page de profil d'un utilisateur en faisant un clic droit sur son avatar dans la zone des stories de la page d'accueil.\nSi vous cliquez avec le bouton central de la souris, cela s'ouvrira dans un nouvel onglet.","FORCE_FETCH_ALL_RESOURCES_INTRO":"Forcer la récupération de toutes les ressources (photos et vidéos) d'un post via l'API Instagram afin de supprimer la limite de trois ressources par post.","DIRECT_DOWNLOAD_VISIBLE_RESOURCE_INTRO":"Télécharger directement les ressources actuellement disponibles dans le post.","DIRECT_DOWNLOAD_ALL_INTRO":"Lorsque vous cliquez sur le bouton de téléchargement, toutes les ressources du post seront récupérées et téléchargées de force.","MODIFY_VIDEO_VOLUME_INTRO":"Modifier le volume de lecture vidéo dans les Reels et les posts (clic droit pour ouvrir le curseur de réglage du volume).","SCROLL_BUTTON_INTRO":"Activer les boutons de défilement dans le coin inférieur droit de la page des Reels.","FORCE_RESOURCE_VIA_MEDIA_INTRO":"L'API Media essaiera d'obtenir la meilleure qualité possible pour les photos ou les vidéos, mais le chargement peut prendre plus de temps.","PREFER_DASH_MANIFEST_INTRO":"Préférer le manifeste DASH pour les ressources vidéo via l'API Media. Si un manifeste DASH est disponible, les flux vidéo et audio seront téléchargés SÉPARÉMENT pour obtenir la meilleure qualité possible.","FALLBACK_TO_BLOB_FETCH_IF_MEDIA_API_THROTTLED_INTRO":"Lorsque l'API Media atteint sa limite de débit ou ne peut pas être utilisée pour d'autres raisons, l'API de récupération forcée sera utilisée pour télécharger les ressources (la qualité des ressources peut être légèrement inférieure).","NEW_TAB_ALWAYS_FORCE_MEDIA_IN_POST_INTRO":"Le bouton [Ouvrir dans un nouvel onglet] dans les posts utilisera toujours l'API Media pour obtenir des ressources en haute résolution.","SKIP_VIEW_STORY_CONFIRM_INTRO":"Ignorer automatiquement lorsque la page de confirmation s'affiche dans une story ou un contenu à la une.","SKIP_SHARED_WITH_YOU_DIALOG_INTRO":"Cliquer automatiquement sur « Pas maintenant » dans la boîte de dialogue « X a partagé ceci avec vous » lors de l'ouverture de tout lien ?igsh=.","MODIFY_RESOURCE_EXIF_INTRO":"Modifier les attributs EXIF de la ressource image afin d'inclure des métadonnées telles que le lien du post, la date de prise de vue et l'auteur.","DIRECT_DOWNLOAD_STORY_INTRO":"Lorsque vous cliquez sur [Télécharger toutes les ressources], toutes les stories/contenus à la une sont téléchargés directement, sans afficher la boîte de dialogue de sélection des images.","CAPTURE_IMAGE_VIA_MEDIA_CACHE_INTRO":"Utilise un observateur pour capturer toutes les URL d'images de haute qualité de l'arborescence DOM dans le stockage du script, afin qu'elles puissent être extraites lorsqu'elles sont disponibles et à la demande de l'utilisateur.","HOTKEY_DEBUG_KEY":"Fenêtre de débogage","HOTKEY_SETTINGS_KEY":"Paramètres de préférences","HOTKEY_KEY_SETTINGS_KEY":"Paramètres des raccourcis clavier","HOTKEY_DOWNLOAD_STORY_KEY":"Télécharger la story","HOTKEY_CONFLICT_WARNING":"Ce raccourci clavier peut entrer en conflit avec d'autres paramètres.","HOTKEY_RESET":"Réinitialiser","USE_EXTERNAL_DOWNLOAD_MODE":"Utiliser le mode de téléchargement externe","USE_EXTERNAL_DOWNLOAD_MODE_INTRO":"L'activation de cette fonctionnalité permettra au script d'utiliser des fonctions de téléchargement étendues (telles que GM_download) pour télécharger des fichiers, ce qui résout le problème des fichiers manquants lors du téléchargement de plusieurs fichiers.\n\nRemarque : L'activation de cette fonctionnalité peut empêcher le bon fonctionnement de la fonction de renommage des fichiers. Assurez-vous que le mode de téléchargement dans les paramètres des fonctionnalités étendues est défini sur Natif."},
+        "id": {"RELOAD_SCRIPT":"Muat ulang skrip","IMAGE_VIEWER":"Buka gambar di penampil","NEW_TAB":"Buka di tab baru","SHOW_DOM_TREE":"Tampilkan pohon DOM","SELECT_AND_COPY":"Pilih semua dan salin dari kotak input","DOWNLOAD_DOM_TREE":"Unduh pohon DOM sebagai file teks","REPORT_GITHUB":"Laporkan masalah di GitHub","DEBUG":"Jendela debug","CLOSE":"Tutup","ALL_CHECK":"Pilih semua","ITEM_COUNT_SINGULAR":"%COUNT% item","ITEM_COUNT_PLURAL":"%COUNT% item","ITEM_POSITION":"Item %CURRENT% dari %TOTAL%","SELECTED_COUNT_SINGULAR":"%COUNT% dipilih","SELECTED_COUNT_PLURAL":"%COUNT% dipilih","BATCH_DOWNLOAD_SELECTED":"Unduh sumber daya yang dipilih","BATCH_DOWNLOAD_DIRECT":"Unduh semua sumber daya","IMG":"Gambar","VID":"Video","DW":"Unduh","DW_ALL":"Unduh semua sumber daya","VIDEO_THUMBNAIL":"Unduh thumbnail video","LOAD_BLOB_ONE":"Memuat media Blob...","LOAD_BLOB_MULTIPLE":"Memuat media Blob dan lainnya...","LOAD_BLOB_RELOAD":"Mendeteksi media Blob, memuat ulang...","NO_CHECK_RESOURCE":"Kamu harus memilih sumber daya untuk diunduh.","NO_VID_URL":"Tidak dapat menemukan URL video.","SETTING":"Pengaturan","AUTO_RENAME":"Ganti nama file secara otomatis (klik kanan untuk mengatur)","RENAME_PUBLISH_DATE":"Atur stempel waktu file yang diganti namanya ke tanggal publikasi sumber daya","RENAME_LOCATE_DATE":"Ubah format tanggal stempel waktu file yang diganti namanya (klik kanan untuk mengatur)","DISABLE_VIDEO_LOOPING":"Nonaktifkan pemutaran video berulang otomatis","HTML5_VIDEO_CONTROL":"Tampilkan kontrol video HTML5","REDIRECT_CLICK_USER_STORY_PICTURE":"Alihkan saat mengklik foto cerita pengguna","FORCE_FETCH_ALL_RESOURCES":"Paksa pengambilan semua sumber daya dalam postingan","DIRECT_DOWNLOAD_VISIBLE_RESOURCE":"Unduh langsung sumber daya yang terlihat dalam postingan","DIRECT_DOWNLOAD_ALL":"Unduh langsung semua sumber daya dalam postingan","DIRECT_DOWNLOAD_STORY":"Unduh langsung semua sumber daya dalam cerita/sorotan","MODIFY_VIDEO_VOLUME":"Ubah volume video (klik kanan untuk mengatur)","MODIFY_RESOURCE_EXIF":"Ubah properti EXIF sumber daya","SCROLL_BUTTON":"Aktifkan tombol gulir untuk halaman Reels","FORCE_RESOURCE_VIA_MEDIA":"Paksa pengambilan sumber daya melalui Media API","PREFER_DASH_MANIFEST":"Utamakan manifes DASH (video berkualitas lebih tinggi melalui Media API)","FALLBACK_TO_BLOB_FETCH_IF_MEDIA_API_THROTTLED":"Gunakan metode alternatif untuk mengunduh saat Media API tidak dapat diakses","NEW_TAB_ALWAYS_FORCE_MEDIA_IN_POST":"Selalu gunakan Media API untuk [Buka di tab baru] dalam postingan","SKIP_VIEW_STORY_CONFIRM":"Lewati halaman konfirmasi untuk melihat cerita/sorotan","SKIP_SHARED_WITH_YOU_DIALOG":"Lewati dialog \"membagikan ini denganmu\" pada tautan profil yang dibagikan","CAPTURE_IMAGE_VIA_MEDIA_CACHE":"Tangkap sumber daya gambar menggunakan cache media","AUTO_RENAME_INTRO":["Ganti nama file secara otomatis ke format khusus:","Daftar format khusus:","%USERNAME% - Nama pengguna","%SOURCE_TYPE% - Sumber unduhan","%SHORTCODE% - Shortcode postingan","%YEAR% - Tahun saat diunduh/dipublikasikan","%2-YEAR% - Tahun (dua digit terakhir) saat diunduh/dipublikasikan","%MONTH% - Bulan saat diunduh/dipublikasikan","%DAY% - Hari saat diunduh/dipublikasikan","%HOUR% - Jam saat diunduh/dipublikasikan","%MINUTE% - Menit saat diunduh/dipublikasikan","%SECOND% - Detik saat diunduh/dipublikasikan","%ORIGINAL_NAME% - Nama asli file yang diunduh","%ORIGINAL_NAME_FIRST% - Nama asli file yang diunduh (bagian pertama nama)","%INDEX% - Indeks sumber daya","%UID% - ID unik akun pengguna","","Jika diatur ke false, nama file akan tetap tidak berubah.","Contoh: instagram_321565527_679025940443063_4318007696887450953_n.jpg"],"RENAME_PUBLISH_DATE_INTRO":"Mengatur stempel waktu dalam format penggantian nama file ke tanggal publikasi sumber daya (zona waktu browser).\n\nFitur ini hanya berfungsi saat [Ganti nama file secara otomatis] diatur ke TRUE.","RENAME_LOCATE_DATE_INTRO":"Mengubah format tanggal stempel waktu file yang diganti namanya ke waktu lokal browser dan memformatnya ke format tanggal regional yang kamu inginkan.\n\nFitur ini hanya berfungsi saat [Ganti nama file secara otomatis] diatur ke TRUE.","DISABLE_VIDEO_LOOPING_INTRO":"Nonaktifkan pemutaran video berulang otomatis di Reels dan postingan.","HTML5_VIDEO_CONTROL_INTRO":"Tampilkan kontrol video HTML5 pada sumber daya video.\n\nIni akan menyembunyikan penggeser volume khusus dan menggantinya dengan kontrol HTML5. Kontrol HTML5 dapat disembunyikan dengan mengklik kanan video untuk menampilkan detail asli.","REDIRECT_CLICK_USER_STORY_PICTURE_INTRO":"Alihkan ke halaman profil pengguna saat kamu mengklik kanan avatar mereka di area cerita pada beranda.\nJika kamu menggunakan tombol tengah mouse untuk mengklik, itu akan terbuka di tab baru.","FORCE_FETCH_ALL_RESOURCES_INTRO":"Paksa pengambilan semua sumber daya (foto dan video) dalam postingan melalui API Instagram untuk menghapus batas tiga sumber daya per postingan.","DIRECT_DOWNLOAD_VISIBLE_RESOURCE_INTRO":"Unduh langsung sumber daya yang saat ini tersedia dalam postingan.","DIRECT_DOWNLOAD_ALL_INTRO":"Saat kamu mengklik tombol unduh, semua sumber daya dalam postingan akan diambil dan diunduh secara paksa.","MODIFY_VIDEO_VOLUME_INTRO":"Ubah volume pemutaran video di Reels dan postingan (klik kanan untuk membuka penggeser pengaturan volume).","SCROLL_BUTTON_INTRO":"Aktifkan tombol gulir di sudut kanan bawah halaman Reels.","FORCE_RESOURCE_VIA_MEDIA_INTRO":"Media API akan mencoba mendapatkan foto atau video dengan kualitas setinggi mungkin, tetapi pemuatannya mungkin memerlukan waktu lebih lama.","PREFER_DASH_MANIFEST_INTRO":"Utamakan manifes DASH untuk sumber daya video melalui Media API. Jika manifes DASH tersedia, aliran video dan audio akan diunduh SECARA TERPISAH untuk mendapatkan kualitas terbaik yang memungkinkan.","FALLBACK_TO_BLOB_FETCH_IF_MEDIA_API_THROTTLED_INTRO":"Saat Media API mencapai batas laju permintaan atau tidak dapat digunakan karena alasan lain, Forced Fetch API akan digunakan untuk mengunduh sumber daya (kualitas sumber daya mungkin sedikit lebih rendah).","NEW_TAB_ALWAYS_FORCE_MEDIA_IN_POST_INTRO":"Tombol [Buka di tab baru] dalam postingan akan selalu menggunakan Media API untuk mendapatkan sumber daya beresolusi tinggi.","SKIP_VIEW_STORY_CONFIRM_INTRO":"Lewati secara otomatis saat halaman konfirmasi ditampilkan dalam cerita atau sorotan.","SKIP_SHARED_WITH_YOU_DIALOG_INTRO":"Klik otomatis \"Tidak sekarang\" pada dialog \"X membagikan ini denganmu\" saat membuka tautan ?igsh= apa pun.","MODIFY_RESOURCE_EXIF_INTRO":"Ubah atribut EXIF sumber daya gambar untuk menyertakan metadata seperti tautan postingan, tanggal pengambilan, dan penulis.","DIRECT_DOWNLOAD_STORY_INTRO":"Saat kamu mengklik [Unduh semua sumber daya], semua cerita/sorotan diunduh langsung tanpa menampilkan dialog pemilihan gambar.","CAPTURE_IMAGE_VIA_MEDIA_CACHE_INTRO":"Gunakan pemantau untuk menangkap URL gambar berkualitas tinggi apa pun di pohon DOM ke penyimpanan skrip, sehingga dapat diekstrak saat tersedia dan atas input pengguna.","HOTKEY_DEBUG_KEY":"Jendela debug","HOTKEY_SETTINGS_KEY":"Pengaturan preferensi","HOTKEY_KEY_SETTINGS_KEY":"Pengaturan tombol pintas","HOTKEY_DOWNLOAD_STORY_KEY":"Unduh cerita","HOTKEY_CONFLICT_WARNING":"Tombol pintas ini mungkin bertentangan dengan pengaturan lain.","HOTKEY_RESET":"Atur ulang","USE_EXTERNAL_DOWNLOAD_MODE":"Gunakan Mode Unduhan Eksternal","USE_EXTERNAL_DOWNLOAD_MODE_INTRO":"Mengaktifkan fitur ini akan membuat skrip menggunakan fungsi unduhan lanjutan (seperti GM_download) untuk mengunduh file, sehingga mengatasi masalah file yang hilang saat mengunduh beberapa file.\n\nHarap diperhatikan: Mengaktifkan fitur ini dapat menyebabkan fungsi penggantian nama file tidak berfungsi dengan baik. Pastikan mode unduhan di pengaturan fitur lanjutan diatur ke Native."},
+        "it": {"RELOAD_SCRIPT":"Ricarica script","IMAGE_VIEWER":"Apri immagine nel visualizzatore","NEW_TAB":"Apri in una nuova scheda","SHOW_DOM_TREE":"Mostra albero DOM","SELECT_AND_COPY":"Seleziona tutto e copia dalla casella di input","DOWNLOAD_DOM_TREE":"Scarica l'albero DOM come file di testo","REPORT_GITHUB":"Segnala un problema su GitHub","DEBUG":"Finestra di debug","CLOSE":"Chiudi","ALL_CHECK":"Seleziona tutto","ITEM_COUNT_SINGULAR":"%COUNT% elemento","ITEM_COUNT_PLURAL":"%COUNT% elementi","ITEM_POSITION":"Elemento %CURRENT% di %TOTAL%","SELECTED_COUNT_SINGULAR":"%COUNT% selezionato","SELECTED_COUNT_PLURAL":"%COUNT% selezionati","BATCH_DOWNLOAD_SELECTED":"Scarica le risorse selezionate","BATCH_DOWNLOAD_DIRECT":"Scarica tutte le risorse","IMG":"Immagine","VID":"Video","DW":"Scarica","DW_ALL":"Scarica tutte le risorse","VIDEO_THUMBNAIL":"Scarica miniatura del video","LOAD_BLOB_ONE":"Caricamento media Blob...","LOAD_BLOB_MULTIPLE":"Caricamento media Blob e altri...","LOAD_BLOB_RELOAD":"Rilevamento media Blob, ricaricamento...","NO_CHECK_RESOURCE":"Devi selezionare una risorsa da scaricare.","NO_VID_URL":"Impossibile trovare l'URL del video.","SETTING":"Impostazioni","AUTO_RENAME":"Rinomina automaticamente i file (clic destro per impostare)","RENAME_PUBLISH_DATE":"Imposta il timestamp del file rinominato sulla data di pubblicazione della risorsa","RENAME_LOCATE_DATE":"Modifica il formato della data del timestamp del file rinominato (clic destro per impostare)","DISABLE_VIDEO_LOOPING":"Disabilita il loop automatico del video","HTML5_VIDEO_CONTROL":"Mostra i controlli video HTML5","REDIRECT_CLICK_USER_STORY_PICTURE":"Reindirizza quando si clicca sull'immagine della storia dell'utente","FORCE_FETCH_ALL_RESOURCES":"Forza il recupero di tutte le risorse nel post","DIRECT_DOWNLOAD_VISIBLE_RESOURCE":"Scarica direttamente le risorse visibili nel post","DIRECT_DOWNLOAD_ALL":"Scarica direttamente tutte le risorse nel post","DIRECT_DOWNLOAD_STORY":"Scarica direttamente tutte le risorse nella storia/in evidenza","MODIFY_VIDEO_VOLUME":"Modifica il volume del video (clic destro per impostare)","MODIFY_RESOURCE_EXIF":"Modifica le proprietà EXIF della risorsa","SCROLL_BUTTON":"Abilita pulsanti di scorrimento per la pagina Reels","FORCE_RESOURCE_VIA_MEDIA":"Forza il recupero della risorsa tramite Media API","PREFER_DASH_MANIFEST":"Preferisci il manifest DASH (video di qualità superiore tramite Media API)","FALLBACK_TO_BLOB_FETCH_IF_MEDIA_API_THROTTLED":"Usa metodi alternativi di download quando la Media API non è accessibile","NEW_TAB_ALWAYS_FORCE_MEDIA_IN_POST":"Usa sempre la Media API per [Apri in una nuova scheda] nei post","SKIP_VIEW_STORY_CONFIRM":"Salta la pagina di conferma per visualizzare una storia/un contenuto in evidenza","SKIP_SHARED_WITH_YOU_DIALOG":"Salta la finestra di dialogo \"ha condiviso con te\" nei link profilo condivisi","CAPTURE_IMAGE_VIA_MEDIA_CACHE":"Cattura la risorsa immagine usando la cache dei media","AUTO_RENAME_INTRO":["Rinomina automaticamente il file con un formato personalizzato:","Elenco dei formati personalizzati:","%USERNAME% - Nome utente","%SOURCE_TYPE% - Origine del download","%SHORTCODE% - Shortcode del post","%YEAR% - Anno di download/pubblicazione","%2-YEAR% - Anno (ultime due cifre) di download/pubblicazione","%MONTH% - Mese di download/pubblicazione","%DAY% - Giorno di download/pubblicazione","%HOUR% - Ora di download/pubblicazione","%MINUTE% - Minuto di download/pubblicazione","%SECOND% - Secondo di download/pubblicazione","%ORIGINAL_NAME% - Nome originale del file scaricato","%ORIGINAL_NAME_FIRST% - Nome originale del file scaricato (prima parte del nome)","%INDEX% - Indice della risorsa","%UID% - ID univoco dell'account utente","","Se impostato su false, il nome del file rimarrà invariato.","Esempio: instagram_321565527_679025940443063_4318007696887450953_n.jpg"],"RENAME_PUBLISH_DATE_INTRO":"Imposta il timestamp nel formato di rinomina del file sulla data di pubblicazione della risorsa (fuso orario del browser).\n\nQuesta funzione funziona solo quando [Rinomina automaticamente i file] è impostato su TRUE.","RENAME_LOCATE_DATE_INTRO":"Modifica il formato della data del timestamp del file rinominato sull'ora locale del browser e lo formatta secondo il formato regionale preferito.\n\nQuesta funzione funziona solo quando [Rinomina automaticamente i file] è impostato su TRUE.","DISABLE_VIDEO_LOOPING_INTRO":"Disabilita il loop automatico dei video nei Reels e nei post.","HTML5_VIDEO_CONTROL_INTRO":"Mostra i controlli video HTML5 nella risorsa video.\n\nQuesto nasconderà il cursore personalizzato del volume e lo sostituirà con il controller HTML5. Il controller HTML5 può essere nascosto facendo clic con il tasto destro sul video per mostrare i dettagli originali.","REDIRECT_CLICK_USER_STORY_PICTURE_INTRO":"Reindirizza al profilo dell'utente quando fai clic con il tasto destro sul suo avatar nell'area delle storie nella homepage.\nSe usi il tasto centrale del mouse, si aprirà in una nuova scheda.","FORCE_FETCH_ALL_RESOURCES_INTRO":"Forza il recupero di tutte le risorse (foto e video) in un post tramite l'API di Instagram per rimuovere il limite di tre risorse per post.","DIRECT_DOWNLOAD_VISIBLE_RESOURCE_INTRO":"Scarica direttamente le risorse attualmente disponibili nel post.","DIRECT_DOWNLOAD_ALL_INTRO":"Quando clicchi il pulsante di download, tutte le risorse del post verranno recuperate e scaricate forzatamente.","MODIFY_VIDEO_VOLUME_INTRO":"Modifica il volume di riproduzione dei video nei Reels e nei post (clic destro per aprire il cursore delle impostazioni del volume).","SCROLL_BUTTON_INTRO":"Abilita i pulsanti di scorrimento nell'angolo in basso a destra della pagina Reels.","FORCE_RESOURCE_VIA_MEDIA_INTRO":"La Media API proverà a ottenere la foto o il video della qualità più alta possibile, ma il caricamento potrebbe richiedere più tempo.","PREFER_DASH_MANIFEST_INTRO":"Preferisci il manifest DASH per le risorse video tramite la Media API. Se è disponibile un manifest DASH, il video e l'audio verranno scaricati SEPARATAMENTE per ottenere la migliore qualità possibile.","FALLBACK_TO_BLOB_FETCH_IF_MEDIA_API_THROTTLED_INTRO":"Quando la Media API raggiunge il limite di richieste o non può essere usata per altri motivi, verrà usata la Forced Fetch API per scaricare le risorse (la qualità della risorsa potrebbe essere leggermente inferiore).","NEW_TAB_ALWAYS_FORCE_MEDIA_IN_POST_INTRO":"Il pulsante [Apri in una nuova scheda] nei post userà sempre la Media API per ottenere risorse ad alta risoluzione.","SKIP_VIEW_STORY_CONFIRM_INTRO":"Salta automaticamente la pagina di conferma quando viene mostrata in una storia o in un contenuto in evidenza.","SKIP_SHARED_WITH_YOU_DIALOG_INTRO":"Clicca automaticamente su \"Non ora\" nella finestra di dialogo \"X ha condiviso con te\" quando apri qualsiasi link ?igsh=.","MODIFY_RESOURCE_EXIF_INTRO":"Modifica gli attributi EXIF della risorsa immagine per includere metadati come il link del post, la data dello scatto e l'autore.","DIRECT_DOWNLOAD_STORY_INTRO":"Quando clicchi su [Scarica tutte le risorse], tutte le storie/i contenuti in evidenza vengono scaricati direttamente, senza mostrare la finestra di selezione delle immagini.","CAPTURE_IMAGE_VIA_MEDIA_CACHE_INTRO":"Usa un watcher per catturare nella memoria dello script eventuali URL di immagini ad alta qualità presenti nell'albero DOM, in modo che possano essere estratti quando disponibili e su richiesta dell'utente.","HOTKEY_DEBUG_KEY":"Finestra di debug","HOTKEY_SETTINGS_KEY":"Impostazioni preferenze","HOTKEY_KEY_SETTINGS_KEY":"Impostazioni scorciatoie da tastiera","HOTKEY_DOWNLOAD_STORY_KEY":"Scarica storia","HOTKEY_CONFLICT_WARNING":"Questa scorciatoia da tastiera potrebbe entrare in conflitto con altre impostazioni.","HOTKEY_RESET":"Reimposta","USE_EXTERNAL_DOWNLOAD_MODE":"Usa la modalità di download esterna","USE_EXTERNAL_DOWNLOAD_MODE_INTRO":"L'attivazione di questa funzione farà sì che lo script utilizzi funzioni di download avanzate (come GM_download) per scaricare i file, risolvendo il problema dei file mancanti durante il download di più file.\n\nNota: L'attivazione di questa funzione potrebbe compromettere il corretto funzionamento della funzione di rinomina dei file. Assicurati che la modalità di download nelle impostazioni delle funzionalità avanzate sia impostata su Nativa."},
+        "ja": {"RELOAD_SCRIPT":"スクリプトを再読み込み","IMAGE_VIEWER":"ビューアーで画像を開く","NEW_TAB":"新しいタブで開く","SHOW_DOM_TREE":"DOM ツリーを表示","SELECT_AND_COPY":"入力ボックスからすべて選択してコピー","DOWNLOAD_DOM_TREE":"DOM ツリーをテキストファイルとしてダウンロード","REPORT_GITHUB":"GitHub で問題を報告","DEBUG":"デバッグウィンドウ","CLOSE":"閉じる","ALL_CHECK":"すべて選択","ITEM_COUNT_SINGULAR":"%COUNT% 件の項目","ITEM_COUNT_PLURAL":"%COUNT% 件の項目","ITEM_POSITION":"%TOTAL% 件中 %CURRENT% 件目","SELECTED_COUNT_SINGULAR":"%COUNT% 件選択済み","SELECTED_COUNT_PLURAL":"%COUNT% 件選択済み","BATCH_DOWNLOAD_SELECTED":"選択したリソースをダウンロード","BATCH_DOWNLOAD_DIRECT":"すべてのリソースをダウンロード","IMG":"画像","VID":"動画","DW":"ダウンロード","DW_ALL":"すべてのリソースをダウンロード","VIDEO_THUMBNAIL":"動画のサムネイルをダウンロード","LOAD_BLOB_ONE":"Blob メディアを読み込み中...","LOAD_BLOB_MULTIPLE":"Blob メディアとその他を読み込み中...","LOAD_BLOB_RELOAD":"Blob メディアを検出中、再読み込みしています...","NO_CHECK_RESOURCE":"ダウンロードするリソースを選択する必要があります。","NO_VID_URL":"動画の URL が見つかりません。","SETTING":"設定","AUTO_RENAME":"ファイルを自動的に名前変更（右クリックで設定）","RENAME_PUBLISH_DATE":"名前変更したファイルのタイムスタンプをリソースの公開日に設定","RENAME_LOCATE_DATE":"名前変更したファイルのタイムスタンプの日付形式を変更（右クリックで設定）","DISABLE_VIDEO_LOOPING":"動画の自動ループ再生を無効化","HTML5_VIDEO_CONTROL":"HTML5 動画コントローラーを表示","REDIRECT_CLICK_USER_STORY_PICTURE":"ユーザーのストーリー画像をクリックしたときにリダイレクト","FORCE_FETCH_ALL_RESOURCES":"投稿内のすべてのリソースを強制取得","DIRECT_DOWNLOAD_VISIBLE_RESOURCE":"投稿内の表示中のリソースを直接ダウンロード","DIRECT_DOWNLOAD_ALL":"投稿内のすべてのリソースを直接ダウンロード","DIRECT_DOWNLOAD_STORY":"ストーリー／ハイライト内のすべてのリソースを直接ダウンロード","MODIFY_VIDEO_VOLUME":"動画の音量を変更（右クリックで設定）","MODIFY_RESOURCE_EXIF":"リソースの EXIF プロパティを変更","SCROLL_BUTTON":"リールページのスクロールボタンを有効化","FORCE_RESOURCE_VIA_MEDIA":"Media API 経由でリソースを強制取得","PREFER_DASH_MANIFEST":"DASH マニフェストを優先（Media API 経由で高品質動画）","FALLBACK_TO_BLOB_FETCH_IF_MEDIA_API_THROTTLED":"Media API にアクセスできない場合は代替方法でダウンロード","NEW_TAB_ALWAYS_FORCE_MEDIA_IN_POST":"投稿内の「新しいタブで開く」では常に Media API を使用","SKIP_VIEW_STORY_CONFIRM":"ストーリー／ハイライトを表示する確認ページをスキップ","SKIP_SHARED_WITH_YOU_DIALOG":"共有プロフィールリンクの「あなたと共有しました」ダイアログをスキップ","CAPTURE_IMAGE_VIA_MEDIA_CACHE":"Media Cache を使用して画像リソースをキャプチャ","AUTO_RENAME_INTRO":["ファイルをカスタム形式に自動的に名前変更します：","カスタム形式リスト：","%USERNAME% - ユーザー名","%SOURCE_TYPE% - ダウンロード元","%SHORTCODE% - 投稿のショートコード","%YEAR% - ダウンロード／公開された年","%2-YEAR% - ダウンロード／公開された年（下 2 桁）","%MONTH% - ダウンロード／公開された月","%DAY% - ダウンロード／公開された日","%HOUR% - ダウンロード／公開された時","%MINUTE% - ダウンロード／公開された分","%SECOND% - ダウンロード／公開された秒","%ORIGINAL_NAME% - ダウンロードしたファイルの元の名前","%ORIGINAL_NAME_FIRST% - ダウンロードしたファイルの元の名前（名前の最初の部分）","%INDEX% - リソースのインデックス","%UID% - ユーザーアカウントの一意の ID","","false に設定すると、ファイル名は変更されません。","例： instagram_321565527_679025940443063_4318007696887450953_n.jpg"],"RENAME_PUBLISH_DATE_INTRO":"ファイル名変更形式内のタイムスタンプをリソースの公開日（ブラウザーのタイムゾーン）に設定します。\n\nこの機能は「ファイルを自動的に名前変更」が TRUE に設定されている場合にのみ動作します。","RENAME_LOCATE_DATE_INTRO":"名前変更したファイルのタイムスタンプの日付形式をブラウザーのローカル時刻に変更し、希望する地域の日付形式に整形します。\n\nこの機能は「ファイルを自動的に名前変更」が TRUE に設定されている場合にのみ動作します。","DISABLE_VIDEO_LOOPING_INTRO":"リールと投稿内の動画の自動ループ再生を無効にします。","HTML5_VIDEO_CONTROL_INTRO":"動画リソースに HTML5 動画コントローラーを表示します。\n\nこれにより、カスタム動画音量スライダーが非表示になり、HTML5 コントローラーに置き換えられます。HTML5 コントローラーは、動画を右クリックして元の詳細を表示することで非表示にできます。","REDIRECT_CLICK_USER_STORY_PICTURE_INTRO":"ホームページのストーリーエリアでユーザーのアバターを右クリックしたとき、そのユーザーのプロフィールページにリダイレクトします。\nマウスの中ボタンでクリックすると、新しいタブで開きます。","FORCE_FETCH_ALL_RESOURCES_INTRO":"Instagram API 経由で投稿内のすべてのリソース（写真と動画）を強制取得し、投稿ごとの 3 件のリソース制限を解除します。","DIRECT_DOWNLOAD_VISIBLE_RESOURCE_INTRO":"投稿内で現在利用可能なリソースを直接ダウンロードします。","DIRECT_DOWNLOAD_ALL_INTRO":"ダウンロードボタンをクリックすると、投稿内のすべてのリソースが強制的に取得され、ダウンロードされます。","MODIFY_VIDEO_VOLUME_INTRO":"リールと投稿内の動画再生音量を変更します（右クリックで音量設定スライダーを開きます）。","SCROLL_BUTTON_INTRO":"リールページの右下隅にスクロールボタンを有効にします。","FORCE_RESOURCE_VIA_MEDIA_INTRO":"Media API は可能な限り最高品質の写真または動画を取得しようとしますが、読み込みに時間がかかる場合があります。","PREFER_DASH_MANIFEST_INTRO":"Media API 経由の動画リソースでは DASH マニフェストを優先します。DASH マニフェストが利用可能な場合、最高品質を得るために動画ストリームと音声ストリームを別々にダウンロードします。","FALLBACK_TO_BLOB_FETCH_IF_MEDIA_API_THROTTLED_INTRO":"Media API がレート制限に達した場合、またはその他の理由で使用できない場合、Forced Fetch API を使用してリソースをダウンロードします（リソースの品質はやや低くなる場合があります）。","NEW_TAB_ALWAYS_FORCE_MEDIA_IN_POST_INTRO":"投稿内の「新しいタブで開く」ボタンは、高解像度リソースを取得するために常に Media API を使用します。","SKIP_VIEW_STORY_CONFIRM_INTRO":"ストーリーまたはハイライトで確認ページが表示された場合、自動的にスキップします。","SKIP_SHARED_WITH_YOU_DIALOG_INTRO":"?igsh= リンクを開いたとき、「X があなたとこれを共有しました」ダイアログで「後で」を自動的にクリックします。","MODIFY_RESOURCE_EXIF_INTRO":"画像リソースの EXIF 属性を変更し、投稿リンク、撮影日、作成者などのメタデータを含めます。","DIRECT_DOWNLOAD_STORY_INTRO":"「すべてのリソースをダウンロード」をクリックすると、画像選択ダイアログを表示せずに、すべてのストーリー／ハイライトが直接ダウンロードされます。","CAPTURE_IMAGE_VIA_MEDIA_CACHE_INTRO":"ウォッチャーを使用して、DOM ツリー内の高品質画像 URL をスクリプトのストレージにキャプチャし、利用可能になったときやユーザー入力時に抽出できるようにします。","HOTKEY_DEBUG_KEY":"デバッグウィンドウ","HOTKEY_SETTINGS_KEY":"環境設定","HOTKEY_KEY_SETTINGS_KEY":"ホットキー設定","HOTKEY_DOWNLOAD_STORY_KEY":"ストーリーをダウンロード","HOTKEY_CONFLICT_WARNING":"このホットキーは他の設定と競合する可能性があります。","HOTKEY_RESET":"リセット","USE_EXTERNAL_DOWNLOAD_MODE":"外部ダウンロードモードを使用","USE_EXTERNAL_DOWNLOAD_MODE_INTRO":"この機能を有効にすると、スクリプトはファイルのダウンロードに GM_download などの拡張ダウンロード機能を使用するようになり、複数のファイルをダウンロードした際に一部のファイルが欠落する問題を解決します。\n\n注意: この機能を有効にすると、ファイル名変更機能が正常に動作しなくなる場合があります。拡張機能の設定で、ダウンロードモードが「ネイティブ」に設定されていることを確認してください。"},
+        "ko": {"RELOAD_SCRIPT":"스크립트 다시 불러오기","IMAGE_VIEWER":"뷰어에서 이미지 열기","NEW_TAB":"새 탭에서 열기","SHOW_DOM_TREE":"DOM 트리 표시","SELECT_AND_COPY":"입력 상자에서 모두 선택하고 복사","DOWNLOAD_DOM_TREE":"DOM 트리를 텍스트 파일로 다운로드","REPORT_GITHUB":"GitHub에 문제 보고","DEBUG":"디버그 창","CLOSE":"닫기","ALL_CHECK":"모두 선택","ITEM_COUNT_SINGULAR":"%COUNT%개 항목","ITEM_COUNT_PLURAL":"%COUNT%개 항목","ITEM_POSITION":"%TOTAL%개 중 %CURRENT%번째 항목","SELECTED_COUNT_SINGULAR":"%COUNT%개 선택됨","SELECTED_COUNT_PLURAL":"%COUNT%개 선택됨","BATCH_DOWNLOAD_SELECTED":"선택한 리소스 다운로드","BATCH_DOWNLOAD_DIRECT":"모든 리소스 다운로드","IMG":"이미지","VID":"동영상","DW":"다운로드","DW_ALL":"모든 리소스 다운로드","VIDEO_THUMBNAIL":"동영상 썸네일 다운로드","LOAD_BLOB_ONE":"Blob 미디어를 불러오는 중...","LOAD_BLOB_MULTIPLE":"Blob 미디어 및 기타 항목을 불러오는 중...","LOAD_BLOB_RELOAD":"Blob 미디어 감지 중, 다시 불러오는 중...","NO_CHECK_RESOURCE":"다운로드할 리소스를 선택해야 합니다.","NO_VID_URL":"동영상 URL을 찾을 수 없습니다.","SETTING":"설정","AUTO_RENAME":"파일 자동 이름 변경(마우스 오른쪽 버튼으로 설정)","RENAME_PUBLISH_DATE":"이름이 변경된 파일의 타임스탬프를 리소스 게시일로 설정","RENAME_LOCATE_DATE":"이름이 변경된 파일 타임스탬프의 날짜 형식 수정(마우스 오른쪽 버튼으로 설정)","DISABLE_VIDEO_LOOPING":"동영상 자동 반복 재생 비활성화","HTML5_VIDEO_CONTROL":"HTML5 동영상 컨트롤러 표시","REDIRECT_CLICK_USER_STORY_PICTURE":"사용자의 스토리 사진을 클릭할 때 리디렉션","FORCE_FETCH_ALL_RESOURCES":"게시물의 모든 리소스 강제 가져오기","DIRECT_DOWNLOAD_VISIBLE_RESOURCE":"게시물의 표시된 리소스 직접 다운로드","DIRECT_DOWNLOAD_ALL":"게시물의 모든 리소스 직접 다운로드","DIRECT_DOWNLOAD_STORY":"스토리/하이라이트의 모든 리소스 직접 다운로드","MODIFY_VIDEO_VOLUME":"동영상 볼륨 수정(마우스 오른쪽 버튼으로 설정)","MODIFY_RESOURCE_EXIF":"리소스 EXIF 속성 수정","SCROLL_BUTTON":"릴스 페이지의 스크롤 버튼 활성화","FORCE_RESOURCE_VIA_MEDIA":"Media API를 통해 리소스 강제 가져오기","PREFER_DASH_MANIFEST":"DASH 매니페스트 선호(Media API를 통한 더 높은 품질의 동영상)","FALLBACK_TO_BLOB_FETCH_IF_MEDIA_API_THROTTLED":"Media API에 접근할 수 없을 때 대체 방법으로 다운로드","NEW_TAB_ALWAYS_FORCE_MEDIA_IN_POST":"게시물의 [새 탭에서 열기]에 항상 Media API 사용","SKIP_VIEW_STORY_CONFIRM":"스토리/하이라이트 보기 확인 페이지 건너뛰기","SKIP_SHARED_WITH_YOU_DIALOG":"공유된 프로필 링크에서 “회원님과 공유했습니다” 대화 상자 건너뛰기","CAPTURE_IMAGE_VIA_MEDIA_CACHE":"Media Cache를 사용하여 이미지 리소스 캡처","AUTO_RENAME_INTRO":["파일을 사용자 지정 형식으로 자동 이름 변경:","사용자 지정 형식 목록:","%USERNAME% - 사용자 이름","%SOURCE_TYPE% - 다운로드 소스","%SHORTCODE% - 게시물 숏코드","%YEAR% - 다운로드/게시된 연도","%2-YEAR% - 다운로드/게시된 연도(마지막 두 자리)","%MONTH% - 다운로드/게시된 월","%DAY% - 다운로드/게시된 일","%HOUR% - 다운로드/게시된 시","%MINUTE% - 다운로드/게시된 분","%SECOND% - 다운로드/게시된 초","%ORIGINAL_NAME% - 다운로드한 파일의 원래 이름","%ORIGINAL_NAME_FIRST% - 다운로드한 파일의 원래 이름(이름의 첫 부분)","%INDEX% - 리소스 인덱스","%UID% - 사용자 계정 고유 ID","","false로 설정하면 파일 이름이 변경되지 않습니다.","예: instagram_321565527_679025940443063_4318007696887450953_n.jpg"],"RENAME_PUBLISH_DATE_INTRO":"파일 이름 변경 형식의 타임스탬프를 리소스 게시일(브라우저 시간대)로 설정합니다.\n\n이 기능은 [파일 자동 이름 변경]이 TRUE로 설정된 경우에만 작동합니다.","RENAME_LOCATE_DATE_INTRO":"이름이 변경된 파일 타임스탬프의 날짜 형식을 브라우저의 현지 시간으로 수정하고, 원하는 지역 날짜 형식으로 지정합니다.\n\n이 기능은 [파일 자동 이름 변경]이 TRUE로 설정된 경우에만 작동합니다.","DISABLE_VIDEO_LOOPING_INTRO":"릴스와 게시물에서 동영상 자동 반복 재생을 비활성화합니다.","HTML5_VIDEO_CONTROL_INTRO":"동영상 리소스에 HTML5 동영상 컨트롤러를 표시합니다.\n\n이렇게 하면 사용자 지정 동영상 볼륨 슬라이더가 숨겨지고 HTML5 컨트롤러로 대체됩니다. 동영상을 마우스 오른쪽 버튼으로 클릭하여 원래 세부 정보를 표시하면 HTML5 컨트롤러를 숨길 수 있습니다.","REDIRECT_CLICK_USER_STORY_PICTURE_INTRO":"홈페이지의 스토리 영역에서 사용자의 아바타를 마우스 오른쪽 버튼으로 클릭하면 해당 사용자의 프로필 페이지로 리디렉션합니다.\n마우스 가운데 버튼으로 클릭하면 새 탭에서 열립니다.","FORCE_FETCH_ALL_RESOURCES_INTRO":"Instagram API를 통해 게시물의 모든 리소스(사진 및 동영상)를 강제로 가져와 게시물당 리소스 3개 제한을 제거합니다.","DIRECT_DOWNLOAD_VISIBLE_RESOURCE_INTRO":"게시물에서 현재 사용할 수 있는 리소스를 직접 다운로드합니다.","DIRECT_DOWNLOAD_ALL_INTRO":"다운로드 버튼을 클릭하면 게시물의 모든 리소스를 강제로 가져와 다운로드합니다.","MODIFY_VIDEO_VOLUME_INTRO":"릴스와 게시물의 동영상 재생 볼륨을 수정합니다(마우스 오른쪽 버튼으로 볼륨 설정 슬라이더 열기).","SCROLL_BUTTON_INTRO":"릴스 페이지의 오른쪽 아래 모서리에 스크롤 버튼을 활성화합니다.","FORCE_RESOURCE_VIA_MEDIA_INTRO":"Media API는 가능한 한 가장 높은 품질의 사진 또는 동영상을 가져오려고 하지만, 불러오는 데 시간이 더 걸릴 수 있습니다.","PREFER_DASH_MANIFEST_INTRO":"Media API를 통한 동영상 리소스에 DASH 매니페스트를 우선 사용합니다. DASH 매니페스트를 사용할 수 있으면 최상의 품질을 위해 동영상과 오디오 스트림을 별도로 다운로드합니다.","FALLBACK_TO_BLOB_FETCH_IF_MEDIA_API_THROTTLED_INTRO":"Media API가 속도 제한에 도달했거나 다른 이유로 사용할 수 없는 경우, Forced Fetch API를 사용하여 리소스를 다운로드합니다(리소스 품질이 약간 낮을 수 있음).","NEW_TAB_ALWAYS_FORCE_MEDIA_IN_POST_INTRO":"게시물의 [새 탭에서 열기] 버튼은 고해상도 리소스를 가져오기 위해 항상 Media API를 사용합니다.","SKIP_VIEW_STORY_CONFIRM_INTRO":"스토리 또는 하이라이트에서 확인 페이지가 표시되면 자동으로 건너뜁니다.","SKIP_SHARED_WITH_YOU_DIALOG_INTRO":"?igsh= 링크를 열 때 “X님이 회원님과 공유했습니다” 대화 상자에서 “나중에”를 자동으로 클릭합니다.","MODIFY_RESOURCE_EXIF_INTRO":"이미지 리소스의 EXIF 속성을 수정하여 게시물 링크, 촬영 날짜, 작성자 등의 메타데이터를 포함합니다.","DIRECT_DOWNLOAD_STORY_INTRO":"[모든 리소스 다운로드]를 클릭하면 이미지 선택 대화 상자를 표시하지 않고 모든 스토리/하이라이트가 직접 다운로드됩니다.","CAPTURE_IMAGE_VIA_MEDIA_CACHE_INTRO":"감시자를 사용하여 DOM 트리의 고품질 이미지 URL을 스크립트 저장소에 캡처하여, 사용 가능할 때와 사용자 입력 시 추출할 수 있도록 합니다.","HOTKEY_DEBUG_KEY":"디버그 창","HOTKEY_SETTINGS_KEY":"환경 설정","HOTKEY_KEY_SETTINGS_KEY":"단축키 설정","HOTKEY_DOWNLOAD_STORY_KEY":"스토리 다운로드","HOTKEY_CONFLICT_WARNING":"이 단축키는 다른 설정과 충돌할 수 있습니다.","HOTKEY_RESET":"초기화","USE_EXTERNAL_DOWNLOAD_MODE":"외부 다운로드 모드 사용","USE_EXTERNAL_DOWNLOAD_MODE_INTRO":"이 기능을 활성화하면 스크립트가 파일을 다운로드할 때 GM_download와 같은 확장 다운로드 기능을 사용하여 여러 파일을 다운로드할 때 일부 파일이 누락되는 문제를 해결합니다.\n\n참고: 이 기능을 활성화하면 파일 이름 변경 기능이 제대로 작동하지 않을 수 있습니다. 확장 기능 설정에서 다운로드 모드가 '기본(Native)'으로 설정되어 있는지 확인하세요."},
+        "pt-BR": {"RELOAD_SCRIPT":"Recarregar script","IMAGE_VIEWER":"Abrir imagem no visualizador","NEW_TAB":"Abrir em nova aba","SHOW_DOM_TREE":"Mostrar árvore DOM","SELECT_AND_COPY":"Selecionar tudo e copiar da caixa de entrada","DOWNLOAD_DOM_TREE":"Baixar árvore DOM como arquivo de texto","REPORT_GITHUB":"Reportar um problema no GitHub","DEBUG":"Janela de depuração","CLOSE":"Fechar","ALL_CHECK":"Selecionar tudo","ITEM_COUNT_SINGULAR":"%COUNT% item","ITEM_COUNT_PLURAL":"%COUNT% itens","ITEM_POSITION":"Item %CURRENT% de %TOTAL%","SELECTED_COUNT_SINGULAR":"%COUNT% selecionado","SELECTED_COUNT_PLURAL":"%COUNT% selecionados","BATCH_DOWNLOAD_SELECTED":"Baixar recursos selecionados","BATCH_DOWNLOAD_DIRECT":"Baixar todos os recursos","IMG":"Imagem","VID":"Vídeo","DW":"Baixar","DW_ALL":"Baixar todos os recursos","VIDEO_THUMBNAIL":"Baixar miniatura do vídeo","LOAD_BLOB_ONE":"Carregando mídia Blob...","LOAD_BLOB_MULTIPLE":"Carregando mídia Blob e outros...","LOAD_BLOB_RELOAD":"Detectando mídia Blob, recarregando...","NO_CHECK_RESOURCE":"Você precisa selecionar um recurso para baixar.","NO_VID_URL":"Não foi possível encontrar o URL do vídeo.","SETTING":"Configurações","AUTO_RENAME":"Renomear arquivos automaticamente (clique com o botão direito para definir)","RENAME_PUBLISH_DATE":"Definir o carimbo de data/hora do arquivo renomeado para a data de publicação do recurso","RENAME_LOCATE_DATE":"Modificar o formato da data do carimbo de data/hora do arquivo renomeado (clique com o botão direito para definir)","DISABLE_VIDEO_LOOPING":"Desativar a reprodução automática em loop de vídeos","HTML5_VIDEO_CONTROL":"Exibir o controlador de vídeo HTML5","REDIRECT_CLICK_USER_STORY_PICTURE":"Redirecionar ao clicar na foto do perfil na story do usuário","FORCE_FETCH_ALL_RESOURCES":"Forçar a busca de todos os recursos na publicação","DIRECT_DOWNLOAD_VISIBLE_RESOURCE":"Baixar diretamente os recursos visíveis na publicação","DIRECT_DOWNLOAD_ALL":"Baixar diretamente todos os recursos na publicação","DIRECT_DOWNLOAD_STORY":"Baixar diretamente todos os recursos do story/destaque","MODIFY_VIDEO_VOLUME":"Modificar o volume do vídeo (clique com o botão direito para definir)","MODIFY_RESOURCE_EXIF":"Modificar propriedades EXIF do recurso","SCROLL_BUTTON":"Habilitar botões de rolagem para a página de Reels","FORCE_RESOURCE_VIA_MEDIA":"Forçar a busca de recursos via API de Mídia","PREFER_DASH_MANIFEST":"Preferir o manifesto DASH (vídeo de qualidade mais alta via API de Mídia)","FALLBACK_TO_BLOB_FETCH_IF_MEDIA_API_THROTTLED":"Usar métodos alternativos para baixar quando a API de Mídia não estiver acessível","NEW_TAB_ALWAYS_FORCE_MEDIA_IN_POST":"Sempre usar a API de Mídia para [Abrir em nova aba] em publicações","SKIP_VIEW_STORY_CONFIRM":"Pular a página de confirmação ao visualizar um story/destaque","SKIP_SHARED_WITH_YOU_DIALOG":"Ignorar a caixa de diálogo \"compartilhou isso com você\" em links de perfil compartilhados","CAPTURE_IMAGE_VIA_MEDIA_CACHE":"Capturar recurso de imagem usando o cache de mídia","AUTO_RENAME_INTRO":["Renomear automaticamente os arquivos para um formato personalizado:","Lista de formatos personalizados:","%USERNAME% - Nome de usuário","%SOURCE_TYPE% - Fonte do download","%SHORTCODE% - Código curto da publicação","%YEAR% - Ano de download/publicação","%2-YEAR% - Ano (dois últimos dígitos) de download/publicação","%MONTH% - Mês de download/publicação","%DAY% - Dia de download/publicação","%HOUR% - Hora de download/publicação","%MINUTE% - Minuto de download/publicação","%SECOND% - Segundo de download/publicação","%ORIGINAL_NAME% - Nome original do arquivo baixado","%ORIGINAL_NAME_FIRST% - Nome original do arquivo baixado (primeira parte do nome)","%INDEX% - Índice do recurso","%UID% - ID único da conta do usuário","","Se definido como falso, o nome do arquivo permanecerá inalterado.","Exemplo: instagram_321565527_679025940443063_4318007696887450953_n.jpg"],"RENAME_PUBLISH_DATE_INTRO":"Define o carimbo de data/hora no formato de renomeação de arquivo para a data de publicação do recurso (fuso horário do navegador).\n\nEsse recurso só funciona quando [Renomear arquivos automaticamente] está definido como VERDADEIRO.","RENAME_LOCATE_DATE_INTRO":"Modificar o formato da data do carimbo de data/hora do arquivo renomeado para a hora local do navegador e formatá-lo para o formato de data regional de sua preferência.\n\nEsse recurso só funciona quando [Renomear arquivos automaticamente] está definido como VERDADEIRO.","DISABLE_VIDEO_LOOPING_INTRO":"Desativar a reprodução automática em loop de vídeos em Reels e publicações.","HTML5_VIDEO_CONTROL_INTRO":"Exibir o controlador de vídeo HTML5 no recurso de vídeo.\n\nIsso ocultará o controle deslizante de volume de vídeo personalizado e o substituirá pelo controlador HTML5. O controlador HTML5 pode ser ocultado clicando com o botão direito do mouse no vídeo para revelar os detalhes originais.","REDIRECT_CLICK_USER_STORY_PICTURE_INTRO":"Redirecionar para a página de perfil de um usuário ao clicar com o botão direito do mouse em seu avatar na área de stories na página inicial.\nSe você usar o botão do meio do mouse para clicar, ele será aberto em uma nova aba.","FORCE_FETCH_ALL_RESOURCES_INTRO":"Forçar a busca de todos os recursos (fotos e vídeos) em uma publicação por meio da API do Instagram para remover o limite de três recursos por publicação.","DIRECT_DOWNLOAD_VISIBLE_RESOURCE_INTRO":"Baixar diretamente os recursos atuais disponíveis na publicação.","DIRECT_DOWNLOAD_ALL_INTRO":"Ao clicar no botão de download, todos os recursos da publicação serão forçados a serem buscados e baixados.","MODIFY_VIDEO_VOLUME_INTRO":"Modificar o volume de reprodução de vídeo em Reels e publicações (clique com o botão direito do mouse para abrir o controle deslizante de configuração de volume).","SCROLL_BUTTON_INTRO":"Habilitar botões de rolagem para o canto inferior direito da página de Reels.","FORCE_RESOURCE_VIA_MEDIA_INTRO":"A API de Mídia tentará obter a foto ou o vídeo da mais alta qualidade possível, mas pode demorar mais para carregar.","PREFER_DASH_MANIFEST_INTRO":"Dar preferência ao manifesto DASH para recursos de vídeo via API de Mídia. Se um manifesto DASH estiver disponível, ele baixará os fluxos de vídeo e áudio SEPARADAMENTE para obter a melhor qualidade possível.","FALLBACK_TO_BLOB_FETCH_IF_MEDIA_API_THROTTLED_INTRO":"Quando a API de Mídia atingir seu limite de requisições ou não puder ser usada por outros motivos, a API de Busca Forçada será usada para baixar recursos (a qualidade do recurso pode ser um pouco menor).","NEW_TAB_ALWAYS_FORCE_MEDIA_IN_POST_INTRO":"O botão [Abrir em nova aba] nas publicações sempre usará a API de Mídia para obter recursos de alta resolução.","SKIP_VIEW_STORY_CONFIRM_INTRO":"Pular automaticamente quando a página de confirmação for exibida na story ou no destaque.","SKIP_SHARED_WITH_YOU_DIALOG_INTRO":"Ao abrir qualquer link ?igsh=, clica automaticamente em \"Agora não\" na caixa de diálogo \"X compartilhou isso com você\".","MODIFY_RESOURCE_EXIF_INTRO":"Modificar os atributos EXIF do recurso de imagem para incluir metadados como link da publicação, data de captura e autor.","DIRECT_DOWNLOAD_STORY_INTRO":"Ao clicar em [Baixar todos os recursos], todos os stories/destaques são baixados diretamente, sem exibir a caixa de diálogo de seleção de imagens.","CAPTURE_IMAGE_VIA_MEDIA_CACHE_INTRO":"Usar um observador para capturar quaisquer URLs de imagens de alta qualidade da árvore DOM no armazenamento do script, para que possam ser extraídos quando estiverem disponíveis e mediante ação do usuário.","HOTKEY_DEBUG_KEY":"Janela de depuração","HOTKEY_SETTINGS_KEY":"Configurações de preferência","HOTKEY_KEY_SETTINGS_KEY":"Configurações de atalhos de teclado","HOTKEY_DOWNLOAD_STORY_KEY":"Baixar story","HOTKEY_CONFLICT_WARNING":"Este atalho de teclado pode entrar em conflito com outras configurações.","HOTKEY_RESET":"Redefinir","USE_EXTERNAL_DOWNLOAD_MODE":"Usar modo de download externo","USE_EXTERNAL_DOWNLOAD_MODE_INTRO":"Ativar este recurso fará com que o script utilize funções de download estendidas (como GM_download) para baixar arquivos, resolvendo o problema de arquivos ausentes ao baixar vários arquivos.\n\nObservação: Ativar este recurso pode fazer com que a função de renomeação de arquivos não funcione corretamente. Certifique-se de que o modo de download nas configurações dos recursos estendidos esteja definido como Nativo."},
+        "ro": {"RELOAD_SCRIPT":"Reîncarcă scriptul","IMAGE_VIEWER":"Deschide imaginea în vizualizator","NEW_TAB":"Deschide într-o filă nouă","SHOW_DOM_TREE":"Afișează arborele DOM","SELECT_AND_COPY":"Selectează tot și copiază din caseta de introducere","DOWNLOAD_DOM_TREE":"Descarcă arborele DOM ca fișier text","REPORT_GITHUB":"Raportează o problemă pe GitHub","DEBUG":"Fereastră de depanare","CLOSE":"Închide","ALL_CHECK":"Selectează toate","ITEM_COUNT_SINGULAR":"%COUNT% element","ITEM_COUNT_PLURAL":"%COUNT% elemente","ITEM_POSITION":"Elementul %CURRENT% din %TOTAL%","SELECTED_COUNT_SINGULAR":"%COUNT% selectat","SELECTED_COUNT_PLURAL":"%COUNT% selectate","BATCH_DOWNLOAD_SELECTED":"Descarcă resursele selectate","BATCH_DOWNLOAD_DIRECT":"Descarcă toate resursele","IMG":"Imagine","VID":"Videoclip","DW":"Descarcă","DW_ALL":"Descarcă toate resursele","VIDEO_THUMBNAIL":"Descarcă miniatura videoclipului","LOAD_BLOB_ONE":"Se încarcă conținutul media în format Blob...","LOAD_BLOB_MULTIPLE":"Se încarcă conținutul media în format Blob și celelalte...","LOAD_BLOB_RELOAD":"Se detectează conținutul media în format Blob, se reîncarcă...","NO_CHECK_RESOURCE":"Trebuie să selectezi o resursă pentru a o descărca.","NO_VID_URL":"Nu se poate găsi URL-ul videoclipului.","SETTING":"Setări","AUTO_RENAME":"Redenumește automat fișierele (clic dreapta pentru a seta)","RENAME_PUBLISH_DATE":"Setează marcajul de timp al fișierelor redenumite la data publicării resurselor","RENAME_LOCATE_DATE":"Modifică formatul de dată al marcajului de timp pentru fișierele redenumite (clic dreapta pentru a seta)","DISABLE_VIDEO_LOOPING":"Dezactivează redarea automată în buclă a videoclipurilor","HTML5_VIDEO_CONTROL":"Afișează controllerul video HTML5","REDIRECT_CLICK_USER_STORY_PICTURE":"Redirecționează când dai clic pe fotografia profilului în storyul utilizatorului","FORCE_FETCH_ALL_RESOURCES":"Forțează preluarea tuturor resurselor din postare","DIRECT_DOWNLOAD_VISIBLE_RESOURCE":"Descarcă direct resursele vizibile din postare","DIRECT_DOWNLOAD_ALL":"Descarcă direct toate resursele din postare","DIRECT_DOWNLOAD_STORY":"Descarcă direct toate resursele din story/highlight","MODIFY_VIDEO_VOLUME":"Modifică volumul videoclipurilor (clic dreapta pentru a seta)","MODIFY_RESOURCE_EXIF":"Modifică proprietățile EXIF ale resurselor","SCROLL_BUTTON":"Activează butoanele de derulare pentru pagina Reels","FORCE_RESOURCE_VIA_MEDIA":"Forțează preluarea resurselor prin Media API","PREFER_DASH_MANIFEST":"Preferă manifestul DASH (videoclipuri de calitate mai înaltă prin Media API)","FALLBACK_TO_BLOB_FETCH_IF_MEDIA_API_THROTTLED":"Folosește metode alternative pentru descărcare când Media API nu este accesibil","NEW_TAB_ALWAYS_FORCE_MEDIA_IN_POST":"Folosește întotdeauna Media API pentru [Deschide într-o filă nouă] în postări","SKIP_VIEW_STORY_CONFIRM":"Omite pagina de confirmare pentru vizualizarea unui story/highlight","SKIP_SHARED_WITH_YOU_DIALOG":"Omite caseta de dialog „a partajat asta cu tine” la linkurile de profil partajate","CAPTURE_IMAGE_VIA_MEDIA_CACHE":"Capturează resursele de tip imagine folosind cache-ul media","AUTO_RENAME_INTRO":["Redenumește automat fișierele într-un format personalizat:","Listă de formaturi personalizate:","%USERNAME% - Numele de utilizator","%SOURCE_TYPE% - Sursa descărcării","%SHORTCODE% - Codul scurt al postării\\","%YEAR% - Anul descărcării/publicării","%2-YEAR% - Anul (ultimele două cifre) descărcării/publicării","%MONTH% - Luna descărcării/publicării","%DAY% - Ziua descărcării/publicării","%HOUR% - Ora descărcării/publicării","%MINUTE% - Minutul descărcării/publicării","%SECOND% - Secunda descărcării/publicării","%ORIGINAL_NAME% - Numele original al fișierului descărcat","%ORIGINAL_NAME_FIRST% - Numele original al fișierului descărcat (prima parte a numelui)","%INDEX% - Indexul resursei","%UID% - ID-ul unic al contului de utilizator","","Dacă este setat pe fals, numele fișierului va rămâne neschimbat.","Exemplu: instagram_321565527_679025940443063_4318007696887450953_n.jpg"],"RENAME_PUBLISH_DATE_INTRO":"Setează marcajul de timp din formatul de redenumire a fișierelor la data publicării resurselor (fusul orar al browserului).\n\nAceastă funcție funcționează numai când [Redenumește automat fișierele] este setată pe ADEVĂRAT.","RENAME_LOCATE_DATE_INTRO":"Modifică formatul datei marcajului de timp al fișierelor redenumite la ora locală a browserului și formateaz-o în formatul regional de dată preferat.\n\nAceastă funcție funcționează numai când [Redenumește automat fișierele] este setată pe ADEVĂRAT.","DISABLE_VIDEO_LOOPING_INTRO":"Dezactivează redarea automată în buclă a videoclipurilor din Reels și postări.","HTML5_VIDEO_CONTROL_INTRO":"Afișează controllerul video HTML5 la resursele video.\n\nAcest lucru va ascunde glisorul personalizat pentru volum și îl va înlocui cu controllerul HTML5. Controlerul HTML5 poate fi ascuns dând clic dreapta pe videoclip pentru a arăta detaliile originale.","REDIRECT_CLICK_USER_STORY_PICTURE_INTRO":"Redirecționează spre pagina de profil a unui utilizator când dai clic dreapta pe avatarul acestuia în zona de storyuri de pe pagina principală.\nDacă folosești butonul din mijloc al mouse-ului pentru a da clic, se va deschide într-o filă nouă.","FORCE_FETCH_ALL_RESOURCES_INTRO":"Forțează preluarea tuturor resurselor (fotografii și videoclipuri) dintr-o postare prin API-ul Instagram pentru a elimina limita de trei resurse per postare.","DIRECT_DOWNLOAD_VISIBLE_RESOURCE_INTRO":"Descarcă direct resursele actuale disponibile în postare.","DIRECT_DOWNLOAD_ALL_INTRO":"Când dai clic pe butonul de descărcare, toate resursele din postare vor fi preluate și descărcate forțat.","MODIFY_VIDEO_VOLUME_INTRO":"Modifică volumul de redare al videoclipurilor din Reels și postări (clic dreapta pentru a deschide glisorul pentru setarea volumului).","SCROLL_BUTTON_INTRO":"Activează butoanele de derulare în colțul din dreapta jos al paginii Reels.","FORCE_RESOURCE_VIA_MEDIA_INTRO":"Media API va încerca să obțină fotografia sau videoclipul la cea mai înaltă calitate posibilă, dar încărcarea poate dura mai mult.","PREFER_DASH_MANIFEST_INTRO":"Preferă manifestul DASH pentru resursele video prin Media API. Dacă este disponibil un manifest DASH, va descărca fluxurile video și audio SEPARAT pentru cea mai bună calitate posibilă.","FALLBACK_TO_BLOB_FETCH_IF_MEDIA_API_THROTTLED_INTRO":"Când Media API atinge limita de rată sau nu poate fi folosit din alte motive, Forced Fetch API va fi folosit pentru a descărca resursele (calitatea resurselor poate fi puțin mai scăzută).","NEW_TAB_ALWAYS_FORCE_MEDIA_IN_POST_INTRO":"Butonul [Deschide într-o filă nouă] din postări va folosi întotdeauna Media API pentru a obține resurse la rezoluție înaltă.","SKIP_VIEW_STORY_CONFIRM_INTRO":"Omite automat atunci când pagina de confirmare este afișată într-un story sau highlight.","SKIP_SHARED_WITH_YOU_DIALOG_INTRO":"Dă clic automat pe „Nu acum” în caseta de dialog „X a partajat asta cu tine” când se deschide orice link ?igsh=.","MODIFY_RESOURCE_EXIF_INTRO":"Modifică atributele EXIF ale resurselor de tip imagine pentru a include metadate precum linkul postării, data capturării și autorul.","DIRECT_DOWNLOAD_STORY_INTRO":"Când dai clic pe [Descarcă toate resursele], toate storyurile/highlighturile sunt descărcate direct, fără a afișa caseta de dialog de selectare a resurselor.","CAPTURE_IMAGE_VIA_MEDIA_CACHE_INTRO":"Folosește un observator pentru a captura orice URL-uri ale imaginilor de înaltă calitate din arborele DOM în spațiul de stocare al scriptului, astfel încât acestea să poată fi extrase când sunt disponibile și la intervenția utilizatorului.","HOTKEY_DEBUG_KEY":"Fereastră de depanare","HOTKEY_SETTINGS_KEY":"Setări de preferințe","HOTKEY_KEY_SETTINGS_KEY":"Setări pentru taste rapide","HOTKEY_DOWNLOAD_STORY_KEY":"Descarcă storyul","HOTKEY_CONFLICT_WARNING":"Această tastă rapidă poate intra în conflict cu alte setări.","HOTKEY_RESET":"Resetează","USE_EXTERNAL_DOWNLOAD_MODE":"Folosește modul de descărcare externă","USE_EXTERNAL_DOWNLOAD_MODE_INTRO":"Activarea acestei funcții va face ca scriptul să folosească funcții de descărcare extinse (precum GM_download) pentru a descărca fișiere, rezolvând problema fișierelor lipsă la descărcarea mai multor fișiere.\n\nTe rugăm să reții: Activarea acestei funcții poate cauza funcționarea defectuoasă a funcției de redenumire a fișierelor. Te rugăm să te asiguri că modul de descărcare din setările funcțiilor extinse este setat pe Nativ."},
+        "ru": {"RELOAD_SCRIPT":"Перезагрузить скрипт","IMAGE_VIEWER":"Открыть изображение в средстве просмотра","NEW_TAB":"Открыть в новой вкладке","SHOW_DOM_TREE":"Показать DOM-дерево","SELECT_AND_COPY":"Выбрать всё и скопировать из поля ввода","DOWNLOAD_DOM_TREE":"Скачать DOM-дерево как текстовый файл","REPORT_GITHUB":"Сообщить о проблеме на GitHub","DEBUG":"Окно отладки","CLOSE":"Закрыть","ALL_CHECK":"Выбрать всё","ITEM_COUNT_SINGULAR":"%COUNT% элемент","ITEM_COUNT_PLURAL":"%COUNT% элементов","ITEM_POSITION":"Элемент %CURRENT% из %TOTAL%","SELECTED_COUNT_SINGULAR":"%COUNT% выбран","SELECTED_COUNT_PLURAL":"%COUNT% выбрано","BATCH_DOWNLOAD_SELECTED":"Скачать выбранные ресурсы","BATCH_DOWNLOAD_DIRECT":"Скачать все ресурсы","IMG":"Изображение","VID":"Видео","DW":"Скачать","DW_ALL":"Скачать все ресурсы","VIDEO_THUMBNAIL":"Скачать миниатюру видео","LOAD_BLOB_ONE":"Загружается Blob-медиа...","LOAD_BLOB_MULTIPLE":"Загружаются Blob-медиа и другие ресурсы...","LOAD_BLOB_RELOAD":"Обнаруживаются Blob-медиа, перезагрузка...","NO_CHECK_RESOURCE":"Необходимо выбрать ресурс для скачивания.","NO_VID_URL":"Не удалось найти URL видео.","SETTING":"Настройки","AUTO_RENAME":"Автоматически переименовывать файлы (ПКМ для настройки)","RENAME_PUBLISH_DATE":"Задавать метку времени переименованного файла по дате публикации ресурса","RENAME_LOCATE_DATE":"Изменить формат даты метки времени переименованного файла (ПКМ для настройки)","DISABLE_VIDEO_LOOPING":"Отключить автоматическое зацикливание видео","HTML5_VIDEO_CONTROL":"Показывать контроллер видео HTML5","REDIRECT_CLICK_USER_STORY_PICTURE":"Перенаправлять при клике по фото истории пользователя","FORCE_FETCH_ALL_RESOURCES":"Принудительно получать все ресурсы в посте","DIRECT_DOWNLOAD_VISIBLE_RESOURCE":"Напрямую скачивать видимые ресурсы в посте","DIRECT_DOWNLOAD_ALL":"Напрямую скачивать все ресурсы в посте","DIRECT_DOWNLOAD_STORY":"Напрямую скачивать все ресурсы в истории/актуальном","MODIFY_VIDEO_VOLUME":"Изменить громкость видео (ПКМ для настройки)","MODIFY_RESOURCE_EXIF":"Изменить свойства EXIF ресурса","SCROLL_BUTTON":"Включить кнопки прокрутки для страницы Reels","FORCE_RESOURCE_VIA_MEDIA":"Принудительно получать ресурс через Media API","PREFER_DASH_MANIFEST":"Предпочитать манифест DASH (видео более высокого качества через Media API)","FALLBACK_TO_BLOB_FETCH_IF_MEDIA_API_THROTTLED":"Использовать альтернативные методы скачивания, когда Media API недоступен","NEW_TAB_ALWAYS_FORCE_MEDIA_IN_POST":"Всегда использовать Media API для [Открыть в новой вкладке] в постах","SKIP_VIEW_STORY_CONFIRM":"Пропускать страницу подтверждения при просмотре истории/актуального","SKIP_SHARED_WITH_YOU_DIALOG":"Пропускать диалог «поделился(-ась) этим с вами» в ссылках на общий профиль","CAPTURE_IMAGE_VIA_MEDIA_CACHE":"Захватывать ресурсы изображений с помощью медиакэша","AUTO_RENAME_INTRO":["Автоматически переименовывать файлы в пользовательский формат:","Список пользовательских форматов:","%USERNAME% - Имя пользователя","%SOURCE_TYPE% - Источник скачивания","%SHORTCODE% - Короткий код поста","%YEAR% - Год скачивания/публикации","%2-YEAR% - Год (последние две цифры) скачивания/публикации","%MONTH% - Месяц скачивания/публикации","%DAY% - День скачивания/публикации","%HOUR% - Час скачивания/публикации","%MINUTE% - Минута скачивания/публикации","%SECOND% - Секунда скачивания/публикации","%ORIGINAL_NAME% - Исходное имя скачанного файла","%ORIGINAL_NAME_FIRST% - Исходное имя скачанного файла (первая часть имени)","%INDEX% - Индекс ресурса","%UID% - Уникальный ID аккаунта пользователя","","Если задано значение false, имя файла останется без изменений.","Пример: instagram_321565527_679025940443063_4318007696887450953_n.jpg"],"RENAME_PUBLISH_DATE_INTRO":"Задаёт метку времени в формате переименования файла по дате публикации ресурса (часовой пояс браузера).\n\nЭта функция работает только тогда, когда [Автоматически переименовывать файлы] имеет значение TRUE.","RENAME_LOCATE_DATE_INTRO":"Изменяет формат даты метки времени переименованного файла на локальное время браузера и форматирует её в предпочитаемый региональный формат даты.\n\nЭта функция работает только тогда, когда [Автоматически переименовывать файлы] имеет значение TRUE.","DISABLE_VIDEO_LOOPING_INTRO":"Отключает автоматическое зацикливание видео в Reels и постах.","HTML5_VIDEO_CONTROL_INTRO":"Показывает контроллер видео HTML5 в видеоресурсе.\n\nЭто скроет пользовательский ползунок громкости и заменит его контроллером HTML5. Контроллер HTML5 можно скрыть, щёлкнув видео правой кнопкой мыши, чтобы показать исходные сведения.","REDIRECT_CLICK_USER_STORY_PICTURE_INTRO":"Перенаправляет на страницу профиля пользователя при клике правой кнопкой мыши по его аватару в области историй на главной странице.\nЕсли нажать средней кнопкой мыши, страница откроется в новой вкладке.","FORCE_FETCH_ALL_RESOURCES_INTRO":"Принудительно получает все ресурсы (фото и видео) в посте через API Instagram, чтобы убрать ограничение в три ресурса на пост.","DIRECT_DOWNLOAD_VISIBLE_RESOURCE_INTRO":"Напрямую скачивает текущие ресурсы, доступные в посте.","DIRECT_DOWNLOAD_ALL_INTRO":"Когда вы нажимаете кнопку скачивания, все ресурсы в посте будут принудительно получены и скачаны.","MODIFY_VIDEO_VOLUME_INTRO":"Изменяет громкость воспроизведения видео в Reels и постах (ПКМ, чтобы открыть ползунок настройки громкости).","SCROLL_BUTTON_INTRO":"Включает кнопки прокрутки в правом нижнем углу страницы Reels.","FORCE_RESOURCE_VIA_MEDIA_INTRO":"Media API попытается получить фото или видео максимально возможного качества, но загрузка может занять больше времени.","PREFER_DASH_MANIFEST_INTRO":"Предпочитает манифест DASH для видеоресурсов через Media API. Если манифест DASH доступен, видео- и аудиопотоки будут скачаны ОТДЕЛЬНО для наилучшего возможного качества.","FALLBACK_TO_BLOB_FETCH_IF_MEDIA_API_THROTTLED_INTRO":"Когда Media API достигает лимита запросов или не может использоваться по другим причинам, для скачивания ресурсов будет использоваться Forced Fetch API (качество ресурса может быть немного ниже).","NEW_TAB_ALWAYS_FORCE_MEDIA_IN_POST_INTRO":"Кнопка [Открыть в новой вкладке] в постах всегда будет использовать Media API для получения ресурсов высокого разрешения.","SKIP_VIEW_STORY_CONFIRM_INTRO":"Автоматически пропускает страницу подтверждения, когда она отображается в истории или актуальном.","SKIP_SHARED_WITH_YOU_DIALOG_INTRO":"Автоматически нажимает «Не сейчас» в диалоге «X поделился(-ась) этим с вами» при открытии любых ссылок ?igsh=.","MODIFY_RESOURCE_EXIF_INTRO":"Изменяет атрибут EXIF ресурса изображения, чтобы добавить метаданные, такие как ссылка на пост, дата съёмки и автор.","DIRECT_DOWNLOAD_STORY_INTRO":"Когда вы нажимаете [Скачать все ресурсы], все истории/актуальное скачиваются напрямую, без отображения диалога выбора изображений.","CAPTURE_IMAGE_VIA_MEDIA_CACHE_INTRO":"Использует наблюдатель, чтобы захватывать любые URL изображений высокого качества из DOM-дерева в хранилище скрипта, чтобы их можно было извлечь при наличии и по запросу пользователя.","HOTKEY_DEBUG_KEY":"Окно отладки","HOTKEY_SETTINGS_KEY":"Настройки предпочтений","HOTKEY_KEY_SETTINGS_KEY":"Настройки горячих клавиш","HOTKEY_DOWNLOAD_STORY_KEY":"Скачать историю","HOTKEY_CONFLICT_WARNING":"Эта горячая клавиша может конфликтовать с другими настройками.","HOTKEY_RESET":"Сброс","USE_EXTERNAL_DOWNLOAD_MODE":"Использовать внешний режим загрузки","USE_EXTERNAL_DOWNLOAD_MODE_INTRO":"При включении этой функции скрипт будет использовать расширенные функции загрузки (например, GM_download) для скачивания файлов, что решит проблему отсутствующих файлов при загрузке нескольких файлов.\n\nОбратите внимание: Включение этой функции может привести к некорректной работе функции переименования файлов. Убедитесь, что режим загрузки в настройках расширенных функций установлен на «Нативный»."},
+        "th": {"RELOAD_SCRIPT":"โหลดสคริปต์ใหม่","IMAGE_VIEWER":"เปิดรูปภาพในตัวแสดง","NEW_TAB":"เปิดในแท็บใหม่","SHOW_DOM_TREE":"แสดงโครงสร้าง DOM","SELECT_AND_COPY":"เลือกทั้งหมดและคัดลอกจากกล่องป้อนข้อมูล","DOWNLOAD_DOM_TREE":"ดาวน์โหลดโครงสร้าง DOM เป็นไฟล์ข้อความ","REPORT_GITHUB":"รายงานปัญหาบน GitHub","DEBUG":"หน้าต่างดีบัก","CLOSE":"ปิด","ALL_CHECK":"เลือกทั้งหมด","ITEM_COUNT_SINGULAR":"%COUNT% รายการ","ITEM_COUNT_PLURAL":"%COUNT% รายการ","ITEM_POSITION":"รายการที่ %CURRENT% จาก %TOTAL%","SELECTED_COUNT_SINGULAR":"เลือกแล้ว %COUNT% รายการ","SELECTED_COUNT_PLURAL":"เลือกแล้ว %COUNT% รายการ","BATCH_DOWNLOAD_SELECTED":"ดาวน์โหลดทรัพยากรที่เลือก","BATCH_DOWNLOAD_DIRECT":"ดาวน์โหลดทรัพยากรทั้งหมด","IMG":"รูปภาพ","VID":"วิดีโอ","DW":"ดาวน์โหลด","DW_ALL":"ดาวน์โหลดทรัพยากรทั้งหมด","VIDEO_THUMBNAIL":"ดาวน์โหลดภาพขนาดย่อของวิดีโอ","LOAD_BLOB_ONE":"กำลังโหลดสื่อ Blob...","LOAD_BLOB_MULTIPLE":"กำลังโหลดสื่อ Blob และรายการอื่นๆ...","LOAD_BLOB_RELOAD":"กำลังตรวจหาสื่อ Blob กำลังโหลดใหม่...","NO_CHECK_RESOURCE":"คุณต้องเลือกทรัพยากรเพื่อดาวน์โหลด","NO_VID_URL":"ไม่พบ URL ของวิดีโอ","SETTING":"การตั้งค่า","AUTO_RENAME":"เปลี่ยนชื่อไฟล์โดยอัตโนมัติ (คลิกขวาเพื่อตั้งค่า)","RENAME_PUBLISH_DATE":"ตั้งค่าประทับเวลาของไฟล์ที่เปลี่ยนชื่อเป็นวันที่เผยแพร่ทรัพยากร","RENAME_LOCATE_DATE":"แก้ไขรูปแบบวันที่ของค่าประทับเวลาสำหรับไฟล์ที่เปลี่ยนชื่อ (คลิกขวาเพื่อตั้งค่า)","DISABLE_VIDEO_LOOPING":"ปิดใช้งานการวนซ้ำอัตโนมัติของวิดีโอ","HTML5_VIDEO_CONTROL":"แสดงตัวควบคุมวิดีโอ HTML5","REDIRECT_CLICK_USER_STORY_PICTURE":"เปลี่ยนเส้นทางเมื่อคลิกรูปโปรไฟล์ในสตอรี่ของผู้ใช้","FORCE_FETCH_ALL_RESOURCES":"บังคับดึงทรัพยากรทั้งหมดในโพสต์","DIRECT_DOWNLOAD_VISIBLE_RESOURCE":"ดาวน์โหลดทรัพยากรที่มองเห็นได้ในโพสต์โดยตรง","DIRECT_DOWNLOAD_ALL":"ดาวน์โหลดทรัพยากรทั้งหมดในโพสต์โดยตรง","DIRECT_DOWNLOAD_STORY":"ดาวน์โหลดทรัพยากรทั้งหมดในสตอรี่/ไฮไลต์โดยตรง","MODIFY_VIDEO_VOLUME":"ปรับระดับเสียงวิดีโอ (คลิกขวาเพื่อตั้งค่า)","MODIFY_RESOURCE_EXIF":"แก้ไขคุณสมบัติ EXIF ของทรัพยากร","SCROLL_BUTTON":"เปิดใช้งานปุ่มเลื่อนสำหรับหน้า Reels","FORCE_RESOURCE_VIA_MEDIA":"บังคับดึงทรัพยากรผ่าน Media API","PREFER_DASH_MANIFEST":"ใช้ DASH Manifest เป็นลำดับแรก (วิดีโอคุณภาพสูงขึ้นผ่าน Media API)","FALLBACK_TO_BLOB_FETCH_IF_MEDIA_API_THROTTLED":"ใช้วิธีอื่นในการดาวน์โหลดเมื่อไม่สามารถเข้าถึง Media API ได้","NEW_TAB_ALWAYS_FORCE_MEDIA_IN_POST":"ใช้ Media API เสมอสำหรับ「เปิดในแท็บใหม่」ในโพสต์","SKIP_VIEW_STORY_CONFIRM":"ข้ามหน้ายืนยันสำหรับการดูสตอรี่/ไฮไลต์","SKIP_SHARED_WITH_YOU_DIALOG":"ข้ามกล่องโต้ตอบ “แชร์สิ่งนี้กับคุณ” บนลิงก์โปรไฟล์ที่แชร์","CAPTURE_IMAGE_VIA_MEDIA_CACHE":"จับทรัพยากรรูปภาพโดยใช้แคชสื่อ","AUTO_RENAME_INTRO":["เปลี่ยนชื่อไฟล์โดยอัตโนมัติเป็นรูปแบบกำหนดเอง:","รายการรูปแบบกำหนดเอง:","%USERNAME% - ชื่อผู้ใช้","%SOURCE_TYPE% - แหล่งที่มาของการดาวน์โหลด","%SHORTCODE% - รหัสย่อของโพสต์","%YEAR% - ปีที่ดาวน์โหลด/เผยแพร่","%2-YEAR% - ปี (สองหลักท้าย) ที่ดาวน์โหลด/เผยแพร่","%MONTH% - เดือนที่ดาวน์โหลด/เผยแพร่","%DAY% - วันที่ดาวน์โหลด/เผยแพร่","%HOUR% - ชั่วโมงที่ดาวน์โหลด/เผยแพร่","%MINUTE% - นาทีที่ดาวน์โหลด/เผยแพร่","%SECOND% - วินาทีที่ดาวน์โหลด/เผยแพร่","%ORIGINAL_NAME% - ชื่อเดิมของไฟล์ที่ดาวน์โหลด","%ORIGINAL_NAME_FIRST% - ชื่อเดิมของไฟล์ที่ดาวน์โหลด (ส่วนแรกของชื่อ)","%INDEX% - ดัชนีทรัพยากร","%UID% - ID เฉพาะของบัญชีผู้ใช้","","หากตั้งค่าเป็น false ชื่อไฟล์จะยังคงไม่เปลี่ยนแปลง","ัวอย่าง: instagram_321565527_679025940443063_4318007696887450953_n.jpg"],"RENAME_PUBLISH_DATE_INTRO":"ตั้งค่าประทับเวลาในรูปแบบการเปลี่ยนชื่อไฟล์เป็นวันที่เผยแพร่ทรัพยากร (เขตเวลาของเบราว์เซอร์)\n\nฟีเจอร์นี้จะทำงานเฉพาะเมื่อ「เปลี่ยนชื่อไฟล์โดยอัตโนมัติ」ตั้งค่าเป็น TRUE","RENAME_LOCATE_DATE_INTRO":"แก้ไขรูปแบบวันที่ของค่าประทับเวลาสำหรับไฟล์ที่เปลี่ยนชื่อให้เป็นเวลาท้องถิ่นของเบราว์เซอร์ และจัดรูปแบบเป็นรูปแบบวันที่ตามภูมิภาคที่คุณต้องการ\n\nฟีเจอร์นี้จะทำงานเฉพาะเมื่อ「เปลี่ยนชื่อไฟล์โดยอัตโนมัติ」ตั้งค่าเป็น TRUE","DISABLE_VIDEO_LOOPING_INTRO":"ปิดใช้งานการวนซ้ำอัตโนมัติของวิดีโอใน Reels และโพสต์","HTML5_VIDEO_CONTROL_INTRO":"แสดงตัวควบคุมวิดีโอ HTML5 ในทรัพยากรวิดีโอ\n\nการดำเนินการนี้จะซ่อนแถบเลื่อนระดับเสียงแบบกำหนดเองและแทนที่ด้วยตัวควบคุม HTML5 สามารถซ่อนตัวควบคุม HTML5 ได้โดยคลิกขวาที่วิดีโอเพื่อแสดงรายละเอียดเดิม","REDIRECT_CLICK_USER_STORY_PICTURE_INTRO":"เปลี่ยนเส้นทางไปยังหน้าโปรไฟล์ของผู้ใช้เมื่อคลิกขวาที่รูปประจำตัวของผู้ใช้นั้นในพื้นที่สตอรี่บนหน้าแรก\nหากคุณใช้ปุ่มกลางของเมาส์คลิก จะเปิดในแท็บใหม่","FORCE_FETCH_ALL_RESOURCES_INTRO":"บังคับดึงทรัพยากรทั้งหมด (รูปภาพและวิดีโอ) ในโพสต์ผ่าน Instagram API เพื่อลบขีดจำกัดสามทรัพยากรต่อโพสต์","DIRECT_DOWNLOAD_VISIBLE_RESOURCE_INTRO":"ดาวน์โหลดทรัพยากรปัจจุบันที่มีอยู่ในโพสต์โดยตรง","DIRECT_DOWNLOAD_ALL_INTRO":"เมื่อคุณคลิกปุ่มดาวน์โหลด ทรัพยากรทั้งหมดในโพสต์จะถูกบังคับดึงและดาวน์โหลด","MODIFY_VIDEO_VOLUME_INTRO":"ปรับระดับเสียงการเล่นวิดีโอใน Reels และโพสต์ (คลิกขวาเพื่อเปิดแถบเลื่อนการตั้งค่าระดับเสียง)","SCROLL_BUTTON_INTRO":"เปิดใช้งานปุ่มเลื่อนที่มุมขวาล่างของหน้า Reels","FORCE_RESOURCE_VIA_MEDIA_INTRO":"Media API จะพยายามดึงรูปภาพหรือวิดีโอที่มีคุณภาพสูงที่สุดเท่าที่เป็นไปได้ แต่อาจใช้เวลาโหลดนานขึ้น","PREFER_DASH_MANIFEST_INTRO":"ใช้ DASH Manifest เป็นลำดับแรกสำหรับทรัพยากรวิดีโอผ่าน Media API หากมี DASH Manifest จะดาวน์โหลดสตรีมวิดีโอและเสียงแยกกันเพื่อให้ได้คุณภาพดีที่สุด","FALLBACK_TO_BLOB_FETCH_IF_MEDIA_API_THROTTLED_INTRO":"เมื่อ Media API ถึงขีดจำกัดอัตราการใช้งานหรือไม่สามารถใช้ได้ด้วยเหตุผลอื่น Forced Fetch API จะถูกใช้เพื่อดาวน์โหลดทรัพยากร (คุณภาพของทรัพยากรอาจต่ำลงเล็กน้อย)","NEW_TAB_ALWAYS_FORCE_MEDIA_IN_POST_INTRO":"ปุ่ม「เปิดในแท็บใหม่」ในโพสต์จะใช้ Media API เสมอเพื่อรับทรัพยากรความละเอียดสูง","SKIP_VIEW_STORY_CONFIRM_INTRO":"ข้ามโดยอัตโนมัติเมื่อมีการแสดงหน้ายืนยันในสตอรี่หรือไฮไลต์","SKIP_SHARED_WITH_YOU_DIALOG_INTRO":"คลิก “ไม่ใช่ตอนนี้” โดยอัตโนมัติในกล่องโต้ตอบ “X แชร์สิ่งนี้กับคุณ” เมื่อเปิดลิงก์ ?igsh= ใดๆ","MODIFY_RESOURCE_EXIF_INTRO":"แก้ไขแอตทริบิวต์ EXIF ของทรัพยากรรูปภาพเพื่อรวมเมทาดาทา เช่น ลิงก์โพสต์ วันที่ถ่าย และผู้เขียน","DIRECT_DOWNLOAD_STORY_INTRO":"เมื่อคุณคลิก「ดาวน์โหลดทรัพยากรทั้งหมด」สตอรี่/ไฮไลต์ทั้งหมดจะถูกดาวน์โหลดโดยตรง โดยไม่แสดงกล่องโต้ตอบการเลือกทรัพยากร","CAPTURE_IMAGE_VIA_MEDIA_CACHE_INTRO":"ใช้ตัวเฝ้าดูเพื่อจับ URL รูปภาพคุณภาพสูงใดๆ ในโครงสร้าง DOM ไปยังพื้นที่จัดเก็บของสคริปต์ เพื่อให้สามารถดึงออกมาได้เมื่อพร้อมใช้งานและเมื่อผู้ใช้สั่งการ","HOTKEY_DEBUG_KEY":"หน้าต่างดีบัก","HOTKEY_SETTINGS_KEY":"การตั้งค่าการกำหนดลักษณะ","HOTKEY_KEY_SETTINGS_KEY":"การตั้งค่าปุ่มลัด","HOTKEY_DOWNLOAD_STORY_KEY":"ดาวน์โหลดสตอรี่","HOTKEY_CONFLICT_WARNING":"ปุ่มลัดนี้อาจขัดแย้งกับการตั้งค่าอื่น","HOTKEY_RESET":"รีเซ็ต","USE_EXTERNAL_DOWNLOAD_MODE":"ใช้โหมดดาวน์โหลดภายนอก","USE_EXTERNAL_DOWNLOAD_MODE_INTRO":"เมื่อเปิดใช้งานคุณสมบัตินี้ สคริปต์จะใช้ฟังก์ชันการดาวน์โหลดแบบขยาย (เช่น GM_download) เพื่อดาวน์โหลดไฟล์ ซึ่งช่วยแก้ปัญหาไฟล์หายเมื่อดาวน์โหลดหลายไฟล์พร้อมกัน\n\nโปรดทราบ: การเปิดใช้งานคุณสมบัตินี้อาจทำให้ฟังก์ชันเปลี่ยนชื่อไฟล์ทำงานผิดปกติ โปรดตรวจสอบให้แน่ใจว่าโหมดดาวน์โหลดในการตั้งค่าคุณสมบัติแบบขยายถูกตั้งค่าเป็น Native"},
+        "tr": {"RELOAD_SCRIPT":"Betiği yeniden yükle","IMAGE_VIEWER":"Görseli görüntüleyicide aç","NEW_TAB":"Yeni sekmede aç","SHOW_DOM_TREE":"DOM ağacını göster","SELECT_AND_COPY":"Tümünü seç ve giriş kutusundan kopyala","DOWNLOAD_DOM_TREE":"DOM ağacını metin dosyası olarak indir","REPORT_GITHUB":"GitHub’da sorun bildir","DEBUG":"Hata ayıklama penceresi","CLOSE":"Kapat","ALL_CHECK":"Tümünü seç","ITEM_COUNT_SINGULAR":"%COUNT% öğe","ITEM_COUNT_PLURAL":"%COUNT% öğe","ITEM_POSITION":"Öğe %CURRENT% / %TOTAL%","SELECTED_COUNT_SINGULAR":"%COUNT% seçildi","SELECTED_COUNT_PLURAL":"%COUNT% seçildi","BATCH_DOWNLOAD_SELECTED":"Seçili kaynakları indir","BATCH_DOWNLOAD_DIRECT":"Tüm kaynakları indir","IMG":"Görsel","VID":"Video","DW":"İndir","DW_ALL":"Tüm kaynakları indir","VIDEO_THUMBNAIL":"Video küçük resmini indir","LOAD_BLOB_ONE":"Blob medyası yükleniyor...","LOAD_BLOB_MULTIPLE":"Blob medyası ve diğerleri yükleniyor...","LOAD_BLOB_RELOAD":"Blob medyası algılanıyor, yeniden yükleniyor...","NO_CHECK_RESOURCE":"İndirmek için bir kaynak seçmen gerekiyor.","NO_VID_URL":"Video URL’si bulunamıyor.","SETTING":"Ayarlar","AUTO_RENAME":"Dosyaları otomatik olarak yeniden adlandır (ayarlamak için sağ tıkla)","RENAME_PUBLISH_DATE":"Yeniden adlandırılan dosyanın zaman damgasını kaynağın yayımlanma tarihine ayarla","RENAME_LOCATE_DATE":"Yeniden adlandırılan dosyanın zaman damgası tarih biçimini değiştir (ayarlamak için sağ tıkla)","DISABLE_VIDEO_LOOPING":"Videoların otomatik döngüye alınmasını devre dışı bırak","HTML5_VIDEO_CONTROL":"HTML5 video denetimlerini göster","REDIRECT_CLICK_USER_STORY_PICTURE":"Kullanıcının hikaye fotoğrafına tıklandığında yönlendir","FORCE_FETCH_ALL_RESOURCES":"Gönderideki tüm kaynakları zorla getir","DIRECT_DOWNLOAD_VISIBLE_RESOURCE":"Gönderideki görünür kaynakları doğrudan indir","DIRECT_DOWNLOAD_ALL":"Gönderideki tüm kaynakları doğrudan indir","DIRECT_DOWNLOAD_STORY":"Hikayedeki/öne çıkandaki tüm kaynakları doğrudan indir","MODIFY_VIDEO_VOLUME":"Video ses düzeyini değiştir (ayarlamak için sağ tıkla)","MODIFY_RESOURCE_EXIF":"Kaynağın EXIF özelliklerini değiştir","SCROLL_BUTTON":"Reels sayfası için kaydırma düğmelerini etkinleştir","FORCE_RESOURCE_VIA_MEDIA":"Kaynağı Media API üzerinden zorla getir","PREFER_DASH_MANIFEST":"DASH manifestini tercih et (Media API üzerinden daha yüksek kaliteli video)","FALLBACK_TO_BLOB_FETCH_IF_MEDIA_API_THROTTLED":"Media API erişilebilir olmadığında indirmek için alternatif yöntemleri kullan","NEW_TAB_ALWAYS_FORCE_MEDIA_IN_POST":"Gönderilerde [Yeni sekmede aç] için her zaman Media API’yi kullan","SKIP_VIEW_STORY_CONFIRM":"Bir hikayeyi/öne çıkanı görüntüleme onay sayfasını atla","SKIP_SHARED_WITH_YOU_DIALOG":"Paylaşılan profil bağlantılarında \"bunu seninle paylaştı\" iletişim kutusunu atla","CAPTURE_IMAGE_VIA_MEDIA_CACHE":"Medya önbelleğini kullanarak görsel kaynağını yakala","AUTO_RENAME_INTRO":["Dosyayı otomatik olarak özel bir biçimle yeniden adlandır:","Özel biçim listesi:","%USERNAME% - Kullanıcı adı","%SOURCE_TYPE% - İndirme kaynağı","%SHORTCODE% - Gönderi kısa kodu","%YEAR% - İndirme/yayımlanma yılı","%2-YEAR% - İndirme/yayımlanma yılı (son iki basamak)","%MONTH% - İndirme/yayımlanma ayı","%DAY% - İndirme/yayımlanma günü","%HOUR% - İndirme/yayımlanma saati","%MINUTE% - İndirme/yayımlanma dakikası","%SECOND% - İndirme/yayımlanma saniyesi","%ORIGINAL_NAME% - İndirilen dosyanın özgün adı","%ORIGINAL_NAME_FIRST% - İndirilen dosyanın özgün adı (adın ilk bölümü)","%INDEX% - Kaynak dizini","%UID% - Kullanıcı hesabının benzersiz kimliği","","false olarak ayarlanırsa dosya adı değişmeden kalır.","Örnek: instagram_321565527_679025940443063_4318007696887450953_n.jpg"],"RENAME_PUBLISH_DATE_INTRO":"Dosya yeniden adlandırma biçimindeki zaman damgasını kaynağın yayımlanma tarihine ayarlar (tarayıcı saat dilimi).\n\nBu özellik yalnızca [Dosyaları otomatik olarak yeniden adlandır] TRUE olarak ayarlandığında çalışır.","RENAME_LOCATE_DATE_INTRO":"Yeniden adlandırılan dosyanın zaman damgası tarih biçimini tarayıcının yerel saatine göre değiştirir ve tercih ettiğin bölgesel tarih biçimine göre biçimlendirir.\n\nBu özellik yalnızca [Dosyaları otomatik olarak yeniden adlandır] TRUE olarak ayarlandığında çalışır.","DISABLE_VIDEO_LOOPING_INTRO":"Reels ve gönderilerde videoların otomatik döngüye alınmasını devre dışı bırakır.","HTML5_VIDEO_CONTROL_INTRO":"Video kaynağında HTML5 video denetimlerini gösterir.\n\nBu, özel ses düzeyi kaydırıcısını gizler ve onun yerine HTML5 denetleyicisini koyar. HTML5 denetleyicisi, özgün ayrıntıları göstermek için videoya sağ tıklanarak gizlenebilir.","REDIRECT_CLICK_USER_STORY_PICTURE_INTRO":"Ana sayfadaki hikayeler alanında bir kullanıcının avatarına sağ tıkladığında kullanıcının profil sayfasına yönlendirir.\nOrta fare düğmesiyle tıklarsan yeni sekmede açılır.","FORCE_FETCH_ALL_RESOURCES_INTRO":"Gönderi başına üç kaynak sınırını kaldırmak için bir gönderideki tüm kaynakların (fotoğraflar ve videolar) Instagram API üzerinden zorla getirilmesini sağlar.","DIRECT_DOWNLOAD_VISIBLE_RESOURCE_INTRO":"Gönderide şu anda kullanılabilir olan kaynakları doğrudan indirir.","DIRECT_DOWNLOAD_ALL_INTRO":"İndirme düğmesine tıkladığında gönderideki tüm kaynaklar zorla getirilecek ve indirilecektir.","MODIFY_VIDEO_VOLUME_INTRO":"Reels ve gönderilerde videoların oynatma ses düzeyini değiştirir (ses düzeyi ayarı kaydırıcısını açmak için sağ tıkla).","SCROLL_BUTTON_INTRO":"Reels sayfasının sağ alt köşesinde kaydırma düğmelerini etkinleştirir.","FORCE_RESOURCE_VIA_MEDIA_INTRO":"Media API mümkün olan en yüksek kalitede fotoğrafı veya videoyu almaya çalışır, ancak yüklenmesi daha uzun sürebilir.","PREFER_DASH_MANIFEST_INTRO":"Media API üzerinden video kaynakları için DASH manifestini tercih eder. Bir DASH manifesti mevcutsa, mümkün olan en iyi kalite için video ve ses akışlarını AYRI AYRI indirir.","FALLBACK_TO_BLOB_FETCH_IF_MEDIA_API_THROTTLED_INTRO":"Media API hız sınırına ulaştığında veya başka nedenlerle kullanılamadığında, kaynakları indirmek için Forced Fetch API kullanılacaktır (kaynak kalitesi biraz daha düşük olabilir).","NEW_TAB_ALWAYS_FORCE_MEDIA_IN_POST_INTRO":"Gönderilerdeki [Yeni sekmede aç] düğmesi, yüksek çözünürlüklü kaynakları almak için her zaman Media API’yi kullanacaktır.","SKIP_VIEW_STORY_CONFIRM_INTRO":"Bir hikayede veya öne çıkanda onay sayfası gösterildiğinde otomatik olarak atlar.","SKIP_SHARED_WITH_YOU_DIALOG_INTRO":"Herhangi bir ?igsh= bağlantısı açılırken \"X bunu seninle paylaştı\" iletişim kutusunda otomatik olarak \"Şimdi değil\" seçeneğine tıklar.","MODIFY_RESOURCE_EXIF_INTRO":"Görsel kaynağının EXIF özniteliklerini, gönderi bağlantısı, çekim tarihi ve yazar gibi meta verileri içerecek şekilde değiştirir.","DIRECT_DOWNLOAD_STORY_INTRO":"[Tüm kaynakları indir] seçeneğine tıkladığında, tüm hikayeler/öne çıkanlar görsel seçme iletişim kutusu gösterilmeden doğrudan indirilir.","CAPTURE_IMAGE_VIA_MEDIA_CACHE_INTRO":"DOM ağacındaki yüksek kaliteli görsel URL’lerini betiğin depolama alanına yakalamak için bir watcher kullanır; böylece bunlar kullanılabilir olduğunda ve kullanıcı girdisiyle çıkarılabilir.","HOTKEY_DEBUG_KEY":"Hata ayıklama penceresi","HOTKEY_SETTINGS_KEY":"Tercih ayarları","HOTKEY_KEY_SETTINGS_KEY":"Kısayol tuşu ayarları","HOTKEY_DOWNLOAD_STORY_KEY":"Hikayeyi indir","HOTKEY_CONFLICT_WARNING":"Bu kısayol tuşu diğer ayarlarla çakışabilir.","HOTKEY_RESET":"Sıfırla","USE_EXTERNAL_DOWNLOAD_MODE":"Harici İndirme Modunu Kullan","USE_EXTERNAL_DOWNLOAD_MODE_INTRO":"Bu özelliği etkinleştirmek, komut dosyasının dosyaları indirmek için GM_download gibi gelişmiş indirme işlevlerini kullanmasını sağlayarak birden fazla dosya indirilirken eksik dosya sorununu çözer.\n\nLütfen unutma: Bu özelliğin etkinleştirilmesi dosya yeniden adlandırma işlevinin düzgün çalışmamasına neden olabilir. Gelişmiş özellik ayarlarında indirme modunun Yerel olarak ayarlandığından emin ol."},
+        "vi": {"RELOAD_SCRIPT":"Tải lại script","IMAGE_VIEWER":"Mở hình ảnh trong trình xem","NEW_TAB":"Mở trong thẻ mới","SHOW_DOM_TREE":"Hiển thị cây DOM","SELECT_AND_COPY":"Chọn tất cả và sao chép từ hộp nhập","DOWNLOAD_DOM_TREE":"Tải cây DOM xuống dưới dạng tệp văn bản","REPORT_GITHUB":"Báo cáo sự cố trên GitHub","DEBUG":"Cửa sổ gỡ lỗi","CLOSE":"Đóng","ALL_CHECK":"Chọn tất cả","ITEM_COUNT_SINGULAR":"%COUNT% mục","ITEM_COUNT_PLURAL":"%COUNT% mục","ITEM_POSITION":"Mục %CURRENT% trên %TOTAL%","SELECTED_COUNT_SINGULAR":"Đã chọn %COUNT% mục","SELECTED_COUNT_PLURAL":"Đã chọn %COUNT% mục","BATCH_DOWNLOAD_SELECTED":"Tải xuống các tài nguyên đã chọn","BATCH_DOWNLOAD_DIRECT":"Tải xuống tất cả tài nguyên","IMG":"Hình ảnh","VID":"Video","DW":"Tải xuống","DW_ALL":"Tải xuống tất cả tài nguyên","VIDEO_THUMBNAIL":"Tải xuống hình thu nhỏ của video","LOAD_BLOB_ONE":"Đang tải phương tiện Blob...","LOAD_BLOB_MULTIPLE":"Đang tải phương tiện Blob và các nội dung khác...","LOAD_BLOB_RELOAD":"Đang phát hiện phương tiện Blob, đang tải lại...","NO_CHECK_RESOURCE":"Bạn cần chọn một tài nguyên để tải xuống.","NO_VID_URL":"Không tìm thấy URL video.","SETTING":"Cài đặt","AUTO_RENAME":"Tự động đổi tên tệp (nhấp chuột phải để đặt)","RENAME_PUBLISH_DATE":"Đặt dấu thời gian của tệp đã đổi tên thành ngày đăng tài nguyên","RENAME_LOCATE_DATE":"Sửa đổi định dạng ngày của dấu thời gian cho tệp đã đổi tên (nhấp chuột phải để đặt)","DISABLE_VIDEO_LOOPING":"Tắt tự động lặp video","HTML5_VIDEO_CONTROL":"Hiển thị bộ điều khiển video HTML5","REDIRECT_CLICK_USER_STORY_PICTURE":"Chuyển hướng khi nhấp vào ảnh tin của người dùng","FORCE_FETCH_ALL_RESOURCES":"Buộc lấy tất cả tài nguyên trong bài viết","DIRECT_DOWNLOAD_VISIBLE_RESOURCE":"Tải trực tiếp các tài nguyên hiển thị trong bài viết","DIRECT_DOWNLOAD_ALL":"Tải trực tiếp tất cả tài nguyên trong bài viết","DIRECT_DOWNLOAD_STORY":"Tải trực tiếp tất cả tài nguyên trong tin/tin nổi bật","MODIFY_VIDEO_VOLUME":"Sửa đổi âm lượng video (nhấp chuột phải để đặt)","MODIFY_RESOURCE_EXIF":"Sửa đổi thuộc tính EXIF của tài nguyên","SCROLL_BUTTON":"Bật nút cuộn cho trang Reels","FORCE_RESOURCE_VIA_MEDIA":"Buộc lấy tài nguyên qua Media API","PREFER_DASH_MANIFEST":"Ưu tiên DASH Manifest (video chất lượng cao hơn qua Media API)","FALLBACK_TO_BLOB_FETCH_IF_MEDIA_API_THROTTLED":"Dùng các phương thức thay thế để tải xuống khi không thể truy cập Media API","NEW_TAB_ALWAYS_FORCE_MEDIA_IN_POST":"Luôn dùng Media API cho「Mở trong thẻ mới」trong bài viết","SKIP_VIEW_STORY_CONFIRM":"Bỏ qua trang xác nhận khi xem tin/tin nổi bật","SKIP_SHARED_WITH_YOU_DIALOG":"Bỏ qua hộp thoại “đã chia sẻ nội dung này với bạn” trên liên kết hồ sơ được chia sẻ","CAPTURE_IMAGE_VIA_MEDIA_CACHE":"Chụp tài nguyên hình ảnh bằng bộ nhớ đệm phương tiện","AUTO_RENAME_INTRO":["Tự động đổi tên tệp theo định dạng tùy chỉnh:","Danh sách định dạng tùy chỉnh:","%USERNAME% - Tên người dùng","%SOURCE_TYPE% - Nguồn tải xuống","%SHORTCODE% - Mã ngắn của bài viết","%YEAR% - Năm tải xuống/đăng","%2-YEAR% - Năm (hai chữ số cuối) tải xuống/đăng","%MONTH% - Tháng tải xuống/đăng","%DAY% - Ngày tải xuống/đăng","%HOUR% - Giờ tải xuống/đăng","%MINUTE% - Phút tải xuống/đăng","%SECOND% - Giây tải xuống/đăng","%ORIGINAL_NAME% - Tên gốc của tệp đã tải xuống","%ORIGINAL_NAME_FIRST% - Tên gốc của tệp đã tải xuống (phần đầu của tên)","%INDEX% - Chỉ mục tài nguyên","%UID% - ID duy nhất của tài khoản người dùng","","Nếu đặt thành false, tên tệp sẽ giữ nguyên.","Ví dụ: instagram_321565527_679025940443063_4318007696887450953_n.jpg"],"RENAME_PUBLISH_DATE_INTRO":"Đặt dấu thời gian trong định dạng đổi tên tệp thành ngày đăng tài nguyên (múi giờ của trình duyệt).\n\nTính năng này chỉ hoạt động khi「Tự động đổi tên tệp」được đặt thành TRUE.","RENAME_LOCATE_DATE_INTRO":"Sửa đổi định dạng ngày của dấu thời gian cho tệp đã đổi tên sang giờ địa phương của trình duyệt và định dạng theo kiểu ngày khu vực bạn muốn.\n\nTính năng này chỉ hoạt động khi「Tự động đổi tên tệp」được đặt thành TRUE.","DISABLE_VIDEO_LOOPING_INTRO":"Tắt tự động lặp video trong Reels và bài viết.","HTML5_VIDEO_CONTROL_INTRO":"Hiển thị bộ điều khiển video HTML5 trong tài nguyên video.\n\nThao tác này sẽ ẩn thanh trượt âm lượng tùy chỉnh và thay bằng bộ điều khiển HTML5. Có thể ẩn bộ điều khiển HTML5 bằng cách nhấp chuột phải vào video để hiển thị chi tiết ban đầu.","REDIRECT_CLICK_USER_STORY_PICTURE_INTRO":"Chuyển hướng đến trang hồ sơ của người dùng khi nhấp chuột phải vào ảnh đại diện của họ trong khu vực tin trên trang chủ.\nNếu bạn dùng nút giữa của chuột để nhấp, trang sẽ mở trong thẻ mới.","FORCE_FETCH_ALL_RESOURCES_INTRO":"Buộc lấy tất cả tài nguyên (ảnh và video) trong bài viết qua API Instagram để loại bỏ giới hạn ba tài nguyên cho mỗi bài viết.","DIRECT_DOWNLOAD_VISIBLE_RESOURCE_INTRO":"Tải trực tiếp các tài nguyên hiện có trong bài viết.","DIRECT_DOWNLOAD_ALL_INTRO":"Khi bạn nhấp vào nút tải xuống, tất cả tài nguyên trong bài viết sẽ được buộc lấy và tải xuống.","MODIFY_VIDEO_VOLUME_INTRO":"Sửa đổi âm lượng phát video trong Reels và bài viết (nhấp chuột phải để mở thanh trượt cài đặt âm lượng).","SCROLL_BUTTON_INTRO":"Bật các nút cuộn ở góc dưới bên phải của trang Reels.","FORCE_RESOURCE_VIA_MEDIA_INTRO":"Media API sẽ cố gắng lấy ảnh hoặc video có chất lượng cao nhất có thể, nhưng có thể mất nhiều thời gian hơn để tải.","PREFER_DASH_MANIFEST_INTRO":"Ưu tiên DASH Manifest cho tài nguyên video qua Media API. Nếu có DASH Manifest, luồng video và âm thanh sẽ được tải xuống RIÊNG BIỆT để đạt chất lượng tốt nhất có thể.","FALLBACK_TO_BLOB_FETCH_IF_MEDIA_API_THROTTLED_INTRO":"Khi Media API đạt giới hạn tốc độ hoặc không thể dùng vì lý do khác, Forced Fetch API sẽ được dùng để tải xuống tài nguyên (chất lượng tài nguyên có thể thấp hơn một chút).","NEW_TAB_ALWAYS_FORCE_MEDIA_IN_POST_INTRO":"Nút「Mở trong thẻ mới」trong bài viết sẽ luôn dùng Media API để lấy tài nguyên có độ phân giải cao.","SKIP_VIEW_STORY_CONFIRM_INTRO":"Tự động bỏ qua khi trang xác nhận được hiển thị trong tin hoặc tin nổi bật.","SKIP_SHARED_WITH_YOU_DIALOG_INTRO":"Tự động nhấp vào “Không phải bây giờ” trong hộp thoại “X đã chia sẻ nội dung này với bạn” khi mở bất kỳ liên kết ?igsh= nào.","MODIFY_RESOURCE_EXIF_INTRO":"Sửa đổi thuộc tính EXIF của tài nguyên hình ảnh để bao gồm siêu dữ liệu như liên kết bài viết, ngày chụp và tác giả.","DIRECT_DOWNLOAD_STORY_INTRO":"Khi bạn nhấp vào「Tải xuống tất cả tài nguyên」, tất cả tin/tin nổi bật sẽ được tải xuống trực tiếp mà không hiển thị hộp thoại chọn tài nguyên.","CAPTURE_IMAGE_VIA_MEDIA_CACHE_INTRO":"Dùng trình theo dõi để chụp mọi URL hình ảnh chất lượng cao trong cây DOM vào bộ nhớ của script, để có thể trích xuất chúng khi có sẵn và theo thao tác của người dùng.","HOTKEY_DEBUG_KEY":"Cửa sổ gỡ lỗi","HOTKEY_SETTINGS_KEY":"Cài đặt tùy chọn","HOTKEY_KEY_SETTINGS_KEY":"Cài đặt phím tắt","HOTKEY_DOWNLOAD_STORY_KEY":"Tải xuống tin","HOTKEY_CONFLICT_WARNING":"Phím tắt này có thể xung đột với các cài đặt khác.","HOTKEY_RESET":"Đặt lại","USE_EXTERNAL_DOWNLOAD_MODE":"Sử dụng chế độ tải xuống bên ngoài","USE_EXTERNAL_DOWNLOAD_MODE_INTRO":"Việc bật tính năng này sẽ khiến tập lệnh sử dụng các chức năng tải xuống mở rộng (chẳng hạn như GM_download) để tải tệp xuống, giúp khắc phục tình trạng thiếu tệp khi tải nhiều tệp cùng lúc.\n\nLưu ý: Việc bật tính năng này có thể khiến chức năng đổi tên tệp hoạt động không chính xác. Hãy đảm bảo chế độ tải xuống trong phần cài đặt tính năng mở rộng được đặt thành Gốc (Native)."},
+        "zh-CN": {"RELOAD_SCRIPT":"重新加载脚本","IMAGE_VIEWER":"在查看器中打开图片","NEW_TAB":"在新选项卡中打开","SHOW_DOM_TREE":"显示 DOM 树","SELECT_AND_COPY":"全选并复制输入框中的内容","DOWNLOAD_DOM_TREE":"将 DOM 树下载为文本文件","REPORT_GITHUB":"在 GitHub 上报告问题","DEBUG":"调试窗口","CLOSE":"关闭","ALL_CHECK":"全选","ITEM_COUNT_SINGULAR":"%COUNT% 项","ITEM_COUNT_PLURAL":"%COUNT% 项","ITEM_POSITION":"第 %CURRENT% 项，共 %TOTAL% 项","SELECTED_COUNT_SINGULAR":"已选择 %COUNT% 项","SELECTED_COUNT_PLURAL":"已选择 %COUNT% 项","BATCH_DOWNLOAD_SELECTED":"下载已选资源","BATCH_DOWNLOAD_DIRECT":"下载全部资源","IMG":"图片","VID":"视频","DW":"下载","DW_ALL":"下载全部资源","VIDEO_THUMBNAIL":"下载视频缩略图","LOAD_BLOB_ONE":"正在加载 Blob 媒体...","LOAD_BLOB_MULTIPLE":"正在加载 Blob 媒体及其他资源...","LOAD_BLOB_RELOAD":"正在检测 Blob 媒体，正在重新加载...","NO_CHECK_RESOURCE":"你需要选择要下载的资源。","NO_VID_URL":"无法找到视频 URL。","SETTING":"设置","AUTO_RENAME":"自动重命名文件（右键单击以设置）","RENAME_PUBLISH_DATE":"将重命名文件的时间戳设置为资源发布日期","RENAME_LOCATE_DATE":"修改重命名文件时间戳的日期格式（右键单击以设置）","DISABLE_VIDEO_LOOPING":"禁用视频自动循环播放","HTML5_VIDEO_CONTROL":"显示 HTML5 视频控制器","REDIRECT_CLICK_USER_STORY_PICTURE":"点击用户快拍头像时重定向","FORCE_FETCH_ALL_RESOURCES":"强制获取帖子中的所有资源","DIRECT_DOWNLOAD_VISIBLE_RESOURCE":"直接下载帖子中的可见资源","DIRECT_DOWNLOAD_ALL":"直接下载帖子中的所有资源","DIRECT_DOWNLOAD_STORY":"直接下载快拍/精选中的所有资源","MODIFY_VIDEO_VOLUME":"修改视频音量（右键单击以设置）","MODIFY_RESOURCE_EXIF":"修改资源 EXIF 属性","SCROLL_BUTTON":"为 Reels 页面启用滚动按钮","FORCE_RESOURCE_VIA_MEDIA":"通过 Media API 强制获取资源","PREFER_DASH_MANIFEST":"优先使用 DASH 清单（通过 Media API 获取更高质量的视频）","FALLBACK_TO_BLOB_FETCH_IF_MEDIA_API_THROTTLED":"当 Media API 不可访问时使用其他方法下载","NEW_TAB_ALWAYS_FORCE_MEDIA_IN_POST":"在帖子中始终为「在新选项卡中打开」使用 Media API","SKIP_VIEW_STORY_CONFIRM":"跳过查看快拍/精选的确认页面","SKIP_SHARED_WITH_YOU_DIALOG":"跳过共享个人资料链接上的“已与你分享此内容”对话框","CAPTURE_IMAGE_VIA_MEDIA_CACHE":"使用 Media Cache 捕获图片资源","AUTO_RENAME_INTRO":["自动将文件重命名为自定义格式:","自定义格式列表:","%USERNAME% - 用户名","%SOURCE_TYPE% - 下载来源","%SHORTCODE% - 帖子短代码","%YEAR% - 下载/发布年份","%2-YEAR% - 下载/发布年份（后两位）","%MONTH% - 下载/发布月份","%DAY% - 下载/发布日期","%HOUR% - 下载/发布小时","%MINUTE% - 下载/发布分钟","%SECOND% - 下载/发布秒","%ORIGINAL_NAME% - 已下载文件的原始名称","%ORIGINAL_NAME_FIRST% - 已下载文件原始名称（名称的第一部分）","%INDEX% - 资源索引","%UID% - 用户账号唯一 ID","","如果设置为 false，文件名将保持不变。","示例: instagram_321565527_679025940443063_4318007696887450953_n.jpg"],"RENAME_PUBLISH_DATE_INTRO":"将文件重命名格式中的时间戳设置为资源发布日期（浏览器时区）。\n\n此功能仅在「自动重命名文件」设置为 TRUE 时有效。","RENAME_LOCATE_DATE_INTRO":"将重命名文件时间戳的日期格式修改为浏览器本地时间，并格式化为你偏好的地区日期格式。\n\n此功能仅在「自动重命名文件」设置为 TRUE 时有效。","DISABLE_VIDEO_LOOPING_INTRO":"禁用 Reels 和帖子中的视频自动循环播放。","HTML5_VIDEO_CONTROL_INTRO":"在视频资源中显示 HTML5 视频控制器。\n\n这将隐藏自定义视频音量滑块，并将其替换为 HTML5 控制器。可以通过右键单击视频来隐藏 HTML5 控制器，以显示原始详情。","REDIRECT_CLICK_USER_STORY_PICTURE_INTRO":"在主页的快拍区域中右键单击用户头像时，重定向到该用户的个人资料页面。\n如果使用鼠标中键点击，则会在新选项卡中打开。","FORCE_FETCH_ALL_RESOURCES_INTRO":"通过 Instagram API 强制获取帖子中的所有资源（照片和视频），以移除每个帖子三个资源的限制。","DIRECT_DOWNLOAD_VISIBLE_RESOURCE_INTRO":"直接下载帖子中当前可用的资源。","DIRECT_DOWNLOAD_ALL_INTRO":"当你点击下载按钮时，将强制获取并下载帖子中的所有资源。","MODIFY_VIDEO_VOLUME_INTRO":"修改 Reels 和帖子中的视频播放音量（右键单击可打开音量设置滑块）。","SCROLL_BUTTON_INTRO":"为 Reels 页面右下角启用滚动按钮。","FORCE_RESOURCE_VIA_MEDIA_INTRO":"Media API 将尝试获取尽可能最高质量的照片或视频，但加载时间可能更长。","PREFER_DASH_MANIFEST_INTRO":"通过 Media API 优先使用视频资源的 DASH 清单。如果 DASH 清单可用，将分别下载视频流和音频流，以获得尽可能最佳的质量。","FALLBACK_TO_BLOB_FETCH_IF_MEDIA_API_THROTTLED_INTRO":"当 Media API 达到速率限制或因其他原因无法使用时，将使用 Forced Fetch API 下载资源（资源质量可能会略低）。","NEW_TAB_ALWAYS_FORCE_MEDIA_IN_POST_INTRO":"帖子中的「在新选项卡中打开」按钮将始终使用 Media API 获取高分辨率资源。","SKIP_VIEW_STORY_CONFIRM_INTRO":"当快拍或精选中显示确认页面时自动跳过。","SKIP_SHARED_WITH_YOU_DIALOG_INTRO":"打开任何 ?igsh= 链接时，在“X 已与你分享此内容”对话框中自动点击“不用了”。","MODIFY_RESOURCE_EXIF_INTRO":"修改图片资源的 EXIF 属性，以包含帖子链接、拍摄日期和作者等元数据。","DIRECT_DOWNLOAD_STORY_INTRO":"当你点击「下载全部资源」时，所有快拍/精选都会直接下载，不显示资源选择对话框。","CAPTURE_IMAGE_VIA_MEDIA_CACHE_INTRO":"使用观察者将 DOM 树中的任何高质量图片 URL 捕获到脚本存储中，以便在可用时以及根据用户输入进行提取。","HOTKEY_DEBUG_KEY":"调试窗口","HOTKEY_SETTINGS_KEY":"偏好设置","HOTKEY_KEY_SETTINGS_KEY":"快捷键设置","HOTKEY_DOWNLOAD_STORY_KEY":"下载快拍","HOTKEY_CONFLICT_WARNING":"此快捷键可能与其他设置冲突。","HOTKEY_RESET":"重设","USE_EXTERNAL_DOWNLOAD_MODE":"使用外部下载模式","USE_EXTERNAL_DOWNLOAD_MODE_INTRO":"启用此功能后，脚本将使用扩展下载功能（如 GM_download）下载文件，从而解决下载多个文件时文件缺失的问题。\n\n请注意：启用此功能可能会导致文件重命名功能无法正常工作。请确保扩展功能设置中的下载模式已设置为“原生（Native）”。"},
+        "zh-TW": {"RELOAD_SCRIPT":"重新載入腳本","IMAGE_VIEWER":"在檢視器中開啟圖片","NEW_TAB":"在新分頁中開啟","SHOW_DOM_TREE":"顯示 DOM 樹","SELECT_AND_COPY":"全選並複製輸入框的內容","DOWNLOAD_DOM_TREE":"將 DOM 樹下載為文字檔案","REPORT_GITHUB":"在 GitHub 上回報問題","DEBUG":"偵錯視窗","CLOSE":"關閉","ALL_CHECK":"全選","ITEM_COUNT_SINGULAR":"%COUNT% 個項目","ITEM_COUNT_PLURAL":"%COUNT% 個項目","ITEM_POSITION":"第 %CURRENT% 個項目，共 %TOTAL% 個","SELECTED_COUNT_SINGULAR":"已選取 %COUNT% 個","SELECTED_COUNT_PLURAL":"已選取 %COUNT% 個","BATCH_DOWNLOAD_SELECTED":"下載已選取的資源","BATCH_DOWNLOAD_DIRECT":"下載所有資源","IMG":"相片","VID":"影片","DW":"下載","DW_ALL":"下載所有資源","VIDEO_THUMBNAIL":"下載影片縮圖","LOAD_BLOB_ONE":"正在載入 Blob 媒體...","LOAD_BLOB_MULTIPLE":"正在載入 Blob 媒體和其他資源...","LOAD_BLOB_RELOAD":"正在偵測 Blob 媒體，重新載入中...","NO_CHECK_RESOURCE":"您需要選取一項資源才能下載。","NO_VID_URL":"找不到影片網址。","SETTING":"設定","AUTO_RENAME":"自動重新命名檔案（右鍵設定）","RENAME_PUBLISH_DATE":"將重新命名檔案的時間戳設定為資源發布日期","RENAME_LOCATE_DATE":"修改重新命名檔案時間戳的日期格式（右鍵設定）","DISABLE_VIDEO_LOOPING":"停用影片自動循環播放","HTML5_VIDEO_CONTROL":"顯示 HTML5 影片控制器","REDIRECT_CLICK_USER_STORY_PICTURE":"點擊使用者限時動態頭像時重新導向","FORCE_FETCH_ALL_RESOURCES":"強制擷取貼文中的所有資源","DIRECT_DOWNLOAD_VISIBLE_RESOURCE":"直接下載貼文中的可見資源","DIRECT_DOWNLOAD_ALL":"直接下載貼文中的所有資源","DIRECT_DOWNLOAD_STORY":"直接下載限時動態／精選動態中的所有資源","MODIFY_VIDEO_VOLUME":"修改影片音量（右鍵設定）","MODIFY_RESOURCE_EXIF":"修改資源 EXIF 屬性","SCROLL_BUTTON":"為 Reels 頁面啟用捲動按鈕","FORCE_RESOURCE_VIA_MEDIA":"透過 Media API 強制擷取資源","PREFER_DASH_MANIFEST":"優先使用 DASH 清單（透過 Media API 取得更高品質影片）","FALLBACK_TO_BLOB_FETCH_IF_MEDIA_API_THROTTLED":"當 Media API 無法存取時使用其他方式下載","NEW_TAB_ALWAYS_FORCE_MEDIA_IN_POST":"在貼文中一律使用 Media API 執行「在新分頁中開啟」","SKIP_VIEW_STORY_CONFIRM":"略過檢視限時動態／精選動態的確認頁面","SKIP_SHARED_WITH_YOU_DIALOG":"略過共享個人檔案連結上的「已與您分享此內容」對話框","CAPTURE_IMAGE_VIA_MEDIA_CACHE":"使用 Media Cache 擷取圖片資源","AUTO_RENAME_INTRO":["自動將檔案重新命名為自訂格式：","自訂格式列表：","%USERNAME% - 使用者名稱","%SOURCE_TYPE% - 下載來源","%SHORTCODE% - 貼文短碼","%YEAR% - 下載／發布年份","%2-YEAR% - 下載／發布年份（後兩位）","%MONTH% - 下載／發布月份","%DAY% - 下載／發布日期","%HOUR% - 下載／發布小時","%MINUTE% - 下載／發布分鐘","%SECOND% - 下載／發布秒","%ORIGINAL_NAME% - 已下載檔案的原始名稱","%ORIGINAL_NAME_FIRST% - 已下載檔案的原始名稱（名稱的第一部分）","%INDEX% - 資源索引","%UID% - 使用者帳號唯一 ID","","若設定為 false，檔名將維持不變。","範例： instagram_321565527_679025940443063_4318007696887450953_n.jpg"],"RENAME_PUBLISH_DATE_INTRO":"將檔案重新命名格式中的時間戳設定為資源發布日期（瀏覽器時區）。\n\n此功能僅在「自動重新命名檔案」設定為 TRUE 時有效。","RENAME_LOCATE_DATE_INTRO":"將重新命名檔案的時間戳日期格式修改為瀏覽器當地時間，並將其格式化為您偏好的地區日期格式。\n\n此功能僅在「自動重新命名檔案」設定為 TRUE 時有效。","DISABLE_VIDEO_LOOPING_INTRO":"停用 Reels 和貼文中的影片自動循環播放。","HTML5_VIDEO_CONTROL_INTRO":"在影片資源中顯示 HTML5 影片控制器。\n\n這會隱藏自訂影片音量滑桿，並以 HTML5 控制器取代。可在影片上按右鍵隱藏 HTML5 控制器，以顯示原始詳細資訊。","REDIRECT_CLICK_USER_STORY_PICTURE_INTRO":"在首頁限時動態區域中，以右鍵點擊使用者頭像時，重新導向至該使用者的個人檔案頁面。\n如果使用滑鼠中鍵點擊，則會在新分頁中開啟。","FORCE_FETCH_ALL_RESOURCES_INTRO":"透過 Instagram API 強制擷取貼文中的所有資源（照片和影片），以移除每篇貼文三項資源的限制。","DIRECT_DOWNLOAD_VISIBLE_RESOURCE_INTRO":"直接下載貼文中目前可用的資源。","DIRECT_DOWNLOAD_ALL_INTRO":"當您點擊下載按鈕時，將強制擷取並下載貼文中的所有資源。","MODIFY_VIDEO_VOLUME_INTRO":"修改 Reels 和貼文中的影片播放音量（右鍵開啟音量設定滑桿）。","SCROLL_BUTTON_INTRO":"為 Reels 頁面右下角啟用捲動按鈕。","FORCE_RESOURCE_VIA_MEDIA_INTRO":"Media API 會嘗試取得品質盡可能最高的照片或影片，但載入時間可能較長。","PREFER_DASH_MANIFEST_INTRO":"透過 Media API 優先使用 DASH 清單作為影片資源。如果有可用的 DASH 清單，將會分別下載影片與音訊串流，以取得最佳品質。","FALLBACK_TO_BLOB_FETCH_IF_MEDIA_API_THROTTLED_INTRO":"當 Media API 達到速率限制，或因其他原因無法使用時，將使用強制擷取 API 下載資源（資源品質可能略低）。","NEW_TAB_ALWAYS_FORCE_MEDIA_IN_POST_INTRO":"貼文中的「在新分頁中開啟」按鈕將一律使用 Media API 取得高解析度資源。","SKIP_VIEW_STORY_CONFIRM_INTRO":"在限時動態或精選動態中顯示確認頁面時，自動略過。","SKIP_SHARED_WITH_YOU_DIALOG_INTRO":"開啟任何 ?igsh= 連結時，在「X 已與您分享此內容」對話框中自動點擊「現在不要」。","MODIFY_RESOURCE_EXIF_INTRO":"修改圖片資源的 EXIF 屬性，以包含貼文連結、拍攝日期和作者等中繼資料。","DIRECT_DOWNLOAD_STORY_INTRO":"當您點擊「下載所有資源」時，所有限時動態／精選動態都會直接下載，不會顯示圖片選擇對話框。","CAPTURE_IMAGE_VIA_MEDIA_CACHE_INTRO":"使用 Observer 將 DOM 樹中的任何高品質圖片網址擷取至腳本儲存空間，以便在可用時及依使用者輸入進行擷取。","HOTKEY_DEBUG_KEY":"偵錯視窗","HOTKEY_SETTINGS_KEY":"偏好設定","HOTKEY_KEY_SETTINGS_KEY":"快捷鍵設定","HOTKEY_DOWNLOAD_STORY_KEY":"下載限時動態","HOTKEY_CONFLICT_WARNING":"此快捷鍵可能與其他設定衝突。","HOTKEY_RESET":"重置","USE_EXTERNAL_DOWNLOAD_MODE":"使用外部下載模式","USE_EXTERNAL_DOWNLOAD_MODE_INTRO":"啟用此功能後，腳本將使用擴充功能的下載模式（例如 GM_download）來下載檔案，藉此解決下載多個檔案時遺漏檔案的問題。\n\n請注意：啟用此功能可能會導致檔案重新命名功能無法正常運作。請確認擴充功能設定中的下載模式已設為「原生（Native）」。"},
+    };
 
     const userIdCache = new Map();
 
@@ -515,10 +1274,8 @@
         state.locale[state.lang] = res;
         repaintingTranslations();
         registerMenuCommand();
-        checkingScriptUpdate(300);
     }).catch((err) => {
         registerMenuCommand();
-        checkingScriptUpdate(300);
 
         if (!state.lang.startsWith('en')) {
             console.error('getTranslationText catch error:', err);
@@ -732,8 +1489,7 @@
                 }
             }
 
-            checkingScriptUpdate(300);
-            state.GL_referrer = new URL(location.href).pathname;
+                state.GL_referrer = new URL(location.href).pathname;
         }
     }, checkInterval);
 
@@ -1596,7 +2352,7 @@
                                     // Check if video?
                                     if ($targetNode.find('video').length > 0) {
                                         // FIX: clear any stale image URL when the visible item is a video
-                                        $mainElement.removeData('igHelper_displayResourceURL');
+                                        $mainElement.removeData('igMedia_displayResourceURL');
 
                                         if ($childElement.find('.IG_THUMBNAIL_MAIN').length === 0) {
                                             $childElement.find(".button_wrapper").append(ThumbnailElement);
@@ -1607,7 +2363,7 @@
                                     // is Image
                                     else {
                                         const imgSrc = $targetNode.find('img').attr('src');
-                                        $mainElement.data('igHelper_displayResourceURL', imgSrc);
+                                        $mainElement.data('igMedia_displayResourceURL', imgSrc);
 
                                         $childElement.find(".button_wrapper").append(ViewerElement);
                                     }
@@ -1705,21 +2461,21 @@
      * @description Registers delegated body-level handlers for post download/view actions.
      *
      * FIX: Registers all post-button click handlers exactly once on $('body') using
-     * the event namespace ".igHelperPost". Body-level delegation means jQuery stores
+     * the event namespace ".igMediaPost". Body-level delegation means jQuery stores
      * only a single handler object per event type (not one per article), and the
      * handlers themselves never hold strong references to article DOM nodes —
      * they resolve the relevant article at click-time via $(this).closest().
      *
-     * Cleanup is a single $('body').off('.igHelperPost') call in reloadScript().
+     * Cleanup is a single $('body').off('.igMediaPost') call in reloadScript().
      */
     function registerPostClickHandlers() {
         if (state.bodyEventsRegistered) return;
         state.bodyEventsRegistered = true;
 
         // OPTIMIZATION: All body-level delegated handlers now use cached $body reference
-        $body.on('click.igHelperPost', '.IG_IMAGE_VIEWER', function () {
+        $body.on('click.igMediaPost', '.IG_IMAGE_VIEWER', function () {
             const { $article } = getPostContextFromButton(this);
-            let url = $article.data('igHelper_displayResourceURL');
+            let url = $article.data('igMedia_displayResourceURL');
 
             if (!url) {
                 url = $article.find('img:visible').filter(function () {
@@ -1735,7 +2491,7 @@
             }
         });
 
-        $body.on('click.igHelperPost', '.IG_THUMBNAIL_MAIN', async function () {
+        $body.on('click.igMediaPost', '.IG_THUMBNAIL_MAIN', async function () {
             updateLoadingBar(true);
 
             try {
@@ -1786,7 +2542,7 @@
             }
         });
 
-        $body.on('click.igHelperPost', '.IG_NEWTAB_MAIN', async function () {
+        $body.on('click.igMediaPost', '.IG_NEWTAB_MAIN', async function () {
             updateLoadingBar(true);
 
             try {
@@ -1844,7 +2600,7 @@
             }
         });
 
-        $body.on('click.igHelperPost', '.IG_DW_ALL_MAIN', async function () {
+        $body.on('click.igMediaPost', '.IG_DW_ALL_MAIN', async function () {
             try {
                 const { $article, postPath } = getPostContextFromButton(this);
                 if ($article.length === 0 || !postPath) {
@@ -1884,7 +2640,7 @@
             }
         });
 
-        $body.on('click.igHelperPost', '.IG_DW_MAIN', async function () {
+        $body.on('click.igMediaPost', '.IG_DW_MAIN', async function () {
             try {
                 const { $article, postPath } = getPostContextFromButton(this);
                 if ($article.length === 0 || !postPath) {
@@ -3745,7 +4501,7 @@
 
     /* utils */
 
-    const DB_NAME = 'IG_HELPER';
+    const DB_NAME = 'IG_HELPER'; // Preserve the existing IndexedDB cache across script upgrades.
     const DB_VERSION = 1;
     const STORE_NAME = 'DATA_CACHE';
 
@@ -5580,73 +6336,6 @@
     }
 
     /**
-     * checkingScriptUpdate
-     * @description Check if there is a new version of the script and push notification.
-     *
-     * @param  {Integer}  interval
-     * @return {void}
-     */
-    function checkingScriptUpdate(interval) {
-        if (!USER_SETTING.CHECK_FOR_UPDATE) return;
-
-        const check_timestamp = GM_getValue('G_CHECK_TIMESTAMP') ?? new Date().getTime();
-        const now_time = new Date().getTime();
-
-        if (now_time > (parseInt(check_timestamp) + (interval * 1000))) {
-            GM_setValue('G_CHECK_TIMESTAMP', new Date().getTime());
-            callNotification();
-        }
-    }
-
-    /**
-     * callNotification
-     * @description Call desktop notification by browser.
-     *
-     * @return {void}
-     */
-    function callNotification() {
-        const currentVersion = GM_info.script.version;
-        const remoteScriptURL = 'https://raw.githubusercontent.com/SN-Koarashi/ig-helper/refs/heads/master/main.js';
-
-        GM_xmlhttpRequest({
-            method: "GET",
-            url: remoteScriptURL,
-            onload: function (response) {
-                const remoteScript = response.responseText;
-                const match = remoteScript.match(/\/\/\s+@version\s+([0-9.\-a-zA-Z]+)/i);
-
-                if (match && match[1]) {
-                    const remoteVersion = match[1];
-                    logger('Current version: ', currentVersion, '|', 'Remote version: ', remoteVersion);
-
-                    if (remoteVersion !== currentVersion) {
-                        GM_notification({
-                            text: _i18n("NOTICE_UPDATE_CONTENT"),
-                            title: _i18n("NOTICE_UPDATE_TITLE"),
-                            tag: 'ig_helper_notice',
-                            highlight: true,
-                            timeout: 5000,
-                            zombieTimeout: 5000,
-                            image: "https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://www.instagram.com&size=64",
-                            onclick: (event) => {
-                                event?.preventDefault();
-                                var w = GM_openInTab(GM_info.script.downloadURL);
-                                setTimeout(() => {
-                                    w.close();
-                                }, 250);
-                            }
-                        });
-                    } else {
-                        logger('there is no new update');
-                    }
-                } else {
-                    console.error('Could not find version in the remote script.');
-                }
-            }
-        });
-    }
-
-    /**
      * openNewTab
      * @description Open URL in new tab.
      *
@@ -5675,7 +6364,7 @@
         clearInterval(state.GL_repeat);
 
         // OPTIMIZATION: use cached $body and combine .off() calls
-        $body.off('.igHelperPost');
+        $body.off('.igMediaPost');
         state.bodyEventsRegistered = false;
 
         $('.button_wrapper').remove();
@@ -5961,28 +6650,10 @@
             accessKey: "q"
         }));
 
-        state.registerMenuIds.push(GM_registerMenuCommand(_i18n('DONATE'), () => {
-            GM_openInTab("https://ko-fi.com/snkoarashi", { active: true });
-        }, {
-            accessKey: "d"
-        }));
-
         state.registerMenuIds.push(GM_registerMenuCommand(_i18n('DEBUG'), () => {
             showDebugDOM();
         }, {
             accessKey: "z"
-        }));
-
-        state.registerMenuIds.push(GM_registerMenuCommand(_i18n('FEEDBACK'), () => {
-            showFeedbackDOM();
-        }, {
-            accessKey: "f"
-        }));
-
-        state.registerMenuIds.push(GM_registerMenuCommand(_i18n('CHECK_FOR_UPDATE'), () => {
-            callNotification();
-        }, {
-            accessKey: "c"
         }));
 
         state.registerMenuIds.push(GM_registerMenuCommand(_i18n('RELOAD_SCRIPT'), () => {
@@ -6107,9 +6778,6 @@
         $('.IG_POPUP_DIG .IG_POPUP_DIG_TITLE > div')
             .append(`
                 <select id="langSelect"></select>
-                <div style="font-size: 12px;">
-                    Some texts are machine-translated and may be inaccurate; translation contributions are welcome on GitHub.
-                </div>
             `);
 
         // OPTIMIZATION: cache the lang select once
@@ -6163,7 +6831,6 @@
             }
         }
 
-        $('.IG_POPUP_DIG .IG_POPUP_DIG_BODY input#CHECK_FOR_UPDATE').closest('label').prependTo('.IG_POPUP_DIG .IG_POPUP_DIG_BODY');
 
         arrangeSettingHierarchy();
     }
@@ -6207,27 +6874,7 @@
         $span.append(`<button style="margin: 3px;" class="IG_DISPLAY_DOM_TREE"><a>${_i18n('SHOW_DOM_TREE')}</a></button>`);
         $span.append(`<button style="margin: 3px;" class="IG_SELECT_DOM_TREE"><a>${_i18n('SELECT_AND_COPY')}</a></button>`);
         $span.append(`<button style="margin: 3px;" class="IG_DOWNLOAD_DOM_TREE"><a>${_i18n('DOWNLOAD_DOM_TREE')}</a></button><br/>`);
-        $span.append(`<button style="margin: 3px;" class="IG_REPORT_GITHUB"><a href="https://github.com/SN-Koarashi/ig-helper/issues" target="_blank">${_i18n('REPORT_GITHUB')}</a></button>`);
-        $span.append(`<button style="margin: 3px;" class="IG_REPORT_DISCORD"><a href="https://discord.gg/q3KT4hdq8x" target="_blank">${_i18n('REPORT_DISCORD')}</a></button>`);
-    }
-
-    /**
-     * showFeedbackDOM
-     * @description Show feedback options.
-     *
-     * @return {void}
-     */
-    function showFeedbackDOM() {
-        $('.IG_POPUP_DIG').remove();
-        IG_createDM();
-        $('.IG_POPUP_DIG #post_info').text('Feedback Options');
-
-        const $popupBody = $('.IG_POPUP_DIG .IG_POPUP_DIG_BODY');
-        $popupBody.append(`<span style="display:block;text-align:center;">`);
-        const $span = $popupBody.find('span').last();
-        $span.append(`<button style="margin: 3px;" class="IG_REPORT_FORK"><a href="https://greasyfork.org/en/scripts/404535-ig-helper/feedback" target="_blank">${_i18n('REPORT_FORK')}</a></button>`);
-        $span.append(`<button style="margin: 3px;" class="IG_REPORT_GITHUB"><a href="https://github.com/SN-Koarashi/ig-helper/issues" target="_blank">${_i18n('REPORT_GITHUB')}</a></button>`);
-        $span.append(`<button style="margin: 3px;" class="IG_REPORT_DISCORD"><a href="https://discord.gg/q3KT4hdq8x" target="_blank">${_i18n('REPORT_DISCORD')}</a></button>`);
+        $span.append(`<button style="margin: 3px;" class="IG_REPORT_GITHUB"><a href="https://github.com/karpuzikov/userscripts/issues" target="_blank">${_i18n('REPORT_GITHUB')}</a></button>`);
     }
 
     var detectMovingViewerTimer = null;
@@ -6362,7 +7009,7 @@
             updateImageStyle();
         });
 
-        $(document).on('mousemove.igHelper', (e) => {
+        $(document).on('mousemove.igMedia', (e) => {
             if (!isDragging) return;
             e.preventDefault();
 
@@ -6432,7 +7079,7 @@
     function removeImageViewer() {
         clearInterval(detectMovingViewerTimer);
         $('#imageViewer').remove();
-        $(document).off('mousemove.igHelper');
+        $(document).off('mousemove.igMedia');
     }
 
     let mediaCacheDirty = false;
@@ -6555,20 +7202,13 @@
     function translateText() {
         var eLocale = {
             "en-US": {
-                "NOTICE_UPDATE_TITLE": "Wololo! New version released.",
-                "NOTICE_UPDATE_CONTENT": "IG-Helper has released a new version, click here to update.",
-                "CHECK_FOR_UPDATE": "Check for Script Updates",
                 "RELOAD_SCRIPT": "Reload Script",
-                "DONATE": "Donate",
-                "FEEDBACK": "Feedback",
                 "IMAGE_VIEWER": "Open Image In Viewer",
                 "NEW_TAB": "Open in New Tab",
                 "SHOW_DOM_TREE": "Show DOM Tree",
                 "SELECT_AND_COPY": "Select All and Copy from the Input Box",
                 "DOWNLOAD_DOM_TREE": "Download DOM Tree as a Text File",
                 "REPORT_GITHUB": "Report an Issue on GitHub",
-                "REPORT_DISCORD": "Report an Issue on Discord Support Server",
-                "REPORT_FORK": "Report an Issue on Greasy Fork",
                 "DEBUG": "Debug Window",
                 "CLOSE": "Close",
                 "ALL_CHECK": "Select All",
@@ -6645,7 +7285,6 @@
                 "PREFER_DASH_MANIFEST_INTRO": "Prefer the DASH manifest for video resources via the Media API. If a DASH manifest is available, it will download the video and audio streams SEPARATELY for the best possible quality.",
                 "FALLBACK_TO_BLOB_FETCH_IF_MEDIA_API_THROTTLED_INTRO": "When the Media API reaches its rate limit or cannot be used for other reasons, the Forced Fetch API will be used to download resources (the resource quality may be slightly lower).",
                 "NEW_TAB_ALWAYS_FORCE_MEDIA_IN_POST_INTRO": "The [Open in New Tab] button in posts will always use the Media API to obtain high-resolution resources.",
-                "CHECK_FOR_UPDATE_INTRO": "Check for updates when the script is triggered (check every 300 seconds).\nUpdate notifications will be sent as desktop notifications through the browser.",
                 "SKIP_VIEW_STORY_CONFIRM_INTRO": "Automatically skip when confirmation page is shown in story or highlight.",
                 "SKIP_SHARED_WITH_YOU_DIALOG_INTRO": "Automatically click \"Not now\" on the \"X shared this with you\" dialog when opening any ?igsh= links.",
                 "MODIFY_RESOURCE_EXIF_INTRO": "Modify the EXIF attribute of the image resource to include metadata such as post link, shooting date, and author.",
@@ -6696,25 +7335,9 @@
      * @return {Object}
      */
     async function getTranslationText(lang) {
-        return new Promise((resolve, reject) => {
-            GM_xmlhttpRequest({
-                method: "GET",
-                url: `https://cdn.jsdelivr.net/gh/SN-Koarashi/ig-helper@master/locale/translations/${lang}.json?v${GM_info.script.version}`,
-                onload: function (response) {
-                    try {
-                        let obj = JSON.parse(response.response);
-                        resolve(obj);
-                    }
-                    catch (err) {
-                        reject(err);
-                    }
-                },
-                onerror: function (err) {
-                    logger('getTranslationText()', 'reject', err);
-                    reject(err);
-                }
-            });
-        });
+        return Object.prototype.hasOwnProperty.call(EMBEDDED_TRANSLATIONS, lang)
+            ? EMBEDDED_TRANSLATIONS[lang]
+            : translateText()['en-US'];
     }
 
     /**
