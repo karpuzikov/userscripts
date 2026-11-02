@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MusicBrainz ToolBox
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.0.64
+// @version      1.0.65
 // @description  Combined MusicBrainz release-editor, recording, barcode, Spotify/Apple Music linking, search, cover-art, Disc ID, and duplicate-edit tools.
 // @author       karpuzikov
 // @license      MIT
@@ -10417,6 +10417,46 @@
                 return '';
             }
 
+            function hideCommentBehindEllipsisToggle(comment, commentDescription) {
+                if (comment.classList.contains(LABEL_COMMENT_CLASS)) return;
+
+                comment.classList.add(LABEL_COMMENT_CLASS);
+                const fullText = comment.textContent.trim();
+                comment.hidden = true;
+
+                const toggle = document.createElement('button');
+                toggle.type = 'button';
+                toggle.className = LABEL_TOGGLE_CLASS;
+                toggle.textContent = '...';
+                toggle.title = 'Show ' + commentDescription + ': ' + fullText;
+                toggle.setAttribute('aria-label', toggle.title);
+                toggle.setAttribute('aria-expanded', 'false');
+
+                toggle.addEventListener('click', event => {
+                    event.preventDefault();
+                    event.stopPropagation();
+
+                    const expanded = comment.hidden;
+                    comment.hidden = !expanded;
+                    toggle.setAttribute('aria-expanded', String(expanded));
+                    toggle.title =
+                        (expanded ? 'Hide' : 'Show') +
+                        ' ' + commentDescription + ': ' + fullText;
+                    toggle.setAttribute('aria-label', toggle.title);
+                });
+
+                comment.parentNode.insertBefore(toggle, comment);
+            }
+
+            // Release page relationship rows: "(track 9)" after each URL/credit.
+            // Artist disambiguations wrap their text in <bdi>; track numbers do not.
+            function collapseTrackAttributions() {
+                for (const comment of document.querySelectorAll('table.details td > span.comment')) {
+                    if (comment.querySelector('bdi') || !comment.textContent.trim()) continue;
+                    hideCommentBehindEllipsisToggle(comment, 'track attribution');
+                }
+            }
+
             function collapseLabelDisambiguations() {
                 for (const labelLink of document.querySelectorAll('table.tbl a[href^="/label/"]')) {
                     if (labelLink.dataset.mbtbLabelCommentHandled) continue;
@@ -10450,34 +10490,8 @@
 
                     labelLink.dataset.mbtbLabelCommentHandled = '1';
                     if (!comment || !comment.textContent.trim()) continue;
-                    if (comment.classList.contains(LABEL_COMMENT_CLASS)) continue;
 
-                    comment.classList.add(LABEL_COMMENT_CLASS);
-                    const fullText = comment.textContent.trim();
-                    comment.hidden = true;
-
-                    const toggle = document.createElement('button');
-                    toggle.type = 'button';
-                    toggle.className = LABEL_TOGGLE_CLASS;
-                    toggle.textContent = '...';
-                    toggle.title = 'Show label disambiguation: ' + fullText;
-                    toggle.setAttribute('aria-label', toggle.title);
-                    toggle.setAttribute('aria-expanded', 'false');
-
-                    toggle.addEventListener('click', event => {
-                        event.preventDefault();
-                        event.stopPropagation();
-
-                        const expanded = comment.hidden;
-                        comment.hidden = !expanded;
-                        toggle.setAttribute('aria-expanded', String(expanded));
-                        toggle.title =
-                            (expanded ? 'Hide' : 'Show') +
-                            ' label disambiguation: ' + fullText;
-                        toggle.setAttribute('aria-label', toggle.title);
-                    });
-
-                    comment.parentNode.insertBefore(toggle, comment);
+                    hideCommentBehindEllipsisToggle(comment, 'label disambiguation');
                 }
             }
 
@@ -10627,6 +10641,11 @@
             }
 
             async function init() {
+                if (new RegExp('^/release/' + UUID + '/?$', 'i').test(location.pathname)) {
+                    installStyle();
+                    collapseTrackAttributions();
+                }
+
                 const context = pageContext();
                 if (!context) return;
 
