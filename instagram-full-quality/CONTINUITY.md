@@ -37,5 +37,5 @@
 
 ## Current work and next action
 - v4.4.6 source implementation is published after the post-page overlay/API-throttle bug report dated 2026-11-02.
-- Source syntax, direct-media fallback helper cases, and static regression checks passed in this session. The connected local browser was unavailable; actual Instagram interaction/visual acceptance is NOT RUN.
+- Source syntax, direct-media fallback helper cases, static regression checks, and mocked `GM_openInTab`/`GM_download` routing tests passed in this session. The connected local browser was unavailable; actual Instagram interaction/visual acceptance is NOT RUN.
 - Exact next action: update Tampermonkey to v4.4.5 and test `https://www.instagram.com/p/DT5angriDSP/?img_index=1` for native Copy image, Open in new tab, and Download. Then test a carousel and a video post. Keep status Under construction ⚠️ until the user confirms.
