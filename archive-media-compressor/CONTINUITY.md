@@ -2,7 +2,7 @@
 
 ## Purpose and current baseline
 - Product: Archive Media Compressor, under `karpuzikov/userscripts/archive-media-compressor/`.
-- Current working build: `ArchiveMedia v6.00.16.bat` (semantic version 6.0.16), **Under construction ⚠️**, published on default `main`. Previous build: `ArchiveMedia v6.00.15.bat`.
+- Current working build: `ArchiveMedia v6.00.16.bat` (semantic version 6.0.16), **Under construction ⚠️**, published on default `main`. Previous build: `version-history/ArchiveMedia v6.00.15.bat`.
 - Default branch: `main`. No alternate active branch is established.
 - A single versioned Windows .bat embeds a Base64 ZIP containing `ArchiveMedia.ps1`; the BAT bootstraps WinGet, PowerShell 7, FFmpeg/FFprobe, and ImageMagick; extracts payload into a temporary folder; then runs PowerShell. The BAT contains temporary source-repair/worker-tuning transformations in 6.0.13.
 - Project README: `archive-media-compressor/README.md`; repository-wide download/version table: root `README.md`.
@@ -46,7 +46,7 @@
 ## Change: v6.0.15 concise SKIP log (2026-10-14)
 - User confirmed skip-log output should be limited to `[SKIP] <source path>`. The previous redundant `[7.38 MiB] -> [7.38 MiB] 0 B saved` suffix is removed only for actual `Skip` actions. Other actions keep meaningful before/after sizes and saved-byte deltas.
 - Retained the 6.0.14 embedded ZIP and existing size-growth safety gate unchanged. A new startup PowerShell patch injects an early `if ($Action -eq 'Skip')` branch into `Write-FileResultLine` immediately after the action label is calculated; it prints label and path and returns. The patch validates unique marker presence and PowerShell parse syntax before execution.
-- Filename: `archive-media-compressor/ArchiveMedia v6.00.15.bat`. Repo README and project README updated.
+- Filename: `archive-media-compressor/version-history/ArchiveMedia v6.00.15.bat`. Repo README and project README updated.
 - Source-level static checks: **PASS**, startup command max length 7,272 characters; original ZIP payload unchanged; new early SKIP branch retained; older no-growth guard retained. Actual Windows execution / log verification: **NOT RUN**.
 
 ## Validation

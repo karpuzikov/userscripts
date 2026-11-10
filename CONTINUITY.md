@@ -1,3 +1,7 @@
+## Repository cleanup - 2026-11-10
+
+User request: clean all repositories. 26 previous versioned files moved into a `version-history/` folder inside each tool directory (ArchiveMedia, Corrupt Image Verifier, Beatport Catalog Number Finder, Picard scripts); blobs unchanged. Each tool folder keeps only its latest versioned file plus the unversioned stable/update endpoints, which were not moved. `audio-tools/audio-parity-rea-kit/` left as is because its tests are bound to each version's path. Picard regression failures (5 + 1) existed before this change. Rule from now on: a previous version never stays next to the current one; move it to `version-history/` in the same commit.
+
 # Karpuzikov Picard Scripts - Continuity
 
 ## Product and state
@@ -11,7 +15,7 @@
 - `__init__.py`: root plugin registration, embedded optional tagging scripts, Barcode/UPC lookup action and plugin options page.
 - `current_artist_names.py` and `musicbrainz_title_capitalization.py`: companion metadata modules.
 - `picard-tools/scripts/*.txt`: manual tagging-script sources; `Format_Multiple_Artists.txt` is the stable source counterpart to the embedded script.
-- `picard-tools/scripts/Format_Multiple_Artists_v1.00.01.txt`: versioned standalone download; future revisions need new versioned filenames.
+- `picard-tools/scripts/version-history/Format_Multiple_Artists_v1.00.01.txt`: versioned standalone download; future revisions need new versioned filenames.
 - `README.md`: Picard entries and installation instructions.
 
 ## Architecture and feature contracts
@@ -108,7 +112,7 @@
 ## Move Featured Artists duplicate-title prevention (2026-10-09; plugin v1.5.15)
 
 - The existing Move Featured Artists script appended `(ft. Guest)` even if `title` already contained `(feat. Guest)` or `(ft. Guest)` and `artist` still carried the featured credit. Fixed by normalizing only the title-inspection copy from `feat.` to `ft.`, then appending only when the equivalent credit is absent. Existing artist/albumartist removal regex and captured credit spelling/casing are preserved. Temporary `_feat_title` is unset at end.
-- Published `picard-tools/scripts/Move_Featured_Artists_to_Title_v1.00.01.txt`, mirrored to stable .txt and embedded plugin source. Added versioned README link and runtime regression cases covering no credit, already-`ft.`, and already-`feat.` titles. Tests requiring Picard are pending execution inside Picard 3; keep v1.5.15 - Under construction ⚠️.
+- Published `picard-tools/scripts/version-history/Move_Featured_Artists_to_Title_v1.00.01.txt`, mirrored to stable .txt and embedded plugin source. Added versioned README link and runtime regression cases covering no credit, already-`ft.`, and already-`feat.` titles. Tests requiring Picard are pending execution inside Picard 3; keep v1.5.15 - Under construction ⚠️.
 
 ## Format Multiple Artists source parity (2026-10-09; plugin v1.5.16)
 
@@ -128,7 +132,7 @@
 - If Picard rejects Close (e.g. unsaved user changes), restart watcher and restore the button on the still-visible main window. On normal plugin disable, remove QAction from all toolbars and disconnect the aboutToQuit signal; do not arbitrarily hide unrelated toolbars while Picard remains open.
 - New Qt-independent regression checks cover detached/obsolete floating toolbar action cleanup, other toolbars unaffected, and static verification of close/cancel/quit guards. Windows taskbar exit test in Picard 3 remains pending.
 - User explicitly wants `releasecountry=XE` stored as `EU` when a capitalization tool is enabled. MusicBrainz XE is Europe (not identical to EU political membership); the mapping is user-preferred output only. The *language-aware Python* capitalization handlers normalize exact XE in the releasecountry tag (scalar or multi-value) without touching unrelated region codes and tags; the *English Title Capitalization* standalone/embedded script appends an equivalent $if/$map mapping outside its English-only title branch, so even non-English release titles preserve country preferences.
-- Published `picard-tools/scripts/English_Title_Capitalization_v1.01.04.txt` and synced stable manual script and embedded source; bumped plugin to `1.5.18 - Under construction ⚠️`; README and test parity updated. Verify auto-update in Picard, Close/Cancel Close, and XE/EU/idempotence in Picard's actual ScriptParser before marking tested.
+- Published `picard-tools/scripts/version-history/English_Title_Capitalization_v1.01.04.txt` and synced stable manual script and embedded source; bumped plugin to `1.5.18 - Under construction ⚠️`; README and test parity updated. Verify auto-update in Picard, Close/Cancel Close, and XE/EU/idempotence in Picard's actual ScriptParser before marking tested.
 
 ## Cancelled Picard shutdown visibility recovery (2026-10-09; v1.5.19)
 
@@ -186,7 +190,7 @@
 
 - User reproduction: MusicBrainz release `a0a74e7e-227c-4abc-ad09-bfd59bdf25af`. Original `album` and `title` are `THE OUTSIDE (OUTSIDERS VERSION)`. Existing standalone 1.1.6 left `album` uppercase before Add EP/Single Suffix appended ` - Single`; combined capitalization fallback could turn the track into `The outside (Outsiders Version)`. Required: `album=The Outside (Outsiders Version) - Single`; `title=The Outside (Outsiders Version)`.
 - Root cause 1: Picard `$title()` only uppercase-initializes words and deliberately does NOT lowercase trailing all-capital letters; e.g. `$title(THIS TEXT)` remains `THIS TEXT`. Correct approach for typographic all-caps is `$title($lower(...))`. Detection must ignore a terminal ` - Single` or ` - EP` suffix (which is mixed-case), so running capitalization before or after Add EP/Single Suffix is idempotent.
-- Standalone `picard-tools/scripts/English_Title_Capitalization_v1.01.07.txt`: chooses `$title($lower(...))` when the complete main title is uppercase; otherwise retains previous `$title(...)` to protect ordinary mixed-case input. Accepts obvious `THE ...` English releases when MB language is undetermined/multiple, while preserving Spanish `la noche` and Portuguese `vai sentando` exceptions. Reconstitutes ` - EP` uppercase if needed; protects common DJ/VIP/EDM/BBC/UK/USA/EP/LP acronyms when an all-caps title is normalized. Keeps existing final lowercase `vs.` and Digital Media releasecountry deletion / XE->EU. Manually noted acronym coverage is not exhaustive; review other uppercase stylized identifiers in runtime testing.
+- Standalone `picard-tools/scripts/version-history/English_Title_Capitalization_v1.01.07.txt`: chooses `$title($lower(...))` when the complete main title is uppercase; otherwise retains previous `$title(...)` to protect ordinary mixed-case input. Accepts obvious `THE ...` English releases when MB language is undetermined/multiple, while preserving Spanish `la noche` and Portuguese `vai sentando` exceptions. Reconstitutes ` - EP` uppercase if needed; protects common DJ/VIP/EDM/BBC/UK/USA/EP/LP acronyms when an all-caps title is normalized. Keeps existing final lowercase `vs.` and Digital Media releasecountry deletion / XE->EU. Manually noted acronym coverage is not exhaustive; review other uppercase stylized identifiers in runtime testing.
 - Language-aware Python plugin: for unknown-language releases, `_english_all_caps_title()` identifies conservative leading-`THE ` English headline even with a trailing canonical release-type suffix and dispatches to English title case, not the generic unknown-language sentence-case fallback. Explicit French/Spanish/Portuguese language choices and the Spanish/Portuguese overriding heuristics remain unchanged.
 - Added static and Picard-runtime regression methods for both fields, unknown/English language codes, either script order, existing/missing suffixes, repeated processing, preservation of country codes and lowercase vs., and earlier phrasal-verb regressions. Keep embedded script byte-identical to standalone and versioned source; follow main plugin update with the user's own Picard 3 runtime test. v1.5.24 - Under construction ⚠️.
 
