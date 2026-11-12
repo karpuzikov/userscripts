@@ -480,10 +480,14 @@ def _french_title_case(title: str) -> str:
     return _apple_eti_case(result)
 
 
-def _apple_eti_case(title: str) -> str:
+def _apple_eti_case(title: str, keep_featured_credits: bool = False) -> str:
     def rewrite(match: re.Match[str]) -> str:
         content = match.group(1)
         if not content.strip():
+            return match.group(0)
+        # Featured-artist credits hold artist names; when the language is
+        # unknown, keep their spelling (e.g. lowercase stage names) as credited.
+        if keep_featured_credits and re.match(r"(?i)\s*(feat|ft|featuring|with)\b", content):
             return match.group(0)
 
         styled = musicbrainz_english_title_case(content)
@@ -542,7 +546,9 @@ def standardize_title_case(
         # usual all-caps fallback conservatively.
         result = _apple_eti_case(_sentence_case_title(title))
     else:
-        result = title
+        # Unknown language, normally styled main title: keep it, but still
+        # capitalize version info, e.g. "(12″ mix)" -> "(12″ Mix)".
+        result = _apple_eti_case(title, keep_featured_credits=True)
 
     return _restore_stylized_names(_lowercase_vs_abbreviation(result))
 

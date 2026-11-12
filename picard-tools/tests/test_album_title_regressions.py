@@ -898,6 +898,16 @@ class PicardAlbumRegressions(unittest.TestCase):
                           {"relations": [{"type-id": "other", "area": {"iso-3166-1-codes": ["DE"]}}]}):
             self.assertIsNone(manufactured_in_release_country(no_answer))
 
+    def test_unknown_language_capitalizes_version_info_only(self):
+        # Yello "One Second" (09ebe280-…) is language "mul" -> mode "unknown".
+        for before, after in (
+            ("Goldrush II (12″ mix)", "Goldrush II (12″ Mix)"),
+            ("The Rhythm Divine (1992 version)", "The Rhythm Divine (1992 Version)"),
+            ("Si Señor the Hairy Grill", "Si Señor the Hairy Grill"),
+            ("Song (feat. bbno$)", "Song (feat. bbno$)"),
+        ):
+            self.assertEqual(standardize_title_case(before, "unknown"), after)
+
 
 if __name__ == "__main__":
     unittest.main()
