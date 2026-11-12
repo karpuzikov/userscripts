@@ -620,6 +620,27 @@ def normalize_europe_release_country(metadata: Any, release_node: Any = None) ->
         metadata["releasecountry"] = "EU"
 
 
+_MANUFACTURED_IN_RELATIONSHIP_TYPE_ID = "c0998b44-aa21-4d27-be79-2ff64205cecd"
+
+
+def manufactured_in_release_country(release_with_area_relationships: Any) -> str | None:
+    """Country from the release's "manufactured in" area relationship (XE -> EU).
+
+    Returns None when the relationship is absent, has no ISO 3166-1 country,
+    or several relationships disagree; the caller then keeps the normal pipeline.
+    """
+    if not isinstance(release_with_area_relationships, dict):
+        return None
+    countries = set()
+    for relationship in release_with_area_relationships.get("relations") or []:
+        if relationship.get("type-id") != _MANUFACTURED_IN_RELATIONSHIP_TYPE_ID:
+            continue
+        area = relationship.get("area") or {}
+        for country in area.get("iso-3166-1-codes") or []:
+            countries.add("EU" if country == "XE" else country)
+    return countries.pop() if len(countries) == 1 else None
+
+
 def capitalize_release_title(api: Any, metadata: Any, release_node: Any) -> None:
     normalize_europe_release_country(metadata, release_node)
     try:

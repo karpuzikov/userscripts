@@ -19,6 +19,7 @@ from musicbrainz_title_capitalization import (  # noqa: E402
     _language_mode,
     capitalize_release_title,
     capitalize_track_title,
+    manufactured_in_release_country,
     normalize_europe_release_country,
     _is_digital_release,
     musicbrainz_english_title_case,
@@ -882,6 +883,20 @@ class PicardAlbumRegressions(unittest.TestCase):
                 ScriptParser().eval(source, metadata)
                 self.assertEqual(metadata[tag], after)
 
+    def test_manufactured_in_country_overrides_release_country(self):
+        def manufactured_in(*codes):
+            return {"type-id": "c0998b44-aa21-4d27-be79-2ff64205cecd",
+                    "area": {"iso-3166-1-codes": list(codes)}}
+
+        # Solid Pleasure (db86df27-…): released in DE, manufactured in Europe.
+        self.assertEqual(manufactured_in_release_country(
+            {"country": "DE", "relations": [manufactured_in("XE")]}), "EU")
+        self.assertEqual(manufactured_in_release_country(
+            {"relations": [manufactured_in("DE")]}), "DE")
+        for no_answer in ({}, {"relations": []}, {"relations": [manufactured_in()]},
+                          {"relations": [manufactured_in("DE"), manufactured_in("AT")]},
+                          {"relations": [{"type-id": "other", "area": {"iso-3166-1-codes": ["DE"]}}]}):
+            self.assertIsNone(manufactured_in_release_country(no_answer))
 
 
 if __name__ == "__main__":

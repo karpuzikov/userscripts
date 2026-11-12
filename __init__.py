@@ -16,6 +16,7 @@ from .musicbrainz_title_capitalization import (
     _is_digital_release,
     capitalize_release_title,
     capitalize_track_title,
+    manufactured_in_release_country,
 )
 
 
@@ -1005,6 +1006,45 @@ def process_album(api, album, metadata, release_node):
     _run_scripts(api, metadata, release_node)
     if api.plugin_config["musicbrainz_title_capitalization"]:
         capitalize_release_title(api, metadata, release_node)
+        _request_manufactured_in_release_country(api, album, metadata, release_node)
+
+
+def _request_manufactured_in_release_country(api, album, album_metadata, release_node):
+    """Prefer the release's "manufactured in" country over releasecountry.
+
+    Picard does not request area relationships, so fetch them once per album.
+    The task is blocking: Picard builds tracks from the album metadata only
+    after it completes, so tracks inherit the corrected releasecountry.
+    """
+    release_id = release_node.get("id") if isinstance(release_node, dict) else None
+    if not release_id or _is_digital_release(album_metadata, release_node):
+        return
+    task_id = "manufactured_in_country_%s" % release_id
+
+    def handle_manufactured_in_response(document, _http, error):
+        try:
+            if error:
+                api.logger.warning(
+                    "Manufactured-in lookup failed for release %s; keeping releasecountry", release_id
+                )
+                return
+            manufactured_in_country = manufactured_in_release_country(document)
+            if manufactured_in_country:
+                album_metadata["releasecountry"] = manufactured_in_country
+        except Exception:
+            api.logger.exception("Manufactured-in lookup failed for release %s", release_id)
+        finally:
+            api.complete_album_task(album, task_id)
+
+    api.add_album_task(
+        album,
+        task_id,
+        "Checking MusicBrainz 'manufactured in' country",
+        request_factory=lambda: api.mb_api.get_release_by_id(
+            release_id, handle_manufactured_in_response, inc=["area-rels"]
+        ),
+        blocking=True,
+    )
 
 
 def process_track(api, track, metadata, track_node, release_node=None):
