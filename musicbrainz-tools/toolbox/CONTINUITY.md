@@ -1,7 +1,7 @@
 # MusicBrainz ToolBox - Continuity
 
 Last reviewed: 2026-11-02
-Current version: 1.0.65 - Under construction ⚠️ (pending browser verification)
+Current version: 1.0.66 - Under construction ⚠️ (pending browser verification)
 Repository: `karpuzikov/userscripts`, branch `main`
 Global rules: `/SOFTWARE_RULES.md`; no separate ToolBox `RULES.md` exists.
 
