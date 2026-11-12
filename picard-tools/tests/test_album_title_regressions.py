@@ -908,6 +908,14 @@ class PicardAlbumRegressions(unittest.TestCase):
         ):
             self.assertEqual(standardize_title_case(before, "unknown"), after)
 
+    def test_single_letter_initials_are_not_the_article_a(self):
+        for before, after in (
+            ("S. A. X.", "S. A. X."),
+            ("S.A.X.", "S.A.X."),
+            ("Life Is A Snowball", "Life Is a Snowball"),
+        ):
+            self.assertEqual(standardize_title_case(before, "english"), after)
+
 
 if __name__ == "__main__":
     unittest.main()

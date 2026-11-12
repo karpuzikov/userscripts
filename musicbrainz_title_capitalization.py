@@ -332,6 +332,10 @@ def musicbrainz_english_title_case(title: str) -> str:
             previous = words[index - 1].group(0).lower().strip("'’")
             if (previous, lower) in _PHRASAL_VERBS:
                 force_major = True
+        # A single letter followed by "." is an initial, never the article "a":
+        # "S. A. X." / "S.A.X." keep their capital A.
+        if len(word) == 1 and working[match.end():match.end() + 1] == ".":
+            force_major = True
 
         # Preserve original casing of stylized dollar-prefixed words.
         # Example: Ty Dolla $ign must not become Ty Dolla $Ign.
