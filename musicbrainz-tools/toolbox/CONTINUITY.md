@@ -1,7 +1,7 @@
 # MusicBrainz ToolBox - Continuity
 
 Last reviewed: 2026-11-02
-Current version: 1.0.67 - Under construction ⚠️ (pending browser verification)
+Current version: 1.0.68 - Under construction ⚠️ (pending browser verification)
 Repository: `karpuzikov/userscripts`, branch `main`
 Global rules: `/SOFTWARE_RULES.md`; no separate ToolBox `RULES.md` exists.
 
@@ -97,3 +97,9 @@ Global rules: `/SOFTWARE_RULES.md`; no separate ToolBox `RULES.md` exists.
 - Fix in that module only: skip rows inside `#release-relationships, #release-group-relationships`; toggle text `[show]`/`[hide]` (was `...`/`less`), colour `LinkText`, underline on hover. Deleted the duplicate `collapseTrackLinkRows` added in v1.0.66 (this module already covers per-track rows and re-runs on layout switches). Label disambiguations keep `[show]`/`[hide]` via `hideBehindShowHideToggle`.
 - Automated: module code injected on the live Yello "Baby" page (credits at bottom): stream for free / streaming page => [show]; Release Discogs, Release group Discogs, lyrics page, other databases, Allmusic, Wikidata visible; credit rows visible. Syntax PASS. **NOT RUN**: real Tampermonkey install.
 - Lesson: before changing a UI behaviour, grep the whole file for every module producing it (here two "..." toggles existed).
+
+## 2026-11-12 - v1.0.68 - Song-link collapse on every MusicBrainz page
+- User confirmed v1.0.67 works on release pages, then asked that the "purchase for download:", "stream for free:", "streaming page:" rule applies everywhere, recording pages included.
+- Change ("Compact external relationship lists" module only): gate changed from `/release/` paths to any `musicbrainz.org` host (incl. beta). Non-release pages collapse only rows whose header is exactly one of those three phrases (`songLinkPattern`); release pages keep the wider `linkCategoryPattern` for per-track rows. `#release-relationships` / `#release-group-relationships` stay excluded.
+- Automated: module injected on live recording c23582c5-8528-4821-9de7-e13e30799d1d (GIMS "Thomas Shelby"): purchase for download / stream for free / streaming page => [show]; recording of visible. Syntax PASS. **NOT RUN**: real Tampermonkey install; artist / release-group / work pages.
+- Known limit: matches English relationship phrases; other MusicBrainz UI languages are not collapsed.

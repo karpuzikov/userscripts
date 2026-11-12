@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MusicBrainz ToolBox
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.0.67
+// @version      1.0.68
 // @description  Combined MusicBrainz release-editor, recording, barcode, Spotify/Apple Music linking, search, cover-art, Disc ID, and duplicate-edit tools.
 // @author       karpuzikov
 // @license      MIT
@@ -21128,9 +21128,11 @@ ${lines}
     }
 // ============================================================================
 // ============================================================================
-// Compact release-level external relationship lists
+// Compact external relationship lists: every MusicBrainz page for song links,
+// release pages also for the other per-track link categories.
 // ============================================================================
-if (/^\/release\//i.test(location.pathname)) {
+if (/(^|\.)musicbrainz\.org$/i.test(location.hostname)) {
+    const isReleasePage = /^\/release\//i.test(location.pathname);
     const STYLE_ID = 'mbtb-release-link-collapse-style';
     if (!document.getElementById(STYLE_ID)) {
         const style = document.createElement('style');
@@ -21161,6 +21163,7 @@ if (/^\/release\//i.test(location.pathname)) {
         document.head.appendChild(style);
     }
 
+    const songLinkPattern = /^(?:purchase for download|stream for free|streaming page)$/i;
     const linkCategoryPattern = /^(?:purchase\b|stream\b|streaming\b|download\b|mail[\s-]?order\b|discography\b|license\b|get the music\b|production\b|crowdfunding\b|show notes\b|other databases\b|discogs\b|vgmdb\b|secondhandsongs\b|allmusic\b|bookbrainz\b|lyrics\b|official\b|music video\b)/i;
 
     function enhanceReleaseRelationshipLinks() {
@@ -21183,7 +21186,7 @@ if (/^\/release\//i.test(location.pathname)) {
                 .replace(/\s+/g, ' ')
                 .trim()
                 .replace(/:\s*$/, '');
-            if (!linkCategoryPattern.test(phrase)) continue;
+            if (!(isReleasePage ? linkCategoryPattern : songLinkPattern).test(phrase)) continue;
             if (!content.querySelector('a[href]')) continue;
 
             const toggle = document.createElement('button');
