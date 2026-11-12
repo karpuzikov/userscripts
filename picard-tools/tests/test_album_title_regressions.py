@@ -735,7 +735,7 @@ class PicardAlbumRegressions(unittest.TestCase):
 
     def test_published_script_versions_match_stable_sources(self):
         for stable, versioned in (
-            ("Unicode_to_ASCII.txt", "Unicode_to_ASCII_v1.00.01.txt"),
+            ("Unicode_to_ASCII.txt", "Unicode_to_ASCII_v1.00.02.txt"),
             ("English_Title_Capitalization.txt", "English_Title_Capitalization_v1.01.10.txt"),
             ("Add_EP_Single_Suffix.txt", "Add_EP_Single_Suffix_v1.00.02.txt"),
             ("Dont_Use_This_Tags.txt", "Dont_Use_This_Tags_v1.00.00.txt"),
