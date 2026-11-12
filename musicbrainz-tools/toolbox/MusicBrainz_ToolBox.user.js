@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MusicBrainz ToolBox
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.0.65
+// @version      1.0.66
 // @description  Combined MusicBrainz release-editor, recording, barcode, Spotify/Apple Music linking, search, cover-art, Disc ID, and duplicate-edit tools.
 // @author       karpuzikov
 // @license      MIT
@@ -10301,8 +10301,8 @@
             const STYLE_ID = 'mbtb-relationship-shortcuts-style';
             const CELL_CLASS = 'mbtb-relationship-shortcuts';
             const HEAD_CLASS = 'mbtb-relationship-shortcuts-head';
-            const LABEL_COMMENT_CLASS = 'mbtb-label-disambiguation';
-            const LABEL_TOGGLE_CLASS = 'mbtb-label-disambiguation-toggle';
+            const COLLAPSED_CONTENT_CLASS = 'mbtb-collapsed-content';
+            const SHOW_HIDE_TOGGLE_CLASS = 'mbtb-show-hide-toggle';
             const UUID = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}';
 
             function pageContext() {
@@ -10355,12 +10355,11 @@
                     'border: 1px solid #999; border-radius: 3px; text-decoration: none;',
                     '}',
                     'td.' + CELL_CLASS + ' .mbtb-rel-mb img { width: 16px; height: 16px; display: block; border: 0; }',
-                    '.' + LABEL_TOGGLE_CLASS + ' {',
+                    '.' + SHOW_HIDE_TOGGLE_CLASS + ' {',
                     'appearance: none; -webkit-appearance: none; background: none; border: 0;',
-                    'padding: 0 2px; margin: 0; color: inherit; font: inherit; cursor: pointer;',
-                    'text-decoration: underline; text-decoration-style: dotted;',
+                    'padding: 0 2px; margin: 0; color: LinkText; font: inherit; font-weight: normal; cursor: pointer;',
                     '}',
-                    '.' + LABEL_TOGGLE_CLASS + ':hover { text-decoration-style: solid; }',
+                    '.' + SHOW_HIDE_TOGGLE_CLASS + ':hover { text-decoration: underline; }',
                 ].join('\n');
                 document.head.appendChild(style);
             }
@@ -10417,43 +10416,51 @@
                 return '';
             }
 
-            function hideCommentBehindEllipsisToggle(comment, commentDescription) {
-                if (comment.classList.contains(LABEL_COMMENT_CLASS)) return;
+            function hideBehindShowHideToggle(hiddenElement, hiddenDescription, insertToggle) {
+                if (hiddenElement.classList.contains(COLLAPSED_CONTENT_CLASS)) return;
 
-                comment.classList.add(LABEL_COMMENT_CLASS);
-                const fullText = comment.textContent.trim();
-                comment.hidden = true;
+                hiddenElement.classList.add(COLLAPSED_CONTENT_CLASS);
+                hiddenElement.hidden = true;
 
                 const toggle = document.createElement('button');
                 toggle.type = 'button';
-                toggle.className = LABEL_TOGGLE_CLASS;
-                toggle.textContent = '...';
-                toggle.title = 'Show ' + commentDescription + ': ' + fullText;
-                toggle.setAttribute('aria-label', toggle.title);
-                toggle.setAttribute('aria-expanded', 'false');
+                toggle.className = SHOW_HIDE_TOGGLE_CLASS;
+
+                function showToggleState(expanded) {
+                    toggle.textContent = expanded ? '[hide]' : '[show]';
+                    toggle.title = (expanded ? 'Hide ' : 'Show ') + hiddenDescription;
+                    toggle.setAttribute('aria-label', toggle.title);
+                    toggle.setAttribute('aria-expanded', String(expanded));
+                }
+                showToggleState(false);
 
                 toggle.addEventListener('click', event => {
                     event.preventDefault();
                     event.stopPropagation();
 
-                    const expanded = comment.hidden;
-                    comment.hidden = !expanded;
-                    toggle.setAttribute('aria-expanded', String(expanded));
-                    toggle.title =
-                        (expanded ? 'Hide' : 'Show') +
-                        ' ' + commentDescription + ': ' + fullText;
-                    toggle.setAttribute('aria-label', toggle.title);
+                    const expanded = hiddenElement.hidden;
+                    hiddenElement.hidden = !expanded;
+                    showToggleState(expanded);
                 });
 
-                comment.parentNode.insertBefore(toggle, comment);
+                insertToggle(toggle);
             }
 
-            // Release page relationship rows: "(track 9)" after each URL/credit.
-            // Artist disambiguations wrap their text in <bdi>; track numbers do not.
-            function collapseTrackAttributions() {
-                for (const comment of document.querySelectorAll('table.details td > span.comment')) {
-                    if (comment.querySelector('bdi') || !comment.textContent.trim()) continue;
-                    hideCommentBehindEllipsisToggle(comment, 'track attribution');
+            // Release page, "Display credits at bottom": per-track URL rows
+            // ("purchase for download:", "stream for free:", "streaming page:")
+            // hold hundreds of song links. Release and release-group links live
+            // in #release-relationships / #release-group-relationships and stay visible.
+            // shortcut: only runs on page load, switching credit layout afterwards needs a reload.
+            function collapseTrackLinkRows() {
+                for (const linksCell of document.querySelectorAll('#bottom-credits .bottom-credits table.details td')) {
+                    if (!linksCell.querySelector('a[href^="/url/"]')) continue;
+                    const rowHeader = linksCell.closest('tr')?.querySelector('th');
+                    if (!rowHeader) continue;
+                    hideBehindShowHideToggle(
+                        linksCell,
+                        rowHeader.textContent.trim().replace(/:$/, '') + ' links',
+                        toggle => rowHeader.append(' ', toggle)
+                    );
                 }
             }
 
@@ -10491,7 +10498,11 @@
                     labelLink.dataset.mbtbLabelCommentHandled = '1';
                     if (!comment || !comment.textContent.trim()) continue;
 
-                    hideCommentBehindEllipsisToggle(comment, 'label disambiguation');
+                    hideBehindShowHideToggle(
+                        comment,
+                        'label disambiguation: ' + comment.textContent.trim(),
+                        toggle => comment.before(toggle)
+                    );
                 }
             }
 
@@ -10643,7 +10654,7 @@
             async function init() {
                 if (new RegExp('^/release/' + UUID + '/?$', 'i').test(location.pathname)) {
                     installStyle();
-                    collapseTrackAttributions();
+                    collapseTrackLinkRows();
                 }
 
                 const context = pageContext();
