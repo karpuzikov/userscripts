@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MusicBrainz ToolBox
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.0.66
+// @version      1.0.67
 // @description  Combined MusicBrainz release-editor, recording, barcode, Spotify/Apple Music linking, search, cover-art, Disc ID, and duplicate-edit tools.
 // @author       karpuzikov
 // @license      MIT
@@ -10446,24 +10446,6 @@
                 insertToggle(toggle);
             }
 
-            // Release page, "Display credits at bottom": per-track URL rows
-            // ("purchase for download:", "stream for free:", "streaming page:")
-            // hold hundreds of song links. Release and release-group links live
-            // in #release-relationships / #release-group-relationships and stay visible.
-            // shortcut: only runs on page load, switching credit layout afterwards needs a reload.
-            function collapseTrackLinkRows() {
-                for (const linksCell of document.querySelectorAll('#bottom-credits .bottom-credits table.details td')) {
-                    if (!linksCell.querySelector('a[href^="/url/"]')) continue;
-                    const rowHeader = linksCell.closest('tr')?.querySelector('th');
-                    if (!rowHeader) continue;
-                    hideBehindShowHideToggle(
-                        linksCell,
-                        rowHeader.textContent.trim().replace(/:$/, '') + ' links',
-                        toggle => rowHeader.append(' ', toggle)
-                    );
-                }
-            }
-
             function collapseLabelDisambiguations() {
                 for (const labelLink of document.querySelectorAll('table.tbl a[href^="/label/"]')) {
                     if (labelLink.dataset.mbtbLabelCommentHandled) continue;
@@ -10652,11 +10634,6 @@
             }
 
             async function init() {
-                if (new RegExp('^/release/' + UUID + '/?$', 'i').test(location.pathname)) {
-                    installStyle();
-                    collapseTrackLinkRows();
-                }
-
                 const context = pageContext();
                 if (!context) return;
 
@@ -21166,15 +21143,15 @@ if (/^\/release\//i.test(location.pathname)) {
             '    appearance: none;',
             '    border: 0;',
             '    background: transparent;',
-            '    color: inherit;',
+            '    color: LinkText;',
             '    cursor: pointer;',
             '    font: inherit;',
             '    line-height: inherit;',
             '    margin: 0 0.5em 0 0;',
             '    padding: 0;',
-            '    text-decoration: underline;',
             '    white-space: nowrap;',
             '}',
+            '.mbtb-release-link-toggle:hover { text-decoration: underline; }',
             '.mbtb-release-link-toggle:focus-visible {',
             '    outline: 2px solid currentColor;',
             '    outline-offset: 2px;',
@@ -21198,6 +21175,9 @@ if (/^\/release\//i.test(location.pathname)) {
                 content.querySelector('button.mbtb-release-link-toggle')) {
                 continue;
             }
+            // Release and release-group links (Discogs, Allmusic, ...) always stay visible;
+            // only per-track song links ("stream for free:", ...) are collapsed.
+            if (row.closest('#release-relationships, #release-group-relationships')) continue;
 
             const phrase = label.textContent
                 .replace(/\s+/g, ' ')
@@ -21219,7 +21199,7 @@ if (/^\/release\//i.test(location.pathname)) {
             const setExpanded = expanded => {
                 row.classList.add('mbtb-release-links-collapsible');
                 row.classList.toggle('mbtb-release-links-expanded', expanded);
-                toggle.textContent = expanded ? 'less' : '...';
+                toggle.textContent = expanded ? '[hide]' : '[show]';
                 toggle.setAttribute('aria-expanded', String(expanded));
                 const verb = expanded ? 'Hide' : 'Show';
                 toggle.setAttribute('aria-label', verb + ' links for ' + phrase);

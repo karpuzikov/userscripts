@@ -1,7 +1,7 @@
 # MusicBrainz ToolBox - Continuity
 
 Last reviewed: 2026-11-02
-Current version: 1.0.66 - Under construction ⚠️ (pending browser verification)
+Current version: 1.0.67 - Under construction ⚠️ (pending browser verification)
 Repository: `karpuzikov/userscripts`, branch `main`
 Global rules: `/SOFTWARE_RULES.md`; no separate ToolBox `RULES.md` exists.
 
@@ -90,3 +90,10 @@ Global rules: `/SOFTWARE_RULES.md`; no separate ToolBox `RULES.md` exists.
 - Shared helper renamed `hideBehindShowHideToggle(hiddenElement, hiddenDescription, insertToggle)`; label disambiguations use it too, so they also show `[show]`/`[hide]` (link colour, `LinkText`). Classes renamed to `mbtb-collapsed-content` / `mbtb-show-hide-toggle`.
 - Automated: live musicbrainz.org release 1b807741-… with credits at bottom (code injected in the built-in browser): 3 rows collapsed (purchase for download / stream for free / streaming page), 0 hidden in Release and Release group sections, Discogs visible, 90 credit comments visible, [show]->[hide]->[show] toggles the cell, second run adds nothing. Syntax PASS. **NOT RUN**: real Tampermonkey install, inline-credits layout (not targeted), beta site.
 - Known limit: only runs on page load; switching "Display credits at bottom" after load needs a reload.
+
+## 2026-11-12 - v1.0.67 - Real fix: Release / Release group links visible
+- User report on v1.0.66 (Yello "Baby", 551b4851-d59f-3e8f-a394-99e80c325846, credits at bottom): Release "Discogs:" and Release group "Discogs / lyrics page / other databases / Allmusic" still showed "...". v1.0.66 changed the wrong module.
+- Root cause: the separate module **"Compact release-level external relationship lists"** (end of file, `enhanceReleaseRelationshipLinks`, MutationObserver) collapses every `table tr` whose header matches `linkCategoryPattern`, including `#release-relationships` and `#release-group-relationships`.
+- Fix in that module only: skip rows inside `#release-relationships, #release-group-relationships`; toggle text `[show]`/`[hide]` (was `...`/`less`), colour `LinkText`, underline on hover. Deleted the duplicate `collapseTrackLinkRows` added in v1.0.66 (this module already covers per-track rows and re-runs on layout switches). Label disambiguations keep `[show]`/`[hide]` via `hideBehindShowHideToggle`.
+- Automated: module code injected on the live Yello "Baby" page (credits at bottom): stream for free / streaming page => [show]; Release Discogs, Release group Discogs, lyrics page, other databases, Allmusic, Wikidata visible; credit rows visible. Syntax PASS. **NOT RUN**: real Tampermonkey install.
+- Lesson: before changing a UI behaviour, grep the whole file for every module producing it (here two "..." toggles existed).
