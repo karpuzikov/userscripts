@@ -1,7 +1,7 @@
 # MusicBrainz ToolBox - Continuity
 
 Last reviewed: 2026-11-02
-Current version: 1.0.68 - Under construction ⚠️ (pending browser verification)
+Current version: 1.0.69 - Under construction ⚠️ (pending browser verification)
 Repository: `karpuzikov/userscripts`, branch `main`
 Global rules: `/SOFTWARE_RULES.md`; no separate ToolBox `RULES.md` exists.
 
@@ -103,3 +103,8 @@ Global rules: `/SOFTWARE_RULES.md`; no separate ToolBox `RULES.md` exists.
 - Change ("Compact external relationship lists" module only): gate changed from `/release/` paths to any `musicbrainz.org` host (incl. beta). Non-release pages collapse only rows whose header is exactly one of those three phrases (`songLinkPattern`); release pages keep the wider `linkCategoryPattern` for per-track rows. `#release-relationships` / `#release-group-relationships` stay excluded.
 - Automated: module injected on live recording c23582c5-8528-4821-9de7-e13e30799d1d (GIMS "Thomas Shelby"): purchase for download / stream for free / streaming page => [show]; recording of visible. Syntax PASS. **NOT RUN**: real Tampermonkey install; artist / release-group / work pages.
 - Known limit: matches English relationship phrases; other MusicBrainz UI languages are not collapsed.
+
+## 2026-11-12 - v1.0.69 - Collapse only lists with more than 3 links
+- User request: hide links only when a row has more than 3 links.
+- Change ("Compact external relationship lists" module only): a row is collapsed only when its cell has more than 3 `a[href^="/url/"]` ("[info]") links, i.e. more than 3 URL relationships; 1-3 links stay visible. Replaces the old "has any link" check.
+- Automated: live counts via the [info] selector — recording c23582c5-…: purchase for download 10, stream for free 16, streaming page 20 (collapsed); Yello "Baby" release rows 0-3 (visible). Syntax PASS. **NOT RUN**: real Tampermonkey install.

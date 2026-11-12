@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MusicBrainz ToolBox
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.0.68
+// @version      1.0.69
 // @description  Combined MusicBrainz release-editor, recording, barcode, Spotify/Apple Music linking, search, cover-art, Disc ID, and duplicate-edit tools.
 // @author       karpuzikov
 // @license      MIT
@@ -21187,7 +21187,8 @@ if (/(^|\.)musicbrainz\.org$/i.test(location.hostname)) {
                 .trim()
                 .replace(/:\s*$/, '');
             if (!(isReleasePage ? linkCategoryPattern : songLinkPattern).test(phrase)) continue;
-            if (!content.querySelector('a[href]')) continue;
+            // Each URL relationship has one "[info]" link to /url/<MBID>; short lists stay visible.
+            if (content.querySelectorAll('a[href^="/url/"]').length <= 3) continue;
 
             const toggle = document.createElement('button');
             toggle.type = 'button';
