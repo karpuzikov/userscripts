@@ -51,7 +51,7 @@ function makeTile({ unavailable = false, status = '' } = {}) {
   return tile;
 }
 
-function start({ remembered = false, tiles = [], extraPages = [], filtersHydrated = true } = {}) {
+function start({ remembered = false, tiles = [], extraPages = [], filtersHydrated = true, manualShowMore = false } = {}) {
   const root = makeElement();
   const head = makeElement();
   const filters = makeElement();
@@ -67,7 +67,9 @@ function start({ remembered = false, tiles = [], extraPages = [], filtersHydrate
   let moreClicks = 0;
   showMore.click = () => {
     moreClicks++;
+    if (manualShowMore) return;
     tiles.push(...extraPages.shift());
+    location.href += `page=${moreClicks + 1}/`; // Rozetka commits page=N to the URL
     observer?.([{ type: 'childList' }]);
   };
   paginator.querySelector = (selector) => selector === '[data-testid="show_more_btn"]' && extraPages.length ? showMore : null;
@@ -224,4 +226,22 @@ test('a filter change after the tile limit loads the new listing instead of stay
   tiles.splice(0, tiles.length, makeTile());
   app.change();
   assert.equal(app.moreClicks(), 1);
+});
+
+test('next show more waits for both the URL commit and the new tiles, in either order', () => {
+  const tiles = [makeTile()];
+  const app = start({ remembered: true, tiles, extraPages: [[], [], []], manualShowMore: true });
+  assert.equal(app.moreClicks(), 1);
+  tiles.push(makeTile()); // page 2 tiles rendered before Rozetka commits page=2
+  app.change();
+  assert.equal(app.moreClicks(), 1, 'clicking now would load page 2 twice');
+  app.location.href += 'page=2/';
+  app.change();
+  assert.equal(app.moreClicks(), 2);
+  app.location.href += 'page=3/'; // this time the URL commits first
+  app.change();
+  assert.equal(app.moreClicks(), 2, 'waits for page 3 tiles');
+  tiles.push(makeTile());
+  app.change();
+  assert.equal(app.moreClicks(), 3);
 });

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Rozetka - Only in stock
 // @namespace    https://rozetka.com.ua/
-// @version      1.1.1
+// @version      1.1.2
 // @description  Add an Only in stock toggle to Rozetka's catalog filters.
 // @match        https://*.rozetka.com.ua/*
 // @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/browser-tools/rozetka-only-in-stock/Rozetka_Only_in_Stock.user.js
@@ -26,6 +26,7 @@
     let stopped = false;
     let requestNumber = 0;
     let route = location.href;
+    let urlBeforeShowMoreClick = '';
     let lastUserActionTime = 0;
     let urlAtLastUserAction = '';
     let urlChangeAfterUserActionSeenTime = 0;
@@ -164,7 +165,8 @@
     function loadRemainingPages(count) {
         if (route !== location.href) {
             route = location.href;
-            resetLoading();
+            // Our own "show more" also changes the URL (page=N); only other navigations start a new listing.
+            if (!loading || lastUserActionTime) resetLoading();
         }
 
         const paginator = document.querySelector('rz-paginator');
@@ -177,7 +179,9 @@
         }
 
         const total = document.querySelectorAll('rz-catalog-tile-placeholder').length;
-        if (loading && total > previousCount) loading = false;
+        // "Show more" is done only after both the URL commit and the new tiles, which arrive in
+        // either order; clicking again in between makes Rozetka append the same page twice.
+        if (loading && total > previousCount && location.href !== urlBeforeShowMoreClick) loading = false;
         // Checked live, not latched: the previous listing's tiles linger briefly after a filter change.
         const partial = stopped || total >= MAX_LOADED_TILES;
         paginator?.classList.toggle(PAGER_HIDDEN_CLASS, !more && !partial);
@@ -197,6 +201,7 @@
         }
         loading = true;
         previousCount = total;
+        urlBeforeShowMoreClick = location.href;
         const currentRequest = ++requestNumber;
         more.click(); // Use Rozetka's own pagination, preserving its product controls.
         setTimeout(() => {
