@@ -21,6 +21,9 @@ function makeElement() {
     },
     setAttribute: (name, value) => attrs.set(name, String(value)),
     getAttribute: (name) => attrs.get(name),
+    hasAttribute: (name) => attrs.has(name),
+    removeAttribute: (name) => attrs.delete(name),
+    closest: () => null,
     addEventListener: (name, fn) => listeners.set(name, fn),
     click: () => listeners.get('click')?.(),
     append(child) { child.parentElement = this; this.children.push(child); },
@@ -48,10 +51,13 @@ function makeTile({ unavailable = false, status = '' } = {}) {
   return tile;
 }
 
-function start({ remembered = false, tiles = [], extraPages = [] } = {}) {
+function start({ remembered = false, tiles = [], extraPages = [], filtersHydrated = true } = {}) {
   const root = makeElement();
   const head = makeElement();
   const filters = makeElement();
+  if (!filtersHydrated) filters.setAttribute('ngh', '39');
+  const documentListeners = [];
+  const clock = { now: 1000 };
   const sidebarContents = makeElement();
   sidebarContents.append(filters);
   const paginator = makeElement();
@@ -78,6 +84,7 @@ function start({ remembered = false, tiles = [], extraPages = [] } = {}) {
     },
     querySelectorAll: (selector) => selector === 'rz-catalog-tile-placeholder' ? tiles : [],
     getElementById: (id) => [...head.children, ...sidebarContents.children, ...filters.children].find((e) => e.id === id) || null,
+    addEventListener: (type, fn) => documentListeners.push({ type, fn }),
   };
   const context = {
     document,
@@ -92,6 +99,7 @@ function start({ remembered = false, tiles = [], extraPages = [] } = {}) {
     requestAnimationFrame(callback) { raf.push(callback); },
     setTimeout() { return 1; },
     clearTimeout() {},
+    Date: { now: () => clock.now },
     location,
   };
 
@@ -102,6 +110,9 @@ function start({ remembered = false, tiles = [], extraPages = [] } = {}) {
     moreClicks: () => moreClicks,
     button: () => sidebarContents.children.find((e) => e.id === 'rz-only-in-stock'),
     change: () => { observer?.([{ type: 'childList' }]); while (raf.length) raf.shift()(); },
+    userClicksPage: () => documentListeners.filter((l) => l.type === 'pointerdown')
+      .forEach((l) => l.fn({ isTrusted: true, target: makeElement() })),
+    advanceTime: (ms) => { clock.now += ms; },
   };
 }
 
@@ -181,4 +192,36 @@ test('changing a native filter while enabled restarts stock filtering for the ne
   assert.equal(app.moreClicks(), 2);
   assert.equal(tiles.filter((tile) => !tile.classList.contains('rz-stock-hidden')).length, 2);
   assert.equal(app.button().getAttribute('aria-pressed'), 'true');
+});
+
+test('waits for Angular to hydrate the native filters before inserting the button', () => {
+  const app = start({ filtersHydrated: false });
+  assert.equal(app.button(), undefined, 'no foreign node inside server-rendered filters');
+  app.filters.removeAttribute('ngh');
+  app.change();
+  assert.ok(app.button());
+});
+
+test('automatic show more never cancels a filter the user just clicked', () => {
+  const app = start({ tiles: [makeTile()], extraPages: [[makeTile()], [makeTile()]] });
+  app.userClicksPage(); // e.g. a brand checkbox: Rozetka's router is now navigating
+  app.button().click();
+  assert.equal(app.moreClicks(), 0, 'waits while the user navigation is pending');
+  app.location.href += 'producer=asus/';
+  app.change();
+  assert.equal(app.moreClicks(), 0, 'waits for the new listing to render');
+  app.advanceTime(1500);
+  app.change();
+  assert.equal(app.moreClicks(), 2, 'then loads the new listing');
+});
+
+test('a filter change after the tile limit loads the new listing instead of staying partial', () => {
+  const tiles = Array.from({ length: 1200 }, () => makeTile());
+  const app = start({ remembered: true, tiles, extraPages: [[makeTile()]] });
+  assert.match(app.button().textContent, /partial/);
+  app.location.href += 'producer=asus/'; // the old tiles are still on screen when the URL commits
+  app.change();
+  tiles.splice(0, tiles.length, makeTile());
+  app.change();
+  assert.equal(app.moreClicks(), 1);
 });
