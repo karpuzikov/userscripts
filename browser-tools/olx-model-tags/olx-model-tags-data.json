@@ -60,9 +60,19 @@
     "DVI-D",
     "DVI-I"
    ]
+  },
+  "SAMSUNGSYNCMASTER203B": {
+   "name": "Samsung SyncMaster 203B",
+   "tags": [
+    "1400x1050"
+   ]
   }
  },
  "ads": {
+  "899628693": {
+   "model": "Samsung SyncMaster 203B",
+   "tags": []
+  },
   "931407351": {
    "model": "Sony SDM-X202",
    "tags": []
