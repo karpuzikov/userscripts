@@ -64,7 +64,8 @@
   "SAMSUNGSYNCMASTER203B": {
    "name": "Samsung SyncMaster 203B",
    "tags": [
-    "1400x1050"
+    "1400x1050",
+    "600:1"
    ]
   }
  },
