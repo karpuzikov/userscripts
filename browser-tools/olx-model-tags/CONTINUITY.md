@@ -1,7 +1,7 @@
 # OLX - Model Tags - Continuity
 
 ## Product
-- Version: 0.2.1 - Under construction ⚠️ (needs user testing in Tampermonkey on live olx.ua).
+- Version: 0.3.0 - Under construction ⚠️ (needs user testing in Tampermonkey on live olx.ua).
 - Repository/branch: `karpuzikov/userscripts`, `main`.
 - Script: `browser-tools/olx-model-tags/OLX_Model_Tags.user.js`. Tests: `node --test browser-tools/olx-model-tags/olx-model-tags.test.cjs`.
 - Rules: root `SOFTWARE_RULES.md`, `UI_UX_RULES.md`, `DESIGN.md` (Karpuzikov design system). No project-specific rules file.
@@ -21,7 +21,7 @@
 - Single userscript, `@run-at document-idle`, grants `GM_getValue/GM_setValue/GM_xmlhttpRequest/GM_addStyle`, `@connect api.github.com`.
 - Data file: `browser-tools/olx-model-tags/olx-model-tags-data.json` in this repo (created on first save). Shape: `{ models: { NORMALIZEDKEY: { name, tags[] } }, ads: { "<adId>": { model, tags[] } }, tagDisplayModes: { "<tag>": "hide"|"highlight" } }` (missing = Do nothing).
 - Model key = uppercase, Cyrillic look-alikes (А В Е К М Н О Р С Т Х У І) mapped to Latin, only `[0-9A-Z]` kept. Title detection = longest known key (≥4 chars) contained in the normalized title. A per-ad `model` overrides detection.
-- Local storage (Tampermonkey, shared across olx.ua tabs): `olxModelTagsCachedData`, `olxModelTagsCachedAt`, `olxModelTagsPendingOperations`, `olxModelTagsGithubToken`, `olxModelTagsActiveFilters`, `olxModelTagsShowBrokenAds`, `olxModelTagsPanelExpanded`.
+- Local storage (Tampermonkey, shared across olx.ua tabs): `olxModelTagsCachedData`, `olxModelTagsCachedAt`, `olxModelTagsPendingOperations`, `olxModelTagsGithubToken`, `olxModelTagsActiveFilters`, `olxModelTagsShowBrokenAds`. Panel open state is in memory only (always starts collapsed).
 - Sync = operation log: each edit is an idempotent operation (`setAdModel`, `addTag`, `removeTag`, `setTagDisplayMode`) stored as pending, applied locally at once; 2 s after the last edit the script downloads the GitHub file, replays pending operations, PUTs it with the downloaded `sha` (retries up to 3 times on 409/422), then clears the uploaded operations. Edits from other devices are never overwritten. Without pending edits nothing is uploaded; on page load GitHub is only contacted when there is no cache or there are pending edits. The panel's sync icon pulls on demand.
 - Token: GitHub fine-grained token with Contents read/write on `karpuzikov/userscripts`, asked via the panel's `Set GitHub token` button when an upload needs it. Reading works without a token (public repo).
 - DOM: cards `[data-cy="l-card"][id]` (id = ad ID), title `[data-testid="ad-card-title"] h4`; bar inserted after `[data-testid="ad-card-title"]`. Ad page: title `[data-testid="offer_title"]`, ID from `[data-testid="ad-footer-bar-section"]` text `ID: <n>`. MutationObserver re-adds bars when React re-renders cards.
@@ -35,9 +35,10 @@
 - `+` icon button (0.2.1: existing chips stay visible while editing, their × hidden; editor replaces only the ⚠/+ buttons and stays open after Save for the next tag; Esc/× closes and refocuses +): opens editor in place: Model input (datalist of known models), Tag input (datalist of known tags; placeholder says where the tag goes), `Save` (Enter), × Cancel (Esc).
 - Per-tag mode switch (3 icon buttons, aria-pressed, tooltips `Hide/Do nothing/Highlight: ads tagged "x"`): eye-off / minus / square. Active Hide/Highlight = lime fill, active Do nothing = grey fill.
 - Card effects: `.olx-model-tags-meshed-ad::after` checker mesh z-index 1 (bar z-index 2 above it); `.olx-model-tags-highlighted-ad::before` lime frame z-index 3, pointer-events none (outline was covered by card children).
-- Panel (fixed bottom-right): `Tag filters (n)` toggles the list; `shown/total` count; sync status (role=status; red ⚠ text on error); `Set GitHub token` on token errors; sync icon. Filter chips with counts toggle AND filters (✓ + lime when active). `Show broken (N)`, `Clear filters`.
+- Panel (fixed bottom-right), 0.3.0: collapsed by default to one 34 px tag icon button (user: panel must not sit on screen all the time); badge shows active filter count and ⚠ on sync error; click opens; × / Esc / click outside panel and tag bars closes. Open panel: `shown/total` count; sync status (role=status; red ⚠ text on error); `Set GitHub token` on token errors; sync icon. Filter chips with counts toggle AND filters (✓ + lime when active). `Show broken (N)`, `Clear filters`.
 
 ## Tests and acceptance (2026-11-18)
+- 0.3.0: live olx.ua check (Claude built-in browser, script injected by page eval with GM stubs, one page load): 40/40 bars rendered and survive React. Playwright: collapsed 34x34, opens, VGA filter → badge 1 after outside click closes (`qa-screenshots/panel-open.png`, `panel-collapsed-active.png`).
 - 0.2.1: Playwright: 3 tags typed in a row (Enter, Enter, Esc) stay visible while editing (`qa-screenshots/chain.png`).
 - 0.2.0: unit 5/5 pass; Playwright: Hide on `lot` meshes 1 card, Highlight on `P2012Ht` frames 2 cards (`qa-screenshots/modes.png`).
 - Unit (0.1.0): 4/4 pass (Node 22): normalization, detection, idempotent operations/override, broken/filter matching, UTF-8 base64.

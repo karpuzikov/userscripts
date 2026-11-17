@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OLX - Model Tags
 // @namespace    https://www.olx.ua/
-// @version      0.2.1
+// @version      0.3.0
 // @description  Tag OLX ads by model (tags shared by every ad of that model) or per ad, mark broken ads, filter search results by tags, per-tag Hide (pixel mesh) / Highlight (outline). Data syncs to GitHub; OLX only gets read locally from the open page.
 // @match        https://www.olx.ua/*
 // @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/browser-tools/olx-model-tags/OLX_Model_Tags.user.js
@@ -121,7 +121,6 @@
     const STORAGE_KEY_GITHUB_TOKEN = 'olxModelTagsGithubToken';
     const STORAGE_KEY_ACTIVE_FILTERS = 'olxModelTagsActiveFilters';
     const STORAGE_KEY_SHOW_BROKEN_ADS = 'olxModelTagsShowBrokenAds';
-    const STORAGE_KEY_PANEL_EXPANDED = 'olxModelTagsPanelExpanded';
     const UPLOAD_DEBOUNCE_MS = 2000;
     const UPLOAD_CONFLICT_RETRIES = 3;
 
@@ -266,6 +265,8 @@
 .olx-model-tags-input-model{font-family:"JetBrains Mono",ui-monospace,Consolas,monospace}
 .olx-model-tags-input::placeholder{color:var(--muted)}
 .olx-model-tags-panel{position:fixed;right:16px;bottom:16px;z-index:2147483000;display:flex;flex-direction:column;gap:8px;max-width:min(420px,calc(100vw - 32px));max-height:60vh;padding:12px;background:var(--surface-card);border:1px solid var(--border-strong);border-radius:12px}
+.olx-model-tags-panel-collapsed{padding:4px;border-radius:8px}
+.olx-model-tags-panel-collapsed .olx-model-tags-icon-button{gap:4px;line-height:1}
 .olx-model-tags-panel-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
 .olx-model-tags-panel-filters{display:flex;flex-wrap:wrap;gap:4px;overflow:auto}
 .olx-model-tags-count{font-family:"JetBrains Mono",ui-monospace,Consolas,monospace;font-variant-numeric:tabular-nums;color:var(--muted)}
@@ -288,6 +289,7 @@
         close: 'M6 6l12 12M18 6L6 18',
         broken: 'M12 3l9.5 16.5h-19L12 3zM12 10v4M12 17.5v.01',
         sync: 'M20 12a8 8 0 1 1-2.34-5.66M20 4v5h-5',
+        tag: 'M3 12V4a1 1 0 0 1 1-1h8l9 9-9 9-9-9zM7.5 7.5h.01',
         hide: 'M3 3l18 18M10.6 10.6a2 2 0 0 0 2.8 2.8M9.9 5.1A9.8 9.8 0 0 1 12 5c5 0 9 4.5 10 7a13 13 0 0 1-3 4M6.6 6.6C4.5 8 3 10 2 12c1 2.5 5 7 10 7 1.7 0 3.3-.5 4.6-1.3',
         nothing: 'M6 12h12',
         highlight: 'M4 4h16v16H4z',
@@ -425,6 +427,21 @@
         (tagging.modelName ? tagInput : modelInput).focus();
     }
 
+    let isFilterPanelExpanded = false;
+
+    function setFilterPanelExpanded(isExpanded) {
+        isFilterPanelExpanded = isExpanded;
+        renderFilterPanel();
+        document.querySelector(`.olx-model-tags-panel [aria-label^="${isExpanded ? 'Close tag filters' : 'Tag filters'}"]`)?.focus();
+    }
+
+    document.addEventListener('pointerdown', (event) => {
+        if (isFilterPanelExpanded && !event.target.closest?.('.olx-model-tags-panel, .olx-model-tags-bar')) setFilterPanelExpanded(false);
+    }, true);
+    document.addEventListener('keydown', (event) => {
+        if (isFilterPanelExpanded && event.key === 'Escape' && !event.target.closest?.('.olx-model-tags-bar')) setFilterPanelExpanded(false);
+    });
+
     function renderFilterPanel() {
         if (!olxModelTagsData || !document.body) return;
         let panel = document.querySelector('.olx-model-tags-panel');
@@ -437,7 +454,6 @@
         const ads = findAdsOnPage().filter((ad) => ad.card);
         const activeFilters = GM_getValue(STORAGE_KEY_ACTIVE_FILTERS, []);
         const showBrokenAds = GM_getValue(STORAGE_KEY_SHOW_BROKEN_ADS, false);
-        const isExpanded = GM_getValue(STORAGE_KEY_PANEL_EXPANDED, true);
         const filterValueCounts = new Map();
         let shownAdCount = 0;
         let brokenAdCount = 0;
@@ -454,22 +470,33 @@
             if (isShown) shownAdCount++;
         }
 
-        const headerRow = createElement('div', 'olx-model-tags-panel-row');
-        if (ads.length) {
-            const toggleButton = createTextButton(`Tag filters${activeFilters.length ? ` (${activeFilters.length})` : ''}`, isExpanded ? 'Hide tag filters' : 'Show tag filters',
-                () => { GM_setValue(STORAGE_KEY_PANEL_EXPANDED, !isExpanded); renderFilterPanel(); });
-            toggleButton.setAttribute('aria-expanded', String(isExpanded));
-            headerRow.append(toggleButton, createElement('span', 'olx-model-tags-count', `${shownAdCount}/${ads.length} shown`));
+        // Collapsed by default to one small icon; the badge still shows active filters and sync errors.
+        panel.classList.toggle('olx-model-tags-panel-collapsed', !isFilterPanelExpanded);
+        const isSynchronizationError = synchronizationStatus.state === 'error';
+        if (!isFilterPanelExpanded) {
+            const openButton = createIconButton('tag', `Tag filters${activeFilters.length ? ` (${activeFilters.length} active)` : ''}${isSynchronizationError ? ` - sync error: ${synchronizationStatus.message}` : ''}`,
+                () => setFilterPanelExpanded(true));
+            openButton.setAttribute('aria-expanded', 'false');
+            if (activeFilters.length || isSynchronizationError) {
+                openButton.append(createElement('span', isSynchronizationError ? 'olx-model-tags-status-error' : 'olx-model-tags-count',
+                    `${activeFilters.length || ''}${isSynchronizationError ? '⚠' : ''}`));
+            }
+            panel.replaceChildren(openButton);
+            return;
         }
-        const statusText = createElement('span', synchronizationStatus.state === 'error' ? 'olx-model-tags-status-error' : 'olx-model-tags-count',
-            synchronizationStatus.state === 'error' ? `⚠ ${synchronizationStatus.message}` : synchronizationStatus.message);
+        const headerRow = createElement('div', 'olx-model-tags-panel-row');
+        if (ads.length) headerRow.append(createElement('span', 'olx-model-tags-count', `${shownAdCount}/${ads.length} shown`));
+        const statusText = createElement('span', isSynchronizationError ? 'olx-model-tags-status-error' : 'olx-model-tags-count',
+            isSynchronizationError ? `⚠ ${synchronizationStatus.message}` : synchronizationStatus.message);
         statusText.setAttribute('role', 'status');
         headerRow.append(statusText);
-        if (synchronizationStatus.state === 'error' && /token/i.test(synchronizationStatus.message)) headerRow.append(createTextButton('Set GitHub token', 'Enter the GitHub token used to save tags', askForGithubToken));
-        headerRow.append(createIconButton('sync', 'Sync tags with GitHub now', synchronizeWithGithub));
+        if (isSynchronizationError && /token/i.test(synchronizationStatus.message)) headerRow.append(createTextButton('Set GitHub token', 'Enter the GitHub token used to save tags', askForGithubToken));
+        const closeButton = createIconButton('close', 'Close tag filters (Esc)', () => setFilterPanelExpanded(false));
+        closeButton.setAttribute('aria-expanded', 'true');
+        headerRow.append(createIconButton('sync', 'Sync tags with GitHub now', synchronizeWithGithub), closeButton);
         const children = [headerRow];
 
-        if (ads.length && isExpanded) {
+        if (ads.length) {
             const filters = createElement('div', 'olx-model-tags-panel-filters');
             const sortedValues = [...new Set([...activeFilters, ...filterValueCounts.keys()])].sort((a, b) => (filterValueCounts.get(b) || 0) - (filterValueCounts.get(a) || 0) || a.localeCompare(b));
             for (const value of sortedValues) {
