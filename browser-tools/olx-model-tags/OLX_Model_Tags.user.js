@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OLX - Model Tags
 // @namespace    https://www.olx.ua/
-// @version      0.3.3
+// @version      0.3.4
 // @description  Tag OLX ads by model (tags shared by every ad of that model) or per ad, mark broken ads, filter search results by tags, per-tag Hide (pixel mesh) / Highlight (outline). Data syncs to GitHub; OLX only gets read locally from the open page.
 // @match        https://www.olx.ua/*
 // @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/browser-tools/olx-model-tags/OLX_Model_Tags.user.js
@@ -111,6 +111,16 @@
         module.exports = { normalizeModelKey, createEmptyOlxModelTagsData, detectModelKeyInTitle, resolveAdTagging, applyOlxModelTagsOperation, encodeUtf8TextAsBase64, decodeBase64AsUtf8Text, doesAdMatchActiveFilters, resolveAdDisplayEffects };
         return;
     }
+
+    // Two installed copies have separate Tampermonkey storage and overwrite each other's tag bars (one may hold no tags).
+    // The DOM is shared between copies, so the second one stops and makes the first one show an error.
+    const DUPLICATE_INSTALL_EVENT = 'olx-model-tags-duplicate-install';
+    if (document.documentElement.dataset.olxModelTagsRunning) {
+        document.dispatchEvent(new CustomEvent(DUPLICATE_INSTALL_EVENT));
+        console.error('OLX - Model Tags is installed twice in Tampermonkey; delete one copy.');
+        return;
+    }
+    document.documentElement.dataset.olxModelTagsRunning = 'true';
 
     // ---------- Storage and GitHub sync ----------
     // Nothing here talks to OLX: ads are read from the already-open page DOM. Only api.github.com is contacted.
@@ -575,6 +585,8 @@
             if (olxModelTagsData && findAdsOnPage().some(doesAdNeedTagBarRender)) renderEverything();
         });
     }).observe(document.body, { childList: true, subtree: true });
+
+    document.addEventListener(DUPLICATE_INSTALL_EVENT, () => setSynchronizationStatus('error', 'Installed twice in Tampermonkey: delete one copy'));
 
     if (olxModelTagsData) {
         olxModelTagsData = rebuildLocalDataFromCacheAndPendingOperations(olxModelTagsData);
