@@ -45,3 +45,13 @@ test('tag display modes: Hide meshes, Highlight outlines, Do nothing clears', ()
   assert.deepEqual(olxModelTags.resolveAdDisplayEffects({ models: {}, ads: {} }, ['VGA']), { isMeshed: false, isHighlighted: false });
   assert.deepEqual(data.tagDisplayModes, { IPS: 'highlight' });
 });
+
+test('clearing a mistyped per-ad model drops the unused empty model', () => {
+  const data = olxModelTags.createEmptyOlxModelTagsData();
+  olxModelTags.applyOlxModelTagsOperation(data, { type: 'setAdModel', adId: '1', modelName: 'VGA' });
+  olxModelTags.applyOlxModelTagsOperation(data, { type: 'addTag', scope: 'model', modelName: 'P2012Ht', tag: 'TN' });
+  olxModelTags.applyOlxModelTagsOperation(data, { type: 'setAdModel', adId: '2', modelName: 'P2012Ht' });
+  olxModelTags.applyOlxModelTagsOperation(data, { type: 'setAdModel', adId: '1', modelName: '' });
+  olxModelTags.applyOlxModelTagsOperation(data, { type: 'setAdModel', adId: '2', modelName: '' });
+  assert.deepEqual(Object.keys(data.models), ['P2012HT']);
+});

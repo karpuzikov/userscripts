@@ -1,7 +1,7 @@
 # OLX - Model Tags - Continuity
 
 ## Product
-- Version: 0.3.0 - Under construction ⚠️ (needs user testing in Tampermonkey on live olx.ua).
+- Version: 0.3.1 - Under construction ⚠️ (needs user testing in Tampermonkey on live olx.ua).
 - Repository/branch: `karpuzikov/userscripts`, `main`.
 - Script: `browser-tools/olx-model-tags/OLX_Model_Tags.user.js`. Tests: `node --test browser-tools/olx-model-tags/olx-model-tags.test.cjs`.
 - Rules: root `SOFTWARE_RULES.md`, `UI_UX_RULES.md`, `DESIGN.md` (Karpuzikov design system). No project-specific rules file.
@@ -28,16 +28,17 @@
 - UI: Karpuzikov dark tokens; Atkinson Hyperlegible Next → Inter font stack (fonts not loaded, local if installed). Equal padding on all sides; icon buttons borderless, text buttons bordered. Bar has `z-index:2` (OLX's title link otherwise covers it).
 
 ## Control contract
-- Model chip (accent, mono): shows model, tooltip says if set for this ad or found in title. Not clickable.
+- Model chip (accent, mono): shows model, tooltip says if set for this ad or found in title. 0.3.1: × on a per-ad model removes it from the ad (title detection applies again); `setAdModel` deletes the previous model if it has no tags and no other ad uses it.
 - Tag chip × (icon): removes tag from the model (tooltip names the model: affects all its ads) or from this ad (dashed outline = ad-only tag).
 - Broken chip (red, ⚠ text): shown when marked.
 - Broken icon button (⚠): toggles broken; red when active.
-- `+` icon button (0.2.1: existing chips stay visible while editing, their × hidden; editor replaces only the ⚠/+ buttons and stays open after Save for the next tag; Esc/× closes and refocuses +): opens editor in place: Model input (datalist of known models), Tag input (datalist of known tags; placeholder says where the tag goes), `Save` (Enter), × Cancel (Esc).
+- `+` icon button (0.2.1: existing chips stay visible while editing, their × hidden; editor replaces only the ⚠/+ buttons and stays open after Save for the next tag; Esc/× closes and refocuses +): opens editor in place (0.3.1: Tag input first and focused, then `Model (optional)` - user typed a tag into the focused Model field on an ad without a model): Tag input (datalist of known tags; placeholder says where the tag goes), `Save` (Enter), × Cancel (Esc).
 - Per-tag mode switch (3 icon buttons, aria-pressed, tooltips `Hide/Do nothing/Highlight: ads tagged "x"`): eye-off / minus / square. Active Hide/Highlight = lime fill, active Do nothing = grey fill.
 - Card effects: `.olx-model-tags-meshed-ad::after` checker mesh z-index 1 (bar z-index 2 above it); `.olx-model-tags-highlighted-ad::before` lime frame z-index 3, pointer-events none (outline was covered by card children).
 - Panel (fixed bottom-right), 0.3.0: collapsed by default to one 34 px tag icon button (user: panel must not sit on screen all the time); badge shows active filter count and ⚠ on sync error; click opens; × / Esc / click outside panel and tag bars closes. Open panel: `shown/total` count; sync status (role=status; red ⚠ text on error); `Set GitHub token` on token errors; sync icon. Filter chips with counts toggle AND filters (✓ + lime when active). `Show broken (N)`, `Clear filters`.
 
 ## Tests and acceptance (2026-11-18)
+- 0.3.1: unit 6/6. Data fix by hand: ad 940112664 had model `VGA` (meant as a tag) → model cleared, `VGA` added as ad tag, empty `VGA` model deleted.
 - 0.3.0: live olx.ua check (Claude built-in browser, script injected by page eval with GM stubs, one page load): 40/40 bars rendered and survive React. Playwright: collapsed 34x34, opens, VGA filter → badge 1 after outside click closes (`qa-screenshots/panel-open.png`, `panel-collapsed-active.png`).
 - 0.2.1: Playwright: 3 tags typed in a row (Enter, Enter, Esc) stay visible while editing (`qa-screenshots/chain.png`).
 - 0.2.0: unit 5/5 pass; Playwright: Hide on `lot` meshes 1 card, Highlight on `P2012Ht` frames 2 cards (`qa-screenshots/modes.png`).

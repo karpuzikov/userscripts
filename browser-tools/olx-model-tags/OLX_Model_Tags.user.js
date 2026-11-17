@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OLX - Model Tags
 // @namespace    https://www.olx.ua/
-// @version      0.3.0
+// @version      0.3.1
 // @description  Tag OLX ads by model (tags shared by every ad of that model) or per ad, mark broken ads, filter search results by tags, per-tag Hide (pixel mesh) / Highlight (outline). Data syncs to GitHub; OLX only gets read locally from the open page.
 // @match        https://www.olx.ua/*
 // @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/browser-tools/olx-model-tags/OLX_Model_Tags.user.js
@@ -71,8 +71,12 @@
         }
         if (operation.type === 'setAdModel') {
             const adEntry = (data.ads[operation.adId] ||= { model: '', tags: [] });
+            const previousModelKey = normalizeModelKey(adEntry.model);
             adEntry.model = operation.modelName.trim();
             if (adEntry.model) ensureModelEntry(data, adEntry.model);
+            // A mistyped model with no tags and no other ads is dropped, so it stops showing up in suggestions.
+            const isPreviousModelUnused = !Object.values(data.ads).some((otherAd) => normalizeModelKey(otherAd.model) === previousModelKey);
+            if (previousModelKey && isPreviousModelUnused && !data.models[previousModelKey]?.tags.length) delete data.models[previousModelKey];
             return;
         }
         const tagOwner = operation.scope === 'model'
@@ -362,7 +366,9 @@
         const children = [];
         if (tagging.modelName) {
             const modelChip = createElement('span', 'olx-model-tags-chip olx-model-tags-chip-model', tagging.modelName);
-            modelChip.title = olxModelTagsData.ads[ad.adId]?.model ? 'Model set for this ad' : 'Model found in the title';
+            const isModelSetForThisAd = Boolean(olxModelTagsData.ads[ad.adId]?.model);
+            modelChip.title = isModelSetForThisAd ? 'Model set for this ad' : 'Model found in the title';
+            if (isModelSetForThisAd) modelChip.append(createIconButton('close', `Remove model ${tagging.modelName} from this ad`, () => recordOperation({ type: 'setAdModel', adId: ad.adId, modelName: '' })));
             children.push(modelChip);
         }
         for (const tag of tagging.modelTags) {
@@ -390,7 +396,7 @@
     function openTagEditor(bar, ad, tagging) {
         bar.dataset.editing = 'true';
         const modelInput = createElement('input', 'olx-model-tags-input olx-model-tags-input-model');
-        modelInput.placeholder = 'Model';
+        modelInput.placeholder = 'Model (optional)';
         modelInput.value = tagging.modelName;
         modelInput.setAttribute('aria-label', 'Model of this ad');
         modelInput.setAttribute('list', 'olx-model-tags-known-models');
@@ -423,8 +429,8 @@
         }
         // Existing tags stay visible; the editor replaces only the Broken and + buttons and stays open for the next tag until Esc/×.
         for (const actionButton of bar.querySelectorAll(':scope > .olx-model-tags-icon-button')) actionButton.remove();
-        bar.append(modelInput, tagInput, createTextButton('Save', 'Save model and tag (Enter)', saveEditor), createIconButton('close', 'Close editor (Esc)', closeEditor));
-        (tagging.modelName ? tagInput : modelInput).focus();
+        bar.append(tagInput, modelInput, createTextButton('Save', 'Save model and tag (Enter)', saveEditor), createIconButton('close', 'Close editor (Esc)', closeEditor));
+        tagInput.focus();
     }
 
     let isFilterPanelExpanded = false;
