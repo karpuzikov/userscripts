@@ -1,7 +1,7 @@
 # OLX - Model Tags - Continuity
 
 ## Product
-- Version: 0.2.0 - Under construction ⚠️ (needs user testing in Tampermonkey on live olx.ua).
+- Version: 0.2.1 - Under construction ⚠️ (needs user testing in Tampermonkey on live olx.ua).
 - Repository/branch: `karpuzikov/userscripts`, `main`.
 - Script: `browser-tools/olx-model-tags/OLX_Model_Tags.user.js`. Tests: `node --test browser-tools/olx-model-tags/olx-model-tags.test.cjs`.
 - Rules: root `SOFTWARE_RULES.md`, `UI_UX_RULES.md`, `DESIGN.md` (Karpuzikov design system). No project-specific rules file.
@@ -32,12 +32,13 @@
 - Tag chip × (icon): removes tag from the model (tooltip names the model: affects all its ads) or from this ad (dashed outline = ad-only tag).
 - Broken chip (red, ⚠ text): shown when marked.
 - Broken icon button (⚠): toggles broken; red when active.
-- `+` icon button: opens editor in place: Model input (datalist of known models), Tag input (datalist of known tags; placeholder says where the tag goes), `Save` (Enter), × Cancel (Esc).
+- `+` icon button (0.2.1: existing chips stay visible while editing, their × hidden; editor replaces only the ⚠/+ buttons and stays open after Save for the next tag; Esc/× closes and refocuses +): opens editor in place: Model input (datalist of known models), Tag input (datalist of known tags; placeholder says where the tag goes), `Save` (Enter), × Cancel (Esc).
 - Per-tag mode switch (3 icon buttons, aria-pressed, tooltips `Hide/Do nothing/Highlight: ads tagged "x"`): eye-off / minus / square. Active Hide/Highlight = lime fill, active Do nothing = grey fill.
 - Card effects: `.olx-model-tags-meshed-ad::after` checker mesh z-index 1 (bar z-index 2 above it); `.olx-model-tags-highlighted-ad::before` lime frame z-index 3, pointer-events none (outline was covered by card children).
 - Panel (fixed bottom-right): `Tag filters (n)` toggles the list; `shown/total` count; sync status (role=status; red ⚠ text on error); `Set GitHub token` on token errors; sync icon. Filter chips with counts toggle AND filters (✓ + lime when active). `Show broken (N)`, `Clear filters`.
 
 ## Tests and acceptance (2026-11-18)
+- 0.2.1: Playwright: 3 tags typed in a row (Enter, Enter, Esc) stay visible while editing (`qa-screenshots/chain.png`).
 - 0.2.0: unit 5/5 pass; Playwright: Hide on `lot` meshes 1 card, Highlight on `P2012Ht` frames 2 cards (`qa-screenshots/modes.png`).
 - Unit (0.1.0): 4/4 pass (Node 22): normalization, detection, idempotent operations/override, broken/filter matching, UTF-8 base64.
 - Playwright Chromium, saved OLX pages (view-source copies the user uploaded, OLX external CSS missing, network blocked, GM_* stubbed, GitHub stubbed 404): 40/40 bars on the search page, broken ad hidden, editor typing + Enter saves, filter `1600x900` leaves 2 of 40, ad page bar shows model tags. Screenshots: `qa-screenshots/` (search, editor, filtered, ad2, search-narrow at 800 px).
