@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OLX - Model Tags
 // @namespace    https://www.olx.ua/
-// @version      0.3.2
+// @version      0.3.3
 // @description  Tag OLX ads by model (tags shared by every ad of that model) or per ad, mark broken ads, filter search results by tags, per-tag Hide (pixel mesh) / Highlight (outline). Data syncs to GitHub; OLX only gets read locally from the open page.
 // @match        https://www.olx.ua/*
 // @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/browser-tools/olx-model-tags/OLX_Model_Tags.user.js
@@ -170,6 +170,8 @@
 
     async function downloadDataFileFromGithub() {
         const response = await requestGithubApi('GET', `${GITHUB_DATA_FILE_URL}?ref=${GITHUB_DATA_BRANCH}&t=${Date.now()}`);
+        // A missing file is only normal before the first sync; afterwards it must not silently wipe the local tags.
+        if (response.status === 404 && GM_getValue(STORAGE_KEY_CACHED_AT, 0)) throw new Error('GitHub data file not found (check the token has access to the repository)');
         if (response.status === 404) return { data: createEmptyOlxModelTagsData(), sha: null };
         if (response.status !== 200) throw new Error(`GitHub download failed (HTTP ${response.status}${response.json?.message ? `: ${response.json.message}` : ''})`);
         // shortcut: the contents API inlines files up to 1 MB; switch to the blob API if the data file ever grows past that.
@@ -234,11 +236,22 @@
 
     // ---------- Page reading (local DOM only) ----------
 
+    // OLX's client re-render of the listing does not always use <h4>; the title link (or its aria-label) is stable.
+    function findCardTitleText(titleContainer) {
+        const titleLink = titleContainer.querySelector('[data-testid="card-title-link"]');
+        return titleLink?.textContent.trim() || titleLink?.getAttribute('aria-label') || titleContainer.querySelector('h4, h6')?.textContent || '';
+    }
+
+    function doesAdNeedTagBarRender(ad) {
+        const bar = ad.anchor.nextElementSibling;
+        return !bar?.classList.contains('olx-model-tags-bar') || (bar.dataset.editing !== 'true' && bar.dataset.renderedTitle !== ad.title);
+    }
+
     function findAdsOnPage() {
         const ads = [];
         for (const card of document.querySelectorAll('[data-cy="l-card"][id]')) {
             const titleContainer = card.querySelector('[data-testid="ad-card-title"]');
-            if (titleContainer && /^\d+$/.test(card.id)) ads.push({ adId: card.id, title: titleContainer.querySelector('h4')?.textContent || '', anchor: titleContainer, card });
+            if (titleContainer && /^\d+$/.test(card.id)) ads.push({ adId: card.id, title: findCardTitleText(titleContainer), anchor: titleContainer, card });
         }
         const adPageTitle = document.querySelector('[data-testid="offer_title"]');
         const adPageId = document.querySelector('[data-testid="ad-footer-bar-section"]')?.textContent.match(/ID:\s*(\d+)/)?.[1];
@@ -362,6 +375,7 @@
             ad.anchor.after(bar);
         }
         if (bar.dataset.editing === 'true') return;
+        bar.dataset.renderedTitle = ad.title;
         const tagging = resolveAdTagging(olxModelTagsData, ad.adId, ad.title);
         const isBroken = tagging.adTags.includes(BROKEN_TAG);
         const children = [];
@@ -558,7 +572,7 @@
         if (renderFrame) return;
         renderFrame = requestAnimationFrame(() => {
             renderFrame = 0;
-            if (olxModelTagsData && findAdsOnPage().some((ad) => !ad.anchor.nextElementSibling?.classList.contains('olx-model-tags-bar'))) renderEverything();
+            if (olxModelTagsData && findAdsOnPage().some(doesAdNeedTagBarRender)) renderEverything();
         });
     }).observe(document.body, { childList: true, subtree: true });
 

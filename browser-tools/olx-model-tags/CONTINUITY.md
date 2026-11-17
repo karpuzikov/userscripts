@@ -1,7 +1,7 @@
 # OLX - Model Tags - Continuity
 
 ## Product
-- Version: 0.3.2 - Under construction ⚠️ (needs user testing in Tampermonkey on live olx.ua).
+- Version: 0.3.3 - Under construction ⚠️ (needs user testing in Tampermonkey on live olx.ua).
 - Repository/branch: `karpuzikov/userscripts`, `main`.
 - Script: `browser-tools/olx-model-tags/OLX_Model_Tags.user.js`. Tests: `node --test browser-tools/olx-model-tags/olx-model-tags.test.cjs`.
 - Rules: root `SOFTWARE_RULES.md`, `UI_UX_RULES.md`, `DESIGN.md` (Karpuzikov design system). No project-specific rules file.
@@ -24,7 +24,7 @@
 - Local storage (Tampermonkey, shared across olx.ua tabs): `olxModelTagsCachedData`, `olxModelTagsCachedAt`, `olxModelTagsPendingOperations`, `olxModelTagsGithubToken`, `olxModelTagsActiveFilters`, `olxModelTagsShowBrokenAds`. Panel open state is in memory only (always starts collapsed).
 - Sync = operation log: each edit is an idempotent operation (`setAdModel`, `addTag`, `removeTag`, `setTagDisplayMode`) stored as pending, applied locally at once; 2 s after the last edit the script downloads the GitHub file, replays pending operations, PUTs it with the downloaded `sha` (retries up to 3 times on 409/422), then clears the uploaded operations. Edits from other devices are never overwritten. Without pending edits nothing is uploaded; on page load GitHub is only contacted when there is no cache or there are pending edits. The panel's sync icon pulls on demand.
 - Token: GitHub fine-grained token with Contents read/write on `karpuzikov/userscripts`, asked via the panel's `Set GitHub token` button when an upload needs it. Reading works without a token (public repo).
-- DOM: cards `[data-cy="l-card"][id]` (id = ad ID), title `[data-testid="ad-card-title"] h4`; bar inserted after `[data-testid="ad-card-title"]`. Ad page: title `[data-testid="offer_title"]`, ID from `[data-testid="ad-footer-bar-section"]` text `ID: <n>`. MutationObserver re-adds bars when React re-renders cards.
+- DOM: cards `[data-cy="l-card"][id]` (id = ad ID), title = text of `[data-testid="card-title-link"]` (fallback its aria-label, then h4/h6; 0.3.3: user saw tags for ~0.5 s then 0 chips on 60 bars on `/monitory/q-1600-1200/` - suspected client re-render without `<h4>`, so title-detected models vanished; not confirmed live); bar inserted after `[data-testid="ad-card-title"]`. Ad page: title `[data-testid="offer_title"]`, ID from `[data-testid="ad-footer-bar-section"]` text `ID: <n>`. MutationObserver re-renders an ad when its bar is missing or the title it was rendered for (`bar.dataset.renderedTitle`) changed. 0.3.3: a 404 on the data file after a previous sync is an error, never an empty-data overwrite of the cache.
 - UI: Karpuzikov dark tokens; Atkinson Hyperlegible Next → Inter font stack (fonts not loaded, local if installed). Equal padding on all sides; icon buttons borderless, text buttons bordered. Bar has `z-index:2` (OLX's title link otherwise covers it).
 
 ## Control contract
@@ -38,6 +38,7 @@
 - Panel (fixed bottom-right), 0.3.0: collapsed by default to one 34 px tag icon button (user: panel must not sit on screen all the time); badge shows active filter count and ⚠ on sync error; click opens; × / Esc / click outside panel and tag bars closes. Open panel: `shown/total` count; sync status (role=status; red ⚠ text on error); `Set GitHub token` on token errors; sync icon. Filter chips with counts toggle AND filters (✓ + lime when active). `Show broken (N)`, `Clear filters`.
 
 ## Tests and acceptance (2026-11-18)
+- 0.3.3: Playwright: replacing every card `<h4>` with `<h6>` keeps model chips (2→2); changing a title re-renders its bar with the new model. User console on live page before fix: bars 60, chips 0, cards 61. NOT RUN: confirmation on the user's browser.
 - 0.3.2: Playwright: Enter adds `A` and keeps editor open, ✓ adds `B` and closes (`qa-screenshots/editor2.png`).
 - 0.3.1: unit 6/6. Data fix by hand: ad 940112664 had model `VGA` (meant as a tag) → model cleared, `VGA` added as ad tag, empty `VGA` model deleted.
 - 0.3.0: live olx.ua check (Claude built-in browser, script injected by page eval with GM stubs, one page load): 40/40 bars rendered and survive React. Playwright: collapsed 34x34, opens, VGA filter → badge 1 after outside click closes (`qa-screenshots/panel-open.png`, `panel-collapsed-active.png`).
