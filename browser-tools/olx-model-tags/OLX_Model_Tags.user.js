@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OLX - Model Tags
 // @namespace    https://www.olx.ua/
-// @version      0.3.4
+// @version      0.3.5
 // @description  Tag OLX ads by model (tags shared by every ad of that model) or per ad, mark broken ads, filter search results by tags, per-tag Hide (pixel mesh) / Highlight (outline). Data syncs to GitHub; OLX only gets read locally from the open page.
 // @match        https://www.olx.ua/*
 // @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/browser-tools/olx-model-tags/OLX_Model_Tags.user.js
@@ -380,7 +380,10 @@
     function renderTagBar(ad) {
         let bar = ad.anchor.nextElementSibling?.classList.contains('olx-model-tags-bar') ? ad.anchor.nextElementSibling : null;
         if (!bar) {
-            bar = createElement('div', 'olx-model-tags-root olx-model-tags-bar');
+            // Custom tag, not <div>: when the script runs before OLX's React hydration (e.g. Dark Reader slows the page),
+            // React adopts a <div> sitting where it expects its own <div> and fills it with OLX content, wiping the tags.
+            // React never adopts an element of a different type.
+            bar = createElement('olx-model-tags-bar', 'olx-model-tags-root olx-model-tags-bar');
             bar.addEventListener('click', (event) => event.stopPropagation());
             ad.anchor.after(bar);
         }
