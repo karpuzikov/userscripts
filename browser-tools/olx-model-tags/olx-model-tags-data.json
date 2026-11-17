@@ -1,0 +1,17 @@
+{
+ "models": {
+  "DELLP2012HT": {
+   "name": "Dell P2012Ht",
+   "tags": [
+    "1600x900"
+   ]
+  }
+ },
+ "ads": {
+  "932958297": {
+   "model": "Dell P2012Ht",
+   "tags": []
+  }
+ },
+ "tagDisplayModes": {}
+}
