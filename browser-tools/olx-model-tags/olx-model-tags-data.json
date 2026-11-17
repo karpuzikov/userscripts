@@ -33,7 +33,9 @@
   },
   "NECMULTISYNCLCD2070NX": {
    "name": "NEC MultiSync LCD2070NX",
-   "tags": []
+   "tags": [
+    "1600x1200"
+   ]
   }
  },
  "ads": {
