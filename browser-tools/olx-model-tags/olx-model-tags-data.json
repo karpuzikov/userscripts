@@ -52,7 +52,8 @@
   "NECMULTISYNCLCD2090UXI": {
    "name": "NEC MultiSync LCD2090UXi",
    "tags": [
-    "1600x1200"
+    "1600x1200",
+    "280 cd/m²"
    ]
   }
  },
