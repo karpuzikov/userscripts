@@ -35,3 +35,13 @@ test('GitHub base64 round-trips UTF-8', () => {
   const text = JSON.stringify({ tag: '250 cd/m² Монітор' });
   assert.equal(olxModelTags.decodeBase64AsUtf8Text(olxModelTags.encodeUtf8TextAsBase64(text)), text);
 });
+
+test('tag display modes: Hide meshes, Highlight outlines, Do nothing clears', () => {
+  const data = olxModelTags.createEmptyOlxModelTagsData();
+  olxModelTags.applyOlxModelTagsOperation(data, { type: 'setTagDisplayMode', tag: 'VGA', displayMode: 'hide' });
+  olxModelTags.applyOlxModelTagsOperation(data, { type: 'setTagDisplayMode', tag: 'IPS', displayMode: 'highlight' });
+  assert.deepEqual(olxModelTags.resolveAdDisplayEffects(data, ['VGA', 'IPS']), { isMeshed: true, isHighlighted: true });
+  olxModelTags.applyOlxModelTagsOperation(data, { type: 'setTagDisplayMode', tag: 'VGA', displayMode: 'nothing' });
+  assert.deepEqual(olxModelTags.resolveAdDisplayEffects({ models: {}, ads: {} }, ['VGA']), { isMeshed: false, isHighlighted: false });
+  assert.deepEqual(data.tagDisplayModes, { IPS: 'highlight' });
+});

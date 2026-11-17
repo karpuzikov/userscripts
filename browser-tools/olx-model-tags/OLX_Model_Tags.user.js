@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         OLX - Model Tags
 // @namespace    https://www.olx.ua/
-// @version      0.1.0
-// @description  Tag OLX ads by model (tags shared by every ad of that model) or per ad, mark broken ads, filter search results by tags. Data syncs to GitHub; OLX only gets read locally from the open page.
+// @version      0.2.0
+// @description  Tag OLX ads by model (tags shared by every ad of that model) or per ad, mark broken ads, filter search results by tags, per-tag Hide (pixel mesh) / Highlight (outline). Data syncs to GitHub; OLX only gets read locally from the open page.
 // @match        https://www.olx.ua/*
 // @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/browser-tools/olx-model-tags/OLX_Model_Tags.user.js
 // @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/browser-tools/olx-model-tags/OLX_Model_Tags.user.js
@@ -29,7 +29,7 @@
     }
 
     function createEmptyOlxModelTagsData() {
-        return { models: {}, ads: {} };
+        return { models: {}, ads: {}, tagDisplayModes: {} };
     }
 
     // shortcut: substring match on the normalized title; very short model names (<4 chars) are ignored to avoid false hits.
@@ -63,6 +63,12 @@
 
     // Operations are idempotent, so replaying them on fresh GitHub data (or twice from two tabs) is safe.
     function applyOlxModelTagsOperation(data, operation) {
+        if (operation.type === 'setTagDisplayMode') {
+            data.tagDisplayModes ||= {};
+            if (operation.displayMode === 'hide' || operation.displayMode === 'highlight') data.tagDisplayModes[operation.tag] = operation.displayMode;
+            else delete data.tagDisplayModes[operation.tag];
+            return;
+        }
         if (operation.type === 'setAdModel') {
             const adEntry = (data.ads[operation.adId] ||= { model: '', tags: [] });
             adEntry.model = operation.modelName.trim();
@@ -92,8 +98,13 @@
         return activeFilters.every((filter) => filterValues.includes(filter));
     }
 
+    function resolveAdDisplayEffects(data, filterValues) {
+        const displayModes = filterValues.map((value) => data.tagDisplayModes?.[value]);
+        return { isMeshed: displayModes.includes('hide'), isHighlighted: displayModes.includes('highlight') };
+    }
+
     if (typeof module === 'object') {
-        module.exports = { normalizeModelKey, createEmptyOlxModelTagsData, detectModelKeyInTitle, resolveAdTagging, applyOlxModelTagsOperation, encodeUtf8TextAsBase64, decodeBase64AsUtf8Text, doesAdMatchActiveFilters };
+        module.exports = { normalizeModelKey, createEmptyOlxModelTagsData, detectModelKeyInTitle, resolveAdTagging, applyOlxModelTagsOperation, encodeUtf8TextAsBase64, decodeBase64AsUtf8Text, doesAdMatchActiveFilters, resolveAdDisplayEffects };
         return;
     }
 
@@ -261,6 +272,14 @@
 .olx-model-tags-text-button-active .olx-model-tags-count{color:var(--on-primary)}
 .olx-model-tags-status-error{color:var(--negative)}
 .olx-model-tags-hidden-ad{display:none!important}
+.olx-model-tags-tag-group{display:inline-flex;align-items:center;gap:4px;padding:4px;border-radius:8px;background:var(--canvas)}
+.olx-model-tags-mode-switch{display:inline-flex;gap:2px;padding:2px;border-radius:6px;background:var(--surface-elevated)}
+.olx-model-tags-mode-switch .olx-model-tags-icon-button:hover{background:var(--border-strong)}
+.olx-model-tags-mode-switch .olx-model-tags-mode-switch-active,.olx-model-tags-mode-switch .olx-model-tags-mode-switch-active:hover{background:#C6F432;color:#181A20}
+.olx-model-tags-mode-switch [aria-label^="Do nothing"].olx-model-tags-mode-switch-active{background:var(--border-strong);color:var(--text)}
+.olx-model-tags-meshed-ad,.olx-model-tags-highlighted-ad{position:relative!important}
+.olx-model-tags-meshed-ad::after{content:"";position:absolute;inset:0;z-index:1;pointer-events:none;border-radius:inherit;background:repeating-conic-gradient(rgba(11,14,17,.9) 0 25%,transparent 0 50%) 0 0/4px 4px}
+.olx-model-tags-highlighted-ad::before{content:"";position:absolute;inset:0;z-index:3;pointer-events:none;border:3px solid #C6F432;border-radius:4px}
 `);
 
     const ICON_PATHS = {
@@ -268,6 +287,9 @@
         close: 'M6 6l12 12M18 6L6 18',
         broken: 'M12 3l9.5 16.5h-19L12 3zM12 10v4M12 17.5v.01',
         sync: 'M20 12a8 8 0 1 1-2.34-5.66M20 4v5h-5',
+        hide: 'M3 3l18 18M10.6 10.6a2 2 0 0 0 2.8 2.8M9.9 5.1A9.8 9.8 0 0 1 12 5c5 0 9 4.5 10 7a13 13 0 0 1-3 4M6.6 6.6C4.5 8 3 10 2 12c1 2.5 5 7 10 7 1.7 0 3.3-.5 4.6-1.3',
+        nothing: 'M6 12h12',
+        highlight: 'M4 4h16v16H4z',
     };
 
     function createIcon(iconName) {
@@ -423,6 +445,9 @@
             if (filterValues.includes(BROKEN_TAG)) brokenAdCount++;
             const isShown = doesAdMatchActiveFilters(filterValues, activeFilters, showBrokenAds);
             ad.card.classList.toggle('olx-model-tags-hidden-ad', !isShown);
+            const displayEffects = resolveAdDisplayEffects(olxModelTagsData, filterValues);
+            ad.card.classList.toggle('olx-model-tags-meshed-ad', displayEffects.isMeshed);
+            ad.card.classList.toggle('olx-model-tags-highlighted-ad', displayEffects.isHighlighted);
             if (isShown) shownAdCount++;
         }
 
@@ -451,7 +476,9 @@
                     renderFilterPanel();
                 }, isActive);
                 button.append(createElement('span', 'olx-model-tags-count', String(filterValueCounts.get(value) || 0)));
-                filters.append(button);
+                const tagGroup = createElement('div', 'olx-model-tags-tag-group');
+                tagGroup.append(createTagDisplayModeSwitch(value), button);
+                filters.append(tagGroup);
             }
             const footerRow = createElement('div', 'olx-model-tags-panel-row');
             footerRow.append(createTextButton(`${showBrokenAds ? '✓ ' : ''}Show broken (${brokenAdCount})`, showBrokenAds ? 'Hide ads marked broken' : 'Show ads marked broken',
@@ -461,6 +488,22 @@
             children.push(footerRow);
         }
         panel.replaceChildren(...children);
+    }
+
+    function createTagDisplayModeSwitch(tag) {
+        const currentDisplayMode = olxModelTagsData.tagDisplayModes?.[tag] || 'nothing';
+        const displayModeSwitch = createElement('div', 'olx-model-tags-mode-switch');
+        displayModeSwitch.setAttribute('role', 'group');
+        displayModeSwitch.setAttribute('aria-label', `What to do with ads tagged "${tag}"`);
+        for (const [displayMode, label] of [['hide', 'Hide'], ['nothing', 'Do nothing'], ['highlight', 'Highlight']]) {
+            const isActive = displayMode === currentDisplayMode;
+            const button = createIconButton(displayMode, `${label}: ads tagged "${tag}"`,
+                () => { if (!isActive) recordOperation({ type: 'setTagDisplayMode', tag, displayMode }); },
+                isActive ? 'olx-model-tags-mode-switch-active' : '');
+            button.setAttribute('aria-pressed', String(isActive));
+            displayModeSwitch.append(button);
+        }
+        return displayModeSwitch;
     }
 
     function renderEverything() {
