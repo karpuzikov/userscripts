@@ -1,7 +1,7 @@
 # OLX - Model Tags - Continuity
 
 ## Product
-- Version: 0.3.5 - Under construction ⚠️ (needs user testing in Tampermonkey on live olx.ua).
+- Version: 0.4.0 - Under construction ⚠️ (needs user testing in Tampermonkey on live olx.ua).
 - Repository/branch: `karpuzikov/userscripts`, `main`.
 - Script: `browser-tools/olx-model-tags/OLX_Model_Tags.user.js`. Tests: `node --test browser-tools/olx-model-tags/olx-model-tags.test.cjs`.
 - Rules: root `SOFTWARE_RULES.md`, `UI_UX_RULES.md`, `DESIGN.md` (Karpuzikov design system). No project-specific rules file.
@@ -12,6 +12,7 @@
 - `+` button on every card and on the ad page: set/replace the ad's model (also adds a new model to the DB) and add a tag. With a model the tag goes to the model (all its ads); without one it goes to that ad only.
 - Ads without model/make info get per-ad data (per-ad model or per-ad tags), keyed by OLX numeric ad ID.
 - Universal "Broken" button next to `+`: toggles the per-ad `broken` tag. Broken ads are hidden on every search page by default; panel has `Show broken (N)`.
+- 0.4.0 Stop phrases: editable list (panel → `Stop phrases (N)` → chips with ×, input + Enter adds). Case-insensitive substring of the card title (search page) or title + description `[data-cy="ad_description"]` (ad page, open page only). A match = treated as broken (hidden unless `Show broken`, counted in it) and shows a red chip `⚠ «phrase»` on the ad. Synced as `data.stopPhrases` (lowercased); until first edit `DEFAULT_STOP_PHRASES` (UA + RU repair/parts/not-working words) apply. Ops `addStopPhrase` / `removeStopPhrase`.
 - Filter by one or more tags (AND), model names are filterable too. Active filters and panel state persist across pages.
 - Per-tag 3-way switch in the panel: Hide (pixel mesh over the ad card, ad stays clickable, tag bar stays usable above the mesh) / Do nothing / Highlight (lime 3 px frame). Applies to search cards; model names have it too. Synced in the data file.
 - Data lives in GitHub; first run pulls from GitHub, then works from the local cache; changes are uploaded.
@@ -38,6 +39,7 @@
 - Panel (fixed bottom-right), 0.3.0: collapsed by default to one 34 px tag icon button (user: panel must not sit on screen all the time); badge shows active filter count and ⚠ on sync error; click opens; × / Esc / click outside panel and tag bars closes. Open panel: `shown/total` count; sync status (role=status; red ⚠ text on error); `Set GitHub token` on token errors; sync icon. Filter chips with counts toggle AND filters (✓ + lime when active). `Show broken (N)`, `Clear filters`.
 
 ## Tests and acceptance (2026-11-18)
+- 0.4.0: unit 7/7; Playwright: 5/40 saved-page ads hidden by default phrases, editor adds a phrase, matched ad shows `⚠ «под ремонт»` (`qa-screenshots/stop.png`). NOT RUN: live Tampermonkey.
 - 0.3.5 ROOT CAUSE of "tags show ~0.5 s then vanish" (user: Dark Reader, uBlock Origin Lite, Stylus etc.): the script ran before OLX's React hydration; React adopted our `<div class=olx-model-tags-bar>` as its own badge `<div>` (user console: bar's innerHTML = OLX `Вживане` badge, 0 chips, class still ours). Fix: the bar is a custom element `<olx-model-tags-bar>`, which React never adopts. Do not go back to `<div>` for anything inserted inside OLX cards.
 - 0.3.4: live olx.ua `/monitory/q-1600-1200/` in Claude built-in browser with the real GitHub data: 60 bars, 25 chips, stable for 3.5 s - script and data are fine there, while the user's browser shows 0 chips after ~0.5 s. Main suspect: two installed copies (separate GM storage, one empty, both render the same bars). Added guard: `<html data-olx-model-tags-running>`; a second copy dispatches `olx-model-tags-duplicate-install`, logs an error and stops; the first shows ⚠ `Installed twice in Tampermonkey: delete one copy`. Playwright: second injection keeps 14 chips and shows the error. NOT RUN: user confirmation.
 - 0.3.3: Playwright: replacing every card `<h4>` with `<h6>` keeps model chips (2→2); changing a title re-renders its bar with the new model. User console on live page before fix: bars 60, chips 0, cards 61. NOT RUN: confirmation on the user's browser.

@@ -55,3 +55,14 @@ test('clearing a mistyped per-ad model drops the unused empty model', () => {
   olxModelTags.applyOlxModelTagsOperation(data, { type: 'setAdModel', adId: '2', modelName: '' });
   assert.deepEqual(Object.keys(data.models), ['P2012HT']);
 });
+
+test('stop phrases: defaults until edited, case-insensitive match, add/remove', () => {
+  const data = olxModelTags.createEmptyOlxModelTagsData();
+  assert.equal(olxModelTags.findStopPhraseInText(data, 'Монітор Dell НА ЗАПЧАСТИНИ'), 'на запчастини');
+  for (const phrase of ['на запчастини', 'на запчасти']) olxModelTags.applyOlxModelTagsOperation(data, { type: 'removeStopPhrase', phrase });
+  olxModelTags.applyOlxModelTagsOperation(data, { type: 'addStopPhrase', phrase: '  Мертві Пікселі ' });
+  olxModelTags.applyOlxModelTagsOperation(data, { type: 'addStopPhrase', phrase: 'мертві пікселі' });
+  assert.equal(olxModelTags.findStopPhraseInText(data, 'Монітор Dell на запчастини'), '');
+  assert.equal(olxModelTags.findStopPhraseInText(data, 'є мертві пікселі'), 'мертві пікселі');
+  assert.equal(olxModelTags.getStopPhrases(data).filter((phrase) => phrase === 'мертві пікселі').length, 1);
+});

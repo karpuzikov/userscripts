@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OLX - Model Tags
 // @namespace    https://www.olx.ua/
-// @version      0.3.5
+// @version      0.4.0
 // @description  Tag OLX ads by model (tags shared by every ad of that model) or per ad, mark broken ads, filter search results by tags, per-tag Hide (pixel mesh) / Highlight (outline). Data syncs to GitHub; OLX only gets read locally from the open page.
 // @match        https://www.olx.ua/*
 // @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/browser-tools/olx-model-tags/OLX_Model_Tags.user.js
@@ -20,6 +20,8 @@
     // ---------- Pure logic (unit-tested in olx-model-tags.test.cjs) ----------
 
     const BROKEN_TAG = 'broken';
+    // Used until the user edits the list for the first time; afterwards data.stopPhrases is the list.
+    const DEFAULT_STOP_PHRASES = ['на запчастини', 'на запчасти', 'під ремонт', 'под ремонт', 'на ремонт', 'не працює', 'не работает', 'неробочий', 'нерабочий', 'не включається', 'не включается', 'розбитий', 'разбит', 'битий', 'полоси', 'полосы'];
     const CYRILLIC_LOOKALIKE_TO_LATIN = { А: 'A', В: 'B', Е: 'E', К: 'K', М: 'M', Н: 'H', О: 'O', Р: 'P', С: 'C', Т: 'T', Х: 'X', У: 'Y', І: 'I' };
 
     function normalizeModelKey(text) {
@@ -63,6 +65,12 @@
 
     // Operations are idempotent, so replaying them on fresh GitHub data (or twice from two tabs) is safe.
     function applyOlxModelTagsOperation(data, operation) {
+        if (operation.type === 'addStopPhrase' || operation.type === 'removeStopPhrase') {
+            const phrase = operation.phrase.trim().toLowerCase();
+            const stopPhrases = getStopPhrases(data).filter((existingPhrase) => existingPhrase !== phrase);
+            data.stopPhrases = operation.type === 'addStopPhrase' && phrase ? [...stopPhrases, phrase] : stopPhrases;
+            return;
+        }
         if (operation.type === 'setTagDisplayMode') {
             data.tagDisplayModes ||= {};
             if (operation.displayMode === 'hide' || operation.displayMode === 'highlight') data.tagDisplayModes[operation.tag] = operation.displayMode;
@@ -97,6 +105,16 @@
         return new TextDecoder().decode(Uint8Array.from(atob(base64.replace(/\s/g, '')), (character) => character.charCodeAt(0)));
     }
 
+    function getStopPhrases(data) {
+        return data.stopPhrases ?? DEFAULT_STOP_PHRASES;
+    }
+
+    // shortcut: plain case-insensitive substring; a phrase like "полоси" can hit an unrelated word. Edit the list if it misfires.
+    function findStopPhraseInText(data, text) {
+        const lowercaseText = text.toLowerCase();
+        return getStopPhrases(data).find((phrase) => lowercaseText.includes(phrase)) || '';
+    }
+
     function doesAdMatchActiveFilters(filterValues, activeFilters, showBrokenAds) {
         if (!showBrokenAds && filterValues.includes(BROKEN_TAG)) return false;
         return activeFilters.every((filter) => filterValues.includes(filter));
@@ -108,7 +126,7 @@
     }
 
     if (typeof module === 'object') {
-        module.exports = { normalizeModelKey, createEmptyOlxModelTagsData, detectModelKeyInTitle, resolveAdTagging, applyOlxModelTagsOperation, encodeUtf8TextAsBase64, decodeBase64AsUtf8Text, doesAdMatchActiveFilters, resolveAdDisplayEffects };
+        module.exports = { normalizeModelKey, createEmptyOlxModelTagsData, detectModelKeyInTitle, resolveAdTagging, applyOlxModelTagsOperation, encodeUtf8TextAsBase64, decodeBase64AsUtf8Text, doesAdMatchActiveFilters, resolveAdDisplayEffects, getStopPhrases, findStopPhraseInText };
         return;
     }
 
@@ -254,18 +272,25 @@
 
     function doesAdNeedTagBarRender(ad) {
         const bar = ad.anchor.nextElementSibling;
-        return !bar?.classList.contains('olx-model-tags-bar') || (bar.dataset.editing !== 'true' && bar.dataset.renderedTitle !== ad.title);
+        return !bar?.classList.contains('olx-model-tags-bar') || (bar.dataset.editing !== 'true' && bar.dataset.renderedText !== ad.text);
     }
 
     function findAdsOnPage() {
         const ads = [];
         for (const card of document.querySelectorAll('[data-cy="l-card"][id]')) {
             const titleContainer = card.querySelector('[data-testid="ad-card-title"]');
-            if (titleContainer && /^\d+$/.test(card.id)) ads.push({ adId: card.id, title: findCardTitleText(titleContainer), anchor: titleContainer, card });
+            if (titleContainer && /^\d+$/.test(card.id)) {
+                const title = findCardTitleText(titleContainer);
+                ads.push({ adId: card.id, title, text: title, anchor: titleContainer, card });
+            }
         }
         const adPageTitle = document.querySelector('[data-testid="offer_title"]');
         const adPageId = document.querySelector('[data-testid="ad-footer-bar-section"]')?.textContent.match(/ID:\s*(\d+)/)?.[1];
-        if (adPageTitle && adPageId) ads.push({ adId: adPageId, title: adPageTitle.textContent, anchor: adPageTitle, card: null });
+        if (adPageTitle && adPageId) {
+            // Search cards only have the title; the ad page also has the description. Both are read from the open page only.
+            const description = document.querySelector('[data-cy="ad_description"]')?.textContent || '';
+            ads.push({ adId: adPageId, title: adPageTitle.textContent, text: `${adPageTitle.textContent}\n${description}`, anchor: adPageTitle, card: null });
+        }
         return ads;
     }
 
@@ -388,7 +413,7 @@
             ad.anchor.after(bar);
         }
         if (bar.dataset.editing === 'true') return;
-        bar.dataset.renderedTitle = ad.title;
+        bar.dataset.renderedText = ad.text;
         const tagging = resolveAdTagging(olxModelTagsData, ad.adId, ad.title);
         const isBroken = tagging.adTags.includes(BROKEN_TAG);
         const children = [];
@@ -408,6 +433,12 @@
                 () => recordOperation({ type: 'removeTag', scope: 'ad', adId: ad.adId, tag })));
         }
         if (isBroken) children.push(createElement('span', 'olx-model-tags-chip olx-model-tags-chip-broken', '⚠ Broken'));
+        const matchedStopPhrase = findStopPhraseInText(olxModelTagsData, ad.text);
+        if (matchedStopPhrase && !isBroken) {
+            const stopPhraseChip = createElement('span', 'olx-model-tags-chip olx-model-tags-chip-broken', `⚠ «${matchedStopPhrase}»`);
+            stopPhraseChip.title = 'Matches a stop phrase: treated as broken and hidden in searches';
+            children.push(stopPhraseChip);
+        }
         children.push(createIconButton('broken', isBroken ? 'Unmark as broken' : 'Mark this ad as broken (hidden from searches)',
             () => recordOperation({ type: isBroken ? 'removeTag' : 'addTag', scope: 'ad', adId: ad.adId, tag: BROKEN_TAG }),
             isBroken ? 'olx-model-tags-icon-button-broken-active' : ''));
@@ -464,6 +495,34 @@
     }
 
     let isFilterPanelExpanded = false;
+    let isStopPhraseEditorExpanded = false;
+
+    function createStopPhraseEditor() {
+        const stopPhrases = getStopPhrases(olxModelTagsData);
+        const toggleButton = createTextButton(`${isStopPhraseEditorExpanded ? '✓ ' : ''}Stop phrases (${stopPhrases.length})`,
+            isStopPhraseEditorExpanded ? 'Hide stop phrases' : 'Edit stop phrases: ads whose title or description contains one are treated as broken',
+            () => { isStopPhraseEditorExpanded = !isStopPhraseEditorExpanded; renderFilterPanel(); }, isStopPhraseEditorExpanded);
+        toggleButton.setAttribute('aria-expanded', String(isStopPhraseEditorExpanded));
+        const toggleRow = createElement('div', 'olx-model-tags-panel-row');
+        toggleRow.append(toggleButton);
+        if (!isStopPhraseEditorExpanded) return [toggleRow];
+        const phraseList = createElement('div', 'olx-model-tags-panel-filters');
+        for (const phrase of stopPhrases) {
+            phraseList.append(createTagChip(phrase, 'olx-model-tags-chip', `Remove stop phrase "${phrase}"`, () => recordOperation({ type: 'removeStopPhrase', phrase })));
+        }
+        const phraseInput = createElement('input', 'olx-model-tags-input');
+        phraseInput.placeholder = 'Add stop phrase';
+        phraseInput.setAttribute('aria-label', 'Add stop phrase (Enter)');
+        phraseInput.addEventListener('keydown', (event) => {
+            event.stopPropagation();
+            if (event.key !== 'Enter' || !phraseInput.value.trim()) return;
+            event.preventDefault();
+            recordOperation({ type: 'addStopPhrase', phrase: phraseInput.value });
+            document.querySelector('.olx-model-tags-panel [aria-label^="Add stop phrase"]')?.focus();
+        });
+        phraseList.append(phraseInput);
+        return [toggleRow, phraseList];
+    }
 
     function setFilterPanelExpanded(isExpanded) {
         isFilterPanelExpanded = isExpanded;
@@ -495,7 +554,7 @@
         let brokenAdCount = 0;
         for (const ad of ads) {
             const tagging = resolveAdTagging(olxModelTagsData, ad.adId, ad.title);
-            const filterValues = [...new Set([...tagging.modelTags, ...tagging.adTags, ...(tagging.modelName ? [tagging.modelName] : [])])];
+            const filterValues = [...new Set([...tagging.modelTags, ...tagging.adTags, ...(tagging.modelName ? [tagging.modelName] : []), ...(findStopPhraseInText(olxModelTagsData, ad.text) ? [BROKEN_TAG] : [])])];
             for (const value of filterValues) if (value !== BROKEN_TAG) filterValueCounts.set(value, (filterValueCounts.get(value) || 0) + 1);
             if (filterValues.includes(BROKEN_TAG)) brokenAdCount++;
             const isShown = doesAdMatchActiveFilters(filterValues, activeFilters, showBrokenAds);
@@ -553,6 +612,7 @@
             if (sortedValues.length) children.push(filters);
             children.push(footerRow);
         }
+        children.push(...createStopPhraseEditor());
         panel.replaceChildren(...children);
     }
 
