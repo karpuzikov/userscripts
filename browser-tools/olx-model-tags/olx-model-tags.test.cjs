@@ -58,11 +58,24 @@ test('clearing a mistyped per-ad model drops the unused empty model', () => {
 
 test('stop phrases: defaults until edited, case-insensitive match, add/remove', () => {
   const data = olxModelTags.createEmptyOlxModelTagsData();
-  assert.equal(olxModelTags.findStopPhraseInText(data, 'Монітор Dell НА ЗАПЧАСТИНИ'), 'на запчастини');
+  assert.equal(olxModelTags.findPhraseInText(data, 'stopPhrases', 'Монітор Dell НА ЗАПЧАСТИНИ'), 'на запчастини');
   for (const phrase of ['на запчастини', 'на запчасти']) olxModelTags.applyOlxModelTagsOperation(data, { type: 'removeStopPhrase', phrase });
   olxModelTags.applyOlxModelTagsOperation(data, { type: 'addStopPhrase', phrase: '  Мертві Пікселі ' });
   olxModelTags.applyOlxModelTagsOperation(data, { type: 'addStopPhrase', phrase: 'мертві пікселі' });
-  assert.equal(olxModelTags.findStopPhraseInText(data, 'Монітор Dell на запчастини'), '');
-  assert.equal(olxModelTags.findStopPhraseInText(data, 'є мертві пікселі'), 'мертві пікселі');
-  assert.equal(olxModelTags.getStopPhrases(data).filter((phrase) => phrase === 'мертві пікселі').length, 1);
+  assert.equal(olxModelTags.findPhraseInText(data, 'stopPhrases', 'Монітор Dell на запчастини'), '');
+  assert.equal(olxModelTags.findPhraseInText(data, 'stopPhrases', 'є мертві пікселі'), 'мертві пікселі');
+  assert.equal(olxModelTags.getPhraseList(data, 'stopPhrases').filter((phrase) => phrase === 'мертві пікселі').length, 1);
+});
+
+test('disliked brands: whole-word match, hide unless shown, old stop-phrase ops still apply', () => {
+  const data = olxModelTags.createEmptyOlxModelTagsData();
+  for (const phrase of ['LG', 'hp', 'Acer']) olxModelTags.applyOlxModelTagsOperation(data, { type: 'addPhrase', listName: 'dislikedBrands', phrase });
+  assert.equal(olxModelTags.findPhraseInText(data, 'dislikedBrands', 'Монітори Acer, Samsung'), 'acer');
+  assert.equal(olxModelTags.findPhraseInText(data, 'dislikedBrands', 'Монітор HP2035'), 'hp');
+  assert.equal(olxModelTags.findPhraseInText(data, 'dislikedBrands', 'Процесор LGA1151 Dell'), '');
+  assert.equal(olxModelTags.doesAdMatchActiveFilters(['disliked brand'], [], false), false);
+  assert.equal(olxModelTags.doesAdMatchActiveFilters(['disliked brand'], [], false, true), true);
+  olxModelTags.applyOlxModelTagsOperation(data, { type: 'addStopPhrase', phrase: 'мертві пікселі' });
+  assert.equal(olxModelTags.findPhraseInText(data, 'stopPhrases', 'Є мертві пікселі'), 'мертві пікселі');
+  assert.throws(() => olxModelTags.applyOlxModelTagsOperation(data, { type: 'addPhrase', listName: 'nope', phrase: 'x' }));
 });

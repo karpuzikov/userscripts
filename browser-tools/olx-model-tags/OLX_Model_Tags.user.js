@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OLX - Model Tags
 // @namespace    https://www.olx.ua/
-// @version      0.4.0
+// @version      0.5.0
 // @description  Tag OLX ads by model (tags shared by every ad of that model) or per ad, mark broken ads, filter search results by tags, per-tag Hide (pixel mesh) / Highlight (outline). Data syncs to GitHub; OLX only gets read locally from the open page.
 // @match        https://www.olx.ua/*
 // @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/browser-tools/olx-model-tags/OLX_Model_Tags.user.js
@@ -20,6 +20,7 @@
     // ---------- Pure logic (unit-tested in olx-model-tags.test.cjs) ----------
 
     const BROKEN_TAG = 'broken';
+    const DISLIKED_BRAND_TAG = 'disliked brand';
     // Used until the user edits the list for the first time; afterwards data.stopPhrases is the list.
     const DEFAULT_STOP_PHRASES = ['на запчастини', 'на запчасти', 'під ремонт', 'под ремонт', 'на ремонт', 'не працює', 'не работает', 'неробочий', 'нерабочий', 'не включається', 'не включается', 'розбитий', 'разбит', 'битий', 'полоси', 'полосы'];
     const CYRILLIC_LOOKALIKE_TO_LATIN = { А: 'A', В: 'B', Е: 'E', К: 'K', М: 'M', Н: 'H', О: 'O', Р: 'P', С: 'C', Т: 'T', Х: 'X', У: 'Y', І: 'I' };
@@ -65,10 +66,12 @@
 
     // Operations are idempotent, so replaying them on fresh GitHub data (or twice from two tabs) is safe.
     function applyOlxModelTagsOperation(data, operation) {
-        if (operation.type === 'addStopPhrase' || operation.type === 'removeStopPhrase') {
+        if (['addPhrase', 'removePhrase', 'addStopPhrase', 'removeStopPhrase'].includes(operation.type)) {
+            const listName = operation.listName || 'stopPhrases'; // 0.4.0 ops had no listName
+            if (!PHRASE_LISTS[listName]) throw new Error(`Unknown OLX Model Tags phrase list: ${listName}`);
             const phrase = operation.phrase.trim().toLowerCase();
-            const stopPhrases = getStopPhrases(data).filter((existingPhrase) => existingPhrase !== phrase);
-            data.stopPhrases = operation.type === 'addStopPhrase' && phrase ? [...stopPhrases, phrase] : stopPhrases;
+            const remainingPhrases = getPhraseList(data, listName).filter((existingPhrase) => existingPhrase !== phrase);
+            data[listName] = operation.type.startsWith('add') && phrase ? [...remainingPhrases, phrase] : remainingPhrases;
             return;
         }
         if (operation.type === 'setTagDisplayMode') {
@@ -105,18 +108,28 @@
         return new TextDecoder().decode(Uint8Array.from(atob(base64.replace(/\s/g, '')), (character) => character.charCodeAt(0)));
     }
 
-    function getStopPhrases(data) {
-        return data.stopPhrases ?? DEFAULT_STOP_PHRASES;
+    // Defaults apply until the user edits a list for the first time; afterwards data[listName] is the list.
+    const PHRASE_LISTS = {
+        stopPhrases: { defaults: DEFAULT_STOP_PHRASES, matchesWholeWordOnly: false },
+        dislikedBrands: { defaults: [], matchesWholeWordOnly: true },
+    };
+
+    function getPhraseList(data, listName) {
+        return data[listName] ?? PHRASE_LISTS[listName].defaults;
     }
 
-    // shortcut: plain case-insensitive substring; a phrase like "полоси" can hit an unrelated word. Edit the list if it misfires.
-    function findStopPhraseInText(data, text) {
+    // Stop phrases: plain case-insensitive substring (shortcut: "полоси" can hit an unrelated word; edit the list if it misfires).
+    // Brands: whole word, so "lg" does not hit "LGA", while "hp" still hits "HP2035".
+    function findPhraseInText(data, listName, text) {
         const lowercaseText = text.toLowerCase();
-        return getStopPhrases(data).find((phrase) => lowercaseText.includes(phrase)) || '';
+        return getPhraseList(data, listName).find((phrase) => (PHRASE_LISTS[listName].matchesWholeWordOnly
+            ? new RegExp(`(^|\\P{L})${phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?=$|\\P{L})`, 'u').test(lowercaseText)
+            : lowercaseText.includes(phrase))) || '';
     }
 
-    function doesAdMatchActiveFilters(filterValues, activeFilters, showBrokenAds) {
+    function doesAdMatchActiveFilters(filterValues, activeFilters, showBrokenAds, showDislikedBrandAds = false) {
         if (!showBrokenAds && filterValues.includes(BROKEN_TAG)) return false;
+        if (!showDislikedBrandAds && filterValues.includes(DISLIKED_BRAND_TAG)) return false;
         return activeFilters.every((filter) => filterValues.includes(filter));
     }
 
@@ -126,7 +139,7 @@
     }
 
     if (typeof module === 'object') {
-        module.exports = { normalizeModelKey, createEmptyOlxModelTagsData, detectModelKeyInTitle, resolveAdTagging, applyOlxModelTagsOperation, encodeUtf8TextAsBase64, decodeBase64AsUtf8Text, doesAdMatchActiveFilters, resolveAdDisplayEffects, getStopPhrases, findStopPhraseInText };
+        module.exports = { normalizeModelKey, createEmptyOlxModelTagsData, detectModelKeyInTitle, resolveAdTagging, applyOlxModelTagsOperation, encodeUtf8TextAsBase64, decodeBase64AsUtf8Text, doesAdMatchActiveFilters, resolveAdDisplayEffects, getPhraseList, findPhraseInText };
         return;
     }
 
@@ -153,6 +166,7 @@
     const STORAGE_KEY_GITHUB_TOKEN = 'olxModelTagsGithubToken';
     const STORAGE_KEY_ACTIVE_FILTERS = 'olxModelTagsActiveFilters';
     const STORAGE_KEY_SHOW_BROKEN_ADS = 'olxModelTagsShowBrokenAds';
+    const STORAGE_KEY_SHOW_DISLIKED_BRAND_ADS = 'olxModelTagsShowDislikedBrandAds';
     const UPLOAD_DEBOUNCE_MS = 2000;
     const UPLOAD_CONFLICT_RETRIES = 3;
 
@@ -289,7 +303,8 @@
         if (adPageTitle && adPageId) {
             // Search cards only have the title; the ad page also has the description. Both are read from the open page only.
             const description = document.querySelector('[data-cy="ad_description"]')?.textContent || '';
-            ads.push({ adId: adPageId, title: adPageTitle.textContent, text: `${adPageTitle.textContent}\n${description}`, anchor: adPageTitle, card: null });
+            const parameters = document.querySelector('[data-testid="ad-parameters-container"]')?.innerText || '';
+            ads.push({ adId: adPageId, title: adPageTitle.textContent, text: `${adPageTitle.textContent}\n${parameters}\n${description}`, anchor: adPageTitle, card: null });
         }
         return ads;
     }
@@ -433,11 +448,17 @@
                 () => recordOperation({ type: 'removeTag', scope: 'ad', adId: ad.adId, tag })));
         }
         if (isBroken) children.push(createElement('span', 'olx-model-tags-chip olx-model-tags-chip-broken', '⚠ Broken'));
-        const matchedStopPhrase = findStopPhraseInText(olxModelTagsData, ad.text);
+        const matchedStopPhrase = findPhraseInText(olxModelTagsData, 'stopPhrases', ad.text);
         if (matchedStopPhrase && !isBroken) {
             const stopPhraseChip = createElement('span', 'olx-model-tags-chip olx-model-tags-chip-broken', `⚠ «${matchedStopPhrase}»`);
             stopPhraseChip.title = 'Matches a stop phrase: treated as broken and hidden in searches';
             children.push(stopPhraseChip);
+        }
+        const matchedDislikedBrand = findPhraseInText(olxModelTagsData, 'dislikedBrands', ad.text);
+        if (matchedDislikedBrand) {
+            const dislikedBrandChip = createElement('span', 'olx-model-tags-chip olx-model-tags-chip-broken', `⊘ ${matchedDislikedBrand}`);
+            dislikedBrandChip.title = 'Disliked brand: hidden in searches';
+            children.push(dislikedBrandChip);
         }
         children.push(createIconButton('broken', isBroken ? 'Unmark as broken' : 'Mark this ad as broken (hidden from searches)',
             () => recordOperation({ type: isBroken ? 'removeTag' : 'addTag', scope: 'ad', adId: ad.adId, tag: BROKEN_TAG }),
@@ -495,30 +516,38 @@
     }
 
     let isFilterPanelExpanded = false;
-    let isStopPhraseEditorExpanded = false;
+    let expandedPhraseListName = '';
 
-    function createStopPhraseEditor() {
-        const stopPhrases = getStopPhrases(olxModelTagsData);
-        const toggleButton = createTextButton(`${isStopPhraseEditorExpanded ? '✓ ' : ''}Stop phrases (${stopPhrases.length})`,
-            isStopPhraseEditorExpanded ? 'Hide stop phrases' : 'Edit stop phrases: ads whose title or description contains one are treated as broken',
-            () => { isStopPhraseEditorExpanded = !isStopPhraseEditorExpanded; renderFilterPanel(); }, isStopPhraseEditorExpanded);
-        toggleButton.setAttribute('aria-expanded', String(isStopPhraseEditorExpanded));
+    function createPhraseListToggleButton(listName, label, description) {
+        const isExpanded = expandedPhraseListName === listName;
+        const toggleButton = createTextButton(`${isExpanded ? '✓ ' : ''}${label} (${getPhraseList(olxModelTagsData, listName).length})`,
+            isExpanded ? `Hide ${label.toLowerCase()}` : `Edit ${label.toLowerCase()}: ${description}`,
+            () => { expandedPhraseListName = isExpanded ? '' : listName; renderFilterPanel(); }, isExpanded);
+        toggleButton.setAttribute('aria-expanded', String(isExpanded));
+        return toggleButton;
+    }
+
+    function createPhraseListEditors() {
         const toggleRow = createElement('div', 'olx-model-tags-panel-row');
-        toggleRow.append(toggleButton);
-        if (!isStopPhraseEditorExpanded) return [toggleRow];
+        toggleRow.append(
+            createPhraseListToggleButton('stopPhrases', 'Stop phrases', 'ads whose title or description contains one are treated as broken'),
+            createPhraseListToggleButton('dislikedBrands', 'Disliked brands', 'ads naming one of these brands are hidden'));
+        if (!expandedPhraseListName) return [toggleRow];
+        const singularLabel = expandedPhraseListName === 'stopPhrases' ? 'stop phrase' : 'disliked brand';
         const phraseList = createElement('div', 'olx-model-tags-panel-filters');
-        for (const phrase of stopPhrases) {
-            phraseList.append(createTagChip(phrase, 'olx-model-tags-chip', `Remove stop phrase "${phrase}"`, () => recordOperation({ type: 'removeStopPhrase', phrase })));
+        for (const phrase of getPhraseList(olxModelTagsData, expandedPhraseListName)) {
+            phraseList.append(createTagChip(phrase, 'olx-model-tags-chip', `Remove ${singularLabel} "${phrase}"`,
+                () => recordOperation({ type: 'removePhrase', listName: expandedPhraseListName, phrase })));
         }
         const phraseInput = createElement('input', 'olx-model-tags-input');
-        phraseInput.placeholder = 'Add stop phrase';
-        phraseInput.setAttribute('aria-label', 'Add stop phrase (Enter)');
+        phraseInput.placeholder = `Add ${singularLabel}`;
+        phraseInput.setAttribute('aria-label', `Add ${singularLabel} (Enter)`);
         phraseInput.addEventListener('keydown', (event) => {
             event.stopPropagation();
             if (event.key !== 'Enter' || !phraseInput.value.trim()) return;
             event.preventDefault();
-            recordOperation({ type: 'addStopPhrase', phrase: phraseInput.value });
-            document.querySelector('.olx-model-tags-panel [aria-label^="Add stop phrase"]')?.focus();
+            recordOperation({ type: 'addPhrase', listName: expandedPhraseListName, phrase: phraseInput.value });
+            document.querySelector(`.olx-model-tags-panel [aria-label^="Add ${singularLabel}"]`)?.focus();
         });
         phraseList.append(phraseInput);
         return [toggleRow, phraseList];
@@ -549,15 +578,19 @@
         const ads = findAdsOnPage().filter((ad) => ad.card);
         const activeFilters = GM_getValue(STORAGE_KEY_ACTIVE_FILTERS, []);
         const showBrokenAds = GM_getValue(STORAGE_KEY_SHOW_BROKEN_ADS, false);
+        const showDislikedBrandAds = GM_getValue(STORAGE_KEY_SHOW_DISLIKED_BRAND_ADS, false);
+        let dislikedBrandAdCount = 0;
         const filterValueCounts = new Map();
         let shownAdCount = 0;
         let brokenAdCount = 0;
         for (const ad of ads) {
             const tagging = resolveAdTagging(olxModelTagsData, ad.adId, ad.title);
-            const filterValues = [...new Set([...tagging.modelTags, ...tagging.adTags, ...(tagging.modelName ? [tagging.modelName] : []), ...(findStopPhraseInText(olxModelTagsData, ad.text) ? [BROKEN_TAG] : [])])];
-            for (const value of filterValues) if (value !== BROKEN_TAG) filterValueCounts.set(value, (filterValueCounts.get(value) || 0) + 1);
+            const filterValues = [...new Set([...tagging.modelTags, ...tagging.adTags, ...(tagging.modelName ? [tagging.modelName] : []), ...(findPhraseInText(olxModelTagsData, 'stopPhrases', ad.text) ? [BROKEN_TAG] : []),
+                ...(findPhraseInText(olxModelTagsData, 'dislikedBrands', ad.text) ? [DISLIKED_BRAND_TAG] : [])])];
+            for (const value of filterValues) if (value !== BROKEN_TAG && value !== DISLIKED_BRAND_TAG) filterValueCounts.set(value, (filterValueCounts.get(value) || 0) + 1);
             if (filterValues.includes(BROKEN_TAG)) brokenAdCount++;
-            const isShown = doesAdMatchActiveFilters(filterValues, activeFilters, showBrokenAds);
+            if (filterValues.includes(DISLIKED_BRAND_TAG)) dislikedBrandAdCount++;
+            const isShown = doesAdMatchActiveFilters(filterValues, activeFilters, showBrokenAds, showDislikedBrandAds);
             ad.card.classList.toggle('olx-model-tags-hidden-ad', !isShown);
             const displayEffects = resolveAdDisplayEffects(olxModelTagsData, filterValues);
             ad.card.classList.toggle('olx-model-tags-meshed-ad', displayEffects.isMeshed);
@@ -607,12 +640,14 @@
             }
             const footerRow = createElement('div', 'olx-model-tags-panel-row');
             footerRow.append(createTextButton(`${showBrokenAds ? '✓ ' : ''}Show broken (${brokenAdCount})`, showBrokenAds ? 'Hide ads marked broken' : 'Show ads marked broken',
-                () => { GM_setValue(STORAGE_KEY_SHOW_BROKEN_ADS, !showBrokenAds); renderFilterPanel(); }, showBrokenAds));
+                () => { GM_setValue(STORAGE_KEY_SHOW_BROKEN_ADS, !showBrokenAds); renderFilterPanel(); }, showBrokenAds),
+                createTextButton(`${showDislikedBrandAds ? '✓ ' : ''}Show disliked brands (${dislikedBrandAdCount})`, showDislikedBrandAds ? 'Hide ads of disliked brands' : 'Show ads of disliked brands',
+                () => { GM_setValue(STORAGE_KEY_SHOW_DISLIKED_BRAND_ADS, !showDislikedBrandAds); renderFilterPanel(); }, showDislikedBrandAds));
             if (activeFilters.length) footerRow.append(createTextButton('Clear filters', 'Remove all tag filters', () => { GM_setValue(STORAGE_KEY_ACTIVE_FILTERS, []); renderFilterPanel(); }));
             if (sortedValues.length) children.push(filters);
             children.push(footerRow);
         }
-        children.push(...createStopPhraseEditor());
+        children.push(...createPhraseListEditors());
         panel.replaceChildren(...children);
     }
 
