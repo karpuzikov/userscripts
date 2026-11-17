@@ -48,11 +48,21 @@
     "VGA",
     "DVI"
    ]
+  },
+  "NECMULTISYNCLCD2090UXI": {
+   "name": "NEC MultiSync LCD2090UXi",
+   "tags": [
+    "1600x1200"
+   ]
   }
  },
  "ads": {
   "931407351": {
    "model": "Sony SDM-X202",
+   "tags": []
+  },
+  "931938473": {
+   "model": "NEC MultiSync LCD2090UXi",
    "tags": []
   },
   "932958297": {
