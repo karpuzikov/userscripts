@@ -40,9 +40,19 @@
     "250 cd/m²",
     "700:1"
    ]
+  },
+  "SONYSDMX202": {
+   "name": "Sony SDM-X202",
+   "tags": [
+    "1600x1200"
+   ]
   }
  },
  "ads": {
+  "931407351": {
+   "model": "Sony SDM-X202",
+   "tags": []
+  },
   "932958297": {
    "model": "Dell P2012Ht",
    "tags": []
