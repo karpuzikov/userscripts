@@ -9,11 +9,21 @@
     "250 cd/m²",
     "TN"
    ]
+  },
+  "DELLE1910C": {
+   "name": "Dell E1910c",
+   "tags": [
+    "19\""
+   ]
   }
  },
  "ads": {
   "932958297": {
    "model": "Dell P2012Ht",
+   "tags": []
+  },
+  "939637525": {
+   "model": "Dell E1910c",
    "tags": []
   }
  },
