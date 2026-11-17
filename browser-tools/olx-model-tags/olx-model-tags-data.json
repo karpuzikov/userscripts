@@ -30,6 +30,10 @@
     "VGA",
     "21.5\""
    ]
+  },
+  "NECMULTISYNCLCD2070NX": {
+   "name": "NEC MultiSync LCD2070NX",
+   "tags": []
   }
  },
  "ads": {
@@ -53,6 +57,10 @@
   },
   "940357194": {
    "model": "Dell P2212H",
+   "tags": []
+  },
+  "940592470": {
+   "model": "NEC MultiSync LCD2070NX",
    "tags": []
   },
   "940731167": {
