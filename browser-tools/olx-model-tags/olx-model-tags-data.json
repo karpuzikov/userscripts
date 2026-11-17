@@ -44,7 +44,8 @@
   "SONYSDMX202": {
    "name": "Sony SDM-X202",
    "tags": [
-    "1600x1200"
+    "1600x1200",
+    "VGA"
    ]
   }
  },
