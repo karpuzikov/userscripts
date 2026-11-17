@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OLX - Model Tags
 // @namespace    https://www.olx.ua/
-// @version      0.3.1
+// @version      0.3.2
 // @description  Tag OLX ads by model (tags shared by every ad of that model) or per ad, mark broken ads, filter search results by tags, per-tag Hide (pixel mesh) / Highlight (outline). Data syncs to GitHub; OLX only gets read locally from the open page.
 // @match        https://www.olx.ua/*
 // @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/browser-tools/olx-model-tags/OLX_Model_Tags.user.js
@@ -265,7 +265,7 @@
 .olx-model-tags-text-button-active{background:var(--primary);border-color:var(--primary);color:var(--on-primary)}
 .olx-model-tags-text-button-active:hover{background:var(--primary-active)}
 .olx-model-tags-root button:focus-visible,.olx-model-tags-root input:focus-visible{outline:none;box-shadow:0 0 0 2px rgba(59,130,246,.5)}
-.olx-model-tags-input{width:120px;padding:4px;border:1px solid var(--border-strong);border-radius:4px;background:var(--surface-elevated);color:var(--text)}
+.olx-model-tags-input{width:140px;padding:4px;border:1px solid var(--border-strong);border-radius:4px;background:var(--surface-elevated);color:var(--text)}
 .olx-model-tags-input-model{font-family:"JetBrains Mono",ui-monospace,Consolas,monospace}
 .olx-model-tags-input::placeholder{color:var(--muted)}
 .olx-model-tags-panel{position:fixed;right:16px;bottom:16px;z-index:2147483000;display:flex;flex-direction:column;gap:8px;max-width:min(420px,calc(100vw - 32px));max-height:60vh;padding:12px;background:var(--surface-card);border:1px solid var(--border-strong);border-radius:12px}
@@ -294,6 +294,7 @@
         broken: 'M12 3l9.5 16.5h-19L12 3zM12 10v4M12 17.5v.01',
         sync: 'M20 12a8 8 0 1 1-2.34-5.66M20 4v5h-5',
         tag: 'M3 12V4a1 1 0 0 1 1-1h8l9 9-9 9-9-9zM7.5 7.5h.01',
+        check: 'M5 12l5 5 9-10',
         hide: 'M3 3l18 18M10.6 10.6a2 2 0 0 0 2.8 2.8M9.9 5.1A9.8 9.8 0 0 1 12 5c5 0 9 4.5 10 7a13 13 0 0 1-3 4M6.6 6.6C4.5 8 3 10 2 12c1 2.5 5 7 10 7 1.7 0 3.3-.5 4.6-1.3',
         nothing: 'M6 12h12',
         highlight: 'M4 4h16v16H4z',
@@ -409,7 +410,8 @@
             tagInput.setAttribute('aria-label', tagInput.placeholder);
         });
         const closeEditor = () => { delete bar.dataset.editing; renderTagBar(ad); bar.querySelector('[aria-label="Add tag or set model"]')?.focus(); };
-        const saveEditor = () => {
+        // Enter saves and keeps the editor open for the next tag; ✓ saves and closes; × / Esc discard.
+        const saveEditor = (shouldKeepEditorOpen) => {
             const modelName = modelInput.value.trim();
             const tag = tagInput.value.trim();
             if (modelName && !normalizeModelKey(modelName)) { modelInput.setCustomValidity('Model needs letters or digits'); modelInput.reportValidity(); return; }
@@ -417,19 +419,20 @@
             if (modelName !== tagging.modelName) recordOperation({ type: 'setAdModel', adId: ad.adId, modelName });
             if (tag) recordOperation(modelName ? { type: 'addTag', scope: 'model', modelName, tag } : { type: 'addTag', scope: 'ad', adId: ad.adId, tag });
             renderTagBar(ad);
-            openTagEditor(bar, ad, resolveAdTagging(olxModelTagsData, ad.adId, ad.title));
+            if (shouldKeepEditorOpen) openTagEditor(bar, ad, resolveAdTagging(olxModelTagsData, ad.adId, ad.title));
+            else bar.querySelector('[aria-label="Add tag or set model"]')?.focus();
         };
         for (const input of [modelInput, tagInput]) {
             input.addEventListener('keydown', (event) => {
                 event.stopPropagation();
-                if (event.key === 'Enter') { event.preventDefault(); saveEditor(); }
+                if (event.key === 'Enter') { event.preventDefault(); saveEditor(true); }
                 if (event.key === 'Escape') { event.preventDefault(); closeEditor(); }
             });
             input.addEventListener('input', () => input.setCustomValidity(''));
         }
         // Existing tags stay visible; the editor replaces only the Broken and + buttons and stays open for the next tag until Esc/×.
         for (const actionButton of bar.querySelectorAll(':scope > .olx-model-tags-icon-button')) actionButton.remove();
-        bar.append(tagInput, modelInput, createTextButton('Save', 'Save model and tag (Enter)', saveEditor), createIconButton('close', 'Close editor (Esc)', closeEditor));
+        bar.append(tagInput, modelInput, createIconButton('check', 'Save and close (Enter saves and adds another)', () => saveEditor(false)), createIconButton('close', 'Discard and close (Esc)', closeEditor));
         tagInput.focus();
     }
 
