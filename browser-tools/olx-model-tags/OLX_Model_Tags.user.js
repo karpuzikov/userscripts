@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OLX - Model Tags
 // @namespace    https://www.olx.ua/
-// @version      0.7.0
+// @version      0.8.0
 // @description  Tag OLX ads by model (tags shared by every ad of that model) or per ad, mark broken ads, filter search results by tags, per-tag Hide (pixel mesh) / Highlight (outline). Data syncs to GitHub; OLX only gets read locally from the open page.
 // @match        https://www.olx.ua/*
 // @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/browser-tools/olx-model-tags/OLX_Model_Tags.user.js
@@ -52,6 +52,7 @@
         return {
             modelKey,
             modelName: modelEntry?.name || adEntry?.model || '',
+            group: adEntry?.group || modelEntry?.group || '',
             modelTags: modelEntry?.tags || [],
             adTags: adEntry?.tags || [],
         };
@@ -72,6 +73,12 @@
             const phrase = operation.phrase.trim().toLowerCase();
             const remainingPhrases = getPhraseList(data, listName).filter((existingPhrase) => existingPhrase !== phrase);
             data[listName] = operation.type.startsWith('add') && phrase ? [...remainingPhrases, phrase] : remainingPhrases;
+            return;
+        }
+        if (operation.type === 'setGroup') {
+            // The user's own grouping ("Monitors", "square-ish objects"); set on the model when the ad has one, else on the ad.
+            const groupOwner = operation.scope === 'model' ? ensureModelEntry(data, operation.modelName) : (data.ads[operation.adId] ||= { model: '', tags: [] });
+            groupOwner.group = operation.group.trim();
             return;
         }
         if (operation.type === 'setAdInfo') {
@@ -101,6 +108,12 @@
         if (operation.type === 'addTag' && !tagOwner.tags.includes(operation.tag)) tagOwner.tags.push(operation.tag);
         else if (operation.type === 'removeTag') tagOwner.tags = tagOwner.tags.filter((tag) => tag !== operation.tag);
         else if (operation.type !== 'addTag') throw new Error(`Unknown OLX Model Tags operation: ${operation.type}`);
+    }
+
+    // "Squishiness: very squishy" → property + value; a tag without "Name: " has no property. Same rule as the Google Sheet.
+    function splitTagIntoPropertyAndValue(tag) {
+        const namedTag = tag.match(/^([^\d:][^:]{0,30}):\s+(.+)$/);
+        return namedTag ? { property: namedTag[1].trim(), value: namedTag[2].trim() } : { property: '', value: tag.trim() };
     }
 
     function encodeUtf8TextAsBase64(text) {
@@ -144,7 +157,7 @@
     }
 
     if (typeof module === 'object') {
-        module.exports = { normalizeModelKey, createEmptyOlxModelTagsData, detectModelKeyInTitle, resolveAdTagging, applyOlxModelTagsOperation, encodeUtf8TextAsBase64, decodeBase64AsUtf8Text, doesAdMatchActiveFilters, resolveAdDisplayEffects, getPhraseList, findPhraseInText };
+        module.exports = { normalizeModelKey, createEmptyOlxModelTagsData, detectModelKeyInTitle, resolveAdTagging, applyOlxModelTagsOperation, encodeUtf8TextAsBase64, decodeBase64AsUtf8Text, doesAdMatchActiveFilters, resolveAdDisplayEffects, getPhraseList, findPhraseInText, splitTagIntoPropertyAndValue };
         return;
     }
 
@@ -365,6 +378,8 @@
 .olx-model-tags-chip{display:inline-flex;align-items:center;gap:4px;padding:4px;border-radius:4px;background:var(--surface-elevated);color:var(--body);white-space:nowrap}
 .olx-model-tags-chip-model{background:transparent;color:var(--accent);font-family:"JetBrains Mono",ui-monospace,Consolas,monospace;font-weight:500}
 .olx-model-tags-chip-ad{color:var(--text);outline:1px dashed var(--border-strong);outline-offset:-1px}
+.olx-model-tags-chip-group{background:transparent;color:var(--muted)}
+.olx-model-tags-destination{color:var(--muted);white-space:nowrap}
 .olx-model-tags-chip-broken{background:var(--negative);color:var(--on-primary);font-weight:600}
 .olx-model-tags-icon-button{display:inline-flex;align-items:center;justify-content:center;padding:4px;border:0;border-radius:4px;background:transparent;color:var(--muted);cursor:pointer;line-height:0}
 .olx-model-tags-icon-button:hover{background:var(--surface-elevated);color:var(--text)}
@@ -453,14 +468,22 @@
     }
 
     function ensureDatalists() {
-        for (const [datalistId, values] of [
-            ['olx-model-tags-known-tags', new Set([...Object.values(olxModelTagsData.models), ...Object.values(olxModelTagsData.ads)].flatMap((entry) => entry.tags))],
-            ['olx-model-tags-known-models', new Set(Object.values(olxModelTagsData.models).map((model) => model.name))],
-        ]) {
-            let datalist = document.getElementById(datalistId);
-            if (!datalist) { datalist = createElement('datalist'); datalist.id = datalistId; document.body.append(datalist); }
-            datalist.replaceChildren(...[...values].sort().map((value) => Object.assign(document.createElement('option'), { value })));
-        }
+        const entries = [...Object.values(olxModelTagsData.models), ...Object.values(olxModelTagsData.ads)];
+        fillDatalist('olx-model-tags-known-groups', entries.map((entry) => entry.group));
+        fillDatalist('olx-model-tags-known-models', Object.values(olxModelTagsData.models).map((model) => model.name));
+        fillDatalist('olx-model-tags-known-properties', entries.flatMap((entry) => entry.tags).map((tag) => splitTagIntoPropertyAndValue(tag).property));
+    }
+
+    function fillDatalist(datalistId, values) {
+        let datalist = document.getElementById(datalistId);
+        if (!datalist) { datalist = createElement('datalist'); datalist.id = datalistId; document.body.append(datalist); }
+        datalist.replaceChildren(...[...new Set(values.filter(Boolean))].sort().map((value) => Object.assign(document.createElement('option'), { value })));
+    }
+
+    function fillKnownValuesDatalistForProperty(property) {
+        const allTags = [...Object.values(olxModelTagsData.models), ...Object.values(olxModelTagsData.ads)].flatMap((entry) => entry.tags);
+        fillDatalist('olx-model-tags-known-values', allTags.map(splitTagIntoPropertyAndValue)
+            .filter((splitTag) => splitTag.property.toLowerCase() === property.trim().toLowerCase()).map((splitTag) => splitTag.value));
     }
 
     function renderTagBar(ad) {
@@ -479,6 +502,11 @@
         const isBroken = tagging.adTags.includes(BROKEN_TAG);
         const matchedStopPhrase = findPhraseInText(olxModelTagsData, 'stopPhrases', ad.text);
         const children = [];
+        if (tagging.group) {
+            const groupChip = createElement('span', 'olx-model-tags-chip olx-model-tags-chip-group', tagging.group);
+            groupChip.title = 'Group';
+            children.push(groupChip);
+        }
         if (tagging.modelName) {
             const modelChip = createElement('span', 'olx-model-tags-chip olx-model-tags-chip-model', tagging.modelName);
             const isModelSetForThisAd = Boolean(olxModelTagsData.ads[ad.adId]?.model);
@@ -532,35 +560,49 @@
         return chip;
     }
 
+    function createEditorInput(placeholder, ariaLabel, value, datalistId, extraClassName = '') {
+        const input = createElement('input', `olx-model-tags-input ${extraClassName}`.trim());
+        input.placeholder = placeholder;
+        input.value = value;
+        input.setAttribute('aria-label', ariaLabel);
+        input.setAttribute('list', datalistId);
+        return input;
+    }
+
+    // Fields: Group → Model → Property → Value. "Property: value" is stored as one tag, so filters and the sheet keep working.
     function openTagEditor(bar, ad, tagging) {
         bar.dataset.editing = 'true';
-        const modelInput = createElement('input', 'olx-model-tags-input olx-model-tags-input-model');
-        modelInput.placeholder = 'Model (optional)';
-        modelInput.value = tagging.modelName;
-        modelInput.setAttribute('aria-label', 'Model of this ad');
-        modelInput.setAttribute('list', 'olx-model-tags-known-models');
-        const tagInput = createElement('input', 'olx-model-tags-input');
-        tagInput.placeholder = tagging.modelName ? `Tag for all ${tagging.modelName}` : 'Tag for this ad';
-        tagInput.setAttribute('aria-label', tagInput.placeholder);
-        tagInput.setAttribute('list', 'olx-model-tags-known-tags');
-        modelInput.addEventListener('input', () => {
-            tagInput.placeholder = modelInput.value.trim() ? `Tag for all ${modelInput.value.trim()}` : 'Tag for this ad';
-            tagInput.setAttribute('aria-label', tagInput.placeholder);
-        });
+        const groupInput = createEditorInput('Group (e.g. Monitors)', 'Group of this ad or model', tagging.group, 'olx-model-tags-known-groups');
+        const modelInput = createEditorInput('Model (optional)', 'Model of this ad', tagging.modelName, 'olx-model-tags-known-models', 'olx-model-tags-input-model');
+        const propertyInput = createEditorInput('Property (e.g. Size)', 'Property name, optional', '', 'olx-model-tags-known-properties');
+        const valueInput = createEditorInput('Value', 'Property value or plain tag', '', 'olx-model-tags-known-values');
+        fillKnownValuesDatalistForProperty('');
+        propertyInput.addEventListener('input', () => fillKnownValuesDatalistForProperty(propertyInput.value));
+        const destinationText = createElement('span', 'olx-model-tags-destination');
+        const updateDestinationText = () => {
+            destinationText.textContent = modelInput.value.trim() ? `→ every ${modelInput.value.trim()} ad` : '→ this ad only';
+        };
+        updateDestinationText();
+        modelInput.addEventListener('input', updateDestinationText);
         const closeEditor = () => { delete bar.dataset.editing; renderTagBar(ad); bar.querySelector('[aria-label="Add tag or set model"]')?.focus(); };
-        // Enter saves and keeps the editor open for the next tag; ✓ saves and closes; × / Esc discard.
+        // Enter saves and keeps the editor open for the next property; ✓ saves and closes; × / Esc discard.
         const saveEditor = (shouldKeepEditorOpen) => {
+            const group = groupInput.value.trim();
             const modelName = modelInput.value.trim();
-            const tag = tagInput.value.trim();
+            const property = propertyInput.value.trim().replace(/:+$/, '');
+            const value = valueInput.value.trim();
             if (modelName && !normalizeModelKey(modelName)) { modelInput.setCustomValidity('Model needs letters or digits'); modelInput.reportValidity(); return; }
+            if (property && !value) { valueInput.setCustomValidity(`Enter a value for ${property}`); valueInput.reportValidity(); return; }
             delete bar.dataset.editing;
             if (modelName !== tagging.modelName) recordOperationForAd(ad, { type: 'setAdModel', adId: ad.adId, modelName });
+            if (group !== tagging.group) recordOperationForAd(ad, modelName ? { type: 'setGroup', scope: 'model', modelName, group } : { type: 'setGroup', scope: 'ad', adId: ad.adId, group });
+            const tag = property ? `${property}: ${value}` : value;
             if (tag) recordOperationForAd(ad, modelName ? { type: 'addTag', scope: 'model', modelName, tag } : { type: 'addTag', scope: 'ad', adId: ad.adId, tag });
             renderTagBar(ad);
             if (shouldKeepEditorOpen) openTagEditor(bar, ad, resolveAdTagging(olxModelTagsData, ad.adId, ad.title));
             else bar.querySelector('[aria-label="Add tag or set model"]')?.focus();
         };
-        for (const input of [modelInput, tagInput]) {
+        for (const input of [groupInput, modelInput, propertyInput, valueInput]) {
             input.addEventListener('keydown', (event) => {
                 event.stopPropagation();
                 if (event.key === 'Enter') { event.preventDefault(); saveEditor(true); }
@@ -568,10 +610,11 @@
             });
             input.addEventListener('input', () => input.setCustomValidity(''));
         }
-        // Existing tags stay visible; the editor replaces only the Broken and + buttons and stays open for the next tag until Esc/×.
+        // Existing tags stay visible; the editor replaces only the Broken and + buttons and stays open until Esc/×.
         for (const actionButton of bar.querySelectorAll(':scope > .olx-model-tags-icon-button')) actionButton.remove();
-        bar.append(tagInput, modelInput, createIconButton('check', 'Save and close (Enter saves and adds another)', () => saveEditor(false)), createIconButton('close', 'Discard and close (Esc)', closeEditor));
-        tagInput.focus();
+        bar.append(groupInput, modelInput, propertyInput, valueInput, destinationText,
+            createIconButton('check', 'Save and close (Enter saves and adds another)', () => saveEditor(false)), createIconButton('close', 'Discard and close (Esc)', closeEditor));
+        (tagging.group ? propertyInput : groupInput).focus();
     }
 
     let isFilterPanelExpanded = false;

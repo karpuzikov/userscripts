@@ -86,3 +86,14 @@ test('setAdInfo stores URL, title and detected model without touching tags', () 
   olxModelTags.applyOlxModelTagsOperation(data, { type: 'setAdInfo', adId: '7', url: 'https://www.olx.ua/d/uk/obyavlenie/x-IDabc.html', title: 'Dell P2012Ht', detectedModel: 'P2012Ht', category: 'Монітори' });
   assert.deepEqual(data.ads['7'], { model: '', tags: ['broken'], url: 'https://www.olx.ua/d/uk/obyavlenie/x-IDabc.html', title: 'Dell P2012Ht', detectedModel: 'P2012Ht', category: 'Монітори' });
 });
+
+test('groups: model group applies to its ads, ad group wins; tags split into property and value', () => {
+  const data = olxModelTags.createEmptyOlxModelTagsData();
+  olxModelTags.applyOlxModelTagsOperation(data, { type: 'setGroup', scope: 'model', modelName: 'Samsung 204Ts', group: ' Monitors ' });
+  olxModelTags.applyOlxModelTagsOperation(data, { type: 'setAdModel', adId: '1', modelName: 'Samsung 204Ts' });
+  olxModelTags.applyOlxModelTagsOperation(data, { type: 'setGroup', scope: 'ad', adId: '2', group: 'square-ish objects' });
+  assert.equal(olxModelTags.resolveAdTagging(data, '1', '').group, 'Monitors');
+  assert.equal(olxModelTags.resolveAdTagging(data, '2', '').group, 'square-ish objects');
+  assert.deepEqual(olxModelTags.splitTagIntoPropertyAndValue('Squishiness: very squishy'), { property: 'Squishiness', value: 'very squishy' });
+  assert.deepEqual(olxModelTags.splitTagIntoPropertyAndValue('700:1'), { property: '', value: '700:1' });
+});

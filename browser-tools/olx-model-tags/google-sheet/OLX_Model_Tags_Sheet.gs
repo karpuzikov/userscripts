@@ -1,12 +1,13 @@
 // OLX - Model Tags: read-only Google Sheet view of the tag data the userscript keeps on GitHub.
 // Paste into the sheet's Extensions → Apps Script, save, reload the sheet, then use the "OLX Model Tags" menu.
 // Apps Script's parser rejects ||= and ?. , so this file uses older syntax.
-// One tab per OLX category (Монітори, Цифрові фотоапарати, ...), one row per ad you tagged, set a model for or marked broken,
+// One tab per group you set in the userscript (falls back to the OLX category, e.g. Монітори), one row per ad you tagged,
+// set a model for or marked broken,
 // one column per kind of tag.
 
 const OLX_MODEL_TAGS_DATA_URL = 'https://raw.githubusercontent.com/karpuzikov/userscripts/main/browser-tools/olx-model-tags/olx-model-tags-data.json';
 const OLX_MODEL_TAGS_TAB_PREFIX = 'OLX: ';
-const OLX_MODEL_TAGS_NO_CATEGORY_TAB_NAME = 'no category yet';
+const OLX_MODEL_TAGS_NO_GROUP_TAB_NAME = 'no group yet';
 const OLX_MODEL_TAGS_OLD_TAB_NAMES = ['OLX ads', 'OLX models']; // tabs made by the first version; removed on refresh
 
 // Which column a tag goes to. A tag typed as "Name: value" (e.g. "Lens: 28-80mm") goes to column "Name" instead.
@@ -70,14 +71,15 @@ function refreshOlxModelTagsSheet() {
   const adsByCategory = {};
   for (const [adId, ad] of Object.entries(data.ads)) {
     const modelName = ad.model || ad.detectedModel || '';
-    const allTags = [...((data.models[normalizeOlxModelKey(modelName)] || {}).tags || []), ...ad.tags.filter((tag) => tag !== 'broken')];
+    const modelEntry = data.models[normalizeOlxModelKey(modelName)] || {};
+    const allTags = [...(modelEntry.tags || []), ...ad.tags.filter((tag) => tag !== 'broken')];
     const valuesByColumn = {};
     for (const tag of allTags) {
       const { columnName, value } = findOlxTagColumn(tag);
       if (!valuesByColumn[columnName]) valuesByColumn[columnName] = [];
       valuesByColumn[columnName].push(value);
     }
-    const category = ad.category || OLX_MODEL_TAGS_NO_CATEGORY_TAB_NAME;
+    const category = ad.group || modelEntry.group || ad.category || OLX_MODEL_TAGS_NO_GROUP_TAB_NAME;
     if (!adsByCategory[category]) adsByCategory[category] = [];
     adsByCategory[category].push({
       adId, modelName, valuesByColumn,
