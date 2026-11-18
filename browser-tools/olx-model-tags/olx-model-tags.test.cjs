@@ -83,6 +83,6 @@ test('disliked brands: whole-word match, hide unless shown, old stop-phrase ops 
 test('setAdInfo stores URL, title and detected model without touching tags', () => {
   const data = olxModelTags.createEmptyOlxModelTagsData();
   olxModelTags.applyOlxModelTagsOperation(data, { type: 'addTag', scope: 'ad', adId: '7', tag: 'broken' });
-  olxModelTags.applyOlxModelTagsOperation(data, { type: 'setAdInfo', adId: '7', url: 'https://www.olx.ua/d/uk/obyavlenie/x-IDabc.html', title: 'Dell P2012Ht', detectedModel: 'P2012Ht' });
-  assert.deepEqual(data.ads['7'], { model: '', tags: ['broken'], url: 'https://www.olx.ua/d/uk/obyavlenie/x-IDabc.html', title: 'Dell P2012Ht', detectedModel: 'P2012Ht' });
+  olxModelTags.applyOlxModelTagsOperation(data, { type: 'setAdInfo', adId: '7', url: 'https://www.olx.ua/d/uk/obyavlenie/x-IDabc.html', title: 'Dell P2012Ht', detectedModel: 'P2012Ht', category: 'Монітори' });
+  assert.deepEqual(data.ads['7'], { model: '', tags: ['broken'], url: 'https://www.olx.ua/d/uk/obyavlenie/x-IDabc.html', title: 'Dell P2012Ht', detectedModel: 'P2012Ht', category: 'Монітори' });
 });

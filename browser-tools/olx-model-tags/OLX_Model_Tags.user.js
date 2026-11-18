@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OLX - Model Tags
 // @namespace    https://www.olx.ua/
-// @version      0.6.0
+// @version      0.7.0
 // @description  Tag OLX ads by model (tags shared by every ad of that model) or per ad, mark broken ads, filter search results by tags, per-tag Hide (pixel mesh) / Highlight (outline). Data syncs to GitHub; OLX only gets read locally from the open page.
 // @match        https://www.olx.ua/*
 // @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/browser-tools/olx-model-tags/OLX_Model_Tags.user.js
@@ -76,7 +76,7 @@
         }
         if (operation.type === 'setAdInfo') {
             // Ad URL, title and title-detected model, kept for the Google Sheet view (the script itself reads them from the page).
-            Object.assign((data.ads[operation.adId] ||= { model: '', tags: [] }), { url: operation.url, title: operation.title, detectedModel: operation.detectedModel });
+            Object.assign((data.ads[operation.adId] ||= { model: '', tags: [] }), { url: operation.url, title: operation.title, detectedModel: operation.detectedModel, category: operation.category || '' });
             return;
         }
         if (operation.type === 'setTagDisplayMode') {
@@ -198,8 +198,10 @@
         const adEntry = olxModelTagsData.ads[ad.adId];
         const detectedModel = olxModelTagsData.models[detectModelKeyInTitle(olxModelTagsData, ad.title)]?.name || '';
         const title = ad.title.trim();
-        if (!ad.url || (adEntry?.url === ad.url && adEntry.title === title && adEntry.detectedModel === detectedModel)) return;
-        recordOperation({ type: 'setAdInfo', adId: ad.adId, url: ad.url, title, detectedModel });
+        // A search without a category gives no category; keep the one saved earlier instead of erasing it.
+        const category = ad.category || adEntry?.category || '';
+        if (!ad.url || (adEntry?.url === ad.url && adEntry.title === title && adEntry.detectedModel === detectedModel && adEntry.category === category)) return;
+        recordOperation({ type: 'setAdInfo', adId: ad.adId, url: ad.url, title, detectedModel, category });
     }
 
     function recordOperation(operation) {
@@ -323,14 +325,22 @@
         return url.split(/[?#]/)[0];
     }
 
+    // Deepest OLX category in the breadcrumbs ("Монітори"); region crumbs look like "Монітори - Київ" and are skipped.
+    function findPageCategory() {
+        const categoryCrumbs = [...document.querySelectorAll('[data-testid="breadcrumb-item"]')].slice(1)
+            .map((crumb) => readTextWithoutStyleTags(crumb)).filter((crumbText) => crumbText && !crumbText.includes(' - '));
+        return categoryCrumbs.at(-1) || '';
+    }
+
     function findAdsOnPage() {
         const ads = [];
+        const category = findPageCategory();
         for (const card of document.querySelectorAll('[data-cy="l-card"][id]')) {
             const titleContainer = card.querySelector('[data-testid="ad-card-title"]');
             if (titleContainer && /^\d+$/.test(card.id)) {
                 const title = findCardTitleText(titleContainer);
                 const href = titleContainer.querySelector('[data-testid="card-title-link"]')?.getAttribute('href') || '';
-                ads.push({ adId: card.id, title, text: title, url: href && removeUrlQueryAndHash(new URL(href, location.href).href), anchor: titleContainer, card });
+                ads.push({ adId: card.id, title, text: title, category, url: href && removeUrlQueryAndHash(new URL(href, location.href).href), anchor: titleContainer, card });
             }
         }
         const adPageTitle = document.querySelector('[data-testid="offer_title"]');
@@ -340,7 +350,7 @@
             const description = readTextWithoutStyleTags(document.querySelector('[data-cy="ad_description"]'));
             const parameters = readTextWithoutStyleTags(document.querySelector('[data-testid="ad-parameters-container"]'));
             const title = readTextWithoutStyleTags(adPageTitle);
-            ads.push({ adId: adPageId, title, text: `${title}\n${parameters}\n${description}`, url: removeUrlQueryAndHash(location.href), anchor: adPageTitle, card: null });
+            ads.push({ adId: adPageId, title, category, text: `${title}\n${parameters}\n${description}`, url: removeUrlQueryAndHash(location.href), anchor: adPageTitle, card: null });
         }
         return ads;
     }
@@ -491,7 +501,8 @@
         }
         // Search cards only show the title, so a stop phrase found in the description on the ad page is saved as the
         // ad's Broken tag; search results then hide it too. Done once per ad, so un-marking it by hand sticks.
-        if (olxModelTagsData.ads[ad.adId] && !olxModelTagsData.ads[ad.adId].url && ad.url) queueMicrotask(() => recordAdInfoIfChanged(ad));
+        const savedAdEntry = olxModelTagsData.ads[ad.adId];
+        if (savedAdEntry && ad.url && (!savedAdEntry.url || (!savedAdEntry.category && ad.category))) queueMicrotask(() => recordAdInfoIfChanged(ad));
         const autoBrokenAdIds = GM_getValue(STORAGE_KEY_AUTO_BROKEN_AD_IDS, []);
         if (!ad.card && matchedStopPhrase && !isBroken && !autoBrokenAdIds.includes(ad.adId)) {
             GM_setValue(STORAGE_KEY_AUTO_BROKEN_AD_IDS, [...autoBrokenAdIds, ad.adId]);

@@ -1,7 +1,7 @@
 # OLX - Model Tags - Continuity
 
 ## Product
-- Version: 0.6.0 - Under construction ⚠️ (needs user testing in Tampermonkey on live olx.ua).
+- Version: 0.7.0 - Under construction ⚠️ (needs user testing in Tampermonkey on live olx.ua).
 - Repository/branch: `karpuzikov/userscripts`, `main`.
 - Script: `browser-tools/olx-model-tags/OLX_Model_Tags.user.js`. Tests: `node --test browser-tools/olx-model-tags/olx-model-tags.test.cjs`.
 - Rules: root `SOFTWARE_RULES.md`, `UI_UX_RULES.md`, `DESIGN.md` (Karpuzikov design system). No project-specific rules file.
@@ -13,6 +13,7 @@
 - Ads without model/make info get per-ad data (per-ad model or per-ad tags), keyed by OLX numeric ad ID.
 - Universal "Broken" button next to `+`: toggles the per-ad `broken` tag. Broken ads are hidden on every search page by default; panel has `Show broken (N)`.
 - 0.4.0 Stop phrases: editable list (panel → `Stop phrases (N)` → chips with ×, input + Enter adds). Case-insensitive substring of the card title (search page) or title + description `[data-cy="ad_description"]` (ad page, open page only). A match = treated as broken (hidden unless `Show broken`, counted in it) and shows a red chip `⚠ «phrase»` on the ad. Synced as `data.stopPhrases` (lowercased); until first edit `DEFAULT_STOP_PHRASES` (UA + RU repair/parts/not-working words) apply. Ops `addStopPhrase` / `removeStopPhrase`.
+- 0.7.0 Sheet v2 (user: needs groups per kind of goods, links, one column per tag kind): script saves `category` in setAdInfo = deepest breadcrumb `[data-testid="breadcrumb-item"]` without " - " (region crumbs), on search pages applied to all cards; a search without category never erases a saved one; ads lacking url or category are backfilled when seen. Sheet: one tab `OLX: <category>` per OLX category (`OLX: no category yet` until the ad is seen again), row per ad, link = saved URL or `https://www.olx.ua/d/uk/obyavlenie/-ID<base62 id>.html` (verified live: redirects to the ad), tag columns by `OLX_MODEL_TAGS_COLUMN_RULES` regexes (Size, Resolution, Panel, Brightness, Contrast, Ports, Megapixels, else Other); a tag typed `Name: value` goes to column `Name`. Removes its old `OLX ads`/`OLX models` tabs and stale `OLX: ` tabs.
 - 0.6.0 Google Sheet (user chose: only ads they touched; read-only sheet). Script: every edit from an ad's bar first records `setAdInfo` {url, title, detectedModel} when changed (ads already in data without url are backfilled when seen). Sheet: `google-sheet/OLX_Model_Tags_Sheet.gs` (Apps Script bound to the user's sheet) downloads the public raw data JSON, writes `OLX ads` (linked title, model, model tags, ad tags, broken, ID) and `OLX models`; menu `OLX Model Tags → Refresh now / Refresh every hour` (installs an hourly trigger). Dark header (lime on #1E2329). Its `normalizeOlxModelKey` duplicates the userscript's - keep in sync.
 - 0.6.0 fix: titles/description/parameters are read with `readTextWithoutStyleTags` (OLX SSR puts inline `<style>` inside the title; textContent pulled CSS into titles and matching).
 - 0.5.1: a stop phrase found on the ad page (description/parameters - search cards only have the title) saves the ad's `broken` tag (synced), so search results hide it. Once per ad (local `olxModelTagsAutoBrokenAdIds`), so un-marking by hand sticks. Broken chip tooltip names the phrase.
@@ -43,6 +44,7 @@
 - Panel (fixed bottom-right), 0.3.0: collapsed by default to one 34 px tag icon button (user: panel must not sit on screen all the time); badge shows active filter count and ⚠ on sync error; click opens; × / Esc / click outside panel and tag bars closes. Open panel: `shown/total` count; sync status (role=status; red ⚠ text on error); `Set GitHub token` on token errors; sync icon. Filter chips with counts toggle AND filters (✓ + lime when active). `Show broken (N)`, `Clear filters`.
 
 ## Tests and acceptance (2026-11-18)
+- 0.7.0: unit 9/9; Playwright: setAdInfo carries `category: Монітори` from breadcrumbs (search + ad page). Sheet dry run (mocked SpreadsheetApp, real data + simulated categories): tabs `OLX: Монітори` (12) and `OLX: Цифрові фотоапарати` (1), monitor rows split into Size/Resolution/Panel/Brightness/Contrast/Ports, `Lens: 28-80mm` → Lens column. NOT RUN: real Google Sheet.
 - 0.6.0: unit 9/9; Playwright: card edits record setAdInfo with `/d/uk/obyavlenie/...` URL and clean title; ad page title no longer contains CSS. Apps Script dry run in Node with mocked SpreadsheetApp on real data: 13 ad rows, 8 model rows. NOT RUN: real Google Sheet, live Tampermonkey.
 - 0.5.1: Playwright: ad page with description "…на запчастини…" → pending op addTag broken, chip `⚠ Broken`; unmark → stays unmarked, shows `⚠ «на запчастини»`. NOT RUN: live Tampermonkey.
 - 0.5.0: unit 8/8; Playwright: adding `Samsung`, `LG` hides 1 more saved-page ad, chip `⊘ samsung`, `Show disliked brands (1)` reveals it (`qa-screenshots/brands.png`). NOT RUN: live Tampermonkey.
