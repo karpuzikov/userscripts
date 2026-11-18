@@ -89,7 +89,8 @@
   "SAMSUNG204TS": {
    "name": "Samsung 204Ts",
    "tags": [
-    "Resolution: 1600x1200"
+    "Resolution: 1600x1200",
+    "Size: 20\""
    ],
    "group": "Monitors"
   },
