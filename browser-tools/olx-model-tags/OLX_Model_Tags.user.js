@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OLX - Model Tags
 // @namespace    https://www.olx.ua/
-// @version      0.5.0
+// @version      0.5.1
 // @description  Tag OLX ads by model (tags shared by every ad of that model) or per ad, mark broken ads, filter search results by tags, per-tag Hide (pixel mesh) / Highlight (outline). Data syncs to GitHub; OLX only gets read locally from the open page.
 // @match        https://www.olx.ua/*
 // @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/browser-tools/olx-model-tags/OLX_Model_Tags.user.js
@@ -167,6 +167,7 @@
     const STORAGE_KEY_ACTIVE_FILTERS = 'olxModelTagsActiveFilters';
     const STORAGE_KEY_SHOW_BROKEN_ADS = 'olxModelTagsShowBrokenAds';
     const STORAGE_KEY_SHOW_DISLIKED_BRAND_ADS = 'olxModelTagsShowDislikedBrandAds';
+    const STORAGE_KEY_AUTO_BROKEN_AD_IDS = 'olxModelTagsAutoBrokenAdIds';
     const UPLOAD_DEBOUNCE_MS = 2000;
     const UPLOAD_CONFLICT_RETRIES = 3;
 
@@ -431,6 +432,7 @@
         bar.dataset.renderedText = ad.text;
         const tagging = resolveAdTagging(olxModelTagsData, ad.adId, ad.title);
         const isBroken = tagging.adTags.includes(BROKEN_TAG);
+        const matchedStopPhrase = findPhraseInText(olxModelTagsData, 'stopPhrases', ad.text);
         const children = [];
         if (tagging.modelName) {
             const modelChip = createElement('span', 'olx-model-tags-chip olx-model-tags-chip-model', tagging.modelName);
@@ -447,8 +449,18 @@
             children.push(createTagChip(tag, 'olx-model-tags-chip olx-model-tags-chip-ad', `Remove "${tag}" from this ad`,
                 () => recordOperation({ type: 'removeTag', scope: 'ad', adId: ad.adId, tag })));
         }
-        if (isBroken) children.push(createElement('span', 'olx-model-tags-chip olx-model-tags-chip-broken', '⚠ Broken'));
-        const matchedStopPhrase = findPhraseInText(olxModelTagsData, 'stopPhrases', ad.text);
+        if (isBroken) {
+            const brokenChip = createElement('span', 'olx-model-tags-chip olx-model-tags-chip-broken', '⚠ Broken');
+            if (matchedStopPhrase) brokenChip.title = `Stop phrase «${matchedStopPhrase}»`;
+            children.push(brokenChip);
+        }
+        // Search cards only show the title, so a stop phrase found in the description on the ad page is saved as the
+        // ad's Broken tag; search results then hide it too. Done once per ad, so un-marking it by hand sticks.
+        const autoBrokenAdIds = GM_getValue(STORAGE_KEY_AUTO_BROKEN_AD_IDS, []);
+        if (!ad.card && matchedStopPhrase && !isBroken && !autoBrokenAdIds.includes(ad.adId)) {
+            GM_setValue(STORAGE_KEY_AUTO_BROKEN_AD_IDS, [...autoBrokenAdIds, ad.adId]);
+            queueMicrotask(() => recordOperation({ type: 'addTag', scope: 'ad', adId: ad.adId, tag: BROKEN_TAG }));
+        }
         if (matchedStopPhrase && !isBroken) {
             const stopPhraseChip = createElement('span', 'olx-model-tags-chip olx-model-tags-chip-broken', `⚠ «${matchedStopPhrase}»`);
             stopPhraseChip.title = 'Matches a stop phrase: treated as broken and hidden in searches';
