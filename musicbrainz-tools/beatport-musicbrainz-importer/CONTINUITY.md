@@ -3,7 +3,7 @@
 ## Product / version / status
 - Product: `Beatport - MusicBrainz Importer` Tampermonkey userscript.
 - Repository: `karpuzikov/userscripts`, default branch `main`.
-- Current development target: `1.2.17 - Under construction ⚠️` (requires live Beatport UI verification).
+- Current development target: `1.2.18 - Under construction ⚠️` (requires live Beatport UI verification).
 - Canonical source and Tampermonkey update endpoint: `musicbrainz-tools/beatport-musicbrainz-importer/Beatport_MusicBrainz_Importer.user.js`.
 - Global rules: repository-root `SOFTWARE_RULES.md`. No separate project `RULES.md` exists.
 
@@ -22,6 +22,11 @@
 - Repair target v1.2.17: position the compact self-styled action group relative to the release heading/details; no `main.prepend` fallback, no borrowed Beatport CSS-module button classes. Display barcode, release artists and status in the same anchored group; repair unmounted UI after Beatport SPA rerenders without duplicate controls.
 - Keep the three actions together, visible without substantial empty space, at narrow viewports and zoom levels. Status must identify current work, and errors must be recoverable.
 - No verified browser DOM access for the user's exact Beatport session; validate on the live release page after Tampermonkey native update.
+
+## Data regression / repair - 2026-11-18
+- Beatport stopped embedding the `tracks` query in release `__NEXT_DATA__`; `release.tracks` is now a list of API URLs. Importer failed with "Could not find the Beatport track query".
+- v1.2.18: when no `tracks` query exists, load each track's `_next/data/<build>/<locale>/track/track/<id>.json` (`track-details-<id>` query), map to the old shape (id, name, mix_name, artists, isrc, length_ms) and add a synthetic `tracks` query. Track order still comes from the rendered DOM.
+- Known limit: `available_worldwide` is no longer exposed, so the XW release country is not set.
 
 ## Architecture / dependencies / data
 - Single userscript, no build step. The `www.beatport.com`, `musicbrainz.org/release/add`, and `bptoptracker.com` branches use location checks.

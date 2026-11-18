@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Beatport - MusicBrainz Importer
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.2.17
+// @version      1.2.18
 // @description  Import Beatport and BPTopTracker releases into MusicBrainz, with BPTopTracker 500-page redirect, Beatport enrichment, ISRC matching, and release-source handling.
 // @author       karpuzikov
 // @match        https://www.beatport.com/*
@@ -365,6 +365,54 @@ function __bpMbGmXmlhttpRequest(details) {
         return json.pageProps || json.props?.pageProps || null;
     }
 
+    /*
+     * Since Nov 2026 Beatport no longer embeds a "tracks" query in the release
+     * page data; release.tracks holds only API URLs. Load each track page's data
+     * and add an equivalent "tracks" query so the rest of the importer is unchanged.
+     * shortcut: tracks load one by one and Beatport no longer exposes available_worldwide
+     * (so no XW country); batch requests if large releases get slow.
+     */
+    async function buildTracksQueryFromBeatportTrackPages(buildId, parts, pageProps) {
+        const trackIds = (pageProps?.release?.tracks || [])
+            .map(trackUrl => String(trackUrl).match(/\/tracks\/(\d+)\/?$/)?.[1])
+            .filter(Boolean);
+        if (!trackIds.length) return null;
+
+        const results = [];
+        for (const trackId of trackIds) {
+            const url = `https://www.beatport.com/_next/data/${encodeURIComponent(buildId)}/${encodeURIComponent(parts.locale)}/track/track/${trackId}.json?id=${trackId}`;
+            const response = await __bpMbFetch(url, { credentials: 'same-origin' });
+            if (!response.ok) throw new Error(`Beatport track ${trackId} request failed: HTTP ${response.status}`);
+            const json = await response.json();
+            const details = (json.pageProps?.dehydratedState?.queries || [])
+                .find(query => query?.queryKey?.[0] === `track-details-${trackId}`)?.state?.data;
+            if (!details) throw new Error(`Beatport track ${trackId} details were not found`);
+            results.push({
+                id: details.track_id,
+                name: details.track_name,
+                mix_name: details.mix_name,
+                artists: details.artists || [],
+                isrc: details.isrc,
+                length_ms: details.track_length_ms,
+                number: details.track_number,
+                bpm: details.bpm,
+                key: details.key,
+                genre: details.genre,
+                label: details.label,
+                release: details.release,
+            });
+        }
+
+        const query = {
+            queryKey: ['tracks', { release_id: parts.id, page: 1 }],
+            state: { data: { results, count: results.length } },
+        };
+        pageProps.dehydratedState = pageProps.dehydratedState || {};
+        pageProps.dehydratedState.queries = pageProps.dehydratedState.queries || [];
+        pageProps.dehydratedState.queries.push(query);
+        return query;
+    }
+
     async function getCurrentPageProps() {
         const parts = releasePathParts();
         if (!parts) return null;
@@ -404,6 +452,10 @@ function __bpMbGmXmlhttpRequest(details) {
                     0
                 );
             }
+        }
+
+        if (!query) {
+            query = await buildTracksQueryFromBeatportTrackPages(next.buildId, parts, pageProps);
         }
 
         if (!query) {
