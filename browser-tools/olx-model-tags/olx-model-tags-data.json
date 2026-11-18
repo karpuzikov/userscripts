@@ -92,6 +92,10 @@
     "Resolution: 1600x1200"
    ],
    "group": "Monitors"
+  },
+  "DELLPROFESSIONALP190ST": {
+   "name": "Dell Professional P190St",
+   "tags": []
   }
  },
  "ads": {
@@ -158,7 +162,7 @@
    "tags": []
   },
   "940112664": {
-   "model": "",
+   "model": "Dell Professional P190St",
    "tags": [
     "Resolution: 1280×1024",
     "Ports: DVI",
