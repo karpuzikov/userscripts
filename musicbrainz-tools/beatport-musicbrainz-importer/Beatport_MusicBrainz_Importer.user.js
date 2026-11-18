@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Beatport - MusicBrainz Importer
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.2.19
+// @version      1.2.20
 // @description  Import Beatport and BPTopTracker releases into MusicBrainz, with BPTopTracker 500-page redirect, Beatport enrichment, ISRC matching, and release-source handling.
 // @author       karpuzikov
 // @match        https://www.beatport.com/*
@@ -2597,6 +2597,27 @@ function __bpMbGmXmlhttpRequest(details) {
         importerMeta.status = '';
     }
 
+    function findBeatportCatalogRow() {
+        return [...document.querySelectorAll('h1 ~ div > p:first-child')]
+            .find(label => normalizeSpace(label.textContent) === 'Catalog')
+            ?.parentElement || null;
+    }
+
+    function insertNativeMetadataRowAfterCatalog(catalogRow, id, label, value) {
+        document.getElementById(id)?.remove();
+        if (!value) return true;
+        const row = document.createElement('div');
+        row.id = id;
+        row.className = catalogRow.className;
+        const name = document.createElement('p');
+        name.textContent = label;
+        const content = document.createElement('span');
+        content.textContent = value;
+        row.append(name, content);
+        catalogRow.insertAdjacentElement('afterend', row);
+        return true;
+    }
+
     function renderImporterMetadata() {
         const container = document.querySelector(
             '#beatport-musicbrainz-importer .beatport-mb-details'
@@ -2626,8 +2647,16 @@ function __bpMbGmXmlhttpRequest(details) {
             container.appendChild(row);
         }
 
-        addRow('Barcode:', importerMeta.barcode);
-        addRow('Release Artist:', importerMeta.artists);
+        // Barcode and Release Artist go inline with Beatport's own Release Date / Label / Catalog rows.
+        const catalogRow = findBeatportCatalogRow();
+        const insertedNativeRows = catalogRow && [
+            ['beatport-mb-release-artist-row', 'Release Artist', importerMeta.artists],
+            ['beatport-mb-barcode-row', 'Barcode', importerMeta.barcode],
+        ].every(([id, label, value]) => insertNativeMetadataRowAfterCatalog(catalogRow, id, label, value));
+        if (!insertedNativeRows) {
+            addRow('Barcode:', importerMeta.barcode);
+            addRow('Release Artist:', importerMeta.artists);
+        }
         addRow('Status:', importerMeta.status, true);
         container.hidden = container.childElementCount === 0;
     }

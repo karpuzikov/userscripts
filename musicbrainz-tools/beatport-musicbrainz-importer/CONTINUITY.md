@@ -3,7 +3,7 @@
 ## Product / version / status
 - Product: `Beatport - MusicBrainz Importer` Tampermonkey userscript.
 - Repository: `karpuzikov/userscripts`, default branch `main`.
-- Current development target: `1.2.19 - Under construction ⚠️` (requires live Beatport UI verification).
+- Current development target: `1.2.20 - Under construction ⚠️` (requires live Beatport UI verification).
 - Canonical source and Tampermonkey update endpoint: `musicbrainz-tools/beatport-musicbrainz-importer/Beatport_MusicBrainz_Importer.user.js`.
 - Global rules: repository-root `SOFTWARE_RULES.md`. No separate project `RULES.md` exists.
 
