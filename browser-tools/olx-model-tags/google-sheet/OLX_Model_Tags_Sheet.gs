@@ -8,6 +8,7 @@
 const OLX_MODEL_TAGS_DATA_URL = 'https://raw.githubusercontent.com/karpuzikov/userscripts/main/browser-tools/olx-model-tags/olx-model-tags-data.json';
 const OLX_MODEL_TAGS_TAB_PREFIX = 'OLX: ';
 const OLX_MODEL_TAGS_NO_GROUP_TAB_NAME = 'no group yet';
+const OLX_MODEL_TAGS_BROKEN_WITHOUT_GROUP_TAB_NAME = 'Broken'; // broken ads with no group, model or OLX category
 const OLX_MODEL_TAGS_OLD_TAB_NAMES = ['OLX ads', 'OLX models']; // tabs made by the first version; removed on refresh
 
 // Which column a tag goes to. A tag typed as "Name: value" (e.g. "Lens: 28-80mm") goes to column "Name" instead.
@@ -79,7 +80,8 @@ function refreshOlxModelTagsSheet() {
       if (!valuesByColumn[columnName]) valuesByColumn[columnName] = [];
       valuesByColumn[columnName].push(value);
     }
-    const category = ad.group || modelEntry.group || ad.category || OLX_MODEL_TAGS_NO_GROUP_TAB_NAME;
+    const category = ad.group || modelEntry.group || ad.category
+      || (ad.tags.includes('broken') ? OLX_MODEL_TAGS_BROKEN_WITHOUT_GROUP_TAB_NAME : OLX_MODEL_TAGS_NO_GROUP_TAB_NAME);
     if (!adsByCategory[category]) adsByCategory[category] = [];
     adsByCategory[category].push({
       adId, modelName, valuesByColumn,
