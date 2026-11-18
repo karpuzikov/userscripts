@@ -92,7 +92,8 @@
     "Resolution: 1600x1200",
     "Size: 20\"",
     "Brightness: 250 cd/m²",
-    "Ports: VGA"
+    "Ports: VGA",
+    "Ports: DVI"
    ],
    "group": "Monitors"
   },
