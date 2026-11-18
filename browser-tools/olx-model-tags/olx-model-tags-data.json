@@ -94,15 +94,27 @@
   },
   "899628693": {
    "model": "Samsung SyncMaster 203B",
-   "tags": []
+   "tags": [],
+   "url": "https://www.olx.ua/d/uk/obyavlenie/montor-samsung-203b-IDYSKvd.html",
+   "title": "Монітор Samsung 203B",
+   "detectedModel": "",
+   "category": "Монітори"
   },
   "931407351": {
    "model": "Sony SDM-X202",
-   "tags": []
+   "tags": [],
+   "url": "https://www.olx.ua/d/uk/obyavlenie/montor-sony-sdm-x202-20-1-dyuymv-1600x1200-ID1125Bd.html",
+   "title": "Монітор SONY SDM-X202 20.1 дюймів, 1600x1200",
+   "detectedModel": "Sony SDM-X202",
+   "category": "Монітори"
   },
   "931938473": {
    "model": "NEC MultiSync LCD2090UXi",
-   "tags": []
+   "tags": [],
+   "url": "https://www.olx.ua/d/uk/obyavlenie/monitor-profisionalnyy-nec-multisynk-lcd-2090uxi-ID114jLH.html",
+   "title": "Монитор профисиональный NEC multisynk LCD 2090uxi",
+   "detectedModel": "",
+   "category": "Монітори"
   },
   "932222310": {
    "model": "HP E327",
@@ -138,7 +150,11 @@
   },
   "940592470": {
    "model": "NEC MultiSync LCD2070NX",
-   "tags": []
+   "tags": [],
+   "url": "https://www.olx.ua/d/uk/obyavlenie/montor-nec-multisync-lcd2070nx-20-s-ips-1600x1200-ID11ED4i.html",
+   "title": "Монітор NEC MultiSync LCD2070NX 20\" S-IPS (1600x1200)",
+   "detectedModel": "NEC MultiSync LCD2070NX",
+   "category": "Монітори"
   },
   "940731167": {
    "model": "",
