@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OLX - Model Tags
 // @namespace    https://www.olx.ua/
-// @version      0.5.1
+// @version      0.6.0
 // @description  Tag OLX ads by model (tags shared by every ad of that model) or per ad, mark broken ads, filter search results by tags, per-tag Hide (pixel mesh) / Highlight (outline). Data syncs to GitHub; OLX only gets read locally from the open page.
 // @match        https://www.olx.ua/*
 // @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/browser-tools/olx-model-tags/OLX_Model_Tags.user.js
@@ -72,6 +72,11 @@
             const phrase = operation.phrase.trim().toLowerCase();
             const remainingPhrases = getPhraseList(data, listName).filter((existingPhrase) => existingPhrase !== phrase);
             data[listName] = operation.type.startsWith('add') && phrase ? [...remainingPhrases, phrase] : remainingPhrases;
+            return;
+        }
+        if (operation.type === 'setAdInfo') {
+            // Ad URL, title and title-detected model, kept for the Google Sheet view (the script itself reads them from the page).
+            Object.assign((data.ads[operation.adId] ||= { model: '', tags: [] }), { url: operation.url, title: operation.title, detectedModel: operation.detectedModel });
             return;
         }
         if (operation.type === 'setTagDisplayMode') {
@@ -183,6 +188,20 @@
         return data;
     }
 
+    function recordOperationForAd(ad, operation) {
+        recordAdInfoIfChanged(ad);
+        recordOperation(operation);
+    }
+
+    // Every ad the user touched gets its URL/title saved, so the Google Sheet can list it.
+    function recordAdInfoIfChanged(ad) {
+        const adEntry = olxModelTagsData.ads[ad.adId];
+        const detectedModel = olxModelTagsData.models[detectModelKeyInTitle(olxModelTagsData, ad.title)]?.name || '';
+        const title = ad.title.trim();
+        if (!ad.url || (adEntry?.url === ad.url && adEntry.title === title && adEntry.detectedModel === detectedModel)) return;
+        recordOperation({ type: 'setAdInfo', adId: ad.adId, url: ad.url, title, detectedModel });
+    }
+
     function recordOperation(operation) {
         GM_setValue(STORAGE_KEY_PENDING_OPERATIONS, [...GM_getValue(STORAGE_KEY_PENDING_OPERATIONS, []), operation]);
         applyOlxModelTagsOperation(olxModelTagsData, operation);
@@ -282,12 +301,26 @@
     // OLX's client re-render of the listing does not always use <h4>; the title link (or its aria-label) is stable.
     function findCardTitleText(titleContainer) {
         const titleLink = titleContainer.querySelector('[data-testid="card-title-link"]');
-        return titleLink?.textContent.trim() || titleLink?.getAttribute('aria-label') || titleContainer.querySelector('h4, h6')?.textContent || '';
+        return readTextWithoutStyleTags(titleLink) || titleLink?.getAttribute('aria-label') || '';
     }
 
     function doesAdNeedTagBarRender(ad) {
         const bar = ad.anchor.nextElementSibling;
         return !bar?.classList.contains('olx-model-tags-bar') || (bar.dataset.editing !== 'true' && bar.dataset.renderedText !== ad.text);
+    }
+
+    // OLX server-renders inline <style> tags inside titles; textContent would include that CSS
+    // (and innerText does too for hidden cards), so only text outside <style>/<script> is read.
+    function readTextWithoutStyleTags(element) {
+        if (!element) return '';
+        const textParts = [];
+        const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+        while (walker.nextNode()) if (!walker.currentNode.parentElement.closest('style, script')) textParts.push(walker.currentNode.data);
+        return textParts.join(' ').replace(/\s+/g, ' ').trim();
+    }
+
+    function removeUrlQueryAndHash(url) {
+        return url.split(/[?#]/)[0];
     }
 
     function findAdsOnPage() {
@@ -296,16 +329,18 @@
             const titleContainer = card.querySelector('[data-testid="ad-card-title"]');
             if (titleContainer && /^\d+$/.test(card.id)) {
                 const title = findCardTitleText(titleContainer);
-                ads.push({ adId: card.id, title, text: title, anchor: titleContainer, card });
+                const href = titleContainer.querySelector('[data-testid="card-title-link"]')?.getAttribute('href') || '';
+                ads.push({ adId: card.id, title, text: title, url: href && removeUrlQueryAndHash(new URL(href, location.href).href), anchor: titleContainer, card });
             }
         }
         const adPageTitle = document.querySelector('[data-testid="offer_title"]');
         const adPageId = document.querySelector('[data-testid="ad-footer-bar-section"]')?.textContent.match(/ID:\s*(\d+)/)?.[1];
         if (adPageTitle && adPageId) {
             // Search cards only have the title; the ad page also has the description. Both are read from the open page only.
-            const description = document.querySelector('[data-cy="ad_description"]')?.textContent || '';
-            const parameters = document.querySelector('[data-testid="ad-parameters-container"]')?.innerText || '';
-            ads.push({ adId: adPageId, title: adPageTitle.textContent, text: `${adPageTitle.textContent}\n${parameters}\n${description}`, anchor: adPageTitle, card: null });
+            const description = readTextWithoutStyleTags(document.querySelector('[data-cy="ad_description"]'));
+            const parameters = readTextWithoutStyleTags(document.querySelector('[data-testid="ad-parameters-container"]'));
+            const title = readTextWithoutStyleTags(adPageTitle);
+            ads.push({ adId: adPageId, title, text: `${title}\n${parameters}\n${description}`, url: removeUrlQueryAndHash(location.href), anchor: adPageTitle, card: null });
         }
         return ads;
     }
@@ -438,16 +473,16 @@
             const modelChip = createElement('span', 'olx-model-tags-chip olx-model-tags-chip-model', tagging.modelName);
             const isModelSetForThisAd = Boolean(olxModelTagsData.ads[ad.adId]?.model);
             modelChip.title = isModelSetForThisAd ? 'Model set for this ad' : 'Model found in the title';
-            if (isModelSetForThisAd) modelChip.append(createIconButton('close', `Remove model ${tagging.modelName} from this ad`, () => recordOperation({ type: 'setAdModel', adId: ad.adId, modelName: '' })));
+            if (isModelSetForThisAd) modelChip.append(createIconButton('close', `Remove model ${tagging.modelName} from this ad`, () => recordOperationForAd(ad, { type: 'setAdModel', adId: ad.adId, modelName: '' })));
             children.push(modelChip);
         }
         for (const tag of tagging.modelTags) {
             children.push(createTagChip(tag, 'olx-model-tags-chip', `Remove "${tag}" from every ${tagging.modelName} ad`,
-                () => recordOperation({ type: 'removeTag', scope: 'model', modelName: tagging.modelName, tag })));
+                () => recordOperationForAd(ad, { type: 'removeTag', scope: 'model', modelName: tagging.modelName, tag })));
         }
         for (const tag of tagging.adTags.filter((tag) => tag !== BROKEN_TAG)) {
             children.push(createTagChip(tag, 'olx-model-tags-chip olx-model-tags-chip-ad', `Remove "${tag}" from this ad`,
-                () => recordOperation({ type: 'removeTag', scope: 'ad', adId: ad.adId, tag })));
+                () => recordOperationForAd(ad, { type: 'removeTag', scope: 'ad', adId: ad.adId, tag })));
         }
         if (isBroken) {
             const brokenChip = createElement('span', 'olx-model-tags-chip olx-model-tags-chip-broken', '⚠ Broken');
@@ -456,10 +491,11 @@
         }
         // Search cards only show the title, so a stop phrase found in the description on the ad page is saved as the
         // ad's Broken tag; search results then hide it too. Done once per ad, so un-marking it by hand sticks.
+        if (olxModelTagsData.ads[ad.adId] && !olxModelTagsData.ads[ad.adId].url && ad.url) queueMicrotask(() => recordAdInfoIfChanged(ad));
         const autoBrokenAdIds = GM_getValue(STORAGE_KEY_AUTO_BROKEN_AD_IDS, []);
         if (!ad.card && matchedStopPhrase && !isBroken && !autoBrokenAdIds.includes(ad.adId)) {
             GM_setValue(STORAGE_KEY_AUTO_BROKEN_AD_IDS, [...autoBrokenAdIds, ad.adId]);
-            queueMicrotask(() => recordOperation({ type: 'addTag', scope: 'ad', adId: ad.adId, tag: BROKEN_TAG }));
+            queueMicrotask(() => recordOperationForAd(ad, { type: 'addTag', scope: 'ad', adId: ad.adId, tag: BROKEN_TAG }));
         }
         if (matchedStopPhrase && !isBroken) {
             const stopPhraseChip = createElement('span', 'olx-model-tags-chip olx-model-tags-chip-broken', `⚠ «${matchedStopPhrase}»`);
@@ -473,7 +509,7 @@
             children.push(dislikedBrandChip);
         }
         children.push(createIconButton('broken', isBroken ? 'Unmark as broken' : 'Mark this ad as broken (hidden from searches)',
-            () => recordOperation({ type: isBroken ? 'removeTag' : 'addTag', scope: 'ad', adId: ad.adId, tag: BROKEN_TAG }),
+            () => recordOperationForAd(ad, { type: isBroken ? 'removeTag' : 'addTag', scope: 'ad', adId: ad.adId, tag: BROKEN_TAG }),
             isBroken ? 'olx-model-tags-icon-button-broken-active' : ''));
         children.push(createIconButton('plus', 'Add tag or set model', () => openTagEditor(bar, ad, tagging)));
         bar.replaceChildren(...children);
@@ -507,8 +543,8 @@
             const tag = tagInput.value.trim();
             if (modelName && !normalizeModelKey(modelName)) { modelInput.setCustomValidity('Model needs letters or digits'); modelInput.reportValidity(); return; }
             delete bar.dataset.editing;
-            if (modelName !== tagging.modelName) recordOperation({ type: 'setAdModel', adId: ad.adId, modelName });
-            if (tag) recordOperation(modelName ? { type: 'addTag', scope: 'model', modelName, tag } : { type: 'addTag', scope: 'ad', adId: ad.adId, tag });
+            if (modelName !== tagging.modelName) recordOperationForAd(ad, { type: 'setAdModel', adId: ad.adId, modelName });
+            if (tag) recordOperationForAd(ad, modelName ? { type: 'addTag', scope: 'model', modelName, tag } : { type: 'addTag', scope: 'ad', adId: ad.adId, tag });
             renderTagBar(ad);
             if (shouldKeepEditorOpen) openTagEditor(bar, ad, resolveAdTagging(olxModelTagsData, ad.adId, ad.title));
             else bar.querySelector('[aria-label="Add tag or set model"]')?.focus();
