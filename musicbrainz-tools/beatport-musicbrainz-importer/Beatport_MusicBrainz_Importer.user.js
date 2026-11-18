@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Beatport - MusicBrainz Importer
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.2.18
+// @version      1.2.19
 // @description  Import Beatport and BPTopTracker releases into MusicBrainz, with BPTopTracker 500-page redirect, Beatport enrichment, ISRC matching, and release-source handling.
 // @author       karpuzikov
 // @match        https://www.beatport.com/*
@@ -456,6 +456,7 @@ function __bpMbGmXmlhttpRequest(details) {
 
         if (!query) {
             query = await buildTracksQueryFromBeatportTrackPages(next.buildId, parts, pageProps);
+            currentResults = query?.state?.data?.results || [];
         }
 
         if (!query) {
