@@ -3,86 +3,95 @@
   "DELLP2012HT": {
    "name": "Dell P2012Ht",
    "tags": [
-    "1600x900",
-    "VGA",
-    "DVI-D",
-    "250 cd/m²",
-    "TN"
-   ]
+    "Resolution: 1600x900",
+    "Ports: VGA",
+    "Ports: DVI-D",
+    "Brightness: 250 cd/m²",
+    "Panel: TN"
+   ],
+   "group": "Monitors"
   },
   "DELLE1910C": {
    "name": "Dell E1910c",
    "tags": [
-    "19\"",
-    "VGA",
-    "DVI",
-    "250 cd/m²",
-    "1440x900",
-    "TN"
-   ]
+    "Size: 19\"",
+    "Ports: VGA",
+    "Ports: DVI",
+    "Brightness: 250 cd/m²",
+    "Resolution: 1440x900",
+    "Panel: TN"
+   ],
+   "group": "Monitors"
   },
   "DELLP2212H": {
    "name": "Dell P2212H",
    "tags": [
-    "1920×1080",
-    "TN",
-    "DVI",
-    "VGA",
-    "21.5\""
-   ]
+    "Resolution: 1920×1080",
+    "Panel: TN",
+    "Ports: DVI",
+    "Ports: VGA",
+    "Size: 21.5\""
+   ],
+   "group": "Monitors"
   },
   "NECMULTISYNCLCD2070NX": {
    "name": "NEC MultiSync LCD2070NX",
    "tags": [
-    "1600x1200",
-    "IPS",
-    "20\"",
-    "250 cd/m²",
-    "700:1"
-   ]
+    "Resolution: 1600x1200",
+    "Panel: IPS",
+    "Size: 20\"",
+    "Brightness: 250 cd/m²",
+    "Contrast: 700:1"
+   ],
+   "group": "Monitors"
   },
   "SONYSDMX202": {
    "name": "Sony SDM-X202",
    "tags": [
-    "1600x1200",
-    "VGA",
-    "DVI"
-   ]
+    "Resolution: 1600x1200",
+    "Ports: VGA",
+    "Ports: DVI"
+   ],
+   "group": "Monitors"
   },
   "NECMULTISYNCLCD2090UXI": {
    "name": "NEC MultiSync LCD2090UXi",
    "tags": [
-    "1600x1200",
-    "280 cd/m²",
-    "700:1",
-    "20\"",
-    "IPS",
-    "DVI-D",
-    "DVI-I"
-   ]
+    "Resolution: 1600x1200",
+    "Brightness: 280 cd/m²",
+    "Contrast: 700:1",
+    "Size: 20\"",
+    "Panel: IPS",
+    "Ports: DVI-D",
+    "Ports: DVI-I"
+   ],
+   "group": "Monitors"
   },
   "SAMSUNGSYNCMASTER203B": {
    "name": "Samsung SyncMaster 203B",
    "tags": [
-    "1400x1050",
-    "600:1",
-    "VGA",
-    "DVI-D",
-    "300 cd/m²",
-    "20\""
-   ]
+    "Resolution: 1400x1050",
+    "Contrast: 600:1",
+    "Ports: VGA",
+    "Ports: DVI-D",
+    "Brightness: 300 cd/m²",
+    "Size: 20\""
+   ],
+   "group": "Monitors"
   },
   "HPE327": {
    "name": "HP E327",
    "tags": [
-    "5MP"
-   ]
+    "Megapixels: 5MP"
+   ],
+   "group": "Cameras"
   },
   "SAMSUNG204TS": {
    "name": "Samsung 204Ts",
    "tags": [
-    "1600x1200"
-   ]
+    "Resolution: 1600x1200"
+   ],
+   "group": "Monitors"
   }
  },
  "ads": {
@@ -151,12 +160,13 @@
   "940112664": {
    "model": "",
    "tags": [
-    "1280×1024",
-    "DVI",
-    "VGA",
-    "19\"",
+    "Resolution: 1280×1024",
+    "Ports: DVI",
+    "Ports: VGA",
+    "Size: 19\"",
     "broken"
-   ]
+   ],
+   "group": "Monitors"
   },
   "940357194": {
    "model": "Dell P2212H",
