@@ -80,7 +80,9 @@
   },
   "SAMSUNG204TS": {
    "name": "Samsung 204Ts",
-   "tags": []
+   "tags": [
+    "1600x1200"
+   ]
   }
  },
  "ads": {
@@ -101,7 +103,7 @@
    "tags": [],
    "url": "https://www.olx.ua/d/uk/obyavlenie/monitor-20-samsung-204ts-1600x1200-43-IDYkUfH.html",
    "title": "Монітор 20\" Samsung 204Ts 1600x1200 4:3",
-   "detectedModel": "",
+   "detectedModel": "Samsung 204Ts",
    "category": "Монітори"
   },
   "899628693": {
