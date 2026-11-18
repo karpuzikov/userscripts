@@ -1,5 +1,6 @@
 // OLX - Model Tags: read-only Google Sheet view of the tag data the userscript keeps on GitHub.
 // Paste into the sheet's Extensions → Apps Script, save, reload the sheet, then use the "OLX Model Tags" menu.
+// Apps Script's parser rejects ||= and ?. , so this file uses older syntax.
 // One tab per OLX category (Монітори, Цифрові фотоапарати, ...), one row per ad you tagged, set a model for or marked broken,
 // one column per kind of tag.
 
@@ -69,14 +70,16 @@ function refreshOlxModelTagsSheet() {
   const adsByCategory = {};
   for (const [adId, ad] of Object.entries(data.ads)) {
     const modelName = ad.model || ad.detectedModel || '';
-    const allTags = [...(data.models[normalizeOlxModelKey(modelName)]?.tags || []), ...ad.tags.filter((tag) => tag !== 'broken')];
+    const allTags = [...((data.models[normalizeOlxModelKey(modelName)] || {}).tags || []), ...ad.tags.filter((tag) => tag !== 'broken')];
     const valuesByColumn = {};
     for (const tag of allTags) {
       const { columnName, value } = findOlxTagColumn(tag);
-      (valuesByColumn[columnName] ||= []).push(value);
+      if (!valuesByColumn[columnName]) valuesByColumn[columnName] = [];
+      valuesByColumn[columnName].push(value);
     }
     const category = ad.category || OLX_MODEL_TAGS_NO_CATEGORY_TAB_NAME;
-    (adsByCategory[category] ||= []).push({
+    if (!adsByCategory[category]) adsByCategory[category] = [];
+    adsByCategory[category].push({
       adId, modelName, valuesByColumn,
       link: { text: ad.title || `Ad ${adId}`, url: ad.url || buildOlxAdUrlFromId(adId) },
       isBroken: ad.tags.includes('broken') ? '⚠ broken' : '',

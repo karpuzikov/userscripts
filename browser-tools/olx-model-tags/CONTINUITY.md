@@ -44,6 +44,7 @@
 - Panel (fixed bottom-right), 0.3.0: collapsed by default to one 34 px tag icon button (user: panel must not sit on screen all the time); badge shows active filter count and ⚠ on sync error; click opens; × / Esc / click outside panel and tag bars closes. Open panel: `shown/total` count; sync status (role=status; red ⚠ text on error); `Set GitHub token` on token errors; sync icon. Filter chips with counts toggle AND filters (✓ + lime when active). `Show broken (N)`, `Clear filters`.
 
 ## Tests and acceptance (2026-11-18)
+- Sheet fix (after 0.7.0): Apps Script parser rejected `||=` ("ParseError: Unexpected token =", user report); replaced `||=` and `?.` in the .gs. Keep the .gs free of `||=`, `??=`, `?.`.
 - 0.7.0: unit 9/9; Playwright: setAdInfo carries `category: Монітори` from breadcrumbs (search + ad page). Sheet dry run (mocked SpreadsheetApp, real data + simulated categories): tabs `OLX: Монітори` (12) and `OLX: Цифрові фотоапарати` (1), monitor rows split into Size/Resolution/Panel/Brightness/Contrast/Ports, `Lens: 28-80mm` → Lens column. NOT RUN: real Google Sheet.
 - 0.6.0: unit 9/9; Playwright: card edits record setAdInfo with `/d/uk/obyavlenie/...` URL and clean title; ad page title no longer contains CSS. Apps Script dry run in Node with mocked SpreadsheetApp on real data: 13 ad rows, 8 model rows. NOT RUN: real Google Sheet, live Tampermonkey.
 - 0.5.1: Playwright: ad page with description "…на запчастини…" → pending op addTag broken, chip `⚠ Broken`; unmark → stays unmarked, shows `⚠ «на запчастини»`. NOT RUN: live Tampermonkey.
