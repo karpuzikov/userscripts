@@ -5,6 +5,8 @@
 // set a model for or marked broken,
 // one column per kind of tag.
 
+// Two files: the shared catalog (models) and the owner's personal data (ads).
+const OLX_MODEL_TAGS_CATALOG_URL = 'https://raw.githubusercontent.com/karpuzikov/userscripts/main/browser-tools/olx-model-tags/olx-model-tags-catalog.json';
 const OLX_MODEL_TAGS_DATA_URL = 'https://raw.githubusercontent.com/karpuzikov/userscripts/main/browser-tools/olx-model-tags/olx-model-tags-data.json';
 const OLX_MODEL_TAGS_TAB_PREFIX = 'OLX: ';
 const OLX_MODEL_TAGS_NO_GROUP_TAB_NAME = 'no group yet';
@@ -64,10 +66,15 @@ function findOlxTagColumn(tag) {
   return { columnName: matchingRule ? matchingRule[0] : 'Other', value: tag.trim() };
 }
 
+function downloadOlxModelTagsJson(url) {
+  const response = UrlFetchApp.fetch(`${url}?t=${Date.now()}`, { muteHttpExceptions: true });
+  if (response.getResponseCode() !== 200) throw new Error(`GitHub data download failed (HTTP ${response.getResponseCode()}): ${url}`);
+  return JSON.parse(response.getContentText());
+}
+
 function refreshOlxModelTagsSheet() {
-  const response = UrlFetchApp.fetch(`${OLX_MODEL_TAGS_DATA_URL}?t=${Date.now()}`, { muteHttpExceptions: true });
-  if (response.getResponseCode() !== 200) throw new Error(`GitHub data download failed (HTTP ${response.getResponseCode()})`);
-  const data = JSON.parse(response.getContentText());
+  const data = downloadOlxModelTagsJson(OLX_MODEL_TAGS_DATA_URL);
+  data.models = downloadOlxModelTagsJson(OLX_MODEL_TAGS_CATALOG_URL).models;
 
   const adsByCategory = {};
   for (const [adId, ad] of Object.entries(data.ads)) {

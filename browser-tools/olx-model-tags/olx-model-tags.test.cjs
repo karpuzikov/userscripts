@@ -97,3 +97,16 @@ test('groups: model group applies to its ads, ad group wins; tags split into pro
   assert.deepEqual(olxModelTags.splitTagIntoPropertyAndValue('Squishiness: very squishy'), { property: 'Squishiness', value: 'very squishy' });
   assert.deepEqual(olxModelTags.splitTagIntoPropertyAndValue('700:1'), { property: '', value: '700:1' });
 });
+
+test('catalog and personal data split and join without losing anything', () => {
+  const data = olxModelTags.createEmptyOlxModelTagsData();
+  olxModelTags.applyOlxModelTagsOperation(data, { type: 'addTag', scope: 'model', modelName: 'P2012Ht', tag: 'Size: 20"' });
+  olxModelTags.applyOlxModelTagsOperation(data, { type: 'addTag', scope: 'ad', adId: '1', tag: 'broken' });
+  olxModelTags.applyOlxModelTagsOperation(data, { type: 'addPhrase', listName: 'dislikedBrands', phrase: 'Acme' });
+  const { catalog, personal } = olxModelTags.splitDataIntoCatalogAndPersonal(data);
+  assert.deepEqual(Object.keys(catalog).sort(), ['dislikedBrands', 'models']);
+  assert.deepEqual(Object.keys(personal).sort(), ['ads', 'tagDisplayModes']);
+  assert.deepEqual(olxModelTags.joinCatalogAndPersonal(catalog, personal), data);
+  // A stranger has no personal file: the catalog alone still gives a usable data object.
+  assert.deepEqual(olxModelTags.joinCatalogAndPersonal(catalog, {}).ads, {});
+});

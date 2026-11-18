@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         OLX - Model Tags
 // @namespace    https://www.olx.ua/
-// @version      0.8.0
-// @description  Tag OLX ads by model (tags shared by every ad of that model) or per ad, mark broken ads, filter search results by tags, per-tag Hide (pixel mesh) / Highlight (outline). Data syncs to GitHub; OLX only gets read locally from the open page.
+// @version      0.9.0
+// @description  Tag OLX ads by model (tags shared by every ad of that model) or per ad, mark broken ads, filter search results by tags, per-tag Hide (pixel mesh) / Highlight (outline). Shared model catalog is read from GitHub without any key; your own marks stay in this browser. OLX only gets read locally from the open page.
 // @match        https://www.olx.ua/*
 // @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/browser-tools/olx-model-tags/OLX_Model_Tags.user.js
 // @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/browser-tools/olx-model-tags/OLX_Model_Tags.user.js
@@ -11,7 +11,9 @@
 // @grant        GM_setValue
 // @grant        GM_xmlhttpRequest
 // @grant        GM_addStyle
+// @grant        GM_registerMenuCommand
 // @connect      api.github.com
+// @connect      raw.githubusercontent.com
 // ==/UserScript==
 
 (() => {
@@ -151,13 +153,24 @@
         return activeFilters.every((filter) => filterValues.includes(filter));
     }
 
+    // Catalog = models, stop phrases, brands: public, shared by everyone, written only by the owner (token).
+    // Personal = ads and per-tag display modes: kept in each browser (the owner's also sync to a second GitHub file).
+    function splitDataIntoCatalogAndPersonal(data) {
+        const { ads, tagDisplayModes, ...catalog } = data;
+        return { catalog, personal: { ads, tagDisplayModes } };
+    }
+
+    function joinCatalogAndPersonal(catalog, personal) {
+        return { ...createEmptyOlxModelTagsData(), ...catalog, ads: personal.ads ?? {}, tagDisplayModes: personal.tagDisplayModes ?? {} };
+    }
+
     function resolveAdDisplayEffects(data, filterValues) {
         const displayModes = filterValues.map((value) => data.tagDisplayModes?.[value]);
         return { isMeshed: displayModes.includes('hide'), isHighlighted: displayModes.includes('highlight') };
     }
 
     if (typeof module === 'object') {
-        module.exports = { normalizeModelKey, createEmptyOlxModelTagsData, detectModelKeyInTitle, resolveAdTagging, applyOlxModelTagsOperation, encodeUtf8TextAsBase64, decodeBase64AsUtf8Text, doesAdMatchActiveFilters, resolveAdDisplayEffects, getPhraseList, findPhraseInText, splitTagIntoPropertyAndValue };
+        module.exports = { normalizeModelKey, createEmptyOlxModelTagsData, detectModelKeyInTitle, resolveAdTagging, applyOlxModelTagsOperation, encodeUtf8TextAsBase64, decodeBase64AsUtf8Text, doesAdMatchActiveFilters, resolveAdDisplayEffects, getPhraseList, findPhraseInText, splitTagIntoPropertyAndValue, splitDataIntoCatalogAndPersonal, joinCatalogAndPersonal };
         return;
     }
 
@@ -172,12 +185,16 @@
     document.documentElement.dataset.olxModelTagsRunning = 'true';
 
     // ---------- Storage and GitHub sync ----------
-    // Nothing here talks to OLX: ads are read from the already-open page DOM. Only api.github.com is contacted.
+    // Nothing here talks to OLX: ads are read from the already-open page DOM. Only GitHub is contacted.
+    // Everyone reads the public catalog file without a key; edits stay in this browser as pending operations replayed
+    // over every fresh catalog. Only with the owner's token are the operations uploaded (catalog file + personal file).
 
     const GITHUB_DATA_REPOSITORY = 'karpuzikov/userscripts';
     const GITHUB_DATA_BRANCH = 'main';
-    const GITHUB_DATA_FILE_PATH = 'browser-tools/olx-model-tags/olx-model-tags-data.json';
-    const GITHUB_DATA_FILE_URL = `https://api.github.com/repos/${GITHUB_DATA_REPOSITORY}/contents/${GITHUB_DATA_FILE_PATH}`;
+    const GITHUB_CATALOG_FILE_PATH = 'browser-tools/olx-model-tags/olx-model-tags-catalog.json';
+    const GITHUB_PERSONAL_FILE_PATH = 'browser-tools/olx-model-tags/olx-model-tags-data.json';
+    const githubApiFileUrl = (filePath) => `https://api.github.com/repos/${GITHUB_DATA_REPOSITORY}/contents/${filePath}`;
+    const githubRawFileUrl = (filePath) => `https://raw.githubusercontent.com/${GITHUB_DATA_REPOSITORY}/${GITHUB_DATA_BRANCH}/${filePath}`;
     const STORAGE_KEY_CACHED_DATA = 'olxModelTagsCachedData';
     const STORAGE_KEY_CACHED_AT = 'olxModelTagsCachedAt';
     const STORAGE_KEY_PENDING_OPERATIONS = 'olxModelTagsPendingOperations';
@@ -188,12 +205,15 @@
     const STORAGE_KEY_AUTO_BROKEN_AD_IDS = 'olxModelTagsAutoBrokenAdIds';
     const UPLOAD_DEBOUNCE_MS = 2000;
     const UPLOAD_CONFLICT_RETRIES = 3;
+    const CATALOG_REFRESH_INTERVAL_MS = 60 * 60 * 1000;
 
     let olxModelTagsData = GM_getValue(STORAGE_KEY_CACHED_DATA, null);
     let synchronizationStatus = { state: 'idle', message: '' };
     let synchronizationInProgress = false;
     let synchronizationRequestedAgain = false;
     let uploadDebounceTimer = 0;
+
+    const hasGithubToken = () => Boolean(GM_getValue(STORAGE_KEY_GITHUB_TOKEN, ''));
 
     function rebuildLocalDataFromCacheAndPendingOperations(baseData) {
         const data = structuredClone(baseData);
@@ -217,15 +237,17 @@
         recordOperation({ type: 'setAdInfo', adId: ad.adId, url: ad.url, title, detectedModel, category });
     }
 
+    // shortcut: without a token the pending list only grows (idempotent ops, a few KB per hundred ads); compact it if storage ever bites.
     function recordOperation(operation) {
         GM_setValue(STORAGE_KEY_PENDING_OPERATIONS, [...GM_getValue(STORAGE_KEY_PENDING_OPERATIONS, []), operation]);
         applyOlxModelTagsOperation(olxModelTagsData, operation);
         renderEverything();
+        if (!hasGithubToken()) return;
         clearTimeout(uploadDebounceTimer);
         uploadDebounceTimer = setTimeout(synchronizeWithGithub, UPLOAD_DEBOUNCE_MS);
     }
 
-    function requestGithubApi(method, url, body) {
+    function requestGithub(method, url, body) {
         const token = GM_getValue(STORAGE_KEY_GITHUB_TOKEN, '');
         return new Promise((resolve, reject) => {
             GM_xmlhttpRequest({
@@ -245,19 +267,26 @@
         });
     }
 
-    async function downloadDataFileFromGithub() {
-        const response = await requestGithubApi('GET', `${GITHUB_DATA_FILE_URL}?ref=${GITHUB_DATA_BRANCH}&t=${Date.now()}`);
-        // A missing file is only normal before the first sync; afterwards it must not silently wipe the local tags.
-        if (response.status === 404 && GM_getValue(STORAGE_KEY_CACHED_AT, 0)) throw new Error('GitHub data file not found (check the token has access to the repository)');
-        if (response.status === 404) return { data: createEmptyOlxModelTagsData(), sha: null };
-        if (response.status !== 200) throw new Error(`GitHub download failed (HTTP ${response.status}${response.json?.message ? `: ${response.json.message}` : ''})`);
-        // shortcut: the contents API inlines files up to 1 MB; switch to the blob API if the data file ever grows past that.
-        if (!response.json.content) throw new Error('GitHub data file is over 1 MB; the script needs the blob API');
+    // No token: the public raw file (no API rate limit; GitHub's CDN may serve a copy up to ~5 min old).
+    // Token: the contents API, which also gives the sha needed to upload.
+    async function downloadJsonFileFromGithub(filePath) {
+        const response = hasGithubToken()
+            ? await requestGithub('GET', `${githubApiFileUrl(filePath)}?ref=${GITHUB_DATA_BRANCH}&t=${Date.now()}`)
+            : await requestGithub('GET', githubRawFileUrl(filePath));
+        // A missing file is only normal for the owner before the first sync; afterwards it must not silently wipe the local data.
+        if (response.status === 404 && hasGithubToken() && !GM_getValue(STORAGE_KEY_CACHED_AT, 0)) return { data: {}, sha: null };
+        if (response.status !== 200) throw new Error(`GitHub download failed for ${filePath} (HTTP ${response.status}${response.json?.message ? `: ${response.json.message}` : ''})`);
+        if (!hasGithubToken()) {
+            if (!response.json) throw new Error(`${filePath} is not valid JSON`);
+            return { data: response.json, sha: null };
+        }
+        // shortcut: the contents API inlines files up to 1 MB; switch to the blob API if a data file ever grows past that.
+        if (!response.json.content) throw new Error(`${filePath} is over 1 MB; the script needs the blob API`);
         return { data: JSON.parse(decodeBase64AsUtf8Text(response.json.content)), sha: response.json.sha };
     }
 
-    async function uploadDataFileToGithub(data, sha) {
-        const response = await requestGithubApi('PUT', GITHUB_DATA_FILE_URL, {
+    async function uploadJsonFileToGithub(filePath, data, sha) {
+        const response = await requestGithub('PUT', githubApiFileUrl(filePath), {
             message: 'OLX Model Tags: update tags',
             content: encodeUtf8TextAsBase64(`${JSON.stringify(data, null, 1)}\n`),
             branch: GITHUB_DATA_BRANCH,
@@ -274,22 +303,31 @@
         synchronizationInProgress = true;
         setSynchronizationStatus('working', 'Syncing…');
         try {
-            let remote;
+            const canUpload = hasGithubToken();
             const pendingOperations = GM_getValue(STORAGE_KEY_PENDING_OPERATIONS, []);
+            let remoteData;
             for (let attempt = 1; ; attempt++) {
-                remote = await downloadDataFileFromGithub();
-                if (!pendingOperations.length) break;
-                if (!GM_getValue(STORAGE_KEY_GITHUB_TOKEN, '')) throw new Error('GitHub token needed to save tags');
-                for (const operation of pendingOperations) applyOlxModelTagsOperation(remote.data, operation);
-                if (await uploadDataFileToGithub(remote.data, remote.sha) === 'uploaded') break;
+                const catalogFile = await downloadJsonFileFromGithub(GITHUB_CATALOG_FILE_PATH);
+                const personalFile = canUpload ? await downloadJsonFileFromGithub(GITHUB_PERSONAL_FILE_PATH) : { data: {}, sha: null };
+                remoteData = joinCatalogAndPersonal(catalogFile.data, personalFile.data);
+                if (!canUpload || !pendingOperations.length) break;
+                const updatedData = structuredClone(remoteData);
+                for (const operation of pendingOperations) applyOlxModelTagsOperation(updatedData, operation);
+                const { catalog, personal } = splitDataIntoCatalogAndPersonal(updatedData);
+                let hasConflict = false;
+                for (const [filePath, file, content] of [[GITHUB_CATALOG_FILE_PATH, catalogFile, catalog], [GITHUB_PERSONAL_FILE_PATH, personalFile, personal]]) {
+                    if (JSON.stringify(content) === JSON.stringify(file.data)) continue;
+                    if (await uploadJsonFileToGithub(filePath, content, file.sha) === 'conflict') { hasConflict = true; break; }
+                }
+                if (!hasConflict) { remoteData = updatedData; break; }
                 if (attempt >= UPLOAD_CONFLICT_RETRIES) throw new Error('GitHub data file kept changing during upload; retry');
             }
             // Operations added while uploading stay pending and are applied on top of the fresh data.
-            GM_setValue(STORAGE_KEY_PENDING_OPERATIONS, GM_getValue(STORAGE_KEY_PENDING_OPERATIONS, []).slice(pendingOperations.length));
-            GM_setValue(STORAGE_KEY_CACHED_DATA, remote.data);
+            if (canUpload) GM_setValue(STORAGE_KEY_PENDING_OPERATIONS, GM_getValue(STORAGE_KEY_PENDING_OPERATIONS, []).slice(pendingOperations.length));
+            GM_setValue(STORAGE_KEY_CACHED_DATA, remoteData);
             GM_setValue(STORAGE_KEY_CACHED_AT, Date.now());
-            olxModelTagsData = rebuildLocalDataFromCacheAndPendingOperations(remote.data);
-            setSynchronizationStatus('synced', 'Synced');
+            olxModelTagsData = rebuildLocalDataFromCacheAndPendingOperations(remoteData);
+            setSynchronizationStatus('synced', canUpload ? 'Synced' : 'Catalog synced; your edits stay in this browser');
         } catch (error) {
             setSynchronizationStatus('error', error.message);
         } finally {
@@ -304,12 +342,14 @@
         renderFilterPanel();
     }
 
+    // Owner only: strangers never need this, so it lives in the Tampermonkey menu instead of the panel.
     function askForGithubToken() {
         const token = prompt(`GitHub fine-grained token with Contents read/write on ${GITHUB_DATA_REPOSITORY}:`, GM_getValue(STORAGE_KEY_GITHUB_TOKEN, ''));
         if (token === null) return;
         GM_setValue(STORAGE_KEY_GITHUB_TOKEN, token.trim());
         synchronizeWithGithub();
     }
+    GM_registerMenuCommand('Set GitHub token (owner only)', askForGithubToken);
 
     // ---------- Page reading (local DOM only) ----------
 
@@ -614,7 +654,15 @@
         for (const actionButton of bar.querySelectorAll(':scope > .olx-model-tags-icon-button')) actionButton.remove();
         bar.append(groupInput, modelInput, propertyInput, valueInput, destinationText,
             createIconButton('check', 'Save and close (Enter saves and adds another)', () => saveEditor(false)), createIconButton('close', 'Discard and close (Esc)', closeEditor));
+        if (!hasGithubToken() && tagging.modelTags.length) bar.append(createTextButton('Suggest model', 'Open a pre-filled GitHub issue so the owner can add this model to the shared catalog', () => suggestModelToCatalog(ad, tagging)));
         (tagging.group ? propertyInput : groupInput).focus();
+    }
+
+    // No account-free write path on purpose (it would invite spam): a GitHub issue the owner reviews.
+    function suggestModelToCatalog(ad, tagging) {
+        const suggestion = JSON.stringify({ name: tagging.modelName, group: tagging.group, tags: tagging.modelTags }, null, 1);
+        const issueUrl = `https://github.com/${GITHUB_DATA_REPOSITORY}/issues/new?title=${encodeURIComponent(`Model: ${tagging.modelName}`)}&body=${encodeURIComponent(`\`\`\`json\n${suggestion}\n\`\`\`\nExample ad: ${ad.url}`)}`;
+        window.open(issueUrl, '_blank', 'noopener');
     }
 
     let isFilterPanelExpanded = false;
@@ -720,10 +768,9 @@
             isSynchronizationError ? `⚠ ${synchronizationStatus.message}` : synchronizationStatus.message);
         statusText.setAttribute('role', 'status');
         headerRow.append(statusText);
-        if (isSynchronizationError && /token/i.test(synchronizationStatus.message)) headerRow.append(createTextButton('Set GitHub token', 'Enter the GitHub token used to save tags', askForGithubToken));
         const closeButton = createIconButton('close', 'Close tag filters (Esc)', () => setFilterPanelExpanded(false));
         closeButton.setAttribute('aria-expanded', 'true');
-        headerRow.append(createIconButton('sync', 'Sync tags with GitHub now', synchronizeWithGithub), closeButton);
+        headerRow.append(createIconButton('sync', 'Refresh the shared catalog from GitHub now', synchronizeWithGithub), closeButton);
         const children = [headerRow];
 
         if (ads.length) {
@@ -793,7 +840,7 @@
         const cachedAt = GM_getValue(STORAGE_KEY_CACHED_AT, 0);
         synchronizationStatus = { state: 'synced', message: cachedAt ? `Cached ${new Date(cachedAt).toLocaleString('uk-UA', { dateStyle: 'short', timeStyle: 'short' })}` : 'Cached' };
         renderEverything();
-        if (GM_getValue(STORAGE_KEY_PENDING_OPERATIONS, []).length) synchronizeWithGithub();
+        if (Date.now() - cachedAt > CATALOG_REFRESH_INTERVAL_MS || (hasGithubToken() && GM_getValue(STORAGE_KEY_PENDING_OPERATIONS, []).length)) synchronizeWithGithub();
     } else {
         olxModelTagsData = createEmptyOlxModelTagsData();
         synchronizeWithGithub();

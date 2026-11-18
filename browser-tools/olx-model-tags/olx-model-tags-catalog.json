@@ -1,0 +1,161 @@
+{
+ "models": {
+  "DELLP2012HT": {
+   "name": "Dell P2012Ht",
+   "tags": [
+    "Resolution: 1600x900",
+    "Ports: VGA",
+    "Ports: DVI-D",
+    "Brightness: 250 cd/m²",
+    "Panel: TN"
+   ],
+   "group": "Monitors"
+  },
+  "DELLE1910C": {
+   "name": "Dell E1910c",
+   "tags": [
+    "Size: 19\"",
+    "Ports: VGA",
+    "Ports: DVI",
+    "Brightness: 250 cd/m²",
+    "Resolution: 1440x900",
+    "Panel: TN"
+   ],
+   "group": "Monitors"
+  },
+  "DELLP2212H": {
+   "name": "Dell P2212H",
+   "tags": [
+    "Resolution: 1920×1080",
+    "Panel: TN",
+    "Ports: DVI",
+    "Ports: VGA",
+    "Size: 21.5\""
+   ],
+   "group": "Monitors"
+  },
+  "NECMULTISYNCLCD2070NX": {
+   "name": "NEC MultiSync LCD2070NX",
+   "tags": [
+    "Resolution: 1600x1200",
+    "Panel: IPS",
+    "Size: 20\"",
+    "Brightness: 250 cd/m²",
+    "Contrast: 700:1"
+   ],
+   "group": "Monitors"
+  },
+  "SONYSDMX202": {
+   "name": "Sony SDM-X202",
+   "tags": [
+    "Resolution: 1600x1200",
+    "Ports: VGA",
+    "Ports: DVI"
+   ],
+   "group": "Monitors"
+  },
+  "NECMULTISYNCLCD2090UXI": {
+   "name": "NEC MultiSync LCD2090UXi",
+   "tags": [
+    "Resolution: 1600x1200",
+    "Brightness: 280 cd/m²",
+    "Contrast: 700:1",
+    "Size: 20\"",
+    "Panel: IPS",
+    "Ports: DVI-D",
+    "Ports: DVI-I"
+   ],
+   "group": "Monitors"
+  },
+  "SAMSUNGSYNCMASTER203B": {
+   "name": "Samsung SyncMaster 203B",
+   "tags": [
+    "Resolution: 1400x1050",
+    "Contrast: 600:1",
+    "Ports: VGA",
+    "Ports: DVI-D",
+    "Brightness: 300 cd/m²",
+    "Size: 20\""
+   ],
+   "group": "Monitors"
+  },
+  "HPE327": {
+   "name": "HP E327",
+   "tags": [
+    "Megapixels: 5MP"
+   ],
+   "group": "Cameras"
+  },
+  "SAMSUNG204TS": {
+   "name": "Samsung 204Ts",
+   "tags": [
+    "Resolution: 1600x1200",
+    "Size: 20\"",
+    "Brightness: 250 cd/m²",
+    "Ports: VGA",
+    "Ports: DVI"
+   ],
+   "group": "Monitors"
+  },
+  "DELLPROFESSIONALP190ST": {
+   "name": "Dell Professional P190St",
+   "tags": []
+  }
+ },
+ "stopPhrases": [
+  "на запчастини",
+  "на запчасти",
+  "під ремонт",
+  "под ремонт",
+  "на ремонт",
+  "не працює",
+  "не работает",
+  "неробочий",
+  "нерабочий",
+  "не включається",
+  "не включается",
+  "розбитий",
+  "разбит",
+  "битий",
+  "полоси",
+  "полосы",
+  "на детали",
+  "на зап.части",
+  "по запчастинам",
+  "детали"
+ ],
+ "dislikedBrands": [
+  "ergo",
+  "вилия",
+  "aleo",
+  "фотон",
+  "москва",
+  "vivitar",
+  "плёночный",
+  "фотоплёнка",
+  "фотопленка",
+  "ufo",
+  "caplio",
+  "beno",
+  "шнур",
+  "дитячий",
+  "skina",
+  "meikai",
+  "belka",
+  "konica",
+  "фотонегатив",
+  "мильниця",
+  "мыльницы",
+  "мильница",
+  "мыльница",
+  "genius",
+  "skinv",
+  "fujifilm",
+  "фед",
+  "fino",
+  "kodak",
+  "chinon",
+  "scina",
+  "кодак"
+ ]
+}
