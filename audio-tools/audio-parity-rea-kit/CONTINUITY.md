@@ -149,3 +149,35 @@ The user correctly identified that v0.01.00 did **not create the core output fil
 **Regression**: `tests/test_app_v0.01.02.py` (pure log/contract); additional local runner subprocess integration was executed but not published in test because it uses a POSIX fake script. See docs/vultures-2-parity.md for full original vs experimental differences.
 **Not done**: exact true peak, album/track DR, integrated loudness parity; original full report variants/metadata; full AudioChecker workflow; checksum; complete Windows visual QA, real engine run and packaged EXE.
 **Exact next action**: run v0.01.02 with the user's original 16 VULTURES 2 FLACs on Windows, compare authenticity percentage track by track and decoder modes, test native UI; reverse the original log-verification checksum and MAAT DSP edge cases only as needed; fix output mismatches, then package and validate Windows executable. Record PASS/FAIL/NOT RUN honestly. No GitHub Actions modifications.
+
+## Native REA/Ghidra investigation checkpoint - 2026-11-19
+
+**Application:** still v0.01.02, **Under construction ⚠️**. No app source changed in this checkpoint.
+**Host:** the user's Windows 11 x64 PC. REA 6.9.0 (npx `rea-agents`), Ghidra 12.2 and JDK 25 reported healthy once `GHIDRA_INSTALL_DIR` was set. The registered REA MCP server lacks that variable, so use the CLI or re-register.
+**Targets:**
+- `C:\test\test.exe` is the DROffline Setup installer (SHA-256 1f1405b3…), not the app, so it holds no DSP code.
+- Analysed the kit's `DROffline MkII.exe` (99f4e976…) and `libMAATDROffline2.dll` (0db8fc4a…), both hash-verified.
+- decompile-all: EXE 16,675 functions, DLL 3,442 functions, 0 failures.
+
+**Result:** `Findings/REA_FINDINGS.md` and `Findings/behavior-contract.json` recover:
+- true peak (EXE TruePeakDetector, BS.1770 ×4 up to 48k, ×2 up to 96k, ×1 above);
+- DR (second-highest block peak, 0.01 dB histograms, top-20 % RMS, clip-snap rule, block length rint(sr·132480/44100));
+- LUFS (hard-coded float K-weighting tables, gate order);
+- PSR, album aggregation (round half-even of the mean of unrounded composites), and report layout.
+
+An independent Python model of this contract (`Findings/harness/`) reproduces **23/23** reference rows for Max. TPL, LUFSi and DR, and album DR 1.
+
+**App v0.01.02 differential on the reference corpus:**
+- TPL 2/23 FAIL
+- LUFSi 21/23 FAIL
+- DR 20/23 FAIL
+- Report bytes FAIL: LUFSi width 6 vs 7, "Experimental" album label, extra trailing CRLF.
+- Full PASS/FAIL/NOT RUN list: REA_FINDINGS.md §3.
+
+The decompiled vendor pseudocode is not committed; only addresses, constants and recovered behaviour are.
+
+**Unresolved:** final partial chunk delivery, the default K-filter for unlisted rates (and the 354800 typo path), the single-track album branch, the float display formatter and .5 ties, >2-channel behaviour, the LRA/PLR internals.
+
+**NOT RUN:** all 27-column/TSV/metadata outputs, AudioChecker/auCDtect, native GUI acceptance, non-44.1/48/96 kHz numeric parity.
+
+**Next action:** implement the recovered contract in the app (true peak, DR, K-weighting/gating, report width/label/trailing bytes), rerun `Findings/harness/parity_harness.py` until 23/23, then collect missing original outputs (all columns, TSV, quiet/odd-rate fixtures) on Windows.

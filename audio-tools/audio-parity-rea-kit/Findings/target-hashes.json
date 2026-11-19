@@ -1,0 +1,15 @@
+{
+  "checkpoint": "2026-11-19",
+  "algorithm": "SHA-256",
+  "targets": [
+    {"path": "C:\\test\\test.exe", "identity": "DROffline MkII Setup 2.2.3 (Inno Setup installer, x86)", "sha256": "1f1405b3411c8f21a5ffb960cc0c40d916dc3f7c5ef1014c385680932d94997d", "matches_kit": false, "note": "installer, not a kit target"},
+    {"path": "Targets/DROffline/DROffline MkII.exe", "sha256": "99f4e976d005ea02166903a624ff24ce987e035214c8043b1c645358fb1cc35b", "matches_kit": true},
+    {"path": "Targets/DROffline/libMAATDROffline2.dll", "sha256": "0db8fc4a4f709e3f4583276bd1cb08fcf24932b3ab8dc0cb870bb44612266ab5", "matches_kit": true}
+  ],
+  "rea_evidence": {
+    "installer_analyze": "ev_d1db03684d484077671a0ef29dc0c2efdaa128cd9eaa89a4b84b2b833b014dd6",
+    "dll_decompile_all": "ev_4ff42c3e3283ef4ecfc55ab80629f65974d7532b05730d60fbe4f277310005f6",
+    "exe_decompile_all": "ev_834912c9d17e7113a825411c7842208efb501def16b78efdf31edc21b6c5df0d"
+  },
+  "tools": {"rea": "rea-agents 6.9.0 (npx)", "ghidra": "12.2", "jdk": "25.0.5", "python": "3.12.10, numpy 2.5.5, scipy 1.18.1, pyloudnorm"}
+}

@@ -1,0 +1,711 @@
+[
+ {
+  "file": "01 Silence.wav",
+  "TPL": {
+   "golden": "-100.00",
+   "app": "-100.00",
+   "app_ok": true,
+   "model": "-100.00",
+   "model_ok": true,
+   "model_raw": -100.0
+  },
+  "LUFSi": {
+   "golden": "-128.00",
+   "app": "-128.00",
+   "app_ok": true,
+   "model": "-128.00",
+   "model_ok": true,
+   "model_raw": -128.0
+  },
+  "DR": {
+   "golden": "0",
+   "app": "0",
+   "app_ok": true,
+   "model": "0",
+   "model_ok": true,
+   "model_raw": 0.0,
+   "model_full_only": "0",
+   "model_full_only_raw": 0.0
+  }
+ },
+ {
+  "file": "02 Dual mono sine.wav",
+  "TPL": {
+   "golden": "-6.01",
+   "app": "-6.02",
+   "app_ok": false,
+   "model": "-6.01",
+   "model_ok": true,
+   "model_raw": -6.012583299591778
+  },
+  "LUFSi": {
+   "golden": "-6.06",
+   "app": "-6.06",
+   "app_ok": true,
+   "model": "-6.06",
+   "model_ok": true,
+   "model_raw": -6.057138111293943
+  },
+  "DR": {
+   "golden": "0",
+   "app": "0",
+   "app_ok": true,
+   "model": "0",
+   "model_ok": true,
+   "model_raw": -8.881784197001252e-16,
+   "model_full_only": "0",
+   "model_full_only_raw": -8.881784197001252e-16
+  }
+ },
+ {
+  "file": "03 Mono sine.wav",
+  "TPL": {
+   "golden": "-6.01",
+   "app": "-6.02",
+   "app_ok": false,
+   "model": "-6.01",
+   "model_ok": true,
+   "model_raw": -6.012583299591778
+  },
+  "LUFSi": {
+   "golden": "-9.07",
+   "app": "-9.07",
+   "app_ok": true,
+   "model": "-9.07",
+   "model_ok": true,
+   "model_raw": -9.067438067933756
+  },
+  "DR": {
+   "golden": "0",
+   "app": "0",
+   "app_ok": true,
+   "model": "0",
+   "model_ok": true,
+   "model_raw": -8.881784197001252e-16,
+   "model_full_only": "0",
+   "model_full_only_raw": -8.881784197001252e-16
+  }
+ },
+ {
+  "file": "04 Left channel only.wav",
+  "TPL": {
+   "golden": "-6.01",
+   "app": "-6.02",
+   "app_ok": false,
+   "model": "-6.01",
+   "model_ok": true,
+   "model_raw": -6.012583299591778
+  },
+  "LUFSi": {
+   "golden": "-9.07",
+   "app": "-9.07",
+   "app_ok": true,
+   "model": "-9.07",
+   "model_ok": true,
+   "model_raw": -9.067438067933756
+  },
+  "DR": {
+   "golden": "0",
+   "app": "-2",
+   "app_ok": false,
+   "model": "0",
+   "model_ok": true,
+   "model_raw": -4.440892098500626e-16,
+   "model_full_only": "0",
+   "model_full_only_raw": -4.440892098500626e-16
+  }
+ },
+ {
+  "file": "05 Opposite polarity.wav",
+  "TPL": {
+   "golden": "-6.01",
+   "app": "-6.02",
+   "app_ok": false,
+   "model": "-6.01",
+   "model_ok": true,
+   "model_raw": -6.012583299591778
+  },
+  "LUFSi": {
+   "golden": "-6.06",
+   "app": "-6.06",
+   "app_ok": true,
+   "model": "-6.06",
+   "model_ok": true,
+   "model_raw": -6.057138111293943
+  },
+  "DR": {
+   "golden": "0",
+   "app": "0",
+   "app_ok": true,
+   "model": "0",
+   "model_ok": true,
+   "model_raw": -8.881784197001252e-16,
+   "model_full_only": "0",
+   "model_full_only_raw": -8.881784197001252e-16
+  }
+ },
+ {
+  "file": "06 Unequal channel levels.wav",
+  "TPL": {
+   "golden": "-6.01",
+   "app": "-6.02",
+   "app_ok": false,
+   "model": "-6.01",
+   "model_ok": true,
+   "model_raw": -6.012583299591778
+  },
+  "LUFSi": {
+   "golden": "-8.80",
+   "app": "-8.80",
+   "app_ok": true,
+   "model": "-8.80",
+   "model_ok": true,
+   "model_raw": -8.804152801064854
+  },
+  "DR": {
+   "golden": "0",
+   "app": "0",
+   "app_ok": true,
+   "model": "0",
+   "model_ok": true,
+   "model_raw": 1.3322676295501878e-15,
+   "model_full_only": "0",
+   "model_full_only_raw": 1.3322676295501878e-15
+  }
+ },
+ {
+  "file": "07 Changing levels.wav",
+  "TPL": {
+   "golden": "-6.01",
+   "app": "-6.02",
+   "app_ok": false,
+   "model": "-6.01",
+   "model_ok": true,
+   "model_raw": -6.012583299591778
+  },
+  "LUFSi": {
+   "golden": "-8.52",
+   "app": "-8.51",
+   "app_ok": false,
+   "model": "-8.52",
+   "model_ok": true,
+   "model_raw": -8.515275350205009
+  },
+  "DR": {
+   "golden": "0",
+   "app": "0",
+   "app_ok": true,
+   "model": "0",
+   "model_ok": true,
+   "model_raw": 0.009988487084708453,
+   "model_full_only": "0",
+   "model_full_only_raw": 0.019999999999999574
+  }
+ },
+ {
+  "file": "08 Deterministic noise.wav",
+  "TPL": {
+   "golden": "-2.75",
+   "app": "-2.27",
+   "app_ok": false,
+   "model": "-2.75",
+   "model_ok": true,
+   "model_raw": -2.7461279203613245
+  },
+  "LUFSi": {
+   "golden": "-6.53",
+   "app": "-6.53",
+   "app_ok": true,
+   "model": "-6.53",
+   "model_ok": true,
+   "model_raw": -6.533604567382798
+  },
+  "DR": {
+   "golden": "2",
+   "app": "2",
+   "app_ok": true,
+   "model": "2",
+   "model_ok": true,
+   "model_raw": 1.759999999999999,
+   "model_full_only": "2",
+   "model_full_only_raw": 1.759999999999999
+  }
+ },
+ {
+  "file": "09 Isolated peaks.wav",
+  "TPL": {
+   "golden": "-0.33",
+   "app": "-0.08",
+   "app_ok": false,
+   "model": "-0.33",
+   "model_ok": true,
+   "model_raw": -0.32582989910592397
+  },
+  "LUFSi": {
+   "golden": "-30.12",
+   "app": "-30.12",
+   "app_ok": true,
+   "model": "-30.12",
+   "model_ok": true,
+   "model_raw": -30.118312851952084
+  },
+  "DR": {
+   "golden": "28",
+   "app": "30",
+   "app_ok": false,
+   "model": "28",
+   "model_ok": true,
+   "model_raw": 27.554974095969207,
+   "model_full_only": "28",
+   "model_full_only_raw": 27.54
+  }
+ },
+ {
+  "file": "10 Square wave.wav",
+  "TPL": {
+   "golden": "-4.02",
+   "app": "-3.97",
+   "app_ok": false,
+   "model": "-4.02",
+   "model_ok": true,
+   "model_raw": -4.022383048776979
+  },
+  "LUFSi": {
+   "golden": "-3.04",
+   "app": "-3.04",
+   "app_ok": true,
+   "model": "-3.04",
+   "model_ok": true,
+   "model_raw": -3.036777835472548
+  },
+  "DR": {
+   "golden": "-3",
+   "app": "-3",
+   "app_ok": true,
+   "model": "-3",
+   "model_ok": true,
+   "model_raw": -3.01,
+   "model_full_only": "-3",
+   "model_full_only_raw": -3.01
+  }
+ },
+ {
+  "file": "11 DC signal.wav",
+  "TPL": {
+   "golden": "-11.09",
+   "app": "-10.95",
+   "app_ok": false,
+   "model": "-11.09",
+   "model_ok": true,
+   "model_raw": -11.089124520347637
+  },
+  "LUFSi": {
+   "golden": "-35.35",
+   "app": "-35.34",
+   "app_ok": false,
+   "model": "-35.35",
+   "model_ok": true,
+   "model_raw": -35.3510947890303
+  },
+  "DR": {
+   "golden": "-3",
+   "app": "-3",
+   "app_ok": true,
+   "model": "-3",
+   "model_ok": true,
+   "model_raw": -3.01,
+   "model_full_only": "-3",
+   "model_full_only_raw": -3.01
+  }
+ },
+ {
+  "file": "12 Very short.wav",
+  "golden": null,
+  "app_status": "Rejected",
+  "detail": "DR rejected: shorter than 10 seconds",
+  "dur": 0.1
+ },
+ {
+  "file": "13 Three second boundary.wav",
+  "golden": null,
+  "app_status": "Rejected",
+  "detail": "DR rejected: shorter than 10 seconds",
+  "dur": 3.0
+ },
+ {
+  "file": "14 Three second boundary.wav",
+  "golden": null,
+  "app_status": "Rejected",
+  "detail": "DR rejected: shorter than 10 seconds",
+  "dur": 3.0
+ },
+ {
+  "file": "15 Three second boundary.wav",
+  "golden": null,
+  "app_status": "Rejected",
+  "detail": "DR rejected: shorter than 10 seconds",
+  "dur": 3.0
+ },
+ {
+  "file": "16 48000Hz 24bit.wav",
+  "TPL": {
+   "golden": "-6.01",
+   "app": "-6.02",
+   "app_ok": false,
+   "model": "-6.01",
+   "model_ok": true,
+   "model_raw": -6.01390398437387
+  },
+  "LUFSi": {
+   "golden": "-6.06",
+   "app": "-6.06",
+   "app_ok": true,
+   "model": "-6.06",
+   "model_ok": true,
+   "model_raw": -6.056078980980151
+  },
+  "DR": {
+   "golden": "0",
+   "app": "0",
+   "app_ok": true,
+   "model": "0",
+   "model_ok": true,
+   "model_raw": -8.881784197001252e-16,
+   "model_full_only": "0",
+   "model_full_only_raw": -8.881784197001252e-16
+  }
+ },
+ {
+  "file": "17 96000Hz 24bit.wav",
+  "TPL": {
+   "golden": "-6.01",
+   "app": "-6.02",
+   "app_ok": false,
+   "model": "-6.01",
+   "model_ok": true,
+   "model_raw": -6.012495138382672
+  },
+  "LUFSi": {
+   "golden": "-6.05",
+   "app": "-6.05",
+   "app_ok": true,
+   "model": "-6.05",
+   "model_ok": true,
+   "model_raw": -6.051549920297868
+  },
+  "DR": {
+   "golden": "0",
+   "app": "0",
+   "app_ok": true,
+   "model": "0",
+   "model_ok": true,
+   "model_raw": -8.881784197001252e-16,
+   "model_full_only": "0",
+   "model_full_only_raw": -8.881784197001252e-16
+  }
+ },
+ {
+  "file": "18 192000Hz 24bit.wav",
+  "golden": null,
+  "app_status": "Rejected",
+  "detail": "DR rejected: shorter than 10 seconds",
+  "dur": 6.0
+ },
+ {
+  "file": "19 384000Hz 24bit.wav",
+  "golden": null,
+  "app_status": "Rejected",
+  "detail": "DR rejected: shorter than 10 seconds",
+  "dur": 3.0
+ },
+ {
+  "file": "20 Float32 sine.wav",
+  "TPL": {
+   "golden": "-6.01",
+   "app": "-6.02",
+   "app_ok": false,
+   "model": "-6.01",
+   "model_ok": true,
+   "model_raw": -6.0126539256674505
+  },
+  "LUFSi": {
+   "golden": "-6.06",
+   "app": "-6.06",
+   "app_ok": true,
+   "model": "-6.06",
+   "model_ok": true,
+   "model_raw": -6.057175912023898
+  },
+  "DR": {
+   "golden": "0",
+   "app": "0",
+   "app_ok": true,
+   "model": "0",
+   "model_ok": true,
+   "model_raw": -8.881784197001252e-16,
+   "model_full_only": "0",
+   "model_full_only_raw": -8.881784197001252e-16
+  }
+ },
+ {
+  "file": "21 Float32 over full scale.wav",
+  "TPL": {
+   "golden": "+1.03",
+   "app": "+1.03",
+   "app_ok": true,
+   "model": "+1.03",
+   "model_ok": true,
+   "model_raw": 1.0309968906162665
+  },
+  "LUFSi": {
+   "golden": "0.99",
+   "app": "0.99",
+   "app_ok": true,
+   "model": "0.99",
+   "model_ok": true,
+   "model_raw": 0.9864744311522123
+  },
+  "DR": {
+   "golden": "0",
+   "app": "0",
+   "app_ok": true,
+   "model": "0",
+   "model_ok": true,
+   "model_raw": 0.0,
+   "model_full_only": "0",
+   "model_full_only_raw": 0.0
+  }
+ },
+ {
+  "file": "22 Fixed32 sine.wav",
+  "TPL": {
+   "golden": "-6.01",
+   "app": "-6.02",
+   "app_ok": false,
+   "model": "-6.01",
+   "model_ok": true,
+   "model_raw": -6.0126539256674505
+  },
+  "LUFSi": {
+   "golden": "-6.06",
+   "app": "-6.06",
+   "app_ok": true,
+   "model": "-6.06",
+   "model_ok": true,
+   "model_raw": -6.0571759136213945
+  },
+  "DR": {
+   "golden": "0",
+   "app": "0",
+   "app_ok": true,
+   "model": "0",
+   "model_ok": true,
+   "model_raw": -8.881784197001252e-16,
+   "model_full_only": "0",
+   "model_full_only_raw": -8.881784197001252e-16
+  }
+ },
+ {
+  "file": "23 Silent tail.wav",
+  "TPL": {
+   "golden": "-6.01",
+   "app": "-6.02",
+   "app_ok": false,
+   "model": "-6.01",
+   "model_ok": true,
+   "model_raw": -6.012583299591778
+  },
+  "LUFSi": {
+   "golden": "-6.10",
+   "app": "-6.10",
+   "app_ok": true,
+   "model": "-6.10",
+   "model_ok": true,
+   "model_raw": -6.100780857195548
+  },
+  "DR": {
+   "golden": "0",
+   "app": "0",
+   "app_ok": true,
+   "model": "0",
+   "model_ok": true,
+   "model_raw": -8.881784197001252e-16,
+   "model_full_only": "0",
+   "model_full_only_raw": -8.881784197001252e-16
+  }
+ },
+ {
+  "file": "24 - Тест - é - 音.wav",
+  "TPL": {
+   "golden": "-6.01",
+   "app": "-6.02",
+   "app_ok": false,
+   "model": "-6.01",
+   "model_ok": true,
+   "model_raw": -6.012583299591778
+  },
+  "LUFSi": {
+   "golden": "-6.06",
+   "app": "-6.06",
+   "app_ok": true,
+   "model": "-6.06",
+   "model_ok": true,
+   "model_raw": -6.057138111293943
+  },
+  "DR": {
+   "golden": "0",
+   "app": "0",
+   "app_ok": true,
+   "model": "0",
+   "model_ok": true,
+   "model_raw": -8.881784197001252e-16,
+   "model_full_only": "0",
+   "model_full_only_raw": -8.881784197001252e-16
+  }
+ },
+ {
+  "file": "25 16bit signal in 24bit.wav",
+  "TPL": {
+   "golden": "-6.01",
+   "app": "-6.02",
+   "app_ok": false,
+   "model": "-6.01",
+   "model_ok": true,
+   "model_raw": -6.012583299591778
+  },
+  "LUFSi": {
+   "golden": "-6.06",
+   "app": "-6.06",
+   "app_ok": true,
+   "model": "-6.06",
+   "model_ok": true,
+   "model_raw": -6.057138111293943
+  },
+  "DR": {
+   "golden": "0",
+   "app": "0",
+   "app_ok": true,
+   "model": "0",
+   "model_ok": true,
+   "model_raw": -8.881784197001252e-16,
+   "model_full_only": "0",
+   "model_full_only_raw": -8.881784197001252e-16
+  }
+ },
+ {
+  "file": "26 Intersample peaks.wav",
+  "TPL": {
+   "golden": "+1.93",
+   "app": "+1.97",
+   "app_ok": false,
+   "model": "+1.93",
+   "model_ok": true,
+   "model_raw": 1.9331093800868588
+  },
+  "LUFSi": {
+   "golden": "5.16",
+   "app": "5.16",
+   "app_ok": true,
+   "model": "5.16",
+   "model_ok": true,
+   "model_raw": 5.158846470280912
+  },
+  "DR": {
+   "golden": "-1",
+   "app": "-3",
+   "app_ok": false,
+   "model": "-1",
+   "model_ok": true,
+   "model_raw": -1.1500000000000001,
+   "model_full_only": "-1",
+   "model_full_only_raw": -1.1500000000000001
+  }
+ },
+ {
+  "file": "27 Lossless FLAC.flac",
+  "TPL": {
+   "golden": "-6.01",
+   "app": "-6.02",
+   "app_ok": false,
+   "model": "-6.01",
+   "model_ok": true,
+   "model_raw": -6.012583299591778
+  },
+  "LUFSi": {
+   "golden": "-6.06",
+   "app": "-6.06",
+   "app_ok": true,
+   "model": "-6.06",
+   "model_ok": true,
+   "model_raw": -6.057138111293943
+  },
+  "DR": {
+   "golden": "0",
+   "app": "0",
+   "app_ok": true,
+   "model": "0",
+   "model_ok": true,
+   "model_raw": -8.881784197001252e-16,
+   "model_full_only": "0",
+   "model_full_only_raw": -8.881784197001252e-16
+  }
+ },
+ {
+  "file": "28 AIFF.aiff",
+  "TPL": {
+   "golden": "-6.01",
+   "app": "-6.02",
+   "app_ok": false,
+   "model": "-6.01",
+   "model_ok": true,
+   "model_raw": -6.012583299591778
+  },
+  "LUFSi": {
+   "golden": "-6.06",
+   "app": "-6.06",
+   "app_ok": true,
+   "model": "-6.06",
+   "model_ok": true,
+   "model_raw": -6.057138111293943
+  },
+  "DR": {
+   "golden": "0",
+   "app": "0",
+   "app_ok": true,
+   "model": "0",
+   "model_ok": true,
+   "model_raw": -8.881784197001252e-16,
+   "model_full_only": "0",
+   "model_full_only_raw": -8.881784197001252e-16
+  }
+ },
+ {
+  "file": "29 Broadcast WAV.wav",
+  "TPL": {
+   "golden": "-6.01",
+   "app": "-6.02",
+   "app_ok": false,
+   "model": "-6.01",
+   "model_ok": true,
+   "model_raw": -6.012583299591778
+  },
+  "LUFSi": {
+   "golden": "-6.06",
+   "app": "-6.06",
+   "app_ok": true,
+   "model": "-6.06",
+   "model_ok": true,
+   "model_raw": -6.057138111293943
+  },
+  "DR": {
+   "golden": "0",
+   "app": "0",
+   "app_ok": true,
+   "model": "0",
+   "model_ok": true,
+   "model_raw": -8.881784197001252e-16,
+   "model_full_only": "0",
+   "model_full_only_raw": -8.881784197001252e-16
+  }
+ }
+]
