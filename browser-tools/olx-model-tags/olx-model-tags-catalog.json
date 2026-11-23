@@ -115,6 +115,26 @@
    "name": "Panasonic PN-119D",
    "tags": [],
    "group": "Portable DVD"
+  },
+  "PANASONICDVDLS91": {
+   "name": "Panasonic DVD-LS91",
+   "tags": [],
+   "group": "Portable DVD"
+  },
+  "PANASONICDVDLX8": {
+   "name": "Panasonic DVD-LX8",
+   "tags": [],
+   "group": "Portable DVD"
+  },
+  "PANASONICDVDLS837": {
+   "name": "Panasonic DVD-LS837",
+   "tags": [],
+   "group": "Portable DVD"
+  },
+  "PANASONICDVDLX97": {
+   "name": "Panasonic DVD-LX97",
+   "tags": [],
+   "group": "Portable DVD"
   }
  },
  "stopPhrases": [
