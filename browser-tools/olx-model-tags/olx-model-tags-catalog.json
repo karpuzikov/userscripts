@@ -181,7 +181,9 @@
   },
   "SAMSUNG204B": {
    "name": "Samsung 204B",
-   "tags": [],
+   "tags": [
+    "Resolution: 1600x1200"
+   ],
    "group": "Monitors"
   }
  },
