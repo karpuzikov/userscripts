@@ -1,5 +1,13 @@
 {
  "ads": {
+  "264591284": {
+   "model": "Panasonic DVD-PV55",
+   "tags": [],
+   "url": "https://www.olx.ua/d/uk/obyavlenie/vntazhniy-tonkiy-portativniy-dvd-pler-panasonic-dvd-pv55-retro-IDhUchm.html",
+   "title": "Вінтажний тонкий портативний DVD-плеєр PANASONIC DVD-PV55 (ретро)",
+   "detectedModel": "Panasonic DVD-PV55",
+   "category": "Медіа програвачі"
+  },
   "302083450": {
    "model": "Panasonic DVD-LS91",
    "tags": [],
@@ -67,6 +75,14 @@
    "title": "Монітор Samsung 203B",
    "detectedModel": "",
    "category": "Монітори"
+  },
+  "910700066": {
+   "model": "Panasonic DVD-LV75",
+   "tags": [],
+   "url": "https://www.olx.ua/d/uk/obyavlenie/portativniy-dvd-progravach-panasonic-dvd-lv75-kolektsonuvannya-IDZDcGK.html",
+   "title": "Портативний DVD-програвач Panasonic DVD-LV75/ колекціонування",
+   "detectedModel": "Panasonic DVD-LV75",
+   "category": "Медіа програвачі"
   },
   "911897561": {
    "model": "Panasonic DVD-LS837",
