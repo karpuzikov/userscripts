@@ -197,6 +197,13 @@
     "Memory: 8/256"
    ],
    "group": "Smartphones"
+  },
+  "HONORMAGIC6LITE": {
+   "name": "Honor Magic6 Lite",
+   "tags": [
+    "Memory: 8/256"
+   ],
+   "group": "Smartphones"
   }
  },
  "stopPhrases": [
