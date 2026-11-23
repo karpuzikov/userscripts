@@ -135,6 +135,16 @@
    "name": "Panasonic DVD-LX97",
    "tags": [],
    "group": "Portable DVD"
+  },
+  "PANASONICDVDLV75": {
+   "name": "Panasonic DVD-LV75",
+   "tags": [],
+   "group": "Portable DVD"
+  },
+  "PANASONICDVDPV55": {
+   "name": "Panasonic DVD-PV55",
+   "tags": [],
+   "group": "Portable DVD"
   }
  },
  "stopPhrases": [
