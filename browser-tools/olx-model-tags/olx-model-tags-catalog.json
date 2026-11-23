@@ -185,7 +185,8 @@
     "Resolution: 1600x1200",
     "Brightness: 300 cd/m²",
     "Panel: TN",
-    "Size: 20\""
+    "Size: 20\"",
+    "Video output: VGA"
    ],
    "group": "Monitors"
   }
