@@ -173,7 +173,9 @@
   },
   "ICONBITXDS73D": {
    "name": "iconBIT XDS73D",
-   "tags": [],
+   "tags": [
+    "Video output: HDMI"
+   ],
    "group": "TV box"
   }
  },
