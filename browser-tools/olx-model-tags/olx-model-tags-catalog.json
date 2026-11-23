@@ -183,7 +183,8 @@
    "name": "Samsung 204B",
    "tags": [
     "Resolution: 1600x1200",
-    "Brightness: 300 cd/m²"
+    "Brightness: 300 cd/m²",
+    "Panel: TN"
    ],
    "group": "Monitors"
   }
