@@ -100,6 +100,11 @@
   "DELLPROFESSIONALP190ST": {
    "name": "Dell Professional P190St",
    "tags": []
+  },
+  "PANASONICDVDLS86": {
+   "name": "Panasonic DVD-LS86",
+   "tags": [],
+   "group": "Portable DVD"
   }
  },
  "stopPhrases": [
