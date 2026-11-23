@@ -204,6 +204,13 @@
     "Memory: 8/256"
    ],
    "group": "Smartphones"
+  },
+  "HONOR200LITE": {
+   "name": "Honor 200 Lite",
+   "tags": [
+    "Memory: 8/256"
+   ],
+   "group": "Smartphones"
   }
  },
  "stopPhrases": [
