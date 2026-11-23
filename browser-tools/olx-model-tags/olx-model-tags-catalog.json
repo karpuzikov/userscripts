@@ -182,7 +182,8 @@
   "SAMSUNG204B": {
    "name": "Samsung 204B",
    "tags": [
-    "Resolution: 1600x1200"
+    "Resolution: 1600x1200",
+    "Brightness: 300 cd/m²"
    ],
    "group": "Monitors"
   }
