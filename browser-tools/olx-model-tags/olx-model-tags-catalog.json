@@ -190,6 +190,13 @@
     "Video output: DVI"
    ],
    "group": "Monitors"
+  },
+  "HONORMAGIC5LITE": {
+   "name": "Honor Magic5 Lite",
+   "tags": [
+    "Memory: 8/256"
+   ],
+   "group": "Smartphones"
   }
  },
  "stopPhrases": [
