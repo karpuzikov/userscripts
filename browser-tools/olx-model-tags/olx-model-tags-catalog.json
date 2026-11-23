@@ -155,6 +155,21 @@
    "name": "Sony DVP-FX870",
    "tags": [],
    "group": "Portable DVD"
+  },
+  "SONYDVPFX970": {
+   "name": "Sony DVP-FX970",
+   "tags": [],
+   "group": "Portable DVD"
+  },
+  "SONYDVPFX810": {
+   "name": "Sony DVP-FX810",
+   "tags": [],
+   "group": "Portable DVD"
+  },
+  "SONYDVPFX950": {
+   "name": "Sony DVP-FX950",
+   "tags": [],
+   "group": "Portable DVD"
   }
  },
  "stopPhrases": [
