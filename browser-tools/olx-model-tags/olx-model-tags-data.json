@@ -1,5 +1,13 @@
 {
  "ads": {
+  "302083450": {
+   "model": "Panasonic DVD-LS91",
+   "tags": [],
+   "url": "https://www.olx.ua/d/uk/obyavlenie/dvd-ls91-panasonic-portativnyy-videopleyer-v-avtomobil-i-ne-tolko-IDkrwHI.html",
+   "title": "DVD-LS91 Panasonic-портативний відеопрогравач для автомобіля та не тільки",
+   "detectedModel": "",
+   "category": "Медіа програвачі"
+  },
   "777619080": {
    "model": "",
    "tags": [
@@ -13,6 +21,14 @@
    "title": "Портативний автомобільний CD/DVD програвач Panasonic DVD-LS82",
    "detectedModel": "Panasonic DVD-LS82",
    "category": "Автозвук та мультимедіа"
+  },
+  "868499401": {
+   "model": "Panasonic DVD-LX8",
+   "tags": [],
+   "url": "https://www.olx.ua/d/uk/obyavlenie/portativniy-dvd-cd-pler-panasonic-dvd-lx8-IDVM8mR.html",
+   "title": "Портативний dvd/cd-програвач Panasonic dvd-lx8.",
+   "detectedModel": "Panasonic DVD-LX8",
+   "category": "Медіа програвачі"
   },
   "868679400": {
    "model": "Panasonic PN-119D",
@@ -51,6 +67,30 @@
    "title": "Монітор Samsung 203B",
    "detectedModel": "",
    "category": "Монітори"
+  },
+  "911897561": {
+   "model": "Panasonic DVD-LS837",
+   "tags": [],
+   "url": "https://www.olx.ua/d/uk/obyavlenie/flm-bez-svtla-nternetu-portativniy-dvd-pler-panasonic-dvd-ls837-deal-kolektsoneram-dachnikam-IDZIedb.html",
+   "title": "Фільм без світла і інтернету. Портативний DVD-плеєр Panasonic DVD-LS837 | Ідеал | Колекціонерам | Дачникам",
+   "detectedModel": "Panasonic DVD-LS837",
+   "category": "Медіа програвачі"
+  },
+  "921246334": {
+   "model": "Panasonic DVD-LS91",
+   "tags": [],
+   "url": "https://www.olx.ua/d/uk/obyavlenie/panasonic-dvd-ls91-ID10lsfQ.html",
+   "title": "Panasonic DVD-LS91",
+   "detectedModel": "Panasonic DVD-LS91",
+   "category": "Медіа програвачі"
+  },
+  "929151407": {
+   "model": "Panasonic DVD-LX97",
+   "tags": [],
+   "url": "https://www.olx.ua/d/uk/obyavlenie/dvd-lx-97-portativnyy-pleer-lcd-9-panasonic-ID10SCJ1.html",
+   "title": "DVD- LX 97 портативный плеер LCD 9 Panasonic",
+   "detectedModel": "",
+   "category": "Медіа програвачі"
   },
   "931407351": {
    "model": "Sony SDM-X202",
