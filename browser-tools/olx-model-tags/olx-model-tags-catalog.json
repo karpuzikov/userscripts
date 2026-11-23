@@ -186,7 +186,8 @@
     "Brightness: 300 cd/m²",
     "Panel: TN",
     "Size: 20\"",
-    "Video output: VGA"
+    "Video output: VGA",
+    "Video output: DVI"
    ],
    "group": "Monitors"
   }
