@@ -110,6 +110,11 @@
    "name": "Panasonic DVD-LS82",
    "tags": [],
    "group": "Portable DVD"
+  },
+  "PANASONICPN119D": {
+   "name": "Panasonic PN-119D",
+   "tags": [],
+   "group": "Portable DVD"
   }
  },
  "stopPhrases": [
