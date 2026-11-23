@@ -150,6 +150,11 @@
    "name": "Sony DVP-FX720",
    "tags": [],
    "group": "Portable DVD"
+  },
+  "SONYDVPFX870": {
+   "name": "Sony DVP-FX870",
+   "tags": [],
+   "group": "Portable DVD"
   }
  },
  "stopPhrases": [
