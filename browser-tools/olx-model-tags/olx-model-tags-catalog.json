@@ -174,7 +174,8 @@
   "ICONBITXDS73D": {
    "name": "iconBIT XDS73D",
    "tags": [
-    "Video output: HDMI"
+    "Video output: HDMI",
+    "OS: Android"
    ],
    "group": "TV box"
   }
