@@ -178,6 +178,11 @@
     "OS: Android"
    ],
    "group": "TV box"
+  },
+  "SAMSUNG204B": {
+   "name": "Samsung 204B",
+   "tags": [],
+   "group": "Monitors"
   }
  },
  "stopPhrases": [
