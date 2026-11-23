@@ -145,6 +145,11 @@
    "name": "Panasonic DVD-PV55",
    "tags": [],
    "group": "Portable DVD"
+  },
+  "SONYDVPFX720": {
+   "name": "Sony DVP-FX720",
+   "tags": [],
+   "group": "Portable DVD"
   }
  },
  "stopPhrases": [
