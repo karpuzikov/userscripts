@@ -1,12 +1,13 @@
 // ==UserScript==
 // @name         Harmony ToolBox
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.0.4
+// @version      1.0.5
 // @description  Combines Harmony ISRC copying and one-click MusicBrainz external-ID linking.
 // @author       karpuzikov
 // @license      MIT
 // @match        https://harmony.pulsewidth.org.uk/release*
 // @match        https://musicbrainz.org/release-group/*
+// @match        https://magicisrc.kepstin.ca/*
 // @connect      musicbrainz.org
 // @connect      api.github.com
 // @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/musicbrainz-tools/harmony-toolbox/Harmony_ToolBox.user.js
@@ -24,7 +25,7 @@
 (() => {
     'use strict';
 
-    const CURRENT_VERSION = '1.0.4';
+    const CURRENT_VERSION = '1.0.5';
     const CHECK_KEY = 'harmony-toolbox-self-update-check-v1';
     const CHECK_INTERVAL = 10 * 60 * 1000;
     const META_API =
@@ -182,6 +183,42 @@
     const isMusicBrainzBusy = [...document.querySelectorAll('.message.error')]
         .some(message => message.textContent.includes('The MusicBrainz web server is currently busy'));
     if (isMusicBrainzBusy) location.reload();
+})();
+
+// MagicISRC: retry immediately when MusicBrainz requests fail
+(() => {
+    'use strict';
+
+    if (location.hostname !== 'magicisrc.kepstin.ca') return;
+
+    // Runs in the page context so it can call MagicISRC's own functions.
+    const pageScript = document.createElement('script');
+    pageScript.textContent = `(() => {
+        const container = document.getElementById('container');
+        if (!container) return;
+        const retryFailedMusicBrainzRequest = () => {
+            const errorText = container.textContent;
+            if (!errorText.includes('Failed to fetch')) return;
+            if (errorText.includes('When fetching MusicBrainz release')) {
+                location.reload();
+                return;
+            }
+            if (!errorText.includes('When submitting ISRCs')) return;
+            // Same as MagicISRC's doSubmitISRCs(), minus the button that no longer exists.
+            renderSubmitProgress();
+            postISRCs()
+                .then(() => {
+                    const params = new URLSearchParams(location.search);
+                    params.set('submit', 1);
+                    pushState(params);
+                })
+                .catch(error => renderError('When submitting ISRCs: ' + error, error));
+        };
+        retryFailedMusicBrainzRequest();
+        new MutationObserver(retryFailedMusicBrainzRequest).observe(container, {childList: true});
+    })();`;
+    document.documentElement.appendChild(pageScript);
+    pageScript.remove();
 })();
 
 // Copy ISRCs
