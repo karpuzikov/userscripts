@@ -134,3 +134,15 @@ test('setModelProperty keeps one value per property and fills the group once', (
   assert.equal(olxModelTags.isModelPropertyAlreadySet(data, 'Honor 90 Lite', 'Year', '2023'), true);
   assert.equal(olxModelTags.isModelPropertyAlreadySet(data, 'Honor 90 Lite', 'Year', '2022'), false);
 });
+
+test('source adapters: page chosen by host and path, shipped file only uses known transforms', () => {
+  const { sources } = require('./olx-model-tags-sources.json');
+  const find = (host, path) => olxModelTags.findSourcePage(sources, host, path);
+  assert.equal(find('www.dxomark.com', '/smartphones/Huawei/Pura-80-Ultra').page.rows, undefined);
+  assert.equal(find('www.dxomark.com', '/smartphones/').page.rows, '.device-row');
+  assert.equal(find('www.kimovil.com', '/en/honor-90-lite/antutu').page.properties[0].transform, 'antutu');
+  assert.equal(find('www.example.com', '/'), null);
+  for (const source of sources) for (const page of source.pages) for (const property of page.properties) {
+    assert.ok(olxModelTags.SOURCE_VALUE_TRANSFORMS[property.transform || 'text'], `unknown transform ${property.transform}`);
+  }
+});

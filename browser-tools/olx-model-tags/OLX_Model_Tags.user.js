@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OLX - Model Tags
 // @namespace    https://www.olx.ua/
-// @version      0.10.0
+// @version      0.11.0
 // @description  Tag OLX ads by model (tags shared by every ad of that model) or per ad, mark broken ads, filter search results by tags, per-tag Hide (pixel mesh) / Highlight (outline). Shared model catalog is read from GitHub without any key; your own marks stay in this browser. Phone specs (year, DXOMARK camera, AnTuTu, sensor, display, battery, charger, NFC) are captured from the DXOMARK, Kimovil and GSMArena pages you open. OLX only gets read locally from the open page.
 // @match        https://www.olx.ua/*
 // @match        https://www.dxomark.com/smartphones/*
@@ -166,8 +166,6 @@
     }
 
     // ---- Phone spec capture: text -> value helpers (DOM readers are below, after the sync code) ----
-    const PHONE_GROUP = 'Smartphones';
-
     function extractYearFromText(text) {
         return text.match(/\b(?:19|20)\d{2}\b/)?.[0] || '';
     }
@@ -202,6 +200,28 @@
         return answer ? { property: `AnTuTu v${answer[2]}`, value: answer[1].replace(/[.,]/g, '') } : null;
     }
 
+    // Spec-site adapters (olx-model-tags-sources.json) can only pick one of these value converters; no code comes from the file.
+    const SOURCE_VALUE_TRANSFORMS = {
+        text: (text) => text,
+        year: (text) => extractYearFromText(text),
+        digits: (text) => text.replace(/\D/g, ''),
+        displayType: (text) => classifyDisplayType(text),
+        batteryMah: (text) => extractBatteryCapacity(text),
+        yesNo: (text) => extractNfcSupport(text),
+        unknownIfEmpty: (text) => (!text || /^(unknown|-)$/i.test(text) ? 'Unknown' : text),
+        chargerPower: (text, element) => extractChargerPower(element.innerHTML.split(/<hr[^>]*>/).map((html) => html.replace(/<[^>]+>/g, ' '))),
+        antutu: (text) => parseAnTuTuAnswer(text),
+    };
+
+    function findSourcePage(sources, hostname, pathname) {
+        for (const source of sources) {
+            if (!source.hosts.includes(hostname)) continue;
+            const page = source.pages.find((candidate) => !candidate.path || new RegExp(candidate.path).test(pathname));
+            if (page) return { source, page };
+        }
+        return null;
+    }
+
     function isModelPropertyAlreadySet(data, modelName, property, value) {
         return data.models[normalizeModelKey(modelName)]?.tags.includes(`${property}: ${value}`) ?? false;
     }
@@ -223,7 +243,7 @@
     }
 
     if (typeof module === 'object') {
-        module.exports = { normalizeModelKey, createEmptyOlxModelTagsData, detectModelKeyInTitle, resolveAdTagging, applyOlxModelTagsOperation, encodeUtf8TextAsBase64, decodeBase64AsUtf8Text, doesAdMatchActiveFilters, resolveAdDisplayEffects, getPhraseList, findPhraseInText, splitTagIntoPropertyAndValue, splitDataIntoCatalogAndPersonal, joinCatalogAndPersonal, extractYearFromText, classifyDisplayType, extractBatteryCapacity, extractChargerPower, extractNfcSupport, parseAnTuTuAnswer, isModelPropertyAlreadySet };
+        module.exports = { normalizeModelKey, createEmptyOlxModelTagsData, detectModelKeyInTitle, resolveAdTagging, applyOlxModelTagsOperation, encodeUtf8TextAsBase64, decodeBase64AsUtf8Text, doesAdMatchActiveFilters, resolveAdDisplayEffects, getPhraseList, findPhraseInText, splitTagIntoPropertyAndValue, splitDataIntoCatalogAndPersonal, joinCatalogAndPersonal, extractYearFromText, classifyDisplayType, extractBatteryCapacity, extractChargerPower, extractNfcSupport, parseAnTuTuAnswer, isModelPropertyAlreadySet, findSourcePage, SOURCE_VALUE_TRANSFORMS };
         return;
     }
 
@@ -246,6 +266,8 @@
     const GITHUB_DATA_REPOSITORY = 'karpuzikov/userscripts';
     const GITHUB_DATA_BRANCH = 'main';
     const GITHUB_CATALOG_FILE_PATH = 'browser-tools/olx-model-tags/olx-model-tags-catalog.json';
+    const GITHUB_SOURCES_FILE_PATH = 'browser-tools/olx-model-tags/olx-model-tags-sources.json';
+    const STORAGE_KEY_CACHED_SOURCES = 'olxModelTagsCachedSources';
     const GITHUB_PERSONAL_FILE_PATH = 'browser-tools/olx-model-tags/olx-model-tags-data.json';
     const githubApiFileUrl = (filePath) => `https://api.github.com/repos/${GITHUB_DATA_REPOSITORY}/contents/${filePath}`;
     const githubRawFileUrl = (filePath) => `https://raw.githubusercontent.com/${GITHUB_DATA_REPOSITORY}/${GITHUB_DATA_BRANCH}/${filePath}`;
@@ -405,81 +427,85 @@
     }
     GM_registerMenuCommand('Set GitHub token (owner only)', askForGithubToken);
 
-    // ---------- Phone spec capture (DXOMARK, Kimovil, GSMArena) ----------
-    // Reads only the page that is already open, and saves the values as tags of the phone's model
-    // (the model name is the page's own, e.g. "Honor 90 Lite"); OLX ads whose title contains it then show them.
+    // ---------- Spec capture (adapters from olx-model-tags-sources.json) ----------
+    // Reads only the page that is already open, following the selectors of the site's adapter, and saves the values as tags
+    // of the model named on the page (e.g. "Honor 90 Lite"); OLX ads whose title contains it then show them.
 
     const readTextOf = (element) => (element?.textContent || '').replace(/\s+/g, ' ').trim();
 
-    function readDxomarkCaptures() {
-        const path = location.pathname.replace(/\/+$/, '');
-        if (/^\/smartphones\/[^/]+\/[^/]+$/.test(path)) {
-            const modelName = readTextOf(document.querySelector('h1.entry-title'));
-            return [{ modelName, properties: [
-                ['Year', extractYearFromText(readTextOf(document.querySelector('.cover .sub-title')))],
-                ['DXOMARK', readTextOf(document.querySelector('.scoreBadge.camera .scoreBadgeValue'))],
-            ] }];
+    // Finds the element a property (or the model) is read from; { element, text } with element null when the page lacks it.
+    function readAdapterValue(valueSpec, root, columnIndexByName, page) {
+        let element = null;
+        if (valueSpec.column) {
+            element = [...root.querySelectorAll(page.columns.cells)].map((cell) => cell.querySelector(page.columns.cellValue))[columnIndexByName[valueSpec.column]];
+        } else if (valueSpec.afterLabel) {
+            const labelPattern = new RegExp(valueSpec.afterLabel, 'i');
+            element = [...root.querySelectorAll(valueSpec.labels || 'dt, th, td, li, span')].find((label) => labelPattern.test(readTextOf(label)))?.nextElementSibling;
+        } else if (valueSpec.selector) {
+            element = root.querySelector(valueSpec.selector);
         }
-        if (path !== '/smartphones') return [];
-        // Ranking page: row cells follow the header cells' order; the camera column is "mobileScore".
-        const columnClassNames = [...document.querySelectorAll('.row.headers .sort-header')]
-            .filter((header) => !header.classList.contains('rank') && !header.classList.contains('device_name')).map((header) => header.className);
-        const dateColumn = columnClassNames.findIndex((className) => className.includes('launch_date'));
-        const cameraColumn = columnClassNames.findIndex((className) => className.includes('mobileScore'));
-        return [...document.querySelectorAll('.device-row')].map((row) => {
-            // The value is the cell's own <span>; the cell also holds an SVG label whose text would add digits.
-            const cells = [...row.querySelectorAll('.deviceScore')].map((cell) => cell.querySelector(':scope > span'));
-            return { modelName: row.querySelector('.deviceName')?.dataset.deviceName || '', properties: [
-                ['Year', dateColumn < 0 ? '' : extractYearFromText(readTextOf(cells[dateColumn]))],
-                ['DXOMARK', cameraColumn < 0 ? '' : readTextOf(cells[cameraColumn]).replace(/\D/g, '')],
-            ] };
+        let text = valueSpec.fromTitle ? (document.title.match(new RegExp(valueSpec.fromTitle))?.[1] || '') : readTextOf(element);
+        if (valueSpec.attribute && element) text = (element.getAttribute(valueSpec.attribute) || '').trim();
+        if (valueSpec.ignoreRegex && new RegExp(valueSpec.ignoreRegex).test(text)) text = '';
+        return { element: element || (valueSpec.fromTitle ? document.body : null), text };
+    }
+
+    function readCapturesOfSourcePage(page) {
+        const headerClassNames = page.columns ? [...document.querySelectorAll(page.columns.headers)].map((header) => header.className) : [];
+        const columnIndexByName = {};
+        for (const property of page.properties) {
+            if (property.column) columnIndexByName[property.column] = headerClassNames.findIndex((className) => className.includes(property.column));
+        }
+        return (page.rows ? [...document.querySelectorAll(page.rows)] : [document]).map((root) => {
+            const modelName = readAdapterValue(page.model, root, columnIndexByName, page).text;
+            const properties = [];
+            for (const propertySpec of page.properties) {
+                const { element, text } = readAdapterValue(propertySpec, root, columnIndexByName, page);
+                if (!element) continue;
+                const transform = SOURCE_VALUE_TRANSFORMS[propertySpec.transform || 'text'];
+                if (!transform) throw new Error(`Unknown transform "${propertySpec.transform}" in olx-model-tags-sources.json`);
+                const converted = transform(text, element);
+                if (converted && typeof converted === 'object') properties.push([converted.property, converted.value]);
+                else properties.push([propertySpec.name, converted]);
+            }
+            return { modelName, properties };
         });
     }
 
-    function readGsmarenaCaptures() {
-        const modelName = readTextOf(document.querySelector('h1.specs-phone-name-title'));
-        if (!modelName) return [];
-        const readSpec = (specName) => readTextOf(document.querySelector(`[data-spec="${specName}"]`));
-        const chargingCell = [...document.querySelectorAll('#specs-list td.ttl')].find((cell) => readTextOf(cell) === 'Charging')?.nextElementSibling;
-        const chargingLines = chargingCell ? chargingCell.innerHTML.split(/<hr[^>]*>/).map((html) => html.replace(/<[^>]+>/g, ' ')) : [];
-        return [{ modelName, properties: [
-            ['Year', extractYearFromText(readSpec('year'))],
-            ['Display', classifyDisplayType(readSpec('displaytype'))],
-            ['Battery', extractBatteryCapacity(readSpec('batdescription1'))],
-            ['Charger', extractChargerPower(chargingLines)],
-            ['NFC', document.querySelector('[data-spec="nfc"]') ? extractNfcSupport(readSpec('nfc')) : ''],
-        ] }];
-    }
-
-    // The AnTuTu page gives one score per AnTuTu version. The "Camera Sensor" read from the datasheet page is a best guess
-    // (shortcut: only the AnTuTu page was available when written; verify the sensor selector on a saved datasheet page).
-    function readKimovilCaptures() {
-        const antutuAnswer = parseAnTuTuAnswer(readTextOf(document.querySelector('[itemprop="acceptedAnswer"] [itemprop="text"]')));
-        const antutuModelName = document.title.match(/^AnTuTu Benchmark of (.+?)\s*::/)?.[1] || '';
-        if (antutuAnswer && antutuModelName) return [{ modelName: antutuModelName, properties: [[antutuAnswer.property, antutuAnswer.value]] }];
-        const datasheetModelName = readTextOf(document.querySelector('h1[itemprop="name"]'));
-        if (!datasheetModelName || datasheetModelName.endsWith('?')) return [];
-        const sensorLabel = [...document.querySelectorAll('dt, th, td, li, span')].find((element) => !element.children.length && /^sensor( model)?$/i.test(readTextOf(element)));
-        if (!sensorLabel) return [];
-        const sensorText = readTextOf(sensorLabel.nextElementSibling);
-        return [{ modelName: datasheetModelName, properties: [['Camera Sensor', !sensorText || /^(unknown|-)$/i.test(sensorText) ? 'Unknown' : sensorText]] }];
-    }
-
     function captureSpecsOfOpenPage() {
-        const readCaptures = { 'www.dxomark.com': readDxomarkCaptures, 'www.kimovil.com': readKimovilCaptures, 'www.gsmarena.com': readGsmarenaCaptures }[location.hostname];
-        for (const { modelName, properties } of readCaptures()) {
+        const match = findSourcePage(olxModelTagsSources, location.hostname, location.pathname);
+        if (!match) return;
+        for (const { modelName, properties } of readCapturesOfSourcePage(match.page)) {
             if (!normalizeModelKey(modelName)) continue;
             for (const [property, value] of properties) {
                 if (value && !isModelPropertyAlreadySet(olxModelTagsData, modelName, property, value)) {
-                    recordOperation({ type: 'setModelProperty', modelName, property, value, groupIfEmpty: PHONE_GROUP });
+                    recordOperation({ type: 'setModelProperty', modelName, property, value, groupIfEmpty: match.source.group });
                 }
             }
         }
     }
 
+    // Adapters come from the public repo (no key), cached an hour like the catalog; an unreachable file keeps the cached copy.
+    async function loadSourceAdapters() {
+        const cached = GM_getValue(STORAGE_KEY_CACHED_SOURCES, null);
+        if (cached && Date.now() - cached.at < CATALOG_REFRESH_INTERVAL_MS) return cached.sources;
+        try {
+            const response = await requestGithub('GET', githubRawFileUrl(GITHUB_SOURCES_FILE_PATH));
+            if (response.status !== 200 || !response.json?.sources) throw new Error(`HTTP ${response.status}`);
+            GM_setValue(STORAGE_KEY_CACHED_SOURCES, { at: Date.now(), sources: response.json.sources });
+            return response.json.sources;
+        } catch (error) {
+            console.error(`OLX Model Tags: could not download ${GITHUB_SOURCES_FILE_PATH} (${error.message})`);
+            return cached?.sources || [];
+        }
+    }
+
+    let olxModelTagsSources = [];
+
     // DXOMARK builds its ranking rows after the page loads, so the capture reruns (it skips what is already saved).
-    function startSpecsCapture() {
+    async function startSpecsCapture() {
         olxModelTagsData = olxModelTagsData ? rebuildLocalDataFromCacheAndPendingOperations(olxModelTagsData) : createEmptyOlxModelTagsData();
+        olxModelTagsSources = await loadSourceAdapters();
         captureSpecsOfOpenPage();
         let captureTimer = 0;
         new MutationObserver(() => { clearTimeout(captureTimer); captureTimer = setTimeout(captureSpecsOfOpenPage, 1000); })
