@@ -217,7 +217,8 @@
   "HONORMAGIC7LITE": {
    "name": "Honor Magic7 Lite",
    "tags": [
-    "Memory: 8/256"
+    "Memory: 8/256",
+    "Year: 2025"
    ],
    "group": "Smartphones"
   },
@@ -538,6 +539,73 @@
    "tags": [
     "Year: 2022",
     "DXOMARK: 61"
+   ],
+   "group": "Smartphones"
+  },
+  "HONORX7": {
+   "name": "Honor X7",
+   "tags": [
+    "Year: 2022",
+    "DXOMARK: 61"
+   ],
+   "group": "Smartphones"
+  },
+  "HONOR70LITE": {
+   "name": "Honor 70 Lite",
+   "tags": [
+    "Year: 2023",
+    "DXOMARK: 58"
+   ],
+   "group": "Smartphones"
+  },
+  "HONOR200SMART": {
+   "name": "Honor 200 Smart",
+   "tags": [
+    "Year: 2024",
+    "DXOMARK: 55"
+   ],
+   "group": "Smartphones"
+  },
+  "HONORX85G": {
+   "name": "Honor X8 5G",
+   "tags": [
+    "Year: 2022",
+    "DXOMARK: 52"
+   ],
+   "group": "Smartphones"
+  },
+  "HONORX7D400SMART": {
+   "name": "Honor X7d (400 Smart)",
+   "tags": [
+    "Year: 2025"
+   ],
+   "group": "Smartphones"
+  },
+  "HONOR400SMART5GX7D5G": {
+   "name": "Honor 400 Smart 5G (x7d 5G)",
+   "tags": [
+    "Year: 2025"
+   ],
+   "group": "Smartphones"
+  },
+  "HONOR400": {
+   "name": "Honor 400",
+   "tags": [
+    "Year: 2025"
+   ],
+   "group": "Smartphones"
+  },
+  "HONORX9C": {
+   "name": "Honor X9c",
+   "tags": [
+    "Year: 2024"
+   ],
+   "group": "Smartphones"
+  },
+  "HONORMAGIC6LITE5800MAH": {
+   "name": "Honor Magic6 Lite (5800 mAh)",
+   "tags": [
+    "Year: 2024"
    ],
    "group": "Smartphones"
   }
