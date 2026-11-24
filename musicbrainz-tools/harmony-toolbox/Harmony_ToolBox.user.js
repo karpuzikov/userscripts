@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Harmony ToolBox
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.0.6
+// @version      1.0.7
 // @description  Combines Harmony ISRC copying and one-click MusicBrainz external-ID linking.
 // @author       karpuzikov
 // @license      MIT
@@ -25,7 +25,7 @@
 (() => {
     'use strict';
 
-    const CURRENT_VERSION = '1.0.6';
+    const CURRENT_VERSION = '1.0.7';
     const CHECK_KEY = 'harmony-toolbox-self-update-check-v1';
     const CHECK_INTERVAL = 10 * 60 * 1000;
     const META_API =
@@ -181,7 +181,8 @@
     'use strict';
 
     const isMusicBrainzBusy = [...document.querySelectorAll('.message.error')]
-        .some(message => message.textContent.includes('The MusicBrainz web server is currently busy'));
+        .some(message => message.textContent.includes('The MusicBrainz web server is currently busy') ||
+            message.textContent.includes('Failed to fetch resource at https://musicbrainz.org/'));
     if (isMusicBrainzBusy) location.reload();
 })();
 
