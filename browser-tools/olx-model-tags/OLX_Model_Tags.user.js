@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OLX - Model Tags
 // @namespace    https://www.olx.ua/
-// @version      0.11.0
+// @version      0.11.1
 // @description  Tag OLX ads by model (tags shared by every ad of that model) or per ad, mark broken ads, filter search results by tags, per-tag Hide (pixel mesh) / Highlight (outline). Shared model catalog is read from GitHub without any key; your own marks stay in this browser. Phone specs (year, DXOMARK camera, AnTuTu, sensor, display, battery, charger, NFC) are captured from the DXOMARK, Kimovil and GSMArena pages you open. OLX only gets read locally from the open page.
 // @match        https://www.olx.ua/*
 // @match        https://www.dxomark.com/smartphones/*
@@ -208,7 +208,7 @@
         displayType: (text) => classifyDisplayType(text),
         batteryMah: (text) => extractBatteryCapacity(text),
         yesNo: (text) => extractNfcSupport(text),
-        unknownIfEmpty: (text) => (!text || /^(unknown|-)$/i.test(text) ? 'Unknown' : text),
+        unknownIfEmpty: (text) => (!text || /^(unknown|-+)$/i.test(text) ? 'Unknown' : text),
         chargerPower: (text, element) => extractChargerPower(element.innerHTML.split(/<hr[^>]*>/).map((html) => html.replace(/<[^>]+>/g, ' '))),
         antutu: (text) => parseAnTuTuAnswer(text),
     };

@@ -2,64 +2,130 @@
  "sources": [
   {
    "name": "DXOMARK",
-   "hosts": ["www.dxomark.com"],
+   "hosts": [
+    "www.dxomark.com"
+   ],
    "group": "Smartphones",
    "pages": [
     {
      "path": "^/smartphones/[^/]+/[^/]+/?$",
-     "model": { "selector": "h1.entry-title" },
+     "model": {
+      "selector": "h1.entry-title"
+     },
      "properties": [
-      { "name": "Year", "selector": ".cover .sub-title", "transform": "year" },
-      { "name": "DXOMARK", "selector": ".scoreBadge.camera .scoreBadgeValue", "transform": "digits" }
+      {
+       "name": "Year",
+       "selector": ".cover .sub-title",
+       "transform": "year"
+      },
+      {
+       "name": "DXOMARK",
+       "selector": ".scoreBadge.camera .scoreBadgeValue",
+       "transform": "digits"
+      }
      ]
     },
     {
      "path": "^/smartphones/?$",
      "rows": ".device-row",
-     "columns": { "headers": ".row.headers .sort-header:not(.rank):not(.device_name)", "cells": ".deviceScore", "cellValue": ":scope > span" },
-     "model": { "selector": ".deviceName", "attribute": "data-device-name" },
+     "columns": {
+      "headers": ".row.headers .sort-header:not(.rank):not(.device_name)",
+      "cells": ".deviceScore",
+      "cellValue": ":scope > span"
+     },
+     "model": {
+      "selector": ".deviceName",
+      "attribute": "data-device-name"
+     },
      "properties": [
-      { "name": "Year", "column": "launch_date", "transform": "year" },
-      { "name": "DXOMARK", "column": "mobileScore", "transform": "digits" }
+      {
+       "name": "Year",
+       "column": "launch_date",
+       "transform": "year"
+      },
+      {
+       "name": "DXOMARK",
+       "column": "mobileScore",
+       "transform": "digits"
+      }
      ]
     }
    ]
   },
   {
    "name": "GSMArena",
-   "hosts": ["www.gsmarena.com"],
+   "hosts": [
+    "www.gsmarena.com"
+   ],
    "group": "Smartphones",
    "pages": [
     {
      "path": "\\.php$",
-     "model": { "selector": "h1.specs-phone-name-title" },
+     "model": {
+      "selector": "h1.specs-phone-name-title"
+     },
      "properties": [
-      { "name": "Year", "selector": "[data-spec=year]", "transform": "year" },
-      { "name": "Display", "selector": "[data-spec=displaytype]", "transform": "displayType" },
-      { "name": "Battery", "selector": "[data-spec=batdescription1]", "transform": "batteryMah" },
-      { "name": "Charger", "afterLabel": "^Charging$", "labels": "#specs-list td.ttl", "transform": "chargerPower" },
-      { "name": "NFC", "selector": "[data-spec=nfc]", "transform": "yesNo" }
+      {
+       "name": "Year",
+       "selector": "[data-spec=year]",
+       "transform": "year"
+      },
+      {
+       "name": "Display",
+       "selector": "[data-spec=displaytype]",
+       "transform": "displayType"
+      },
+      {
+       "name": "Battery",
+       "selector": "[data-spec=batdescription1]",
+       "transform": "batteryMah"
+      },
+      {
+       "name": "Charger",
+       "afterLabel": "^Charging$",
+       "labels": "#specs-list td.ttl",
+       "transform": "chargerPower"
+      },
+      {
+       "name": "NFC",
+       "selector": "[data-spec=nfc]",
+       "transform": "yesNo"
+      }
      ]
     }
    ]
   },
   {
    "name": "Kimovil",
-   "hosts": ["www.kimovil.com"],
+   "hosts": [
+    "www.kimovil.com"
+   ],
    "group": "Smartphones",
    "pages": [
     {
      "path": "/antutu/?$",
-     "model": { "fromTitle": "^AnTuTu Benchmark of (.+?)\\s*::" },
+     "model": {
+      "fromTitle": "^AnTuTu Benchmark of (.+?)\\s*::"
+     },
      "properties": [
-      { "selector": "[itemprop=\"acceptedAnswer\"] [itemprop=\"text\"]", "transform": "antutu" }
+      {
+       "selector": "[itemprop=\"acceptedAnswer\"] [itemprop=\"text\"]",
+       "transform": "antutu"
+      }
      ]
     },
     {
      "path": "^/en/(?!.*antutu)",
-     "model": { "selector": "h1[itemprop=\"name\"]", "ignoreRegex": "\\?$" },
+     "model": {
+      "fromTitle": "^(.+?): Price"
+     },
      "properties": [
-      { "name": "Camera Sensor", "afterLabel": "^sensor( model)?$", "transform": "unknownIfEmpty", "note": "UNVERIFIED selector: no saved datasheet page was available" }
+      {
+       "name": "Camera Sensor",
+       "afterLabel": "^sensor$",
+       "labels": "th",
+       "transform": "unknownIfEmpty"
+      }
      ]
     }
    ]
