@@ -227,7 +227,11 @@
    "tags": [
     "Memory: 12/256",
     "Year: 2024",
-    "DXOMARK: 130"
+    "DXOMARK: 130",
+    "Display: OLED",
+    "Battery: 5200mAh",
+    "Charger: 100W",
+    "NFC: Yes"
    ],
    "group": "Smartphones"
   },
