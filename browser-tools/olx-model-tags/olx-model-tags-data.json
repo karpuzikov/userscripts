@@ -393,9 +393,11 @@
   },
   "940632632": {
    "model": "Honor 200 Lite",
-   "tags": [],
+   "tags": [
+    "broken"
+   ],
    "url": "https://www.olx.ua/d/uk/obyavlenie/smartfon-honor-200-lite-8-256gb-sostoyanie-novogo-idealnyy-podarok-ID11ENv4.html",
-   "title": "Смартфон Honor 200 Lite 8/256GB — стан нового, ідеальний подарунок!",
+   "title": "Смартфон Honor 200 Lite 8/256GB — состояние нового, идеальный подарок!",
    "detectedModel": "Honor 200 Lite",
    "category": "Смартфони / мобільні телефони"
   },
