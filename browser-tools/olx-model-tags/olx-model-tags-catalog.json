@@ -207,9 +207,7 @@
   },
   "HONOR200LITE": {
    "name": "Honor 200 Lite",
-   "tags": [
-    "Memory: 8/256"
-   ],
+   "tags": [],
    "group": "Smartphones"
   },
   "HONORMAGIC7LITE": {
@@ -240,7 +238,8 @@
   "на детали",
   "на зап.части",
   "по запчастинам",
-  "детали"
+  "детали",
+  "замінена кришка"
  ],
  "dislikedBrands": [
   "ergo",
