@@ -97,6 +97,21 @@ function refreshOlxModelTagsSheet() {
     });
   }
 
+  // Catalog models no tagged ad uses yet (e.g. phones captured from DXOMARK) still get a row, so their group tab exists.
+  const modelKeysWithAds = new Set(Object.values(data.ads).map((ad) => normalizeOlxModelKey(ad.model || ad.detectedModel || '')));
+  for (const [modelKey, modelEntry] of Object.entries(data.models)) {
+    if (modelKeysWithAds.has(modelKey)) continue;
+    const valuesByColumn = {};
+    for (const tag of modelEntry.tags || []) {
+      const { columnName, value } = findOlxTagColumn(tag);
+      if (!valuesByColumn[columnName]) valuesByColumn[columnName] = [];
+      valuesByColumn[columnName].push(value);
+    }
+    const category = modelEntry.group || OLX_MODEL_TAGS_NO_GROUP_TAB_NAME;
+    if (!adsByCategory[category]) adsByCategory[category] = [];
+    adsByCategory[category].push({ adId: '', modelName: modelEntry.name || modelKey, valuesByColumn, link: { text: '(no ad yet)', url: '' }, isBroken: '' });
+  }
+
   const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
   const wantedTabNames = Object.keys(adsByCategory).map((category) => OLX_MODEL_TAGS_TAB_PREFIX + category);
   for (const sheet of spreadsheet.getSheets()) {
