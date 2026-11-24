@@ -1,9 +1,12 @@
 // ==UserScript==
 // @name         OLX - Model Tags
 // @namespace    https://www.olx.ua/
-// @version      0.9.0
-// @description  Tag OLX ads by model (tags shared by every ad of that model) or per ad, mark broken ads, filter search results by tags, per-tag Hide (pixel mesh) / Highlight (outline). Shared model catalog is read from GitHub without any key; your own marks stay in this browser. OLX only gets read locally from the open page.
+// @version      0.10.0
+// @description  Tag OLX ads by model (tags shared by every ad of that model) or per ad, mark broken ads, filter search results by tags, per-tag Hide (pixel mesh) / Highlight (outline). Shared model catalog is read from GitHub without any key; your own marks stay in this browser. Phone specs (year, DXOMARK camera, AnTuTu, sensor, display, battery, charger, NFC) are captured from the DXOMARK, Kimovil and GSMArena pages you open. OLX only gets read locally from the open page.
 // @match        https://www.olx.ua/*
+// @match        https://www.dxomark.com/smartphones/*
+// @match        https://www.kimovil.com/*
+// @match        https://www.gsmarena.com/*
 // @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/browser-tools/olx-model-tags/OLX_Model_Tags.user.js
 // @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/browser-tools/olx-model-tags/OLX_Model_Tags.user.js
 // @run-at       document-idle
@@ -83,6 +86,15 @@
             groupOwner.group = operation.group.trim();
             return;
         }
+        if (operation.type === 'setModelProperty') {
+            // One value per property on a model: "Year: 2023" replaces an earlier "Year: 2022". Used by the spec-site capture.
+            const modelEntry = ensureModelEntry(data, operation.modelName);
+            const propertyKey = operation.property.toLowerCase();
+            modelEntry.tags = modelEntry.tags.filter((tag) => splitTagIntoPropertyAndValue(tag).property.toLowerCase() !== propertyKey);
+            modelEntry.tags.push(`${operation.property}: ${operation.value}`);
+            if (operation.groupIfEmpty && !modelEntry.group) modelEntry.group = operation.groupIfEmpty;
+            return;
+        }
         if (operation.type === 'setAdInfo') {
             // Ad URL, title and title-detected model, kept for the Google Sheet view (the script itself reads them from the page).
             Object.assign((data.ads[operation.adId] ||= { model: '', tags: [] }), { url: operation.url, title: operation.title, detectedModel: operation.detectedModel, category: operation.category || '' });
@@ -153,6 +165,47 @@
         return activeFilters.every((filter) => filterValues.includes(filter));
     }
 
+    // ---- Phone spec capture: text -> value helpers (DOM readers are below, after the sync code) ----
+    const PHONE_GROUP = 'Smartphones';
+
+    function extractYearFromText(text) {
+        return text.match(/\b(?:19|20)\d{2}\b/)?.[0] || '';
+    }
+
+    // "IPS LCD, 90Hz" -> IPS, "Super AMOLED" -> OLED, anything else -> its first word (TFT, LCD, ...).
+    function classifyDisplayType(text) {
+        const upperText = text.toUpperCase();
+        if (upperText.includes('OLED')) return 'OLED';
+        if (upperText.includes('IPS')) return 'IPS';
+        return text.trim().split(/[,\s]/)[0];
+    }
+
+    function extractBatteryCapacity(text) {
+        const capacity = text.match(/(\d[\d,]*)\s*mAh/i);
+        return capacity ? `${capacity[1].replace(/,/g, '')}mAh` : '';
+    }
+
+    // GSMArena lists one charging line per market ("35W ... (Europe)" / "22.5W ... (Global)"); the Global one wins, else the first.
+    function extractChargerPower(chargingLines) {
+        const chargingLine = chargingLines.find((line) => /global/i.test(line)) || chargingLines[0] || '';
+        const power = chargingLine.match(/(\d+(?:\.\d+)?)\s*W/);
+        return power ? `${power[1]}W` : '';
+    }
+
+    function extractNfcSupport(text) {
+        return /^\s*yes/i.test(text) ? 'Yes' : 'No';
+    }
+
+    // Kimovil: "AnTuTu of Honor 90 Lite is 391.900 (v10)." -> { property: 'AnTuTu v10', value: '391900' }
+    function parseAnTuTuAnswer(text) {
+        const answer = text.match(/([\d.,]+)\s*\(v(\d+)\)/);
+        return answer ? { property: `AnTuTu v${answer[2]}`, value: answer[1].replace(/[.,]/g, '') } : null;
+    }
+
+    function isModelPropertyAlreadySet(data, modelName, property, value) {
+        return data.models[normalizeModelKey(modelName)]?.tags.includes(`${property}: ${value}`) ?? false;
+    }
+
     // Catalog = models, stop phrases, brands: public, shared by everyone, written only by the owner (token).
     // Personal = ads and per-tag display modes: kept in each browser (the owner's also sync to a second GitHub file).
     function splitDataIntoCatalogAndPersonal(data) {
@@ -170,7 +223,7 @@
     }
 
     if (typeof module === 'object') {
-        module.exports = { normalizeModelKey, createEmptyOlxModelTagsData, detectModelKeyInTitle, resolveAdTagging, applyOlxModelTagsOperation, encodeUtf8TextAsBase64, decodeBase64AsUtf8Text, doesAdMatchActiveFilters, resolveAdDisplayEffects, getPhraseList, findPhraseInText, splitTagIntoPropertyAndValue, splitDataIntoCatalogAndPersonal, joinCatalogAndPersonal };
+        module.exports = { normalizeModelKey, createEmptyOlxModelTagsData, detectModelKeyInTitle, resolveAdTagging, applyOlxModelTagsOperation, encodeUtf8TextAsBase64, decodeBase64AsUtf8Text, doesAdMatchActiveFilters, resolveAdDisplayEffects, getPhraseList, findPhraseInText, splitTagIntoPropertyAndValue, splitDataIntoCatalogAndPersonal, joinCatalogAndPersonal, extractYearFromText, classifyDisplayType, extractBatteryCapacity, extractChargerPower, extractNfcSupport, parseAnTuTuAnswer, isModelPropertyAlreadySet };
         return;
     }
 
@@ -189,6 +242,7 @@
     // Everyone reads the public catalog file without a key; edits stay in this browser as pending operations replayed
     // over every fresh catalog. Only with the owner's token are the operations uploaded (catalog file + personal file).
 
+    const IS_OLX_PAGE = location.hostname.endsWith('olx.ua');
     const GITHUB_DATA_REPOSITORY = 'karpuzikov/userscripts';
     const GITHUB_DATA_BRANCH = 'main';
     const GITHUB_CATALOG_FILE_PATH = 'browser-tools/olx-model-tags/olx-model-tags-catalog.json';
@@ -351,6 +405,89 @@
     }
     GM_registerMenuCommand('Set GitHub token (owner only)', askForGithubToken);
 
+    // ---------- Phone spec capture (DXOMARK, Kimovil, GSMArena) ----------
+    // Reads only the page that is already open, and saves the values as tags of the phone's model
+    // (the model name is the page's own, e.g. "Honor 90 Lite"); OLX ads whose title contains it then show them.
+
+    const readTextOf = (element) => (element?.textContent || '').replace(/\s+/g, ' ').trim();
+
+    function readDxomarkCaptures() {
+        const path = location.pathname.replace(/\/+$/, '');
+        if (/^\/smartphones\/[^/]+\/[^/]+$/.test(path)) {
+            const modelName = readTextOf(document.querySelector('h1.entry-title'));
+            return [{ modelName, properties: [
+                ['Year', extractYearFromText(readTextOf(document.querySelector('.cover .sub-title')))],
+                ['DXOMARK', readTextOf(document.querySelector('.scoreBadge.camera .scoreBadgeValue'))],
+            ] }];
+        }
+        if (path !== '/smartphones') return [];
+        // Ranking page: row cells follow the header cells' order; the camera column is "mobileScore".
+        const columnClassNames = [...document.querySelectorAll('.row.headers .sort-header')]
+            .filter((header) => !header.classList.contains('rank') && !header.classList.contains('device_name')).map((header) => header.className);
+        const dateColumn = columnClassNames.findIndex((className) => className.includes('launch_date'));
+        const cameraColumn = columnClassNames.findIndex((className) => className.includes('mobileScore'));
+        return [...document.querySelectorAll('.device-row')].map((row) => {
+            // The value is the cell's own <span>; the cell also holds an SVG label whose text would add digits.
+            const cells = [...row.querySelectorAll('.deviceScore')].map((cell) => cell.querySelector(':scope > span'));
+            return { modelName: row.querySelector('.deviceName')?.dataset.deviceName || '', properties: [
+                ['Year', dateColumn < 0 ? '' : extractYearFromText(readTextOf(cells[dateColumn]))],
+                ['DXOMARK', cameraColumn < 0 ? '' : readTextOf(cells[cameraColumn]).replace(/\D/g, '')],
+            ] };
+        });
+    }
+
+    function readGsmarenaCaptures() {
+        const modelName = readTextOf(document.querySelector('h1.specs-phone-name-title'));
+        if (!modelName) return [];
+        const readSpec = (specName) => readTextOf(document.querySelector(`[data-spec="${specName}"]`));
+        const chargingCell = [...document.querySelectorAll('#specs-list td.ttl')].find((cell) => readTextOf(cell) === 'Charging')?.nextElementSibling;
+        const chargingLines = chargingCell ? chargingCell.innerHTML.split(/<hr[^>]*>/).map((html) => html.replace(/<[^>]+>/g, ' ')) : [];
+        return [{ modelName, properties: [
+            ['Year', extractYearFromText(readSpec('year'))],
+            ['Display', classifyDisplayType(readSpec('displaytype'))],
+            ['Battery', extractBatteryCapacity(readSpec('batdescription1'))],
+            ['Charger', extractChargerPower(chargingLines)],
+            ['NFC', document.querySelector('[data-spec="nfc"]') ? extractNfcSupport(readSpec('nfc')) : ''],
+        ] }];
+    }
+
+    // The AnTuTu page gives one score per AnTuTu version. The "Camera Sensor" read from the datasheet page is a best guess
+    // (shortcut: only the AnTuTu page was available when written; verify the sensor selector on a saved datasheet page).
+    function readKimovilCaptures() {
+        const antutuAnswer = parseAnTuTuAnswer(readTextOf(document.querySelector('[itemprop="acceptedAnswer"] [itemprop="text"]')));
+        const antutuModelName = document.title.match(/^AnTuTu Benchmark of (.+?)\s*::/)?.[1] || '';
+        if (antutuAnswer && antutuModelName) return [{ modelName: antutuModelName, properties: [[antutuAnswer.property, antutuAnswer.value]] }];
+        const datasheetModelName = readTextOf(document.querySelector('h1[itemprop="name"]'));
+        if (!datasheetModelName || datasheetModelName.endsWith('?')) return [];
+        const sensorLabel = [...document.querySelectorAll('dt, th, td, li, span')].find((element) => !element.children.length && /^sensor( model)?$/i.test(readTextOf(element)));
+        if (!sensorLabel) return [];
+        const sensorText = readTextOf(sensorLabel.nextElementSibling);
+        return [{ modelName: datasheetModelName, properties: [['Camera Sensor', !sensorText || /^(unknown|-)$/i.test(sensorText) ? 'Unknown' : sensorText]] }];
+    }
+
+    function captureSpecsOfOpenPage() {
+        const readCaptures = { 'www.dxomark.com': readDxomarkCaptures, 'www.kimovil.com': readKimovilCaptures, 'www.gsmarena.com': readGsmarenaCaptures }[location.hostname];
+        for (const { modelName, properties } of readCaptures()) {
+            if (!normalizeModelKey(modelName)) continue;
+            for (const [property, value] of properties) {
+                if (value && !isModelPropertyAlreadySet(olxModelTagsData, modelName, property, value)) {
+                    recordOperation({ type: 'setModelProperty', modelName, property, value, groupIfEmpty: PHONE_GROUP });
+                }
+            }
+        }
+    }
+
+    // DXOMARK builds its ranking rows after the page loads, so the capture reruns (it skips what is already saved).
+    function startSpecsCapture() {
+        olxModelTagsData = olxModelTagsData ? rebuildLocalDataFromCacheAndPendingOperations(olxModelTagsData) : createEmptyOlxModelTagsData();
+        captureSpecsOfOpenPage();
+        let captureTimer = 0;
+        new MutationObserver(() => { clearTimeout(captureTimer); captureTimer = setTimeout(captureSpecsOfOpenPage, 1000); })
+            .observe(document.body, { childList: true, subtree: true });
+    }
+
+    if (!IS_OLX_PAGE) { startSpecsCapture(); return; }
+
     // ---------- Page reading (local DOM only) ----------
 
     // OLX's client re-render of the listing does not always use <h4>; the title link (or its aria-label) is stable.
@@ -419,6 +556,12 @@
 .olx-model-tags-chip-model{background:transparent;color:var(--accent);font-family:"JetBrains Mono",ui-monospace,Consolas,monospace;font-weight:500}
 .olx-model-tags-chip-ad{color:var(--text);outline:1px dashed var(--border-strong);outline-offset:-1px}
 .olx-model-tags-chip-group{background:transparent;color:var(--muted)}
+.olx-model-tags-table{flex:1 0 100%;border-collapse:collapse;margin:0}
+.olx-model-tags-table th,.olx-model-tags-table td{padding:4px;border-bottom:1px solid var(--surface-elevated);text-align:left;vertical-align:middle}
+.olx-model-tags-table th{width:1%;white-space:nowrap;color:var(--muted);font-weight:400}
+.olx-model-tags-table td{color:var(--text);font-family:"JetBrains Mono",ui-monospace,Consolas,monospace;font-variant-numeric:tabular-nums}
+.olx-model-tags-table td:last-child{width:1%;text-align:right}
+.olx-model-tags-row-ad th{font-style:italic}
 .olx-model-tags-destination{color:var(--muted);white-space:nowrap}
 .olx-model-tags-chip-broken{background:var(--negative);color:var(--on-primary);font-weight:600}
 .olx-model-tags-icon-button{display:inline-flex;align-items:center;justify-content:center;padding:4px;border:0;border-radius:4px;background:transparent;color:var(--muted);cursor:pointer;line-height:0}
@@ -441,7 +584,7 @@
 .olx-model-tags-text-button-active .olx-model-tags-count{color:var(--on-primary)}
 .olx-model-tags-status-error{color:var(--negative)}
 .olx-model-tags-hidden-ad{display:none!important}
-.olx-model-tags-bar[data-editing="true"] .olx-model-tags-chip .olx-model-tags-icon-button{display:none}
+.olx-model-tags-bar[data-editing="true"] .olx-model-tags-chip .olx-model-tags-icon-button,.olx-model-tags-bar[data-editing="true"] .olx-model-tags-table .olx-model-tags-icon-button{display:none}
 .olx-model-tags-tag-group{display:inline-flex;align-items:center;gap:4px;padding:4px;border-radius:8px;background:var(--canvas)}
 .olx-model-tags-mode-switch{display:inline-flex;gap:2px;padding:2px;border-radius:6px;background:var(--surface-elevated)}
 .olx-model-tags-mode-switch .olx-model-tags-icon-button:hover{background:var(--border-strong)}
@@ -554,13 +697,20 @@
             if (isModelSetForThisAd) modelChip.append(createIconButton('close', `Remove model ${tagging.modelName} from this ad`, () => recordOperationForAd(ad, { type: 'setAdModel', adId: ad.adId, modelName: '' })));
             children.push(modelChip);
         }
+        // "Property: value" tags go into a table (one row per property); tags without a property stay chips.
+        const tableRows = [];
+        const addTagToBar = (tag, isAdTag, removeLabel, onRemove) => {
+            const { property, value } = splitTagIntoPropertyAndValue(tag);
+            if (property) tableRows.push({ property, value, isAdTag, removeLabel, onRemove });
+            else children.push(createTagChip(tag, `olx-model-tags-chip${isAdTag ? ' olx-model-tags-chip-ad' : ''}`, removeLabel, onRemove));
+        };
         for (const tag of tagging.modelTags) {
-            children.push(createTagChip(tag, 'olx-model-tags-chip', `Remove "${tag}" from every ${tagging.modelName} ad`,
-                () => recordOperationForAd(ad, { type: 'removeTag', scope: 'model', modelName: tagging.modelName, tag })));
+            addTagToBar(tag, false, `Remove "${tag}" from every ${tagging.modelName} ad`,
+                () => recordOperationForAd(ad, { type: 'removeTag', scope: 'model', modelName: tagging.modelName, tag }));
         }
         for (const tag of tagging.adTags.filter((tag) => tag !== BROKEN_TAG)) {
-            children.push(createTagChip(tag, 'olx-model-tags-chip olx-model-tags-chip-ad', `Remove "${tag}" from this ad`,
-                () => recordOperationForAd(ad, { type: 'removeTag', scope: 'ad', adId: ad.adId, tag })));
+            addTagToBar(tag, true, `Remove "${tag}" from this ad`,
+                () => recordOperationForAd(ad, { type: 'removeTag', scope: 'ad', adId: ad.adId, tag }));
         }
         if (isBroken) {
             const brokenChip = createElement('span', 'olx-model-tags-chip olx-model-tags-chip-broken', '⚠ Broken');
@@ -591,7 +741,21 @@
             () => recordOperationForAd(ad, { type: isBroken ? 'removeTag' : 'addTag', scope: 'ad', adId: ad.adId, tag: BROKEN_TAG }),
             isBroken ? 'olx-model-tags-icon-button-broken-active' : ''));
         children.push(createIconButton('plus', 'Add tag or set model', () => openTagEditor(bar, ad, tagging)));
+        if (tableRows.length) children.push(createPropertyTable(tableRows));
         bar.replaceChildren(...children);
+    }
+
+    function createPropertyTable(tableRows) {
+        const table = createElement('table', 'olx-model-tags-table');
+        for (const { property, value, isAdTag, removeLabel, onRemove } of tableRows) {
+            const row = createElement('tr', isAdTag ? 'olx-model-tags-row-ad' : '');
+            row.append(createElement('th', '', property), createElement('td', '', value));
+            const removeCell = createElement('td');
+            removeCell.append(createIconButton('close', removeLabel, onRemove));
+            row.append(removeCell);
+            table.append(row);
+        }
+        return table;
     }
 
     function createTagChip(tag, className, removeLabel, onRemove) {
@@ -717,7 +881,7 @@
     });
 
     function renderFilterPanel() {
-        if (!olxModelTagsData || !document.body) return;
+        if (!IS_OLX_PAGE || !olxModelTagsData || !document.body) return;
         let panel = document.querySelector('.olx-model-tags-panel');
         if (!panel) {
             panel = createElement('div', 'olx-model-tags-root olx-model-tags-panel');
@@ -817,7 +981,7 @@
     }
 
     function renderEverything() {
-        if (!olxModelTagsData) return;
+        if (!IS_OLX_PAGE || !olxModelTagsData) return;
         ensureDatalists();
         for (const ad of findAdsOnPage()) renderTagBar(ad);
         renderFilterPanel();

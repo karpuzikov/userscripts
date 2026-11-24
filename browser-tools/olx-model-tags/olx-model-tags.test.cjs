@@ -110,3 +110,27 @@ test('catalog and personal data split and join without losing anything', () => {
   // A stranger has no personal file: the catalog alone still gives a usable data object.
   assert.deepEqual(olxModelTags.joinCatalogAndPersonal(catalog, {}).ads, {});
 });
+
+test('spec-site capture helpers turn page text into tag values', () => {
+  assert.equal(olxModelTags.extractYearFromText('2023, June 20'), '2023');
+  assert.equal(olxModelTags.extractYearFromText('Released June 2025'), '2025');
+  assert.equal(olxModelTags.classifyDisplayType('IPS LCD, 90Hz'), 'IPS');
+  assert.equal(olxModelTags.classifyDisplayType('Super AMOLED, 120Hz'), 'OLED');
+  assert.equal(olxModelTags.classifyDisplayType('TFT LCD'), 'TFT');
+  assert.equal(olxModelTags.extractBatteryCapacity('Li-Po 4500 mAh'), '4500mAh');
+  assert.equal(olxModelTags.extractChargerPower(['35W wired, 55% in 30 min (Europe)', ' 22.5W wired (Global)']), '22.5W');
+  assert.equal(olxModelTags.extractChargerPower(['67W wired']), '67W');
+  assert.equal(olxModelTags.extractNfcSupport('Yes (market/region dependent)'), 'Yes');
+  assert.equal(olxModelTags.extractNfcSupport('No'), 'No');
+  assert.deepEqual(olxModelTags.parseAnTuTuAnswer('AnTuTu of Honor 90 Lite is 391.900 (v10).'), { property: 'AnTuTu v10', value: '391900' });
+});
+
+test('setModelProperty keeps one value per property and fills the group once', () => {
+  const data = olxModelTags.createEmptyOlxModelTagsData();
+  const setYear = (value) => olxModelTags.applyOlxModelTagsOperation(data, { type: 'setModelProperty', modelName: 'Honor 90 Lite', property: 'Year', value, groupIfEmpty: 'Smartphones' });
+  setYear('2022'); setYear('2023'); setYear('2023');
+  assert.deepEqual(data.models.HONOR90LITE.tags, ['Year: 2023']);
+  assert.equal(data.models.HONOR90LITE.group, 'Smartphones');
+  assert.equal(olxModelTags.isModelPropertyAlreadySet(data, 'Honor 90 Lite', 'Year', '2023'), true);
+  assert.equal(olxModelTags.isModelPropertyAlreadySet(data, 'Honor 90 Lite', 'Year', '2022'), false);
+});
