@@ -616,6 +616,142 @@
     "Year: 2024"
    ],
    "group": "Smartphones"
+  },
+  "TECNOCAMON50ULTRA5G": {
+   "name": "Tecno Camon 50 Ultra 5G",
+   "tags": [
+    "Year: 2026",
+    "DXOMARK: 146"
+   ],
+   "group": "Smartphones"
+  },
+  "GOOGLEPIXEL7": {
+   "name": "Google Pixel 7",
+   "tags": [
+    "Year: 2022",
+    "DXOMARK: 140"
+   ],
+   "group": "Smartphones"
+  },
+  "TECNOCAMON40PRO5G": {
+   "name": "Tecno Camon 40 Pro 5G",
+   "tags": [
+    "Year: 2025",
+    "DXOMARK: 138"
+   ],
+   "group": "Smartphones"
+  },
+  "GOOGLEPIXEL8A": {
+   "name": "Google Pixel 8a",
+   "tags": [
+    "Year: 2024",
+    "DXOMARK: 136"
+   ],
+   "group": "Smartphones"
+  },
+  "GOOGLEPIXEL10A": {
+   "name": "Google Pixel 10a",
+   "tags": [
+    "Year: 2026",
+    "DXOMARK: 134"
+   ],
+   "group": "Smartphones"
+  },
+  "XIAOMI14T": {
+   "name": "Xiaomi 14T",
+   "tags": [
+    "Year: 2024",
+    "DXOMARK: 134"
+   ],
+   "group": "Smartphones"
+  },
+  "GOOGLEPIXEL7A": {
+   "name": "Google Pixel 7a",
+   "tags": [
+    "Year: 2023",
+    "DXOMARK: 133"
+   ],
+   "group": "Smartphones"
+  },
+  "SAMSUNGGALAXYS24FE": {
+   "name": "Samsung Galaxy S24 FE",
+   "tags": [
+    "Year: 2024",
+    "DXOMARK: 133"
+   ],
+   "group": "Smartphones"
+  },
+  "GOOGLEPIXEL9A": {
+   "name": "Google Pixel 9a",
+   "tags": [
+    "Year: 2025",
+    "DXOMARK: 128"
+   ],
+   "group": "Smartphones"
+  },
+  "SAMSUNGGALAXYS23FE": {
+   "name": "Samsung Galaxy S23 FE",
+   "tags": [
+    "Year: 2023",
+    "DXOMARK: 127"
+   ],
+   "group": "Smartphones"
+  },
+  "GOOGLEPIXEL6": {
+   "name": "Google Pixel 6",
+   "tags": [
+    "Year: 2021",
+    "DXOMARK: 126"
+   ],
+   "group": "Smartphones"
+  },
+  "VIVOX70PROMEDIATEK": {
+   "name": "Vivo X70 Pro (MediaTek)",
+   "tags": [
+    "Year: 2021",
+    "DXOMARK: 126"
+   ],
+   "group": "Smartphones"
+  },
+  "XIAOMI13T": {
+   "name": "Xiaomi 13T",
+   "tags": [
+    "Year: 2023",
+    "DXOMARK: 123"
+   ],
+   "group": "Smartphones"
+  },
+  "GOOGLEPIXEL6A": {
+   "name": "Google Pixel 6a",
+   "tags": [
+    "Year: 2022",
+    "DXOMARK: 122"
+   ],
+   "group": "Smartphones"
+  },
+  "XIAOMIREDMINOTE13PROPLUS5G": {
+   "name": "Xiaomi Redmi Note 13 Pro Plus 5G",
+   "tags": [
+    "Year: 2023",
+    "DXOMARK: 121"
+   ],
+   "group": "Smartphones"
+  },
+  "XIAOMIREDMINOTE13PRO5G": {
+   "name": "Xiaomi Redmi Note 13 Pro 5G",
+   "tags": [
+    "Year: 2023",
+    "DXOMARK: 120"
+   ],
+   "group": "Smartphones"
+  },
+  "SAMSUNGGALAXYS25FE": {
+   "name": "Samsung Galaxy S25 FE",
+   "tags": [
+    "Year: 2025",
+    "DXOMARK: 118"
+   ],
+   "group": "Smartphones"
   }
  },
  "stopPhrases": [
