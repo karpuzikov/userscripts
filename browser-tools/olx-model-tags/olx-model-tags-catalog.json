@@ -226,6 +226,13 @@
     "Memory: 12/256"
    ],
    "group": "Smartphones"
+  },
+  "HONOR90": {
+   "name": "Honor 90",
+   "tags": [
+    "Memory: 8/256"
+   ],
+   "group": "Smartphones"
   }
  },
  "stopPhrases": [
