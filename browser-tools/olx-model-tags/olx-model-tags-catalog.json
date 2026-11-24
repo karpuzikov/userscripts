@@ -247,6 +247,166 @@
     "Antutu v10: 391900"
    ],
    "group": "Smartphones"
+  },
+  "HUAWEIPURA80ULTRA": {
+   "name": "Huawei Pura 80 Ultra",
+   "tags": [
+    "Year: 2025",
+    "DXOMARK: 175"
+   ],
+   "group": "Smartphones"
+  },
+  "MOTOROLASIGNATURE27": {
+   "name": "Motorola Signature 27",
+   "tags": [
+    "Year: 2026",
+    "DXOMARK: 173"
+   ],
+   "group": "Smartphones"
+  },
+  "APPLEIPHONE18PRO": {
+   "name": "Apple iPhone 18 Pro",
+   "tags": [
+    "Year: 2026",
+    "DXOMARK: 172"
+   ],
+   "group": "Smartphones"
+  },
+  "VIVOX300PRO": {
+   "name": "Vivo X300 Pro",
+   "tags": [
+    "Year: 2025",
+    "DXOMARK: 171"
+   ],
+   "group": "Smartphones"
+  },
+  "OPPOFINDX9ULTRA": {
+   "name": "Oppo Find X9 Ultra",
+   "tags": [
+    "Year: 2026",
+    "DXOMARK: 170"
+   ],
+   "group": "Smartphones"
+  },
+  "VIVOX300ULTRA": {
+   "name": "Vivo X300 Ultra",
+   "tags": [
+    "Year: 2026",
+    "DXOMARK: 170"
+   ],
+   "group": "Smartphones"
+  },
+  "GOOGLEPIXEL11PROXL": {
+   "name": "Google Pixel 11 Pro XL",
+   "tags": [
+    "Year: 2026",
+    "DXOMARK: 168"
+   ],
+   "group": "Smartphones"
+  },
+  "OPPOFINDX8ULTRA": {
+   "name": "Oppo Find X8 Ultra",
+   "tags": [
+    "Year: 2025",
+    "DXOMARK: 168"
+   ],
+   "group": "Smartphones"
+  },
+  "APPLEIPHONE17PRO": {
+   "name": "Apple iPhone 17 Pro",
+   "tags": [
+    "Year: 2025",
+    "DXOMARK: 168"
+   ],
+   "group": "Smartphones"
+  },
+  "VIVOX200ULTRA": {
+   "name": "Vivo X200 Ultra",
+   "tags": [
+    "Year: 2025",
+    "DXOMARK: 167"
+   ],
+   "group": "Smartphones"
+  },
+  "OPPOFINDX9PRO": {
+   "name": "Oppo Find X9 Pro",
+   "tags": [
+    "Year: 2025",
+    "DXOMARK: 166"
+   ],
+   "group": "Smartphones"
+  },
+  "XIAOMI17ULTRA": {
+   "name": "Xiaomi 17 Ultra",
+   "tags": [
+    "Year: 2025",
+    "DXOMARK: 166"
+   ],
+   "group": "Smartphones"
+  },
+  "HONORMAGIC8PRO": {
+   "name": "Honor Magic8 Pro",
+   "tags": [
+    "Year: 2025",
+    "DXOMARK: 164"
+   ],
+   "group": "Smartphones"
+  },
+  "MOTOROLARAZRFOLD": {
+   "name": "Motorola Razr Fold",
+   "tags": [
+    "Year: 2026",
+    "DXOMARK: 164"
+   ],
+   "group": "Smartphones"
+  },
+  "MOTOROLASIGNATURE": {
+   "name": "Motorola Signature",
+   "tags": [
+    "Year: 2026",
+    "DXOMARK: 164"
+   ],
+   "group": "Smartphones"
+  },
+  "GOOGLEPIXEL10PROXL": {
+   "name": "Google Pixel 10 Pro XL",
+   "tags": [
+    "Year: 2025",
+    "DXOMARK: 163"
+   ],
+   "group": "Smartphones"
+  },
+  "HUAWEIPURA70ULTRA": {
+   "name": "Huawei Pura 70 Ultra",
+   "tags": [
+    "Year: 2024",
+    "DXOMARK: 163"
+   ],
+   "group": "Smartphones"
+  },
+  "APPLEIPHONE16PROMAX": {
+   "name": "Apple iPhone 16 Pro Max",
+   "tags": [
+    "Year: 2024",
+    "DXOMARK: 161"
+   ],
+   "group": "Smartphones"
+  },
+  "GOOGLEPIXEL9PROXL": {
+   "name": "Google Pixel 9 Pro XL",
+   "tags": [
+    "Year: 2024",
+    "DXOMARK: 160"
+   ],
+   "group": "Smartphones"
+  },
+  "XIAOMI17PROMAX": {
+   "name": "Xiaomi 17 Pro Max",
+   "tags": [
+    "Year: 2025",
+    "DXOMARK: 159"
+   ],
+   "group": "Smartphones"
   }
  },
  "stopPhrases": [
