@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Harmony ToolBox
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.0.3
+// @version      1.0.4
 // @description  Combines Harmony ISRC copying and one-click MusicBrainz external-ID linking.
 // @author       karpuzikov
 // @license      MIT
@@ -24,7 +24,7 @@
 (() => {
     'use strict';
 
-    const CURRENT_VERSION = '1.0.3';
+    const CURRENT_VERSION = '1.0.4';
     const CHECK_KEY = 'harmony-toolbox-self-update-check-v1';
     const CHECK_INTERVAL = 10 * 60 * 1000;
     const META_API =
@@ -175,67 +175,13 @@
     checkNow();
 })();
 
-// Reload Harmony pages until MusicBrainz is no longer busy
+// Reload Harmony pages immediately while MusicBrainz is busy
 (() => {
     'use strict';
 
-    const MUSICBRAINZ_BUSY_TEXT = 'The MusicBrainz web server is currently busy';
-    const RELOAD_ATTEMPT_KEY = 'harmony-toolbox-musicbrainz-busy-reload-attempt:' + location.href;
     const isMusicBrainzBusy = [...document.querySelectorAll('.message.error')]
-        .some(message => message.textContent.includes(MUSICBRAINZ_BUSY_TEXT));
-
-    if (!isMusicBrainzBusy) {
-        sessionStorage.removeItem(RELOAD_ATTEMPT_KEY);
-        return;
-    }
-
-    const reloadAttempt = Number(sessionStorage.getItem(RELOAD_ATTEMPT_KEY) || 0) + 1;
-    sessionStorage.setItem(RELOAD_ATTEMPT_KEY, String(reloadAttempt));
-    // 5s, 10s, 20s, 40s, then every 60s.
-    const reloadDelaySeconds = Math.min(60, 5 * 2 ** (reloadAttempt - 1));
-
-    const banner = document.createElement('div');
-    banner.id = 'harmony-toolbox-musicbrainz-busy-reload';
-    banner.style.cssText = [
-        'position:fixed',
-        'right:16px',
-        'bottom:16px',
-        'z-index:2147483647',
-        'padding:10px 12px',
-        'background:#222',
-        'color:#fff',
-        'border:1px solid #666',
-        'border-radius:6px',
-        'font:13px/1.35 sans-serif',
-    ].join(';');
-    const bannerText = document.createElement('span');
-    const cancelButton = document.createElement('button');
-    cancelButton.type = 'button';
-    cancelButton.textContent = 'Stop';
-    cancelButton.style.marginLeft = '10px';
-    banner.append(bannerText, cancelButton);
-    document.body.appendChild(banner);
-
-    let secondsLeft = reloadDelaySeconds;
-    const updateBannerText = () => {
-        bannerText.textContent = `MusicBrainz busy - reloading in ${secondsLeft}s (attempt ${reloadAttempt})`;
-    };
-    updateBannerText();
-    const countdownTimer = setInterval(() => {
-        secondsLeft -= 1;
-        if (secondsLeft > 0) {
-            updateBannerText();
-            return;
-        }
-        clearInterval(countdownTimer);
-        location.reload();
-    }, 1000);
-
-    cancelButton.addEventListener('click', () => {
-        clearInterval(countdownTimer);
-        sessionStorage.removeItem(RELOAD_ATTEMPT_KEY);
-        banner.remove();
-    });
+        .some(message => message.textContent.includes('The MusicBrainz web server is currently busy'));
+    if (isMusicBrainzBusy) location.reload();
 })();
 
 // Copy ISRCs
