@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MusicBrainz ToolBox
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.0.69
+// @version      1.0.70
 // @description  Combined MusicBrainz release-editor, recording, barcode, Spotify/Apple Music linking, search, cover-art, Disc ID, and duplicate-edit tools.
 // @author       karpuzikov
 // @license      MIT
@@ -1301,7 +1301,8 @@
             .search-container.mb-quick-release-search-enabled {
                 display: flex;
                 align-items: flex-start;
-                flex-wrap: wrap;
+                flex-wrap: nowrap;
+                min-width: 0;
             }
     
             #${GROUP_ID} {
@@ -1309,31 +1310,30 @@
                 align-items: flex-start;
                 gap: 4px;
                 margin-right: 6px;
-                flex-wrap: wrap;
+                flex: 0 1 auto;
+                min-width: 0;
             }
     
             #${GROUP_ID} form {
-                width: 180px !important;
+                display: flex;
                 height: 25px;
                 margin-top: 5px !important;
-                position: relative;
-                flex: 0 0 180px;
+                flex: 0 1 180px;
+                min-width: 80px;
             }
     
             #${GROUP_ID} input {
-                width: 150px !important;
+                flex: 1 1 auto;
+                width: auto !important;
+                min-width: 0;
                 height: 25px !important;
-                position: absolute !important;
-                left: 0 !important;
-                top: 0 !important;
             }
     
             #${GROUP_ID} button {
+                flex: 0 0 30px;
                 width: 30px !important;
                 height: 25px !important;
-                position: absolute !important;
-                left: 149px !important;
-                top: 0 !important;
+                margin-left: -1px;
             }
         `;
         document.head.appendChild(style);
@@ -1406,7 +1406,7 @@
             button.removeAttribute('id');
             button.type = 'submit';
     
-            form.append(input, ' ', button);
+            form.append(input, button);
             group.appendChild(form);
     
             return {form, input};
