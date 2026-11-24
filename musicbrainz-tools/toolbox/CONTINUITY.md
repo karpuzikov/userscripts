@@ -1,7 +1,7 @@
 # MusicBrainz ToolBox - Continuity
 
 Last reviewed: 2026-11-02
-Current version: 1.0.69 - Under construction ⚠️ (pending browser verification)
+Current version: 1.0.70 - Under construction ⚠️ (pending browser verification)
 Repository: `karpuzikov/userscripts`, branch `main`
 Global rules: `/SOFTWARE_RULES.md`; no separate ToolBox `RULES.md` exists.
 
@@ -108,3 +108,8 @@ Global rules: `/SOFTWARE_RULES.md`; no separate ToolBox `RULES.md` exists.
 - User request: hide links only when a row has more than 3 links.
 - Change ("Compact external relationship lists" module only): a row is collapsed only when its cell has more than 3 `a[href^="/url/"]` ("[info]") links, i.e. more than 3 URL relationships; 1-3 links stay visible. Replaces the old "has any link" check.
 - Automated: live counts via the [info] selector — recording c23582c5-…: purchase for download 10, stream for free 16, streaming page 20 (collapsed); Yello "Baby" release rows 0-3 (visible). Syntax PASS. **NOT RUN**: real Tampermonkey install.
+
+## 2026-11-24 - v1.0.70 Header search layout fix
+- User report: in a narrow window the Barcode / Catalog number / Label code header fields wrapped and pushed the native search over the menu bar.
+- Fix: header search container no longer wraps; the three quick-search forms shrink (flex, min 80px each) instead of using fixed 180px absolute-positioned inputs.
+- Browser visual test on real MusicBrainz at narrow/wide widths: NOT RUN.
