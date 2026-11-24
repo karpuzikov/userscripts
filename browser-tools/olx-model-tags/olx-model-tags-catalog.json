@@ -208,7 +208,9 @@
   "HONOR200LITE": {
    "name": "Honor 200 Lite",
    "tags": [
-    "Memory: 8/256"
+    "Memory: 8/256",
+    "Year: 2024",
+    "DXOMARK: 86"
    ],
    "group": "Smartphones"
   },
@@ -222,14 +224,18 @@
   "HONOR200": {
    "name": "Honor 200",
    "tags": [
-    "Memory: 12/256"
+    "Memory: 12/256",
+    "Year: 2024",
+    "DXOMARK: 130"
    ],
    "group": "Smartphones"
   },
   "HONOR90": {
    "name": "Honor 90",
    "tags": [
-    "Memory: 8/256"
+    "Memory: 8/256",
+    "Year: 2023",
+    "DXOMARK: 122"
    ],
    "group": "Smartphones"
   },
@@ -244,7 +250,9 @@
    "name": "Honor 90 Lite",
    "tags": [
     "Memory: 8/256",
-    "Antutu v10: 391900"
+    "Antutu v10: 391900",
+    "Year: 2023",
+    "DXOMARK: 73"
    ],
    "group": "Smartphones"
   },
@@ -405,6 +413,130 @@
    "tags": [
     "Year: 2025",
     "DXOMARK: 159"
+   ],
+   "group": "Smartphones"
+  },
+  "HONORMAGIC6PRO": {
+   "name": "Honor Magic6 Pro",
+   "tags": [
+    "Year: 2024",
+    "DXOMARK: 158"
+   ],
+   "group": "Smartphones"
+  },
+  "HONORMAGIC5PRO": {
+   "name": "Honor Magic5 Pro",
+   "tags": [
+    "Year: 2023",
+    "DXOMARK: 152"
+   ],
+   "group": "Smartphones"
+  },
+  "HONORMAGICV5": {
+   "name": "Honor Magic V5",
+   "tags": [
+    "Year: 2025",
+    "DXOMARK: 150"
+   ],
+   "group": "Smartphones"
+  },
+  "HONORMAGIC7PRO": {
+   "name": "Honor Magic7 Pro",
+   "tags": [
+    "Year: 2025",
+    "DXOMARK: 148"
+   ],
+   "group": "Smartphones"
+  },
+  "HONORMAGIC4ULTIMATE": {
+   "name": "Honor Magic4 Ultimate",
+   "tags": [
+    "Year: 2022",
+    "DXOMARK: 147"
+   ],
+   "group": "Smartphones"
+  },
+  "HONORMAGICV3": {
+   "name": "Honor Magic V3",
+   "tags": [
+    "Year: 2024",
+    "DXOMARK: 137"
+   ],
+   "group": "Smartphones"
+  },
+  "HONOR200PRO": {
+   "name": "Honor 200 Pro",
+   "tags": [
+    "Year: 2024",
+    "DXOMARK: 137",
+    "Display: OLED",
+    "Battery: 5200mAh",
+    "Charger: 100W",
+    "NFC: Yes"
+   ],
+   "group": "Smartphones"
+  },
+  "HONORMAGIC4PRO": {
+   "name": "Honor Magic4 Pro",
+   "tags": [
+    "Year: 2022",
+    "DXOMARK: 126"
+   ],
+   "group": "Smartphones"
+  },
+  "HONORMAGICVS": {
+   "name": "Honor Magic Vs",
+   "tags": [
+    "Year: 2023",
+    "DXOMARK: 119"
+   ],
+   "group": "Smartphones"
+  },
+  "HONORMAGICV2": {
+   "name": "Honor Magic V2",
+   "tags": [
+    "Year: 2024",
+    "DXOMARK: 117"
+   ],
+   "group": "Smartphones"
+  },
+  "HONOR70": {
+   "name": "Honor 70",
+   "tags": [
+    "Year: 2022",
+    "DXOMARK: 115"
+   ],
+   "group": "Smartphones"
+  },
+  "HONORMAGIC6LITE5300MAH": {
+   "name": "Honor Magic6 Lite (5300 mAh)",
+   "tags": [
+    "Year: 2024",
+    "DXOMARK: 84"
+   ],
+   "group": "Smartphones"
+  },
+  "HONOR90SMART": {
+   "name": "Honor 90 Smart",
+   "tags": [
+    "Year: 2024",
+    "DXOMARK: 79"
+   ],
+   "group": "Smartphones"
+  },
+  "HONORMAGIC5LITE5G": {
+   "name": "Honor Magic5 Lite 5G",
+   "tags": [
+    "Year: 2023",
+    "DXOMARK: 74"
+   ],
+   "group": "Smartphones"
+  },
+  "HONORMAGIC4LITE5G": {
+   "name": "Honor Magic4 Lite 5G",
+   "tags": [
+    "Year: 2022",
+    "DXOMARK: 61"
    ],
    "group": "Smartphones"
   }
