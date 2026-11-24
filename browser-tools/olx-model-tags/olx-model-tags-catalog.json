@@ -210,7 +210,11 @@
    "tags": [
     "Memory: 8/256",
     "Year: 2024",
-    "DXOMARK: 86"
+    "DXOMARK: 86",
+    "Display: OLED",
+    "Battery: 4500mAh",
+    "Charger: 35W",
+    "NFC: Yes"
    ],
    "group": "Smartphones"
   },
