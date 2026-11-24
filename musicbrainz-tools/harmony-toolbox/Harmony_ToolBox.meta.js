@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Harmony ToolBox
 // @namespace    https://github.com/karpuzikov/userscripts
-// @version      1.0.5
+// @version      1.0.6
 // @description  Combines Harmony ISRC copying and one-click MusicBrainz external-ID linking.
 // @author       karpuzikov
 // @license      MIT
