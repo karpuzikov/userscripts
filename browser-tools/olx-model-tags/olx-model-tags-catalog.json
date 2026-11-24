@@ -242,7 +242,10 @@
   },
   "HONOR90LITE": {
    "name": "Honor 90 Lite",
-   "tags": []
+   "tags": [
+    "Memory: 8/256"
+   ],
+   "group": "Smartphones"
   }
  },
  "stopPhrases": [
