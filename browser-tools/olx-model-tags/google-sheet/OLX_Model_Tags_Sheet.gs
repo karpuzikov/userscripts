@@ -11,6 +11,8 @@ const OLX_MODEL_TAGS_DATA_URL = 'https://raw.githubusercontent.com/karpuzikov/us
 const OLX_MODEL_TAGS_TAB_PREFIX = 'OLX: ';
 const OLX_MODEL_TAGS_NO_GROUP_TAB_NAME = 'no group yet';
 const OLX_MODEL_TAGS_BROKEN_WITHOUT_GROUP_TAB_NAME = 'Broken'; // broken ads with no group, model or OLX category
+// OLX category names that are the same thing as one of your groups, so they share its tab.
+const OLX_MODEL_TAGS_CATEGORY_TO_GROUP = { 'Монітори': 'Monitors', 'Смартфони / мобільні телефони': 'Smartphones' };
 const OLX_MODEL_TAGS_OLD_TAB_NAMES = ['OLX ads', 'OLX models']; // tabs made by the first version; removed on refresh
 
 // Which column a tag goes to. A tag typed as "Name: value" (e.g. "Lens: 28-80mm") goes to column "Name" instead.
@@ -87,7 +89,7 @@ function refreshOlxModelTagsSheet() {
       if (!valuesByColumn[columnName]) valuesByColumn[columnName] = [];
       valuesByColumn[columnName].push(value);
     }
-    const category = ad.group || modelEntry.group || ad.category
+    const category = ad.group || modelEntry.group || OLX_MODEL_TAGS_CATEGORY_TO_GROUP[ad.category] || ad.category
       || (ad.tags.includes('broken') ? OLX_MODEL_TAGS_BROKEN_WITHOUT_GROUP_TAB_NAME : OLX_MODEL_TAGS_NO_GROUP_TAB_NAME);
     if (!adsByCategory[category]) adsByCategory[category] = [];
     adsByCategory[category].push({
