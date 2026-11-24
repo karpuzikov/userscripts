@@ -207,7 +207,9 @@
   },
   "HONOR200LITE": {
    "name": "Honor 200 Lite",
-   "tags": [],
+   "tags": [
+    "Memory: 12/256"
+   ],
    "group": "Smartphones"
   },
   "HONORMAGIC7LITE": {
