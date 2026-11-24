@@ -132,6 +132,14 @@
    "detectedModel": "",
    "category": "Монітори"
   },
+  "902837918": {
+   "model": "Honor Note 10",
+   "tags": [],
+   "url": "https://www.olx.ua/d/uk/obyavlenie/honor-note-10-8-128-smartfon-telefon-IDZ6dnU.html",
+   "title": "Honor Note 10 8/128, смартфон, телефон",
+   "detectedModel": "Honor Note 10",
+   "category": "Смартфони / мобільні телефони"
+  },
   "909797392": {
    "model": "Sony DVP-FX870",
    "tags": [],
@@ -280,6 +288,16 @@
    "url": "https://www.olx.ua/d/uk/obyavlenie/smartfon-honor-90-8-256-nfc-ID11gqGN.html",
    "title": "Смартфон Honor 90 8/256 NFC",
    "detectedModel": "Honor 90",
+   "category": "Смартфони / мобільні телефони"
+  },
+  "936530936": {
+   "model": "",
+   "tags": [
+    "broken"
+   ],
+   "url": "https://www.olx.ua/d/uk/obyavlenie/honor-magic-4-black-256gb-ID11nAtG.html",
+   "title": "Honor Magic 4 Black 256GB",
+   "detectedModel": "",
    "category": "Смартфони / мобільні телефони"
   },
   "936804503": {
