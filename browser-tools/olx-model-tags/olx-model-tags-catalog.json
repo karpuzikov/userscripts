@@ -233,6 +233,13 @@
     "Memory: 8/256"
    ],
    "group": "Smartphones"
+  },
+  "HONORNOTE10": {
+   "name": "Honor Note 10",
+   "tags": [
+    "Memory: 8/128"
+   ],
+   "group": "Smartphones"
   }
  },
  "stopPhrases": [
