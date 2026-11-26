@@ -3217,5 +3217,39 @@
    "Working hours": "1st gear – 15h, 2nd gear – 6.5h, 3rd gear – 4.5h. 6. The power supply part and the fan can be separated, use as power bank.",
    "Working temperature": "0 °C ~ 40 °C."
   }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-b35e-30000mah-3usb-output": {
+  "model": "Hoco B35E Entourage",
+  "scannedAt": "2026-11-26T02:54:31.362Z",
+  "specs": {
+   "Power bank capacity": "30000mAh 37W, so it is convenient to charge your devices while travelling.",
+   "Input": "Micro / Type-C: 5V 2A Max.",
+   "Battery output": "USB 1 / 2 / 3: DC5V / 2A Max. Total output DC5V / 2A Max. 4. LED digital display for power level, therefore you can check remaining power level anytime.",
+   "Power bank material": "ABS + PC flame retardant, hence battery is durable. 6. Multiple circuit protection provide safety charging, so forget about worries.",
+   "Size": "121*67*9.5mm, weight: 226g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j27a-20000mah-dual-usb": {
+  "model": "Hoco J27A Wide energy",
+  "scannedAt": "2026-11-26T02:54:31.383Z",
+  "specs": {
+   "Power bank capacity": "20000mAh 74Wh. Rated capacity: 11800mAh (5V TYP 2A).",
+   "Input": "Micro-USB / Type-C 5V / 2A Max.",
+   "Output": "USB 1 / 2: DC5V / 2A Max. 4. LED digital display of power level + LED flashlight. 5. High performance A+ grade polymer battery.",
+   "Power bank material": "ABS+PC flame retardant material. 7. Multiple circuit protection, power bank compatible with more than 99% of digital devices such as mobile phones/tablets.",
+   "Size": "14.5*7.3*2.5cm. Weight: 425g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-b31c-sharp-5200mah-dual-usb-output": {
+  "model": "Hoco B31C Sharp",
+  "scannedAt": "2026-11-26T02:54:33.357Z",
+  "specs": {
+   "Capacity": "5200mAh 19.24Wh.",
+   "Input": "Micro-USB DC5V/1.0A.",
+   "Output": "USB 1 / 2 DC5V/1.0A. Total output: DC5V / 1.0A.",
+   "Material": "flame retardant PC material.",
+   "Battery": "high performance 18650 lithium battery. 6. With LED light to display the power level.",
+   "Size": "98*46*23mm. Weight: 120g."
+  }
  }
 }
