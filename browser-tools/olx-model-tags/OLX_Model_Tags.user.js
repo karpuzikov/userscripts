@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OLX - Model Tags
 // @namespace    https://www.olx.ua/
-// @version      0.17.0
+// @version      0.18.0
 // @description  Tag OLX ads by model (tags shared by every ad of that model) or per ad, mark broken ads, filter search results by tags, per-tag Hide (pixel mesh) / Highlight (outline). Shared model catalog is read from GitHub without any key; your own marks stay in this browser. Phone specs (year, DXOMARK camera, AnTuTu, sensor, display, battery, charger, NFC) are captured from the DXOMARK, Kimovil and GSMArena pages you open. OLX only gets read locally from the open page.
 // @match        https://www.olx.ua/*
 // @match        https://hotline.ua/*
@@ -129,6 +129,18 @@
             modelEntry.tags.push(`${operation.property}: ${operation.value}`);
             if (operation.groupIfEmpty && !modelEntry.group) modelEntry.group = operation.groupIfEmpty;
             updateDerivedTags(modelEntry);
+            return;
+        }
+        if (operation.type === 'setModelSource') {
+            // Page each source's values came from: { "HOCO": "https://hocotech.com/product/j129a/" }.
+            (ensureModelEntry(data, operation.modelName).sources ||= {})[operation.source] = operation.url;
+            return;
+        }
+        if (operation.type === 'setProductLink') {
+            // A shop page whose title does not name the catalog model ("Hoco J129" → "Hoco J129A Nature"); '' removes the link.
+            data.productLinks ||= {};
+            if (operation.modelName.trim()) { ensureModelEntry(data, operation.modelName); data.productLinks[operation.pageKey] = operation.modelName.trim(); }
+            else delete data.productLinks[operation.pageKey];
             return;
         }
         if (operation.type === 'setAdInfo') {
@@ -669,6 +681,8 @@
                 recordOperation({ type: 'setModelProperty', modelName, property, value, groupIfEmpty: match.source.group });
             }
             const modelEntry = olxModelTagsData.models[normalizeModelKey(modelName)];
+            const sourceUrl = scanKeyOf(location.href);
+            if (modelEntry && modelEntry.sources?.[match.source.name] !== sourceUrl) recordOperation({ type: 'setModelSource', modelName, source: match.source.name, url: sourceUrl });
             if (modelEntry && !computeDerivedTags(modelEntry.tags).every((tag) => modelEntry.tags.includes(tag))) recordOperation({ type: 'updateDerivedTags', modelName });
         }
         const missingProperties = Object.entries(modelCountMissingProperty).map(([property, count]) => (readModelCount > 1 ? `${property} (${count} of ${readModelCount} models)` : property));
@@ -1130,7 +1144,7 @@
             const isModelSetForThisAd = Boolean(olxModelTagsData.ads[ad.adId]?.model);
             modelChip.title = isModelSetForThisAd ? 'Model set for this ad' : 'Model found in the title';
             if (isModelSetForThisAd) modelChip.append(createIconButton('close', `Remove model ${tagging.modelName} from this ad`, () => recordOperationForAd(ad, { type: 'setAdModel', adId: ad.adId, modelName: '' })));
-            children.push(modelChip);
+            children.push(modelChip, ...createModelSourceLinks(olxModelTagsData.models[tagging.modelKey] || {}));
         }
         // "Property: value" tags go into a table (one row per property); tags without a property stay chips.
         const tableRows = [];
@@ -1193,6 +1207,15 @@
             table.append(row);
         }
         return table;
+    }
+
+    function createModelSourceLinks(modelEntry) {
+        return Object.entries(modelEntry.sources || {}).map(([source, url]) => {
+            const link = createElement('a', 'olx-model-tags-chip olx-model-tags-chip-group', `${source} ↗`);
+            Object.assign(link, { href: url, target: '_blank', rel: 'noopener noreferrer', title: `Specs source: ${url}` });
+            link.addEventListener('click', (event) => event.stopPropagation());
+            return link;
+        });
     }
 
     function createTagChip(tag, className, removeLabel, onRemove) {
@@ -1418,6 +1441,7 @@
     }
 
     function renderEverything() {
+        if (IS_HOTLINE_PAGE && olxModelTagsData) { renderHotlineSpecs(); return; }
         if (!IS_OLX_PAGE || !olxModelTagsData) return;
         ensureDatalists();
         for (const ad of findAdsOnPage()) renderTagBar(ad);
@@ -1429,13 +1453,35 @@
     const STORAGE_KEY_HOTLINE_SHOWN_PROPERTIES = 'olxModelTagsHotlineShownProperties'; // null until picked: every property shows
     let isHotlineSpecsPanelExpanded = false;
 
+    const hotlinePageKeyOf = (url) => { const parsed = new URL(url, location.href); return parsed.hostname + parsed.pathname.replace(/\/+$/, ''); };
+
     function findHotlineProductsOnPage() {
         const listProducts = [...document.querySelectorAll('.list-item__info .item-title')].map((titleLink) => ({
             title: readTextWithoutStyleTags(titleLink),
+            pageKey: hotlinePageKeyOf(titleLink.href),
             anchor: titleLink.closest('.list-item__info').querySelector('.list-item__specifications') || titleLink.parentElement,
         }));
         const productPageTitle = document.querySelector('h1.title__main');
-        return productPageTitle ? [...listProducts, { title: readTextWithoutStyleTags(productPageTitle), anchor: productPageTitle.closest('.header') || productPageTitle }] : listProducts;
+        if (!productPageTitle) return listProducts;
+        return [...listProducts, { title: readTextWithoutStyleTags(productPageTitle), pageKey: hotlinePageKeyOf(location.href), anchor: productPageTitle.closest('.header') || productPageTitle, isProductPage: true }];
+    }
+
+    function openHotlineProductLinkEditor(bar, product, linkedModelName) {
+        bar.dataset.editing = 'true';
+        ensureDatalists();
+        const modelInput = createEditorInput('Catalog model', 'Catalog model of this product', linkedModelName, 'olx-model-tags-known-models', 'olx-model-tags-input-model');
+        const closeEditor = () => { delete bar.dataset.editing; delete bar.dataset.renderedKey; renderHotlineSpecs(); };
+        const saveLink = () => {
+            const modelName = modelInput.value.trim();
+            if (modelName && !olxModelTagsData.models[normalizeModelKey(modelName)]) { modelInput.setCustomValidity('Not in the catalog: pick a model from the list'); modelInput.reportValidity(); return; }
+            delete bar.dataset.editing;
+            recordOperation({ type: 'setProductLink', pageKey: product.pageKey, modelName });
+            renderHotlineSpecs();
+        };
+        modelInput.addEventListener('input', () => modelInput.setCustomValidity(''));
+        modelInput.addEventListener('keydown', (event) => { if (event.key === 'Enter') saveLink(); if (event.key === 'Escape') closeEditor(); });
+        bar.replaceChildren(modelInput, createTextButton('Link', 'Show this catalog model\'s specs for this product', saveLink), createIconButton('close', 'Cancel', closeEditor));
+        modelInput.focus();
     }
 
     function renderHotlineSpecs() {
@@ -1443,17 +1489,27 @@
         const isPropertyShown = (property) => !shownProperties || shownProperties.includes(property);
         const pageProperties = new Set();
         for (const product of findHotlineProductsOnPage()) {
-            const modelEntry = olxModelTagsData.models[detectModelKeyInTitle(olxModelTagsData, product.title)];
+            const linkedModelName = olxModelTagsData.productLinks?.[product.pageKey] || '';
+            const modelEntry = olxModelTagsData.models[linkedModelName ? normalizeModelKey(linkedModelName) : detectModelKeyInTitle(olxModelTagsData, product.title)];
             const rows = (modelEntry?.tags || []).map(splitTagIntoPropertyAndValue).filter((tag) => tag.property);
             rows.forEach((row) => pageProperties.add(row.property));
             const shownRows = rows.filter((row) => isPropertyShown(row.property));
             let bar = product.anchor.nextElementSibling?.classList.contains('olx-model-tags-bar') ? product.anchor.nextElementSibling : null;
-            const renderedKey = JSON.stringify([modelEntry?.name, shownRows]);
-            if (bar?.dataset.renderedKey === renderedKey) continue;
-            if (!modelEntry) { bar?.remove(); continue; }
+            const renderedKey = JSON.stringify([modelEntry?.name, linkedModelName, modelEntry?.sources, shownRows]);
+            if (bar?.dataset.editing === 'true' || bar?.dataset.renderedKey === renderedKey) continue;
+            if (!modelEntry && !product.isProductPage) { bar?.remove(); continue; } // the product page always gets the Link button
             if (!bar) { bar = createElement('olx-model-tags-bar', 'olx-model-tags-root olx-model-tags-bar'); product.anchor.after(bar); }
             bar.dataset.renderedKey = renderedKey;
-            bar.replaceChildren(createElement('span', 'olx-model-tags-chip olx-model-tags-chip-model', modelEntry.name), ...(shownRows.length ? [createPropertyTable(shownRows)] : []));
+            const children = [];
+            if (modelEntry) {
+                const modelChip = createElement('span', 'olx-model-tags-chip olx-model-tags-chip-model', modelEntry.name);
+                modelChip.title = linkedModelName ? 'Linked to this product' : 'Model found in the title';
+                if (linkedModelName) modelChip.append(createIconButton('close', `Unlink ${linkedModelName} from this product`, () => recordOperation({ type: 'setProductLink', pageKey: product.pageKey, modelName: '' })));
+                children.push(modelChip, ...createModelSourceLinks(modelEntry));
+            }
+            if (product.isProductPage) children.push(createIconButton('plus', modelEntry ? 'Link this product to another catalog model' : 'Link this product to a catalog model', () => openHotlineProductLinkEditor(bar, product, linkedModelName)));
+            if (shownRows.length) children.push(createPropertyTable(shownRows));
+            bar.replaceChildren(...children);
         }
         renderHotlineSpecsPanel([...new Set([...pageProperties, ...(shownProperties || [])])].sort(), isPropertyShown);
     }

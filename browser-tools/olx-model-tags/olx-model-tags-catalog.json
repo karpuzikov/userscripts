@@ -765,7 +765,10 @@
     "mAh per g: 53.6",
     "mAh per liter: 91515"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j94-overlord-22-5w-75000mah"
+   }
   },
   "HOCOQ40LEADER": {
    "name": "Hoco Q40 Leader",
@@ -778,7 +781,10 @@
     "mAh per g: 51.5",
     "mAh per liter: 75141"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-q40-leader-pd65w-25000mah"
+   }
   },
   "HOCOJ150STREAM": {
    "name": "Hoco J150 Stream",
@@ -791,7 +797,10 @@
     "mAh per g: 53.3",
     "mAh per liter: 56960"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j150-stream-22-5w-pd20w-20000mah"
+   }
   },
   "HOCOQ41BRIGHT": {
    "name": "Hoco Q41 Bright",
@@ -804,7 +813,10 @@
     "mAh per g: 54.1",
     "mAh per liter: 64584"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-q41-bright-22-5w-pd20w-20000mah"
+   }
   },
   "HOCOJ152PROTOUGH": {
    "name": "Hoco J152 Pro Tough",
@@ -817,7 +829,10 @@
     "mAh per g: 58.0",
     "mAh per liter: 67534"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j152-pro-tough-pd65w-80000mah"
+   }
   },
   "HOCOQ37AGRACEFUL": {
    "name": "Hoco Q37A Graceful",
@@ -830,7 +845,10 @@
     "mAh per g: 57.1",
     "mAh per liter: 75937"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-q37a-graceful-22-5w-pd20w-20000mah"
+   }
   },
   "HOCOJ147PROSPERO": {
    "name": "Hoco J147 Prospero",
@@ -843,7 +861,10 @@
     "mAh per g: 34.1",
     "mAh per liter: 39069"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j147-prospero-3000mah-type-c-ver"
+   }
   },
   "HOCOJ138DISTANT": {
    "name": "Hoco J138 Distant",
@@ -856,7 +877,10 @@
     "mAh per g: 44.1",
     "mAh per liter: 63441"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j138-distant-22-5w-pd20w-dc12v-60000mah"
+   }
   },
   "HOCOJ139HERO": {
    "name": "Hoco J139 Hero",
@@ -869,7 +893,10 @@
     "mAh per g: 51.3",
     "mAh per liter: 73575"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j139-hero-22-5w-pd20w-10000mah-ip-ver"
+   }
   },
   "HOCOJ136SIRUI": {
    "name": "Hoco J136 Sirui",
@@ -882,7 +909,10 @@
     "mAh per g: 40.8",
     "mAh per liter: 57216"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j136-sirui-22-5w-pd20w-10000mah"
+   }
   },
   "HOCOJ134ASTRONG": {
    "name": "Hoco J134A Strong",
@@ -895,7 +925,10 @@
     "mAh per g: 46.5",
     "mAh per liter: 58630"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j134a-strong-10000mah-ip-ver"
+   }
   },
   "HOCOQ47SHINE": {
    "name": "Hoco Q47 Shine",
@@ -908,7 +941,10 @@
     "mAh per g: 47.6",
     "mAh per liter: 56923"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-q47-shine-pd20w-10000mah-with-game-console"
+   }
   },
   "HOCOJ153STABILITY": {
    "name": "Hoco J153 Stability",
@@ -921,7 +957,10 @@
     "mAh per g: 45.5",
     "mAh per liter: 64499"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j153-stability-10w-10000mah"
+   }
   },
   "HOCOJ160ORIGINAL": {
    "name": "Hoco J160 Original",
@@ -934,7 +973,10 @@
     "mAh per g: 40.0",
     "mAh per liter: 54113"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j160-original-10w-wireless-charging-5000mah"
+   }
   },
   "HOCOJ159AESSENCE": {
    "name": "Hoco J159A Essence",
@@ -947,7 +989,10 @@
     "mAh per g: 50.0",
     "mAh per liter: 70879"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j159a-essence-22-5w-pd20w-20000mah"
+   }
   },
   "HOCOJ155SHINE": {
    "name": "Hoco J155 Shine",
@@ -960,7 +1005,10 @@
     "mAh per g: 46.0",
     "mAh per liter: 63295"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j155-shine-22-5w-pd20w-20000mah"
+   }
   },
   "HOCOJ133TRIUMPH": {
    "name": "Hoco J133 Triumph",
@@ -973,7 +1021,10 @@
     "mAh per g: 43.5",
     "mAh per liter: 67212"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j133-triumph-pd20w-5000mah-ip-ver"
+   }
   },
   "HOCOJ132ASABIO": {
    "name": "Hoco J132A Sabio",
@@ -986,7 +1037,10 @@
     "mAh per g: 47.6",
     "mAh per liter: 63350"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j132a-sabio-22-5w-pd20w-20000mah"
+   }
   },
   "HOCOJ129ANATURE": {
    "name": "Hoco J129A Nature",
@@ -999,7 +1053,10 @@
     "mAh per g: 46.9",
     "mAh per liter: 68027"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j129a-nature-20000mah-flashlight"
+   }
   },
   "HOCOQ17BELECTRIC": {
    "name": "Hoco Q17B Electric",
@@ -1012,7 +1069,10 @@
     "mAh per g: 40.7",
     "mAh per liter: 66020"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-q17b-electric-pd130w-qc3-0-20000mah"
+   }
   },
   "HOCOQ21GREAT": {
    "name": "Hoco Q21 Great",
@@ -1025,7 +1085,10 @@
     "mAh per g: 53.5",
     "mAh per liter: 69237"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-q21-great-22-5w-10000mah"
+   }
   },
   "HOCOQ14ICECRYSTAL": {
    "name": "Hoco Q14 Ice Crystal",
@@ -1038,7 +1101,10 @@
     "mAh per g: 34.0",
     "mAh per liter: 59228"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-q14-ice-crystal-pd20w-qc3-0-wireless-charging-5000mah"
+   }
   },
   "HOCOJ128BPOWERFUL": {
    "name": "Hoco J128B Powerful",
@@ -1051,7 +1117,10 @@
     "mAh per g: 50.0",
     "mAh per liter: 71736"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j128b-powerful-30000mah"
+   }
   },
   "HOCOJ132BSABIO": {
    "name": "Hoco J132B Sabio",
@@ -1064,7 +1133,10 @@
     "mAh per g: 46.2",
     "mAh per liter: 68507"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j132b-sabio-22-5w-pd20w-30000mah"
+   }
   },
   "HOCOQ36ASUNLIGHT": {
    "name": "Hoco Q36A Sunlight",
@@ -1077,7 +1149,10 @@
     "mAh per g: 50.0",
     "mAh per liter: 126936"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-q36a-sunlight-pd20w-wireless-charging-10000mah"
+   }
   },
   "HOCOQ35PORTABLE": {
    "name": "Hoco Q35 Portable",
@@ -1090,7 +1165,10 @@
     "mAh per g: 48.8",
     "mAh per liter: 67096"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-q35-portable-pd20w-wireless-charging-10000mah"
+   }
   },
   "HOCOJ101AASTUTE": {
    "name": "Hoco J101A Astute",
@@ -1103,7 +1181,10 @@
     "mAh per g: 50.0",
     "mAh per liter: 75030"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j101a-astute-22-5w-20000mah"
+   }
   },
   "HOCOQ9PROSHELL": {
    "name": "Hoco Q9 Pro Shell",
@@ -1116,7 +1197,10 @@
     "mAh per g: 41.2",
     "mAh per liter: 73447"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-q9-pro-shell-22-5w-pd20w-10000mah"
+   }
   },
   "HOCOJ89": {
    "name": "Hoco J89",
@@ -1129,7 +1213,10 @@
     "mAh per g: 42.7",
     "mAh per liter: 62014"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j89-pd20wqc3-0-10000mah"
+   }
   },
   "HOCOJ86BELECTRIC": {
    "name": "Hoco J86B Electric",
@@ -1142,7 +1229,10 @@
     "mAh per g: 50.0",
     "mAh per liter: 67686"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j86b-electric-22-5w-60000mah"
+   }
   },
   "HOCOJ90A": {
    "name": "Hoco J90A",
@@ -1155,7 +1245,10 @@
     "mAh per g: 41.2",
     "mAh per liter: 62014"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j90a-22-5wpd20w-10000mah"
+   }
   },
   "HOCOQ11EXPRESSAR": {
    "name": "Hoco Q11 Expressar",
@@ -1168,7 +1261,10 @@
     "mAh per g: 50.0",
     "mAh per liter: 74814"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-q11-expressar-pd20w-10000mah"
+   }
   },
   "HOCOJ83STANDARD": {
    "name": "Hoco J83 Standard",
@@ -1181,7 +1277,10 @@
     "mAh per g: 37.0",
     "mAh per liter: 62877"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j83-standard-pd20w-qc3-0-10000mah"
+   }
   },
   "HOCOJ160BORIGINAL": {
    "name": "Hoco J160B Original",
@@ -1194,7 +1293,10 @@
     "mAh per g: 58.8",
     "mAh per liter: 86580"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j160b-original-pd20w-wireless-charging-20000mah"
+   }
   },
   "HOCOJ160AORIGINAL": {
    "name": "Hoco J160A Original",
@@ -1207,7 +1309,10 @@
     "mAh per g: 51.3",
     "mAh per liter: 78955"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j160a-original-pd20w-wireless-charging-10000mah"
+   }
   },
   "HOCOJ156FOUNDER": {
    "name": "Hoco J156 Founder",
@@ -1220,7 +1325,10 @@
     "mAh per g: 37.3",
     "mAh per liter: 43377"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j156-founder-22-5w-pd20w-10000mah"
+   }
   },
   "HOCOQS7SOURCE": {
    "name": "Hoco QS7 Source",
@@ -1232,7 +1340,10 @@
     "mAh per g: 23.3",
     "mAh per liter: 20304"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-qs7-source-jump-starter-10000mah"
+   }
   },
   "HOCOQ44AORIGEN": {
    "name": "Hoco Q44A Origen",
@@ -1245,7 +1356,10 @@
     "mAh per g: 54.8",
     "mAh per liter: 79960"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-q44a-origen-pd45w-wireless-charging-20000mah"
+   }
   },
   "HOCOJ158RUNNER": {
    "name": "Hoco J158 Runner",
@@ -1258,7 +1372,10 @@
     "mAh per g: 38.5",
     "mAh per liter: 51079"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j158-runner-10w-5000mah"
+   }
   },
   "HOCOJ146NIGHTTIDE": {
    "name": "Hoco J146 Night tide",
@@ -1271,7 +1388,10 @@
     "mAh per g: 37.3",
     "mAh per liter: 43377"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j146-night-tide-4-cables-10000mah"
+   }
   },
   "HOCOJ144HYMN": {
    "name": "Hoco J144 Hymn",
@@ -1284,7 +1404,10 @@
     "mAh per g: 42.9",
     "mAh per liter: 60173"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j144-hymn-15000mah"
+   }
   },
   "HOCOJ134STRONG": {
    "name": "Hoco J134 Strong",
@@ -1297,7 +1420,10 @@
     "mAh per g: 40.0",
     "mAh per liter: 52565"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j134-strong-5000mah-type-c-ver"
+   }
   },
   "HOCOQ36SUNLIGHT": {
    "name": "Hoco Q36 Sunlight",
@@ -1310,7 +1436,10 @@
     "mAh per g: 39.1",
     "mAh per liter: 76161"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-q36-sunlight-pd20w-wireless-charging-5000mah"
+   }
   },
   "HOCOQ34CLEVER": {
    "name": "Hoco Q34 Clever",
@@ -1323,7 +1452,10 @@
     "mAh per g: 55.6",
     "mAh per liter: 97551"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-q34-clever-pd20w-wireless-charging-10000mah"
+   }
   },
   "HOCOQ39EMINENTE": {
    "name": "Hoco Q39 Eminente",
@@ -1336,7 +1468,10 @@
     "mAh per g: 61.5",
     "mAh per liter: 91816"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-q39-eminente-22-5w-pd20w-20000mah"
+   }
   },
   "HOCOQ31INGENIOUS": {
    "name": "Hoco Q31 Ingenious",
@@ -1349,7 +1484,10 @@
     "mAh per g: 50.0",
     "mAh per liter: 64167"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-q31-ingenious-pd20w-5000mah-ip-ver"
+   }
   },
   "HOCOJ125APOWER": {
    "name": "Hoco J125A Power",
@@ -1362,7 +1500,10 @@
     "mAh per g: 48.8",
     "mAh per liter: 69618"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j125a-power-pd20w-wireless-charging-10000mah"
+   }
   },
   "HOCOQ15FLASHLIGHT": {
    "name": "Hoco Q15 Flashlight",
@@ -1375,7 +1516,10 @@
     "mAh per g: 34.1",
     "mAh per liter: 50077"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-q15-flashlight-22-5w-10000mah"
+   }
   },
   "HOCOQ26JOY": {
    "name": "Hoco Q26 Joy",
@@ -1388,7 +1532,10 @@
     "mAh per g: 48.1",
     "mAh per liter: 89484"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-q26-joy-pd20w-wireless-charging-5000mah"
+   }
   },
   "HOCOQS2LAND": {
    "name": "Hoco QS2 Land",
@@ -1400,7 +1547,10 @@
     "mAh per g: 10.3",
     "mAh per liter: 7871"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-qs2-land-jump-starter-8000mah"
+   }
   },
   "HOCOQ25GRACEFUL": {
    "name": "Hoco Q25 Graceful",
@@ -1413,7 +1563,10 @@
     "mAh per g: 52.4",
     "mAh per liter: 63594"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-q25-graceful-pd20w-qc3-0-10000mah"
+   }
   },
   "HOCOQS1SPRING": {
    "name": "Hoco QS1 Spring",
@@ -1425,7 +1578,10 @@
     "mAh per g: 27.3",
     "mAh per liter: 23810"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-qs1-spring-jump-starter-10000mah"
+   }
   },
   "HOCOQ23BLADE": {
    "name": "Hoco Q23 Blade",
@@ -1438,7 +1594,10 @@
     "mAh per g: 44.6",
     "mAh per liter: 59203"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-q23-blade-22-5w-10000mah"
+   }
   },
   "HOCOQ22TAURUS": {
    "name": "Hoco Q22 Taurus",
@@ -1451,7 +1610,10 @@
     "mAh per g: 44.6",
     "mAh per liter: 59203"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-q22-taurus-22-5w-wireless-charging-10000mah"
+   }
   },
   "HOCOQ21AGREAT": {
    "name": "Hoco Q21A Great",
@@ -1464,7 +1626,10 @@
     "mAh per g: 59.9",
     "mAh per liter: 78468"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-q21a-great-22-5w-20000mah"
+   }
   },
   "HOCOJ159BESSENCE": {
    "name": "Hoco J159B Essence",
@@ -1477,7 +1642,10 @@
     "mAh per g: 50.8",
     "mAh per liter: 71733"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j159b-essence-22-5w-pd20w-30000mah"
+   }
   },
   "HOCOJ159ESSENCE": {
    "name": "Hoco J159 Essence",
@@ -1490,7 +1658,10 @@
     "mAh per g: 44.4",
     "mAh per liter: 64050"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j159-essence-22-5w-pd20w-10000mah"
+   }
   },
   "HOCOJ158PRORUNNER": {
    "name": "Hoco J158 Pro Runner",
@@ -1503,7 +1674,10 @@
     "mAh per g: 34.5",
     "mAh per liter: 48905"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j158-pro-runner-22-5w-pd20w-10000mah"
+   }
   },
   "HOCOJ158ARUNNER": {
    "name": "Hoco J158A Runner",
@@ -1516,7 +1690,10 @@
     "mAh per g: 34.5",
     "mAh per liter: 47841"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j158a-runner-10w-10000mah"
+   }
   },
   "HOCOJ157LEADER": {
    "name": "Hoco J157 Leader",
@@ -1529,7 +1706,10 @@
     "mAh per g: 52.6",
     "mAh per liter: 60716"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j157-leader-22-5w-pd20w-10000mah"
+   }
   },
   "HOCOJ156AFOUNDER": {
    "name": "Hoco J156A Founder",
@@ -1542,7 +1722,10 @@
     "mAh per g: 44.4",
     "mAh per liter: 61567"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j156a-founder-22-5w-pd20w-20000mah"
+   }
   },
   "HOCOJ156BFOUNDER": {
    "name": "Hoco J156B Founder",
@@ -1555,7 +1738,10 @@
     "mAh per g: 46.9",
     "mAh per liter: 66578"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j156b-founder-22-5w-pd20w-30000mah"
+   }
   },
   "HOCOJ154AVICTORIOUS": {
    "name": "Hoco J154A Victorious",
@@ -1568,7 +1754,10 @@
     "mAh per g: 48.2",
     "mAh per liter: 71357"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j154a-victorious-22-5w-pd20w-20000mah"
+   }
   },
   "HOCOJ154VICTORIOUS": {
    "name": "Hoco J154 Victorious",
@@ -1581,7 +1770,10 @@
     "mAh per g: 43.5",
     "mAh per liter: 62438"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j154-victorious-22-5w-pd20w-10000mah"
+   }
   },
   "HOCOJ153ASTABILITY": {
    "name": "Hoco J153A Stability",
@@ -1594,7 +1786,10 @@
     "mAh per g: 48.1",
     "mAh per liter: 69476"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j153a-stability-10w-20000mah"
+   }
   },
   "HOCOJ151ASPIRIT": {
    "name": "Hoco J151A Spirit",
@@ -1607,7 +1802,10 @@
     "mAh per g: 43.5",
     "mAh per liter: 54567"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j151a-spirit-10w-4-cables-20000mah"
+   }
   },
   "HOCOJ151SPIRIT": {
    "name": "Hoco J151 Spirit",
@@ -1620,7 +1818,10 @@
     "mAh per g: 37.7",
     "mAh per liter: 42148"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j151-spirit-10w-4-cables-10000mah"
+   }
   },
   "HOCOQS6CLEVER": {
    "name": "Hoco QS6 Clever",
@@ -1632,7 +1833,10 @@
     "mAh per g: 10.1",
     "mAh per liter: 7425"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-qs6-clever-jump-starter-air-pump-8000mah"
+   }
   },
   "HOCOQ38EXCELLENT": {
    "name": "Hoco Q38 Excellent",
@@ -1645,7 +1849,10 @@
     "mAh per g: 51.3",
     "mAh per liter: 75593"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-q38-excellent-pd20w-10000mah"
+   }
   },
   "HOCOJ149VICTORY": {
    "name": "Hoco J149 Victory",
@@ -1658,7 +1865,10 @@
     "mAh per g: 16.7",
     "mAh per liter: 5368"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j149-victory-pd20w-wireless-charging-5000mah"
+   }
   },
   "HOCOQS5REFINED": {
    "name": "Hoco QS5 Refined",
@@ -1670,7 +1880,10 @@
     "mAh per g: 25.5",
     "mAh per liter: 28678"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-qs5-refined-jump-starter-6000mah"
+   }
   },
   "HOCOQS3VICTORY": {
    "name": "Hoco QS3 Victory",
@@ -1682,7 +1895,10 @@
     "mAh per g: 27.3",
     "mAh per liter: 23810"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-qs3-victory-jump-starter-10000mah"
+   }
   },
   "HOCOQ37GRACEFUL": {
    "name": "Hoco Q37 Graceful",
@@ -1695,7 +1911,10 @@
     "mAh per g: 50.0",
     "mAh per liter: 61949"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-q37-graceful-22-5w-pd20w-10000mah"
+   }
   },
   "HOCOJ148HANDY": {
    "name": "Hoco J148 Handy",
@@ -1708,7 +1927,10 @@
     "mAh per g: 26.3",
     "mAh per liter: 25817"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j148-handy-pd20w-5000mah-eu-plug"
+   }
   },
   "HOCOQS4INTELLIGENT": {
    "name": "Hoco QS4 Intelligent",
@@ -1720,7 +1942,10 @@
     "mAh per g: 9.3",
     "mAh per liter: 3905"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-qs4-intelligent-jump-starter-air-pump-10000mah"
+   }
   },
   "HOCOJ152TOUGH": {
    "name": "Hoco J152 Tough",
@@ -1733,7 +1958,10 @@
     "mAh per g: 58.0",
     "mAh per liter: 67534"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j152-tough-22-5wpd20w-80000mah"
+   }
   },
   "HOCOJ146BNIGHTTIDE": {
    "name": "Hoco J146B Night tide",
@@ -1746,7 +1974,10 @@
     "mAh per g: 47.2",
     "mAh per liter: 66578"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j146b-night-tide-4-cables-30000mah"
+   }
   },
   "HOCOJ144AHYMN": {
    "name": "Hoco J144A Hymn",
@@ -1759,7 +1990,10 @@
     "mAh per g: 49.0",
     "mAh per liter: 70141"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j144a-hymn-30000mah"
+   }
   },
   "HOCOJ145WHALE": {
    "name": "Hoco J145 Whale",
@@ -1771,7 +2005,10 @@
     "mAh per g: 24.0",
     "mAh per liter: 22918"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j145-whale-wireless-charging-1200mah"
+   }
   },
   "HOCOJ146ANIGHTTIDE": {
    "name": "Hoco J146A Night tide",
@@ -1784,7 +2021,10 @@
     "mAh per g: 44.4",
     "mAh per liter: 61567"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j146a-night-tide-4-cables-20000mah"
+   }
   },
   "HOCOJ140ATONY": {
    "name": "Hoco J140A Tony",
@@ -1797,7 +2037,10 @@
     "mAh per g: 45.5",
     "mAh per liter: 72088"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j140a-tony-pd20w-wireless-charging-5000mah"
+   }
   },
   "HOCOJ137": {
    "name": "Hoco J137",
@@ -1809,7 +2052,10 @@
     "mAh per g: 35.7",
     "mAh per liter: 38297"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j137-wireless-charging-2500mah"
+   }
   },
   "HOCOJ143TITLE": {
    "name": "Hoco J143 Title",
@@ -1822,7 +2068,10 @@
     "mAh per g: 43.2",
     "mAh per liter: 54440"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j143-title-22-5w-pd20w-80000mah"
+   }
   },
   "HOCOJ140TONY": {
    "name": "Hoco J140 Tony",
@@ -1835,7 +2084,10 @@
     "mAh per g: 47.6",
     "mAh per liter: 72088"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j140-tony-pd20w-5000mah"
+   }
   },
   "HOCOJ142SURPASS": {
    "name": "Hoco J142 Surpass",
@@ -1848,7 +2100,10 @@
     "mAh per g: 48.8",
     "mAh per liter: 67113"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j142-surpass-22-5w-pd20w-100000mah"
+   }
   },
   "HOCOJ141GRACE": {
    "name": "Hoco J141 Grace",
@@ -1861,7 +2116,10 @@
     "mAh per g: 52.6",
     "mAh per liter: 77012"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j141-grace-pd20w-wireless-charging-10000mah"
+   }
   },
   "HOCOJ136ASIRUI": {
    "name": "Hoco J136A Sirui",
@@ -1874,7 +2132,10 @@
     "mAh per g: 47.1",
     "mAh per liter: 67081"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j136a-sirui-22-5w-pd20w-20000mah"
+   }
   },
   "HOCOJ136BSIRUI": {
    "name": "Hoco J136B Sirui",
@@ -1887,7 +2148,10 @@
     "mAh per g: 49.3",
     "mAh per liter: 71171"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j136b-sirui-22-5w-pd20w-30000mah"
+   }
   },
   "HOCOJ135RICO": {
    "name": "Hoco J135 Rico",
@@ -1900,7 +2164,10 @@
     "mAh per g: 45.5",
     "mAh per liter: 50987"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j135-rico-22-5w-wireless-charging-10000mah"
+   }
   },
   "HOCOJ133ATRIUMPH": {
    "name": "Hoco J133A Triumph",
@@ -1913,7 +2180,10 @@
     "mAh per g: 55.6",
     "mAh per liter: 84608"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j133a-triumph-pd20w-10000mah-type-c-ver"
+   }
   },
   "HOCOJ132SABIO": {
    "name": "Hoco J132 Sabio",
@@ -1926,7 +2196,10 @@
     "mAh per g: 38.5",
     "mAh per liter: 51681"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j132-sabio-22-5w-pd20w-10000mah"
+   }
   },
   "HOCOJ131SPIRIT": {
    "name": "Hoco J131 Spirit",
@@ -1939,7 +2212,10 @@
     "mAh per g: 40.8",
     "mAh per liter: 46813"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j131-spirit-22-5w-pd20w-10000mah"
+   }
   },
   "HOCOQ33OUTSTANDING": {
    "name": "Hoco Q33 Outstanding",
@@ -1952,7 +2228,10 @@
     "mAh per g: 51.3",
     "mAh per liter: 71431"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-q33-outstanding-pd20w-10000mah"
+   }
   },
   "HOCOQ26AJOY": {
    "name": "Hoco Q26A Joy",
@@ -1965,7 +2244,10 @@
     "mAh per g: 58.5",
     "mAh per liter: 108391"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-q26a-joy-pd20w-wireless-charging-10000mah"
+   }
   },
   "HOCOQ32BIRD": {
    "name": "Hoco Q32 Bird",
@@ -1978,7 +2260,10 @@
     "mAh per g: 40.0",
     "mAh per liter: 69051"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-q32-bird-pd20w-wireless-charging-5000mah"
+   }
   },
   "HOCOQ18TOURER": {
    "name": "Hoco Q18 Tourer",
@@ -1991,7 +2276,10 @@
     "mAh per g: 53.5",
     "mAh per liter: 100040"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-q18-tourer-22-5w-wireless-charging-10000mah"
+   }
   },
   "HOCOQ14AICECRYSTAL": {
    "name": "Hoco Q14A Ice Crystal",
@@ -2004,7 +2292,10 @@
     "mAh per g: 44.1",
     "mAh per liter: 74814"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-q14a-ice-crystal-pd20w-qc3-0-wireless-charging-10000mah"
+   }
   },
   "HOCOJ127AMECHA": {
    "name": "Hoco J127A Mecha",
@@ -2017,7 +2308,10 @@
     "mAh per g: 41.5",
     "mAh per liter: 46594"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j127a-mecha-pd20w-qc3-0-10000mah"
+   }
   },
   "HOCOQ19LUCKY": {
    "name": "Hoco Q19 Lucky",
@@ -2030,7 +2324,10 @@
     "mAh per g: 53.5",
     "mAh per liter: 54158"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-q19-lucky-pd30w-qc3-0-10000mah"
+   }
   },
   "HOCOJ127BMECHA": {
    "name": "Hoco J127B Mecha",
@@ -2043,7 +2340,10 @@
     "mAh per g: 51.5",
     "mAh per liter: 65531"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j127b-mecha-pd20w-qc3-0-wireless-charging-10000mah"
+   }
   },
   "HOCOQ20FOUNTAIN": {
    "name": "Hoco Q20 Fountain",
@@ -2056,7 +2356,10 @@
     "mAh per g: 55.2",
     "mAh per liter: 69214"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-q20-fountain-22-5w-10000mah"
+   }
   },
   "HOCOJ127MECHA": {
    "name": "Hoco J127 Mecha",
@@ -2069,7 +2372,10 @@
     "mAh per g: 56.2",
     "mAh per liter: 68980"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j127-mecha-pd20w-qc3-0-10000mah"
+   }
   },
   "HOCOQ16FRIENDLY": {
    "name": "Hoco Q16 Friendly",
@@ -2082,7 +2388,10 @@
     "mAh per g: 39.7",
     "mAh per liter: 56212"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-q16-friendly-22-5w-10000mah-eu-us-plug"
+   }
   },
   "HOCOJ128APOWERFUL": {
    "name": "Hoco J128A Powerful",
@@ -2095,7 +2404,10 @@
     "mAh per g: 46.3",
     "mAh per liter: 70028"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j128a-powerful-20000mah"
+   }
   },
   "HOCOJ126TRAVEL": {
    "name": "Hoco J126 Travel",
@@ -2108,7 +2420,10 @@
     "mAh per g: 43.5",
     "mAh per liter: 47536"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j126-travel-22-5w-10000mah-eu-us-plug"
+   }
   },
   "HOCOJ128POWERFUL": {
    "name": "Hoco J128 Powerful",
@@ -2121,7 +2436,10 @@
     "mAh per g: 43.5",
     "mAh per liter: 61686"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j128-powerful-10000mah"
+   }
   },
   "HOCOJ122ARESPECT": {
    "name": "Hoco J122A Respect",
@@ -2134,7 +2452,10 @@
     "mAh per g: 49.6",
     "mAh per liter: 63857"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j122a-respect-22-5w-20000mah"
+   }
   },
   "HOCOJ123ELEMENT": {
    "name": "Hoco J123 Element",
@@ -2147,7 +2468,10 @@
     "mAh per g: 44.1",
     "mAh per liter: 64274"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j123-element-10000mah"
+   }
   },
   "HOCOJ121AFAST": {
    "name": "Hoco J121A Fast",
@@ -2160,7 +2484,10 @@
     "mAh per g: 48.2",
     "mAh per liter: 71393"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j121a-fast-22-5w-20000mah"
+   }
   },
   "HOCOJ123DELEMENT": {
    "name": "Hoco J123D Element",
@@ -2173,7 +2500,10 @@
     "mAh per g: 50.1",
     "mAh per liter: 71715"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j123d-element-22-5w-90000mah"
+   }
   },
   "HOCOJ125POWER": {
    "name": "Hoco J125 Power",
@@ -2186,7 +2516,10 @@
     "mAh per g: 35.7",
     "mAh per liter: 54463"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j125-power-pd20w-wireless-charging-5000mah"
+   }
   },
   "HOCOJ123CELEMENT": {
    "name": "Hoco J123C Element",
@@ -2199,7 +2532,10 @@
     "mAh per g: 58.5",
     "mAh per liter: 69402"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j123c-element-22-5w-60000mah"
+   }
   },
   "HOCOJ122RESPECT": {
    "name": "Hoco J122 Respect",
@@ -2212,7 +2548,10 @@
     "mAh per g: 43.5",
     "mAh per liter: 61576"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j122-respect-22-5w-10000mah"
+   }
   },
   "HOCOJ121FAST": {
    "name": "Hoco J121 Fast",
@@ -2225,7 +2564,10 @@
     "mAh per g: 43.1",
     "mAh per liter: 62469"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j121-fast-22-5w-10000mah"
+   }
   },
   "HOCOJ123AELEMENT": {
    "name": "Hoco J123A Element",
@@ -2238,7 +2580,10 @@
     "mAh per g: 48.7",
     "mAh per liter: 67946"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j123a-element-20000mah"
+   }
   },
   "HOCOJ119ASHARPCHARGER": {
    "name": "Hoco J119A Sharp charger",
@@ -2251,7 +2596,10 @@
     "mAh per g: 45.8",
     "mAh per liter: 58950"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j119a-sharp-charger-22-5w-20000mah"
+   }
   },
   "HOCOJ119BSHARPCHARGER": {
    "name": "Hoco J119B Sharp charger",
@@ -2264,7 +2612,10 @@
     "mAh per g: 47.5",
     "mAh per liter: 66318"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j119b-sharp-charger-22-5w-30000mah"
+   }
   },
   "HOCOJ118BSPEEDENERGY": {
    "name": "Hoco J118B Speed energy",
@@ -2277,7 +2628,10 @@
     "mAh per g: 49.0",
     "mAh per liter: 66318"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j118b-speed-energy-30000mah"
+   }
   },
   "HOCOJ120": {
    "name": "Hoco J120",
@@ -2289,7 +2643,10 @@
     "mAh per g: 23.3",
     "mAh per liter: 22978"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/home-office/watch-accessories/power-bank-j120-1000mah-watch-charger"
+   }
   },
   "HOCOJ123BELEMENT": {
    "name": "Hoco J123B Element",
@@ -2302,7 +2659,10 @@
     "mAh per g: 47.6",
     "mAh per liter: 65196"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j123b-element-22-5w-30000mah"
+   }
   },
   "HOCOJ119SHARPCHARGER": {
    "name": "Hoco J119 Sharp charger",
@@ -2315,7 +2675,10 @@
     "mAh per g: 41.5",
     "mAh per liter: 48633"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j119-sharp-charger-22-5w-10000mah"
+   }
   },
   "HOCOJ116PROPOCKET": {
    "name": "Hoco J116 Pro Pocket",
@@ -2328,7 +2691,10 @@
     "mAh per g: 51.5",
     "mAh per liter: 44516"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j116-pro-pocket-5000mah"
+   }
   },
   "HOCOJ114ACHARGER": {
    "name": "Hoco J114A Charger",
@@ -2341,7 +2707,10 @@
     "mAh per g: 44.8",
     "mAh per liter: 61050"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j114a-charger-20000mah"
+   }
   },
   "HOCOJ118ASPEEDENERGY": {
    "name": "Hoco J118A Speed energy",
@@ -2354,7 +2723,10 @@
     "mAh per g: 45.9",
     "mAh per liter: 58950"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j118a-speed-energy-20000mah"
+   }
   },
   "HOCOJ117ESTEEM": {
    "name": "Hoco J117 Esteem",
@@ -2367,7 +2739,10 @@
     "mAh per g: 40.7",
     "mAh per liter: 62661"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j117-esteem-pd20w-qc3-0-wireless-charging-5000mah"
+   }
   },
   "HOCOJ116COOLCHARGING": {
    "name": "Hoco J116 Cool charging",
@@ -2380,7 +2755,10 @@
     "mAh per g: 51.5",
     "mAh per liter: 55741"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j116-cool-charging-5000mah-for-type-c"
+   }
   },
   "HOCOJ114CHARGER": {
    "name": "Hoco J114 Charger",
@@ -2393,7 +2771,10 @@
     "mAh per g: 45.0",
     "mAh per liter: 61275"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j114-charger-10000mah"
+   }
   },
   "HOCOJ113ENERGYBAR": {
    "name": "Hoco J113 Energy-bar",
@@ -2406,7 +2787,10 @@
     "mAh per g: 46.7",
     "mAh per liter: 60739"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j113-energy-bar-5000mah-for-lightning"
+   }
   },
   "HOCOJ111DSMARTCHARGE": {
    "name": "Hoco J111D Smart charge",
@@ -2419,7 +2803,10 @@
     "mAh per g: 54.5",
     "mAh per liter: 75415"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j111d-smart-charge-pd30w-qc3-0-50000mah"
+   }
   },
   "HOCOJ111CSMARTCHARGE": {
    "name": "Hoco J111C Smart charge",
@@ -2432,7 +2819,10 @@
     "mAh per g: 53.2",
     "mAh per liter: 75415"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j111c-smart-charge-pd30w-qc3-0-40000mah"
+   }
   },
   "HOCOJ111BSMARTCHARGE": {
    "name": "Hoco J111B Smart charge",
@@ -2445,7 +2835,10 @@
     "mAh per g: 54.1",
     "mAh per liter: 73529"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j111b-smart-charge-30000mah"
+   }
   },
   "HOCOJ111ASMARTCHARGE": {
    "name": "Hoco J111A Smart charge",
@@ -2458,7 +2851,10 @@
     "mAh per g: 51.4",
     "mAh per liter: 70028"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j111a-smart-charge-20000mah"
+   }
   },
   "HOCOJ118SPEEDENERGY": {
    "name": "Hoco J118 Speed energy",
@@ -2471,7 +2867,10 @@
     "mAh per g: 41.5",
     "mAh per liter: 48633"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j118-speed-energy-10000mah"
+   }
   },
   "HOCOJ117AESTEEM": {
    "name": "Hoco J117A Esteem",
@@ -2484,7 +2883,10 @@
     "mAh per g: 51.8",
     "mAh per liter: 71746"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j117a-esteem-pd20w-qc3-0-wireless-charging-10000mah"
+   }
   },
   "HOCOJ111SMARTCHARGE": {
    "name": "Hoco J111 Smart charge",
@@ -2497,7 +2899,10 @@
     "mAh per g: 45.0",
     "mAh per liter: 61275"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j111-smart-charge-10000mah"
+   }
   },
   "HOCOJ115JOURNEY": {
    "name": "Hoco J115 Journey",
@@ -2510,7 +2915,10 @@
     "mAh per g: 41.3",
     "mAh per liter: 54825"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j115-journey-5000mah"
+   }
   },
   "HOCOJ110APOWERFUL": {
    "name": "Hoco J110A Powerful",
@@ -2523,7 +2931,10 @@
     "mAh per g: 47.5",
     "mAh per liter: 61992"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j110a-powerful-pd65w-60000mah"
+   }
   },
   "HOCOJ109EASY": {
    "name": "Hoco J109 Easy",
@@ -2536,7 +2947,10 @@
     "mAh per g: 37.0",
     "mAh per liter: 59172"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j109-easy-pd20w-wireless-charging-5000mah"
+   }
   },
   "HOCOJ110POWERFUL": {
    "name": "Hoco J110 Powerful",
@@ -2549,7 +2963,10 @@
     "mAh per g: 47.5",
     "mAh per liter: 61992"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j110-powerful-22-5w-60000mah"
+   }
   },
   "HOCOJ107SUPER": {
    "name": "Hoco J107 Super",
@@ -2562,7 +2979,10 @@
     "mAh per g: 47.7",
     "mAh per liter: 68027"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j107-super-22-5w-90000mah"
+   }
   },
   "HOCOJ108UNIVERSE": {
    "name": "Hoco J108 Universe",
@@ -2575,7 +2995,10 @@
     "mAh per g: 44.4",
     "mAh per liter: 65186"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j108-universe-22-5w-10000mah"
+   }
   },
   "HOCOJ108BUNIVERSE": {
    "name": "Hoco J108B Universe",
@@ -2588,7 +3011,10 @@
     "mAh per g: 45.2",
     "mAh per liter: 68860"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j108b-universe-22-5w-30000mah"
+   }
   },
   "HOCOJ106POCKET": {
    "name": "Hoco J106 Pocket",
@@ -2601,7 +3027,10 @@
     "mAh per g: 52.6",
     "mAh per liter: 48710"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j106-pocket-5000mah-for-lightning"
+   }
   },
   "HOCOJ108AUNIVERSE": {
    "name": "Hoco J108A Universe",
@@ -2614,7 +3043,10 @@
     "mAh per g: 49.3",
     "mAh per liter: 71422"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j108a-universe-22-5w-20000mah"
+   }
   },
   "HOCOJ104ADISCOVERYEDITION": {
    "name": "Hoco J104A Discovery edition",
@@ -2627,7 +3059,10 @@
     "mAh per g: 45.9",
     "mAh per liter: 70502"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j104a-discovery-edition-22-5w-20000mah"
+   }
   },
   "HOCOJ105DISCOVERYEDITION": {
    "name": "Hoco J105 Discovery edition",
@@ -2640,7 +3075,10 @@
     "mAh per g: 52.1",
     "mAh per liter: 58015"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j105-discovery-edition-22-5w-10000mah"
+   }
   },
   "HOCOJ103ADISCOVERYEDITION": {
    "name": "Hoco J103A Discovery edition",
@@ -2653,7 +3091,10 @@
     "mAh per g: 46.9",
     "mAh per liter: 71739"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j103a-discovery-edition-22-5w-20000mah"
+   }
   },
   "HOCOJ104DISCOVERYEDITION": {
    "name": "Hoco J104 Discovery edition",
@@ -2666,7 +3107,10 @@
     "mAh per g: 39.8",
     "mAh per liter: 61957"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j104-discovery-edition-22-5w-10000mah"
+   }
   },
   "HOCOJ102COOLFIGURE": {
    "name": "Hoco J102 Cool figure",
@@ -2679,7 +3123,10 @@
     "mAh per g: 43.5",
     "mAh per liter: 56398"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j102-cool-figure-pd20w-qc3-0-10000mah"
+   }
   },
   "HOCOJ103DISCOVERYEDITION": {
    "name": "Hoco J103 Discovery edition",
@@ -2692,7 +3139,10 @@
     "mAh per g: 41.5",
     "mAh per liter: 61957"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j103-discovery-edition-22-5w-10000mah"
+   }
   },
   "HOCOJ102ACOOLFIGURE": {
    "name": "Hoco J102A Cool figure",
@@ -2705,7 +3155,10 @@
     "mAh per g: 47.8",
     "mAh per liter: 67519"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j102a-cool-figure-pd20w-qc3-0-20000mah"
+   }
   },
   "HOCOQ17ELECTRIC": {
    "name": "Hoco Q17 Electric",
@@ -2718,7 +3171,10 @@
     "mAh per g: 38.3",
     "mAh per liter: 60864"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-q17-electric-pd140w-25000mah"
+   }
   },
   "HOCOJ101BASTUTE": {
    "name": "Hoco J101B Astute",
@@ -2731,7 +3187,10 @@
     "mAh per g: 50.3",
     "mAh per liter: 73701"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j101b-astute-22-5w-30000mah"
+   }
   },
   "HOCOJ101ASTUTE": {
    "name": "Hoco J101 Astute",
@@ -2744,7 +3203,10 @@
     "mAh per g: 43.5",
     "mAh per liter: 65651"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j101-astute-22-5w-10000mah"
+   }
   },
   "HOCOJ96STRIDER": {
    "name": "Hoco J96 Strider",
@@ -2757,7 +3219,10 @@
     "mAh per g: 29.4",
     "mAh per liter: 39825"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j96-strider-power-5000mah"
+   }
   },
   "HOCOJ100AHIGHRANKING": {
    "name": "Hoco J100A High-ranking",
@@ -2770,7 +3235,10 @@
     "mAh per g: 49.9",
     "mAh per liter: 77793"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j100a-high-ranking-20000mah"
+   }
   },
   "HOCOJ100HIGHRANKING": {
    "name": "Hoco J100 High-ranking",
@@ -2783,7 +3251,10 @@
     "mAh per g: 45.5",
     "mAh per liter: 72088"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j100-high-ranking-10000mah"
+   }
   },
   "HOCOQ10": {
    "name": "Hoco Q10",
@@ -2796,7 +3267,10 @@
     "mAh per g: 32.9",
     "mAh per liter: 45094"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-q10-transparent-discovery-edition-pd20w-5000mah"
+   }
   },
   "HOCOQ9SHELL": {
    "name": "Hoco Q9 Shell",
@@ -2809,7 +3283,10 @@
     "mAh per g: 44.4",
     "mAh per liter: 82628"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-q9-shell-pd20w-qc3-0-10000mah"
+   }
   },
   "HOCOJ87BTACKER": {
    "name": "Hoco J87B Tacker",
@@ -2822,7 +3299,10 @@
     "mAh per g: 51.2",
     "mAh per liter: 80507"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j87b-tacker-pd20w-qc3-0-30000mah"
+   }
   },
   "HOCOJ93HANDSOME": {
    "name": "Hoco J93 Handsome",
@@ -2835,7 +3315,10 @@
     "mAh per g: 53.5",
     "mAh per liter: 73807"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j93-handsome-10000mah"
+   }
   },
   "HOCOQ3PRO": {
    "name": "Hoco Q3 Pro",
@@ -2848,7 +3331,10 @@
     "mAh per g: 59.5",
     "mAh per liter: 83700"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-q3-pro-22-5wpd20w-10000mah"
+   }
   },
   "HOCOJ91A": {
    "name": "Hoco J91A",
@@ -2861,7 +3347,10 @@
     "mAh per g: 49.6",
     "mAh per liter: 77237"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j91a-20000mah"
+   }
   },
   "HOCOJ91B": {
    "name": "Hoco J91B",
@@ -2874,7 +3363,10 @@
     "mAh per g: 51.3",
     "mAh per liter: 80507"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j91b-30000mah"
+   }
   },
   "HOCOJ92PATH": {
    "name": "Hoco J92 Path",
@@ -2887,7 +3379,10 @@
     "mAh per g: 47.4",
     "mAh per liter: 58344"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j92-path-wireless-charging-built-in-cables-10000mah"
+   }
   },
   "HOCOJ90": {
    "name": "Hoco J90",
@@ -2900,7 +3395,10 @@
     "mAh per g: 44.4",
     "mAh per liter: 62014"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j90-22-5wpd20w-10000mah"
+   }
   },
   "HOCOJ91": {
    "name": "Hoco J91",
@@ -2913,7 +3411,10 @@
     "mAh per g: 45.5",
     "mAh per liter: 67582"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j91-10000mah"
+   }
   },
   "HOCOJ88": {
    "name": "Hoco J88",
@@ -2926,7 +3427,10 @@
     "mAh per g: 47.8",
     "mAh per liter: 65876"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j88-with-magnetic-wireless-charging-10000mah"
+   }
   },
   "HOCOJ87TACKER": {
    "name": "Hoco J87 Tacker",
@@ -2939,7 +3443,10 @@
     "mAh per g: 45.5",
     "mAh per liter: 67096"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j87-tacker-pd20wqc3-0-10000mah"
+   }
   },
   "HOCOJ87ATACKER": {
    "name": "Hoco J87A Tacker",
@@ -2952,7 +3459,10 @@
     "mAh per g: 50.0",
     "mAh per liter: 73418"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j87a-tacker-pd20wqc3-0-20000mah"
+   }
   },
   "HOCOQ8COOLENERGY": {
    "name": "Hoco Q8 Cool energy",
@@ -2965,7 +3475,10 @@
     "mAh per g: 90.4",
     "mAh per liter: 74972"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-q8-cool-energy-45w-15000mah"
+   }
   },
   "HOCOQ7EXQUISITE": {
    "name": "Hoco Q7 Exquisite",
@@ -2978,7 +3491,10 @@
     "mAh per g: 63.7",
     "mAh per liter: 90246"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-q7-exquisite-pd20wqc3-0-10000mah"
+   }
   },
   "HOCOJ86POWERMASTER": {
    "name": "Hoco J86 Powermaster",
@@ -2991,7 +3507,10 @@
     "mAh per g: 50.6",
     "mAh per liter: 76434"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j86-powermaster-22-5w-40000mah"
+   }
   },
   "HOCOJ86APOWERMASTER": {
    "name": "Hoco J86A Powermaster",
@@ -3004,7 +3523,10 @@
     "mAh per g: 51.3",
     "mAh per liter: 77628"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j86a-powermaster-22-5w-50000mah"
+   }
   },
   "HOCOJ81FASTWAY": {
    "name": "Hoco J81 Fast Way",
@@ -3017,7 +3539,10 @@
     "mAh per g: 42.0",
     "mAh per liter: 61351"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j81-fast-way-22-5w-10000mah"
+   }
   },
   "HOCOJ82EASYLINK": {
    "name": "Hoco J82 Easylink",
@@ -3030,7 +3555,10 @@
     "mAh per g: 45.0",
     "mAh per liter: 69013"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j82-easylink-10000mah"
+   }
   },
   "HOCOJ85WELLSPRING": {
    "name": "Hoco J85 Wellspring",
@@ -3043,7 +3571,10 @@
     "mAh per g: 47.8",
     "mAh per liter: 73943"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j85-wellspring-20000mah"
+   }
   },
   "HOCOJ80PREMIUM": {
    "name": "Hoco J80 Premium",
@@ -3056,7 +3587,10 @@
     "mAh per g: 42.7",
     "mAh per liter: 66124"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j80-premium-22-5w-10000mah"
+   }
   },
   "HOCOJ80APREMIUM": {
    "name": "Hoco J80A Premium",
@@ -3069,7 +3603,10 @@
     "mAh per g: 44.7",
     "mAh per liter: 68484"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j80a-premium-22-5w-20000mah"
+   }
   },
   "HOCOJ76BOBBY": {
    "name": "Hoco J76 Bobby",
@@ -3082,7 +3619,10 @@
     "mAh per g: 41.7",
     "mAh per liter: 49975"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j76-bobby-wireless-charging-10000mah"
+   }
   },
   "HOCOJ78OUTSTANDING": {
    "name": "Hoco J78 Outstanding",
@@ -3095,7 +3635,10 @@
     "mAh per g: 45.0",
     "mAh per liter: 69723"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j78-outstanding-30000mah"
+   }
   },
   "HOCOJ79SUCCESS": {
    "name": "Hoco J79 Success",
@@ -3108,7 +3651,10 @@
     "mAh per g: 48.5",
     "mAh per liter: 69864"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j79-success-wireless-charging-10000mah"
+   }
   },
   "HOCOQ5AEGIS": {
    "name": "Hoco Q5 Aegis",
@@ -3121,7 +3667,10 @@
     "mAh per g: 60.2",
     "mAh per liter: 72569"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-q5-aegis-30w-10000mah"
+   }
   },
   "HOCOQ6AEGIS": {
    "name": "Hoco Q6 Aegis",
@@ -3134,7 +3683,10 @@
     "mAh per g: 60.2",
     "mAh per liter: 72569"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-q6-aegis-22-5w-wireless-charging-10000mah"
+   }
   },
   "HOCOJ84COOLPLUG": {
    "name": "Hoco J84 Cool plug",
@@ -3147,7 +3699,10 @@
     "mAh per g: 41.8",
     "mAh per liter: 63776"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j84-cool-plug-10000mah"
+   }
   },
   "HOCOJ72AEASYTRAVEL": {
    "name": "Hoco J72A Easy travel",
@@ -3160,7 +3715,10 @@
     "mAh per g: 50.0",
     "mAh per liter: 72443"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j72a-easy-travel-20000mah"
+   }
   },
   "HOCOJ73POWERFUL": {
    "name": "Hoco J73 Powerful",
@@ -3173,7 +3731,10 @@
     "mAh per g: 45.0",
     "mAh per liter: 69723"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/home-office/lamps/power-bank-j73-powerful-30000mah-with-table-lamp"
+   }
   },
   "HOCOJ71BOREALIS": {
    "name": "Hoco J71 Borealis",
@@ -3186,7 +3747,10 @@
     "mAh per g: 43.5",
     "mAh per liter: 57978"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j71-borealis-10000mah-with-cable"
+   }
   },
   "HOCOJ72EASYTRAVEL": {
    "name": "Hoco J72 Easy travel",
@@ -3199,7 +3763,10 @@
     "mAh per g: 44.4",
     "mAh per liter: 67582"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j72-easy-travel-10000mah"
+   }
   },
   "HOCOQ3MAYFLOWER": {
    "name": "Hoco Q3 Mayflower",
@@ -3212,7 +3779,10 @@
     "mAh per g: 55.9",
     "mAh per liter: 84345"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-q3-mayflower-pd20w-qc3-0-10000mah"
+   }
   },
   "HOCOQ1AKRAFT": {
    "name": "Hoco Q1A Kraft",
@@ -3225,7 +3795,10 @@
     "mAh per g: 63.9",
     "mAh per liter: 93563"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-q1a-kraft-pd3-0-qc3-0-20000mah"
+   }
   },
   "HOCOJ69SPEEDFLASH": {
    "name": "Hoco J69 Speed flash",
@@ -3238,7 +3811,10 @@
     "mAh per g: 41.2",
     "mAh per liter: 62903"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j69-speed-flash-pd-qc3-0-10000mah"
+   }
   },
   "HOCOJ42BHIGHPOWER": {
    "name": "Hoco J42B High power",
@@ -3251,7 +3827,10 @@
     "mAh per g: 44.6",
     "mAh per liter: 68855"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j42b-high-power-30000mah"
+   }
   },
   "HOCOJ62AJOVE": {
    "name": "Hoco J62A Jove",
@@ -3264,7 +3843,10 @@
     "mAh per g: 46.9",
     "mAh per liter: 64893"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/home-office/lamps/power-bank-j62a-jove-10000mah-with-table-lamp"
+   }
   },
   "HOCOQ2GALAX": {
    "name": "Hoco Q2 Galax",
@@ -3277,7 +3859,10 @@
     "mAh per g: 53.8",
     "mAh per liter: 75882"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-q2-galax-10000mah"
+   }
   },
   "HOCOQ2AGALAX": {
    "name": "Hoco Q2A Galax",
@@ -3290,7 +3875,10 @@
     "mAh per g: 59.9",
     "mAh per liter: 76188"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-q2a-galax-20000mah"
+   }
   },
   "HOCOJ75TRESOR": {
    "name": "Hoco J75 Tresor",
@@ -3303,7 +3891,10 @@
     "mAh per g: 44.4",
     "mAh per liter: 66159"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j75-tresor-10000mah"
+   }
   },
   "HOCOQ1KRAFT": {
    "name": "Hoco Q1 Kraft",
@@ -3316,7 +3907,10 @@
     "mAh per g: 67.6",
     "mAh per liter: 96749"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-q1-kraft-pd3-0-qc3-0-10000mah"
+   }
   },
   "HOCOJ69ASPEEDFLASH": {
    "name": "Hoco J69A Speed flash",
@@ -3329,7 +3923,10 @@
     "mAh per g: 44.2",
     "mAh per liter: 64254"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j69a-speed-flash-pd-qc3-0-15000mah"
+   }
   },
   "HOCOJ46ASTAROCEAN": {
    "name": "Hoco J46A Star ocean",
@@ -3341,7 +3938,10 @@
     "mAh per g: 41.8",
     "mAh per liter: 70904"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j46a-star-ocean-20000mah"
+   }
   },
   "HOCOJ62JOVE": {
    "name": "Hoco J62 Jove",
@@ -3354,7 +3954,10 @@
     "mAh per g: 42.3",
     "mAh per liter: 65196"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j62-jove-30000mah"
+   }
   },
   "HOCOJ60SNOWFLAKE": {
    "name": "Hoco J60 Snowflake",
@@ -3367,7 +3970,10 @@
     "mAh per g: 43.0",
     "mAh per liter: 67641"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j60-snowflake-30000mah-with-table-lamp"
+   }
   },
   "HOCOJ63VELOCITY": {
    "name": "Hoco J63 Velocity",
@@ -3380,7 +3986,10 @@
     "mAh per g: 43.1",
     "mAh per liter: 57670"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j63-velocity-pdqc3-0-wireless-charging-10000mah"
+   }
   },
   "HOCOJ42AHIGHPOWER": {
    "name": "Hoco J42A High power",
@@ -3393,7 +4002,10 @@
     "mAh per g: 47.1",
     "mAh per liter: 66633"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j42a-high-power-20000mah"
+   }
   },
   "HOCOJ68RESOURCEFUL": {
    "name": "Hoco J68 Resourceful",
@@ -3406,7 +4018,10 @@
     "mAh per g: 41.5",
     "mAh per liter: 74822"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j68-resourceful-10000mah"
+   }
   },
   "HOCOJ59AFAMOUS": {
    "name": "Hoco J59A Famous",
@@ -3419,7 +4034,10 @@
     "mAh per g: 47.4",
     "mAh per liter: 73411"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j59a-famous-20000mah"
+   }
   },
   "HOCOJ57EXCELLENTNRG": {
    "name": "Hoco J57 Excellent NRG",
@@ -3432,7 +4050,10 @@
     "mAh per g: 48.3",
     "mAh per liter: 58182"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j57-excellent-nrg-10000mah"
+   }
   },
   "HOCOJ64TOUGH": {
    "name": "Hoco J64 Tough",
@@ -3445,7 +4066,10 @@
     "mAh per g: 43.5",
     "mAh per liter: 52083"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j64-tough-10000mah"
+   }
   },
   "HOCOS29NIMBLE": {
    "name": "Hoco S29 Nimble",
@@ -3457,7 +4081,10 @@
     "mAh per g: 42.4",
     "mAh per liter: 41287"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-s29-nimble-10000mah"
+   }
   },
   "HOCOJ66FOUNTAIN": {
    "name": "Hoco J66 Fountain",
@@ -3470,7 +4097,10 @@
     "mAh per g: 41.8",
     "mAh per liter: 65651"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j66-fountain-10000mah"
+   }
   },
   "HOCOJ66AFOUNTAIN": {
    "name": "Hoco J66A Fountain",
@@ -3483,7 +4113,10 @@
     "mAh per g: 45.2",
     "mAh per liter: 69382"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j66a-fountain-20000mah"
+   }
   },
   "HOCOJ67RILL": {
    "name": "Hoco J67 Rill",
@@ -3496,7 +4129,10 @@
     "mAh per g: 42.6",
     "mAh per liter: 55316"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j67-rill-10000mah-with-built-in-cables"
+   }
   },
   "HOCOJ59FAMOUS": {
    "name": "Hoco J59 Famous",
@@ -3509,7 +4145,10 @@
     "mAh per g: 42.6",
     "mAh per liter: 66603"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j59-famous-10000mah"
+   }
   },
   "HOCOJ61COMPANION": {
    "name": "Hoco J61 Companion",
@@ -3518,7 +4157,10 @@
     "Rated capacity: 5900mAh",
     "Output: 18W"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j61-companion-10000mah"
+   }
   },
   "HOCOB40UNIVERSAL": {
    "name": "Hoco B40 Universal",
@@ -3530,7 +4172,10 @@
     "mAh per g: 55.6",
     "mAh per liter: 83084"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-b40-universal-7000mah"
+   }
   },
   "HOCOJ50SURF": {
    "name": "Hoco J50 Surf",
@@ -3543,7 +4188,10 @@
     "mAh per g: 40.7",
     "mAh per liter: 52132"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j50-surf-wireless-charging-10000mah"
+   }
   },
   "HOCOJ52NEWJOY": {
    "name": "Hoco J52 New joy",
@@ -3556,7 +4204,10 @@
     "mAh per g: 45.7",
     "mAh per liter: 66124"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j52-new-joy-10000mah"
+   }
   },
   "HOCOJ53AEXCEPTIONAL": {
    "name": "Hoco J53A Exceptional",
@@ -3569,7 +4220,10 @@
     "mAh per g: 49.9",
     "mAh per liter: 66078"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j53a-exceptional-20000mah"
+   }
   },
   "HOCOJ55ANEOTERIC": {
    "name": "Hoco J55A Neoteric",
@@ -3582,7 +4236,10 @@
     "mAh per g: 50.3",
     "mAh per liter: 78015"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j55a-neoteric-20000mah"
+   }
   },
   "HOCOJ52ANEWJOY": {
    "name": "Hoco J52A New joy",
@@ -3595,7 +4252,10 @@
     "mAh per g: 50.9",
     "mAh per liter: 72443"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j52a-new-joy-20000mah"
+   }
   },
   "HOCOJ51COOLPOWER": {
    "name": "Hoco J51 Cool power",
@@ -3608,7 +4268,10 @@
     "mAh per g: 49.0",
     "mAh per liter: 74272"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j51-cool-power-10000mah"
+   }
   },
   "HOCOJ55NEOTERIC": {
    "name": "Hoco J55 Neoteric",
@@ -3621,7 +4284,10 @@
     "mAh per g: 47.6",
     "mAh per liter: 73164"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j55-neoteric-10000mah"
+   }
   },
   "HOCOJ54SPIRITPOWER": {
    "name": "Hoco J54 Spirit power",
@@ -3634,7 +4300,10 @@
     "mAh per g: 45.5",
     "mAh per liter: 73314"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j54-spirit-power-10000mah"
+   }
   },
   "HOCOJ56SEAPOWER": {
    "name": "Hoco J56 Sea power",
@@ -3647,7 +4316,10 @@
     "mAh per g: 43.1",
     "mAh per liter: 48633"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j56-sea-power-10000mah-wireless-charging"
+   }
   },
   "HOCOJ53EXCEPTIONAL": {
    "name": "Hoco J53 Exceptional",
@@ -3660,7 +4332,10 @@
     "mAh per g: 39.1",
     "mAh per liter: 62480"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j53-exceptional-10000mah"
+   }
   },
   "HOCOJ49JEWEL": {
    "name": "Hoco J49 Jewel",
@@ -3673,7 +4348,10 @@
     "mAh per g: 42.4",
     "mAh per liter: 65206"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j49-jewel-pd-qc3-0-10000mah"
+   }
   },
   "HOCOJ40POWERFUL": {
    "name": "Hoco J40 Powerful",
@@ -3686,7 +4364,10 @@
     "mAh per g: 49.0",
     "mAh per liter: 65762"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j40-powerful-10000mah-with-built-in-cable"
+   }
   },
   "HOCOJ58COSMO": {
    "name": "Hoco J58 Cosmo",
@@ -3699,7 +4380,10 @@
     "mAh per g: 44.1",
     "mAh per liter: 64274"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j58-cosmo-10000mah-pd-qc3-0"
+   }
   },
   "HOCOJ47ELEMENT": {
    "name": "Hoco J47 Element",
@@ -3712,7 +4396,10 @@
     "mAh per g: 49.0",
     "mAh per liter: 60493"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j47-element-pd-qc3-0-10000mah"
+   }
   },
   "HOCOS16ENERGYLAKE": {
    "name": "Hoco S16 Energy lake",
@@ -3725,7 +4412,10 @@
     "mAh per g: 40.8",
     "mAh per liter: 45592"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/stands-docks/charging-docks/power-bank-s16-energy-lake-wireless-charging-10000mah-pd"
+   }
   },
   "HOCOJ45ELEGANTSHELL": {
    "name": "Hoco J45 Elegant shell",
@@ -3738,7 +4428,10 @@
     "mAh per g: 51.0",
     "mAh per liter: 72706"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j45-elegant-shell-10000mah"
+   }
   },
   "HOCOJ41TREASURE": {
    "name": "Hoco J41 Treasure",
@@ -3751,7 +4444,10 @@
     "mAh per g: 49.3",
     "mAh per liter: 68655"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j41-treasure-10000mah"
+   }
   },
   "HOCOJ46STAROCEAN": {
    "name": "Hoco J46 Star ocean",
@@ -3763,7 +4459,10 @@
     "mAh per g: 46.5",
     "mAh per liter: 68655"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j46-star-ocean-power-bank-10000mah-dual-usb-output"
+   }
   },
   "HOCOS9LUCKY": {
    "name": "Hoco S9 Lucky",
@@ -3776,7 +4475,10 @@
     "mAh per g: 21.5",
     "mAh per liter: 34327"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/home-office/lamps/power-bank-s9-lucky-5000mah-wireless-charger"
+   }
   },
   "HOCOB39MAGICSTONE": {
    "name": "Hoco B39 Magic Stone",
@@ -3788,7 +4490,10 @@
     "mAh per g: 62.6",
     "mAh per liter: 97215"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-b39-pd-30000mah"
+   }
   },
   "HOCOJ44": {
    "name": "Hoco J44",
@@ -3801,7 +4506,10 @@
     "mAh per g: 52.1",
     "mAh per liter: 64460"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j44-10000mah-usb-qc3-0-type-c-pd-output"
+   }
   },
   "HOCOJ39QUICKENERGY": {
    "name": "Hoco J39 Quick energy",
@@ -3814,7 +4522,10 @@
     "mAh per g: 49.3",
     "mAh per liter: 65651"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j39-quick-energy-pd-qc3-0-10000mah"
+   }
   },
   "HOCOJ42HIGHPOWER": {
    "name": "Hoco J42 High power",
@@ -3827,7 +4538,10 @@
     "mAh per g: 41.8",
     "mAh per liter: 55285"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j42-high-power-10000mah-dual-usb-output"
+   }
   },
   "HOCOJ48NIMBLE": {
    "name": "Hoco J48 Nimble",
@@ -3840,7 +4554,10 @@
     "mAh per g: 45.9",
     "mAh per liter: 66603"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j48-nimble-10000mah-dual-usb-output"
+   }
   },
   "HOCOS10": {
    "name": "Hoco S10",
@@ -3853,7 +4570,10 @@
     "mAh per g: 42.4",
     "mAh per liter: 54740"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-s10-10000mah-wireless-charging"
+   }
   },
   "HOCOF11": {
    "name": "Hoco F11",
@@ -3865,7 +4585,10 @@
     "mAh per g: 15.4",
     "mAh per liter: 4027"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/home-office/vents/portable-fan-f11-and-power-bank-4000mah"
+   }
   },
   "HOCOB35EENTOURAGE": {
    "name": "Hoco B35E Entourage",
@@ -3877,7 +4600,10 @@
     "mAh per g: 132.7",
     "mAh per liter: 389527"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-b35e-30000mah-3usb-output"
+   }
   },
   "HOCOJ27AWIDEENERGY": {
    "name": "Hoco J27A Wide energy",
@@ -3890,7 +4616,10 @@
     "mAh per g: 47.1",
     "mAh per liter: 75579"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j27a-20000mah-dual-usb"
+   }
   },
   "HOCOB31CSHARP": {
    "name": "Hoco B31C Sharp",
@@ -3902,7 +4631,10 @@
     "mAh per g: 43.3",
     "mAh per liter: 50152"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-b31c-sharp-5200mah-dual-usb-output"
+   }
   },
   "HOCOJ28ASHOCKPOWER": {
    "name": "Hoco J28A Shock power",
@@ -3915,7 +4647,10 @@
     "mAh per g: 48.7",
     "mAh per liter: 71683"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j28a-20000mah-dual-usb"
+   }
   },
   "HOCOJ33COOLFREEDOM": {
    "name": "Hoco J33 Cool freedom",
@@ -3928,7 +4663,10 @@
     "mAh per g: 47.2",
     "mAh per liter: 65693"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j33-10000mah-dual-usb"
+   }
   },
   "HOCOJ35SUNSHINE": {
    "name": "Hoco J35 Sunshine",
@@ -3941,7 +4679,10 @@
     "mAh per g: 36.8",
     "mAh per liter: 84005"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j35-sunshine-10000mah-dual-usb-output"
+   }
   },
   "HOCOJ34MIGHTYSOURCE": {
    "name": "Hoco J34 Mighty source",
@@ -3954,7 +4695,10 @@
     "mAh per g: 38.8",
     "mAh per liter: 153186"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j34-mighty-source-10000mah-dual-usb-output"
+   }
   },
   "HOCOJ33ACOOLFREEDOM": {
    "name": "Hoco J33A Cool freedom",
@@ -3967,7 +4711,10 @@
     "mAh per g: 51.4",
     "mAh per liter: 71690"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j33a-20000mah-dual-usb"
+   }
   },
   "HOCOB35DENTOURAGE": {
    "name": "Hoco B35D Entourage",
@@ -3979,7 +4726,10 @@
     "mAh per g: 48.1",
     "mAh per liter: 64921"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-b35d-5000mah-dual-usb"
+   }
   },
   "HOCOJ38COMPREHENSIVE": {
    "name": "Hoco J38 Comprehensive",
@@ -3992,7 +4742,10 @@
     "mAh per g: 52.9",
     "mAh per liter: 65456"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j38-comprehensive-10000mah-dual-usb-output"
+   }
   },
   "HOCOB36WOODEN": {
    "name": "Hoco B36 Wooden",
@@ -4004,7 +4757,10 @@
     "mAh per g: 61.3",
     "mAh per liter: 90090"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-b36-battery-13000mah"
+   }
   },
   "HOCOB35BENTOURAGE": {
    "name": "Hoco B35B Entourage",
@@ -4016,7 +4772,10 @@
     "mAh per g: 46.0",
     "mAh per liter: 59366"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-b35b-entourage-8000mah-dual-usb-output"
+   }
   },
   "HOCOB35CENTOURAGE": {
    "name": "Hoco B35C Entourage",
@@ -4028,7 +4787,10 @@
     "mAh per g: 52.9",
     "mAh per liter: 77672"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-b35c-entourage-12000mah-dual-usb-output"
+   }
   },
   "HOCOJ31POWERPRIDE": {
    "name": "Hoco J31 Power pride",
@@ -4040,7 +4802,10 @@
     "mAh per g: 51.5",
     "mAh per liter: 74516"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j31-power-pride-10000mah-with-led"
+   }
   },
   "HOCOJ25BNEWPOWER": {
    "name": "Hoco J25B New power",
@@ -4053,7 +4818,10 @@
     "mAh per g: 50.8",
     "mAh per liter: 67335"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j25b-new-power-10000mah-single-usb-built-in-type-c-cable"
+   }
   },
   "HOCOJ25ANEWPOWER": {
    "name": "Hoco J25A New power",
@@ -4066,7 +4834,10 @@
     "mAh per g: 50.8",
     "mAh per liter: 67335"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j25a-new-power-10000mah-single-usb-built-in-micro-usb-cable"
+   }
   },
   "HOCOJ25NEWPOWER": {
    "name": "Hoco J25 New power",
@@ -4079,7 +4850,10 @@
     "mAh per g: 50.8",
     "mAh per liter: 67335"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j25-new-power-10000mah-single-usb-built-in-lightning-cable"
+   }
   },
   "HOCOJ17CLEARPOWER": {
    "name": "Hoco J17 Clear power",
@@ -4091,7 +4865,10 @@
     "mAh per g: 39.3",
     "mAh per liter: 65189"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j17-clear-power-7000mah-with-led"
+   }
   },
   "HOCOJ17ACLEARPOWER": {
    "name": "Hoco J17A Clear power",
@@ -4104,7 +4881,10 @@
     "mAh per g: 41.7",
     "mAh per liter: 77729"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j17a-clear-power-10000mah-with-led"
+   }
   },
   "HOCOJ15CONTENTED": {
    "name": "Hoco J15 Contented",
@@ -4112,7 +4892,10 @@
     "Capacity: 10000mAh",
     "Output: 18W"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j15-contented-pd-qc3-0"
+   }
   },
   "HOCOB37PERSISTENT": {
    "name": "Hoco B37 Persistent",
@@ -4122,7 +4905,10 @@
     "Capacity: 5000mAh",
     "mAh per liter: 57445"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-b37-5000mah-dual-usb"
+   }
   },
   "HOCOJ28SHOCKPOWER": {
    "name": "Hoco J28 Shock power",
@@ -4134,7 +4920,10 @@
     "mAh per g: 51.0",
     "mAh per liter: 67582"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j28-shock-power-10000mah"
+   }
   },
   "HOCOJ36AMPLEENERGY": {
    "name": "Hoco J36 Ample energy",
@@ -4146,7 +4935,10 @@
     "mAh per g: 43.9",
     "mAh per liter: 56747"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j36-10000mah-single-usb"
+   }
   },
   "HOCOB38EXTREME": {
    "name": "Hoco B38 Extreme",
@@ -4158,7 +4950,10 @@
     "mAh per g: 96.2",
     "mAh per liter: 61881"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-b38-10000mah"
+   }
   },
   "HOCOC36WELLSPRING": {
    "name": "Hoco C36 Wellspring",
@@ -4171,7 +4966,10 @@
     "mAh per g: 29.8",
     "mAh per liter: 36724"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/wall-charger-c36-wellspring-dual-usb-built-in-power-bank-5000-mah"
+   }
   },
   "HOCOJ12AMAZINGSTAR": {
    "name": "Hoco J12 Amazing star",
@@ -4183,7 +4981,10 @@
     "mAh per g: 43.5",
     "mAh per liter: 43592"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j12-amazing-star-10000-mah"
+   }
   },
   "HOCOJ37WISDOM": {
    "name": "Hoco J37 Wisdom",
@@ -4196,7 +4997,10 @@
     "mAh per g: 44.2",
     "mAh per liter: 52850"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j37-10000-mah-dual-usb"
+   }
   },
   "HOCOJ30COOLPAINT": {
    "name": "Hoco J30 Cool paint",
@@ -4209,7 +5013,10 @@
     "mAh per g: 57.8",
     "mAh per liter: 103520"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j30-cool-paint-10000-mah-dual-usb-output"
+   }
   },
   "HOCOJ26SIMPLEENERGY": {
    "name": "Hoco J26 Simple energy",
@@ -4222,7 +5029,10 @@
     "mAh per g: 43.3",
     "mAh per liter: 64234"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j26-simple-energy-10000-mah-dual-usb-output"
+   }
   },
   "HOCOJ29BCOOLSQUARE": {
    "name": "Hoco J29B Cool square",
@@ -4235,7 +5045,10 @@
     "mAh per g: 53.8",
     "mAh per liter: 67882"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j29b-cool-square-20000-mah-dual-usb-output"
+   }
   },
   "HOCOJ29COOLSQUARE": {
    "name": "Hoco J29 Cool square",
@@ -4248,7 +5061,10 @@
     "mAh per g: 39.4",
     "mAh per liter: 46451"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j29-cool-square-5000-mah-dual-usb-output"
+   }
   },
   "HOCOJ27POWERTREASURE": {
    "name": "Hoco J27 Power treasure",
@@ -4261,7 +5077,10 @@
     "mAh per g: 47.8",
     "mAh per liter: 76215"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j27-power-treasure-10000-mah-dual-usb-output"
+   }
   },
   "HOCOJ29ACOOLSQUARE": {
    "name": "Hoco J29A Cool square",
@@ -4274,7 +5093,10 @@
     "mAh per g: 53.2",
     "mAh per liter: 69677"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j29a-cool-square-10000-mah-dual-usb-output"
+   }
   },
   "HOCOB35AENTOURAGE": {
    "name": "Hoco B35A Entourage",
@@ -4286,7 +5108,10 @@
     "mAh per g: 43.3",
     "mAh per liter: 55251"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-b35a-entourage-5200-mah-single-usb-output"
+   }
   },
   "HOCOB35ENTOURAGE": {
    "name": "Hoco B35 Entourage",
@@ -4296,7 +5121,10 @@
     "Weight: 62g",
     "mAh per g: 41.9"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-b35-entourage-2600-mah-single-usb-output"
+   }
   },
   "HOCOB31AREGE": {
    "name": "Hoco B31A Rege",
@@ -4308,7 +5136,10 @@
     "mAh per g: 72.3",
     "mAh per liter: 99417"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-b31a-rege-30000-mah-dual-usb-output"
+   }
   },
   "HOCOJ24COOLENERGY": {
    "name": "Hoco J24 Cool energy",
@@ -4321,7 +5152,10 @@
     "mAh per g: 33.9",
     "mAh per liter: 55299"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j24-cool-energy-8000-mah-dual-usb-output"
+   }
   },
   "HOCOB31REGE": {
    "name": "Hoco B31 Rege",
@@ -4333,7 +5167,10 @@
     "mAh per g: 60.6",
     "mAh per liter: 73134"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-b31-rege-20000-mah-dual-usb-output"
+   }
   },
   "HOCOB24PAWKER": {
    "name": "Hoco B24 Pawker",
@@ -4345,7 +5182,10 @@
     "mAh per g: 66.7",
     "mAh per liter: 81633"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-b24-pawker-30000-mah-triple-usb-output"
+   }
   },
   "HOCOB25HANBECK": {
    "name": "Hoco B25 Hanbeck",
@@ -4357,7 +5197,10 @@
     "mAh per g: 53.8",
     "mAh per liter: 92593"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-b25-hanbeck-10000-mah-single-usb-output"
+   }
   },
   "HOCOB23BFLOWED": {
    "name": "Hoco B23B Flowed",
@@ -4369,7 +5212,10 @@
     "mAh per g: 50.0",
     "mAh per liter: 78125"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-b23b-flowed-20000-mah-triple-usb-output"
+   }
   },
   "HOCOB12BWOODGRAINPATTERN": {
    "name": "Hoco B12B Wood grain pattern",
@@ -4381,7 +5227,10 @@
     "mAh per g: 61.3",
     "mAh per liter: 90090"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-b12b-wood-grain-pattern-13000-mah-dual-usb-output"
+   }
   },
   "HOCOB12CCAMOUFLAGEPATTERN": {
    "name": "Hoco B12C Camouflage pattern",
@@ -4393,7 +5242,10 @@
     "mAh per g: 63.7",
     "mAh per liter: 90090"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-b12c-camouflage-pattern-13000-mah-dual-usb-output"
+   }
   },
   "HOCOB12ACARBONFIBERPATTERN": {
    "name": "Hoco B12A Carbon fiber pattern",
@@ -4405,7 +5257,10 @@
     "mAh per g: 63.7",
     "mAh per liter: 154762"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-b12a-carbon-fiber-pattern-13000-mah-dual-usb-output"
+   }
   },
   "HOCOB16METAL": {
    "name": "Hoco B16 Metal",
@@ -4413,7 +5268,10 @@
     "Capacity: 10000mAh",
     "Output: 10.5W"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-b16-metal-10000-mah-single-usb-output"
+   }
   },
   "HOCOB23FLOWED": {
    "name": "Hoco B23 Flowed",
@@ -4425,7 +5283,10 @@
     "mAh per g: 64.1",
     "mAh per liter: 69237"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-b23-flowed-10000-mah-dual-usb-output"
+   }
   },
   "HOCOB23AFLOWED": {
    "name": "Hoco B23A Flowed",
@@ -4437,7 +5298,10 @@
     "mAh per g: 48.1",
     "mAh per liter: 66964"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-b23a-flowed-15000-mah-dual-usb-output"
+   }
   },
   "HOCOB12DOCEANPATTERN": {
    "name": "Hoco B12D Ocean pattern",
@@ -4449,7 +5313,10 @@
     "mAh per g: 61.3",
     "mAh per liter: 90090"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-b12d-ocean-pattern-13000-mah-dual-usb-output"
+   }
   },
   "HOCOJ2BEIBORAPID": {
    "name": "Hoco J2 Beibo Rapid",
@@ -4462,7 +5329,10 @@
     "mAh per g: 39.8",
     "mAh per liter: 70028"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j2-beibo-rapid-qc3-0-10000-mah-dual-usb-output"
+   }
   },
   "HOCOJ1LINSTAR": {
    "name": "Hoco J1 Linstar",
@@ -4474,7 +5344,10 @@
     "mAh per g: 42.4",
     "mAh per liter: 43592"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j1-linstar-10000-mah-single-usb-with-built-in-lightning-cable"
+   }
   },
   "HOCOB34OUTSTANDINGSERIES": {
    "name": "Hoco B34 outstanding series",
@@ -4486,7 +5359,10 @@
     "mAh per g: 40.0",
     "mAh per liter: 50020"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-b34-outstanding-series-8000-mah-dual-usb-output"
+   }
   },
   "HOCOJ5WOODEN": {
    "name": "Hoco J5 Wooden",
@@ -4499,7 +5375,10 @@
     "mAh per g: 41.0",
     "mAh per liter: 51826"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j5-wooden-8000-mah-dual-usb-output"
+   }
   },
   "HOCOJ10GLOWINGPATTERN": {
    "name": "Hoco J10 Glowing pattern",
@@ -4512,7 +5391,10 @@
     "mAh per g: 46.3",
     "mAh per liter: 60469"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j10-glowing-pattern-10000-mah-dual-usb-output"
+   }
   },
   "HOCOJ14GRACEFULENERGY": {
    "name": "Hoco J14 Graceful energy",
@@ -4525,7 +5407,10 @@
     "mAh per g: 42.0",
     "mAh per liter: 65232"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j14-graceful-energy-10000-mah-wireless-charging"
+   }
   },
   "HOCOJ13ADORABLEPUPPY": {
    "name": "Hoco J13 Adorable puppy",
@@ -4538,7 +5423,10 @@
     "mAh per g: 43.9",
     "mAh per liter: 43592"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j13-adorable-puppy-10000-mah-dual-usb-output"
+   }
   },
   "HOCOJ6IRIDESCENCE": {
    "name": "Hoco J6 Iridescence",
@@ -4550,7 +5438,10 @@
     "mAh per g: 51.3",
     "mAh per liter: 64782"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j6-iridescence-10000mah-dual-usb-with-led-display"
+   }
   },
   "HOCOJ23NEWSTYLE": {
    "name": "Hoco J23 New style",
@@ -4561,7 +5452,10 @@
     "Weight: 72g",
     "mAh per g: 34.7"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j23-new-style-2500mah-single-usb"
+   }
   },
   "HOCOJ21VINTAGEWINE": {
    "name": "Hoco J21 Vintage wine",
@@ -4574,7 +5468,10 @@
     "mAh per g: 44.1",
     "mAh per liter: 48715"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j21-vintage-wine-10000-mah-led-power-indicator"
+   }
   },
   "HOCOJ21AHEARTWORDS": {
    "name": "Hoco J21A Heart words",
@@ -4587,7 +5484,10 @@
     "mAh per g: 44.1",
     "mAh per liter: 48715"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j21a-heart-words-10000-mah-led-power-indicator"
+   }
   },
   "HOCOJ20BRILLIANTSUNSHINE": {
    "name": "Hoco J20 Brilliant sunshine",
@@ -4600,7 +5500,10 @@
     "mAh per g: 29.1",
     "mAh per liter: 27174"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j20-brilliant-sunshine-8000-mah-led-power-indicator"
+   }
   },
   "HOCOB2910000DOMON": {
    "name": "Hoco B29-10000 Domon",
@@ -4612,7 +5515,10 @@
     "mAh per g: 57.8",
     "mAh per liter: 63704"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-b29-10000-domon-10000-mah-led-power-indicator"
+   }
   },
   "HOCOB2715000PUSI": {
    "name": "Hoco B27-15000 Pusi",
@@ -4624,7 +5530,10 @@
     "mAh per g: 53.2",
     "mAh per liter: 63621"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/home-office/lamps/power-bank-b27-15000-pusi-15000-mah-with-tabletop-lamp"
+   }
   },
   "HOCOJ11ASTUTE": {
    "name": "Hoco J11 Astute",
@@ -4636,7 +5545,10 @@
     "mAh per g: 40.7",
     "mAh per liter: 61286"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j11-astute-10000-mah-wireless-charging"
+   }
   },
   "HOCOB32ENERGETIC": {
    "name": "Hoco B32 Energetic",
@@ -4648,7 +5560,10 @@
     "mAh per g: 40.0",
     "mAh per liter: 45710"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-b32-energetic-8000-mah-wireless-charging"
+   }
   },
   "HOCOB2010000MIGE": {
    "name": "Hoco B20-10000 Mige",
@@ -4660,7 +5575,10 @@
     "mAh per g: 59.5",
     "mAh per liter: 68194"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-b20-10000-mige-10000-mah-with-led-display"
+   }
   },
   "HOCOB215200TINYCONCAVE": {
    "name": "Hoco B21-5200 Tiny Concave",
@@ -4672,7 +5590,10 @@
     "mAh per g: 45.2",
     "mAh per liter: 52335"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-b21-5200-tiny-concave-5200-mah-power-indicator"
+   }
   },
   "HOCOB20A20000MIGE": {
    "name": "Hoco B20A-20000 Mige",
@@ -4684,7 +5605,10 @@
     "mAh per g: 62.3",
     "mAh per liter: 80128"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-b20a-20000-mige-20000-mah-with-led-display"
+   }
   },
   "HOCOB33A20000CAMOUFLAGE": {
    "name": "Hoco B33A-20000 Camouflage",
@@ -4696,7 +5620,10 @@
     "mAh per g: 64.1",
     "mAh per liter: 85924"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-b33a-20000-camouflage-20000-mah-with-led-display"
+   }
   },
   "HOCOB3320000FLOWERSTORY": {
    "name": "Hoco B33-20000 Flower story",
@@ -4708,7 +5635,10 @@
     "mAh per g: 64.1",
     "mAh per liter: 85924"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "HOCO": "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-b33-20000-flower-story-20000mah-with-led-display"
+   }
   },
   "REMAXFP28": {
    "name": "REMAX FP-28",
@@ -4717,7 +5647,10 @@
     "Rated capacity: 5800mAh",
     "Output: 22.5W"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "REMAX": "https://www.iremax.net/product/5469"
+   }
   },
   "REMAXMH158BMH159B": {
    "name": "REMAX MH158-B/MH159-B",
@@ -4726,7 +5659,10 @@
     "Rated capacity: 5300mAh",
     "Output: 22.5W"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "REMAX": "https://www.iremax.net/product/5481"
+   }
   },
   "REMAXT201ALP": {
    "name": "REMAX T201ALP",
@@ -4735,7 +5671,10 @@
     "Rated capacity: 5800mAh",
     "Output: 35W"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "REMAX": "https://www.iremax.net/product/5409"
+   }
   },
   "REMAXFP16": {
    "name": "REMAX FP-16",
@@ -4743,7 +5682,10 @@
     "Capacity: 5000mAh",
     "Output: 20.04W"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "REMAX": "https://www.iremax.net/product/5091"
+   }
   },
   "REMAXFP11": {
    "name": "REMAX FP-11",
@@ -4752,7 +5694,10 @@
     "Rated capacity: 5500mAh",
     "Output: 45W"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "REMAX": "https://www.iremax.net/product/5265"
+   }
   },
   "REMAX02PD": {
    "name": "REMAX 02PD",
@@ -4761,7 +5706,10 @@
     "Capacity: 10000mAh",
     "Rated capacity: 11000mAh"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "REMAX": "https://www.iremax.net/product/5139"
+   }
   },
   "REMAXFP128": {
    "name": "REMAX FP-128",
@@ -4770,7 +5718,10 @@
     "Rated capacity: 11000mAh",
     "Output: 15W"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "REMAX": "https://www.iremax.net/product/6153"
+   }
   },
   "REMAXFP32": {
    "name": "REMAX FP-32",
@@ -4783,7 +5734,10 @@
     "mAh per g: 29.2",
     "mAh per liter: 41625"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "REMAX": "https://www.iremax.net/product/6159"
+   }
   },
   "REMAXFP135": {
    "name": "REMAX FP-135",
@@ -4792,7 +5746,10 @@
     "Rated capacity: 25000mAh",
     "Output: 22.5W"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "REMAX": "https://www.iremax.net/product/6147"
+   }
   },
   "REMAXAS214A": {
    "name": "REMAX AS-214-A",
@@ -4805,7 +5762,10 @@
     "mAh per g: 53.6",
     "mAh per liter: 34722"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "REMAX": "https://www.iremax.net/product/5865"
+   }
   },
   "REMAXFP131": {
    "name": "REMAX FP-131",
@@ -4814,7 +5774,10 @@
     "Rated capacity: 11600mAh",
     "Output: 45W"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "REMAX": "https://www.iremax.net/product/6051"
+   }
   },
   "REMAXFP65": {
    "name": "REMAX FP-65",
@@ -4823,7 +5786,10 @@
     "Rated capacity: 6000mAh",
     "Output: 35W"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "REMAX": "https://www.iremax.net/product/5775"
+   }
   },
   "REMAXFP62": {
    "name": "REMAX FP-62",
@@ -4832,7 +5798,10 @@
     "Rated capacity: 3000mAh",
     "Output: 22.5W"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "REMAX": "https://www.iremax.net/product/5769"
+   }
   },
   "REMAXAS21745": {
    "name": "REMAX AS-217-45",
@@ -4841,7 +5810,10 @@
     "Rated capacity: 6000mAh",
     "Output: 45W"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "REMAX": "https://www.iremax.net/product/5751"
+   }
   },
   "REMAXAS21865": {
    "name": "REMAX AS-218-65",
@@ -4852,7 +5824,10 @@
     "Dimensions: 99.8×63.4×34mm",
     "mAh per liter: 23242"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "REMAX": "https://www.iremax.net/product/5745"
+   }
   },
   "REMAXAS219100": {
    "name": "REMAX AS-219-100",
@@ -4861,7 +5836,10 @@
     "Rated capacity: 15000mAh",
     "Output: 100W"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "REMAX": "https://www.iremax.net/product/5739"
+   }
   },
   "REMAX01PD": {
    "name": "REMAX 01PD",
@@ -4872,7 +5850,10 @@
     "Weight: 216g",
     "mAh per g: 23.1"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "REMAX": "https://www.iremax.net/product/5547"
+   }
   },
   "REMAXFP18": {
    "name": "REMAX FP-18",
@@ -4885,7 +5866,10 @@
     "mAh per g: 22.6",
     "mAh per liter: 44605"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "REMAX": "https://www.iremax.net/product/5679"
+   }
   },
   "REMAXFP151": {
    "name": "REMAX FP-151",
@@ -4893,7 +5877,10 @@
     "Rated capacity: 10000mAh",
     "Output: 100W"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "REMAX": "https://www.iremax.net/product/5337"
+   }
   },
   "REMAXJP368": {
    "name": "REMAX JP368",
@@ -4902,7 +5889,10 @@
     "Rated capacity: 5100mAh",
     "Output: 45W"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "REMAX": "https://www.iremax.net/product/5169"
+   }
   },
   "REMAXT202ALP": {
    "name": "REMAX T202ALP",
@@ -4911,7 +5901,10 @@
     "Rated capacity: 11600mAh",
     "Output: 45W"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "REMAX": "https://www.iremax.net/product/5049"
+   }
   },
   "REMAXFP17": {
    "name": "REMAX FP-17",
@@ -4920,7 +5913,10 @@
     "Rated capacity: 5500mAh",
     "Output: 40W"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "REMAX": "https://www.iremax.net/product/4917"
+   }
   },
   "REMAXFP12": {
    "name": "REMAX FP-12",
@@ -4933,7 +5929,10 @@
     "mAh per g: 24.6",
     "mAh per liter: 8832"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "REMAX": "https://www.iremax.net/product/6165"
+   }
   },
   "REMAXFP92": {
    "name": "REMAX FP-92",
@@ -4942,7 +5941,10 @@
     "Rated capacity: 11600mAh",
     "Output: 45W"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "REMAX": "https://www.iremax.net/product/5847"
+   }
   },
   "REMAXFP77": {
    "name": "REMAX FP-77",
@@ -4951,14 +5953,20 @@
     "Rated capacity: 10800mAh",
     "Output: 65W"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "REMAX": "https://www.iremax.net/product/4911"
+   }
   },
   "REMAXFP109": {
    "name": "REMAX FP-109",
    "tags": [
     "Output: 22.5W"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "REMAX": "https://www.iremax.net/product/4413"
+   }
   },
   "REMAXFP67": {
    "name": "REMAX FP-67",
@@ -4967,7 +5975,10 @@
     "Rated capacity: 5500mAh",
     "Output: 40.05W"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "REMAX": "https://www.iremax.net/product/4833"
+   }
   },
   "REMAXFP123": {
    "name": "REMAX FP-123",
@@ -4976,7 +5987,10 @@
     "Rated capacity: 5500mAh",
     "Output: 40.05W"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "REMAX": "https://www.iremax.net/product/4425"
+   }
   },
   "REMAXFP113": {
    "name": "REMAX FP-113",
@@ -4985,7 +5999,10 @@
     "Rated capacity: 11000mAh",
     "Output: 40W"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "REMAX": "https://www.iremax.net/product/4809"
+   }
   },
   "REMAXAS18245": {
    "name": "REMAX AS-182-45",
@@ -4993,7 +6010,10 @@
     "Capacity: 10000mAh",
     "Output: 45W"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "REMAX": "https://www.iremax.net/product/4317"
+   }
   },
   "REMAXT132": {
    "name": "REMAX T132",
@@ -5001,7 +6021,10 @@
     "Capacity: 11850mAh",
     "Rated capacity: 6500mAh"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "REMAX": "https://www.iremax.net/product/4353"
+   }
   },
   "REMAXFP122": {
    "name": "REMAX FP-122",
@@ -5009,7 +6032,10 @@
     "Rated capacity: 5500mAh",
     "Output: 22.5W"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "REMAX": "https://www.iremax.net/product/4299"
+   }
   },
   "REMAXAS18135": {
    "name": "REMAX AS-181-35",
@@ -5017,7 +6043,10 @@
     "Capacity: 5000mAh",
     "Rated capacity: 6000mAh"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "REMAX": "https://www.iremax.net/product/4311"
+   }
   },
   "REMAXFP108": {
    "name": "REMAX FP-108",
@@ -5026,7 +6055,10 @@
     "Rated capacity: 2600mAh",
     "Output: 22.5W"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "REMAX": "https://www.iremax.net/product/4281"
+   }
   },
   "REMAXFP111": {
    "name": "REMAX FP-111",
@@ -5035,7 +6067,10 @@
     "Rated capacity: 11000mAh",
     "Output: 100W"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "REMAX": "https://www.iremax.net/product/4335"
+   }
   },
   "REMAXFP100": {
    "name": "REMAX FP-100",
@@ -5044,7 +6079,10 @@
     "Rated capacity: 5300mAh",
     "Output: 22.5W"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "REMAX": "https://www.iremax.net/product/4269"
+   }
   },
   "REMAXFC15": {
    "name": "REMAX FC-15",
@@ -5053,7 +6091,10 @@
     "Rated capacity: 12000mAh",
     "Output: 22.5W"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "REMAX": "https://www.iremax.net/product/1890"
+   }
   },
   "REMAXFP36": {
    "name": "REMAX FP-36",
@@ -5062,7 +6103,10 @@
     "Rated capacity: 2800mAh",
     "Output: 20.04W"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "REMAX": "https://www.iremax.net/product/3555"
+   }
   },
   "REMAXFC13": {
    "name": "REMAX FC-13",
@@ -5071,7 +6115,10 @@
     "Rated capacity: 6000mAh",
     "Output: 22.5W"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "REMAX": "https://www.iremax.net/product/1434"
+   }
   },
   "REMAXFP90": {
    "name": "REMAX FP-90",
@@ -5080,7 +6127,10 @@
     "Rated capacity: 5500mAh",
     "Output: 22.5W"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "REMAX": "https://www.iremax.net/product/4239"
+   }
   },
   "REMAXFP52": {
    "name": "REMAX FP-52",
@@ -5089,7 +6139,10 @@
     "Rated capacity: 5500mAh",
     "Output: 40.05W"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "REMAX": "https://www.iremax.net/product/4089"
+   }
   },
   "REMAXFP5": {
    "name": "REMAX FP-5",
@@ -5098,7 +6151,10 @@
     "Rated capacity: 31200mAh",
     "Output: 27W"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "REMAX": "https://www.iremax.net/product/1848"
+   }
   },
   "REMAXCX09": {
    "name": "REMAX CX09",
@@ -5106,7 +6162,10 @@
     "Capacity: 10000mAh",
     "Rated capacity: 5800mAh"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "REMAX": "https://www.iremax.net/product/1854"
+   }
   },
   "REMAXCX08": {
    "name": "REMAX CX08",
@@ -5115,7 +6174,10 @@
     "Rated capacity: 2800mAh",
     "Output: 10W"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "REMAX": "https://www.iremax.net/product/1851"
+   }
   },
   "REMAXFP60": {
    "name": "REMAX FP-60",
@@ -5124,7 +6186,10 @@
     "Rated capacity: 5200mAh",
     "Output: 22.5W"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "REMAX": "https://www.iremax.net/product/3831"
+   }
   },
   "REMAXFP38": {
    "name": "REMAX FP-38",
@@ -5133,7 +6198,10 @@
     "Rated capacity: 5300mAh",
     "Output: 22.5W"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "REMAX": "https://www.iremax.net/product/1833"
+   }
   },
   "REMAXCP18": {
    "name": "REMAX CP-18",
@@ -5142,7 +6210,10 @@
     "Rated capacity: 5300mAh",
     "Output: 30W"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "REMAX": "https://www.iremax.net/product/1275"
+   }
   },
   "REMAXFC02": {
    "name": "REMAX FC-02",
@@ -5150,7 +6221,10 @@
     "Capacity: 10000mAh",
     "Output: 45W"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "REMAX": "https://www.iremax.net/product/1809"
+   }
   },
   "REMAXFP13": {
    "name": "REMAX FP-13",
@@ -5159,7 +6233,10 @@
     "Rated capacity: 2600mAh",
     "Output: 20W"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "REMAX": "https://www.iremax.net/product/1236"
+   }
   },
   "REMAXCP19": {
    "name": "REMAX CP-19",
@@ -5168,7 +6245,10 @@
     "Rated capacity: 11000mAh",
     "Output: 30W"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "REMAX": "https://www.iremax.net/product/1587"
+   }
   },
   "REMAXFC07": {
    "name": "REMAX FC-07",
@@ -5177,7 +6257,10 @@
     "Rated capacity: 11600mAh",
     "Output: 15W"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "REMAX": "https://www.iremax.net/product/1359"
+   }
   },
   "REMAXCP6": {
    "name": "REMAX CP-6",
@@ -5186,7 +6269,10 @@
     "Rated capacity: 2650mAh",
     "Output: 22.5W"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "REMAX": "https://www.iremax.net/product/1440"
+   }
   },
   "REMAXFC06": {
    "name": "REMAX FC-06",
@@ -5194,7 +6280,10 @@
     "Rated capacity: 11600mAh",
     "Output: 22.5W"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "REMAX": "https://www.iremax.net/product/1230"
+   }
   },
   "REMAXRPP609PRO": {
    "name": "REMAX RPP-609 Pro",
@@ -5202,7 +6291,10 @@
     "Rated capacity: 33000mAh",
     "Output: 22.5W"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "REMAX": "https://www.iremax.net/product/1098"
+   }
   },
   "REMAXCP16": {
    "name": "REMAX CP-16",
@@ -5211,7 +6303,10 @@
     "Rated capacity: 5300mAh",
     "Output: 35W"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "REMAX": "https://www.iremax.net/product/1356"
+   }
   },
   "REMAXFP7": {
    "name": "REMAX FP-7",
@@ -5219,7 +6314,10 @@
     "Capacity: 10000mAh",
     "Rated capacity: 5500mAh"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "REMAX": "https://www.iremax.net/product/1134"
+   }
   },
   "REMAXFC22A": {
    "name": "REMAX FC-22a",
@@ -5228,7 +6326,10 @@
     "Rated capacity: 12215mAh",
     "Output: 100W"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "REMAX": "https://www.iremax.net/product/1671"
+   }
   },
   "REMAXMC01": {
    "name": "REMAX MC-01",
@@ -5237,7 +6338,10 @@
     "Rated capacity: 5800mAh",
     "Output: 22.5W"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "REMAX": "https://www.iremax.net/product/1284"
+   }
   },
   "REMAXCX2": {
    "name": "REMAX CX-2",
@@ -5246,7 +6350,10 @@
     "Rated capacity: 5200mAh",
     "Output: 20.04W"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "REMAX": "https://www.iremax.net/product/1644"
+   }
   },
   "REMAXCP17": {
    "name": "REMAX CP-17",
@@ -5255,7 +6362,10 @@
     "Rated capacity: 12000mAh",
     "Output: 30W"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "REMAX": "https://www.iremax.net/product/1179"
+   }
   },
   "REMAXRPP38": {
    "name": "REMAX RPP-38",
@@ -5263,7 +6373,10 @@
     "Capacity: 20000mAh",
     "Rated capacity: 10400mAh"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "REMAX": "https://www.iremax.net/product/1650"
+   }
   },
   "REMAXFCP9": {
    "name": "REMAX FCP-9",
@@ -5271,7 +6384,10 @@
     "Capacity: 10000mAh",
     "Output: 22.5W"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "REMAX": "https://www.iremax.net/product/1017"
+   }
   },
   "REMAXCP5": {
    "name": "REMAX CP-5",
@@ -5280,7 +6396,10 @@
     "Rated capacity: 6000mAh",
     "Output: 35W"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "REMAX": "https://www.iremax.net/product/1035"
+   }
   },
   "REMAXRPP117": {
    "name": "REMAX RPP-117",
@@ -5288,7 +6407,10 @@
     "Capacity: 50000mAh",
     "Rated capacity: 28000mAh"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "REMAX": "https://www.iremax.net/product/1572"
+   }
   },
   "REMAXFP22": {
    "name": "REMAX FP-22",
@@ -5297,7 +6419,10 @@
     "Rated capacity: 16500mAh",
     "Output: 22.5W"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "REMAX": "https://www.iremax.net/product/1740"
+   }
   },
   "REMAXCX1": {
    "name": "REMAX CX-1",
@@ -5306,14 +6431,20 @@
     "Rated capacity: 2600mAh",
     "Output: 20.04W"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "REMAX": "https://www.iremax.net/product/1641"
+   }
   },
   "REMAXRPP118": {
    "name": "REMAX RPP-118",
    "tags": [
     "Rated capacity: 44000mAh"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "REMAX": "https://www.iremax.net/product/1575"
+   }
   },
   "REMAXRPP71": {
    "name": "REMAX RPP-71",
@@ -5321,7 +6452,10 @@
     "Capacity: 10000mAh",
     "Rated capacity: 5200mAh"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "REMAX": "https://www.iremax.net/product/1566"
+   }
   },
   "REMAXRPP65": {
    "name": "REMAX RPP-65",
@@ -5330,7 +6464,10 @@
     "Rated capacity: 6000mAh",
     "Output: 20.07W"
    ],
-   "group": "Power banks"
+   "group": "Power banks",
+   "sources": {
+    "REMAX": "https://www.iremax.net/product/1632"
+   }
   }
  },
  "stopPhrases": [

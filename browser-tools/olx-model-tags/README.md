@@ -45,4 +45,4 @@ Open a category page of a source that has a `category` entry (hocotech.com power
 
 ## hotline.ua
 
-Product lists and product pages show the catalog specs of every product whose title contains a catalog model (read-only). The **Specs n/m** button (bottom right) picks which specs show; the choice stays in this browser.
+Product lists and product pages show the catalog specs of every product whose title contains a catalog model (read-only). The **Specs n/m** button (bottom right) picks which specs show; the choice stays in this browser. On a product page, **+** links the product to a catalog model when its title names it differently (e.g. Hoco J129 → Hoco J129A Nature); × on the model unlinks. Links are saved to the shared catalog (needs the GitHub token). Each model also shows links to the pages its specs came from.

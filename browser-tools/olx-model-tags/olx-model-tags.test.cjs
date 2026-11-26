@@ -340,3 +340,15 @@ test('Hoco free-text adapter reads "Weight is only 107g" (B37)', () => {
   assert.equal(weight('11. Weight: main unit – 430g, clamps – 190g.'), '430g');
   assert.equal(weight('Sizes: 135*66*15mm, weight: 241g.'), '241g');
 });
+
+test('setModelSource keeps one URL per source; setProductLink links and unlinks a shop page', () => {
+  const data = olxModelTags.createEmptyOlxModelTagsData();
+  olxModelTags.applyOlxModelTagsOperation(data, { type: 'setModelSource', modelName: 'Hoco J129A Nature', source: 'HOCO', url: 'https://hocotech.com/product/a' });
+  olxModelTags.applyOlxModelTagsOperation(data, { type: 'setModelSource', modelName: 'Hoco J129A Nature', source: 'HOCO', url: 'https://hocotech.com/product/b' });
+  assert.deepEqual(data.models.HOCOJ129ANATURE.sources, { HOCO: 'https://hocotech.com/product/b' });
+  olxModelTags.applyOlxModelTagsOperation(data, { type: 'setProductLink', pageKey: 'hotline.ua/ua/x/hoco-j129', modelName: 'Hoco J129A Nature' });
+  assert.equal(data.productLinks['hotline.ua/ua/x/hoco-j129'], 'Hoco J129A Nature');
+  olxModelTags.applyOlxModelTagsOperation(data, { type: 'setProductLink', pageKey: 'hotline.ua/ua/x/hoco-j129', modelName: '' });
+  assert.deepEqual(data.productLinks, {});
+  assert.ok(olxModelTags.splitDataIntoCatalogAndPersonal({ ...data, productLinks: { a: 'b' } }).catalog.productLinks);
+});
