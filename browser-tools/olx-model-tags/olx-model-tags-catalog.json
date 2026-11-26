@@ -3916,6 +3916,21 @@
     "Weight: 178g"
    ],
    "group": "Power banks"
+  },
+  "HOCOJ17ACLEARPOWER": {
+   "name": "Hoco J17A Clear power",
+   "tags": [
+    "Weight: 240g"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ15CONTENTED": {
+   "name": "Hoco J15 Contented",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Output: 18W"
+   ],
+   "group": "Power banks"
   }
  },
  "stopPhrases": [
