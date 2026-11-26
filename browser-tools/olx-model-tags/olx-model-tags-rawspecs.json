@@ -29,7 +29,7 @@
  },
  "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j160a-original-pd20w-wireless-charging-10000mah": {
   "model": "Hoco J160A Original",
-  "scannedAt": "2026-11-26T02:47:07.333Z",
+  "scannedAt": "2026-11-26T02:49:27.336Z",
   "specs": {
    "Capacity": "10000mAh, 38.5Wh, rated capacity: 5800mAh (5V TYP 2A).",
    "Input": "1 × Type-C port – 5V / 3A, 9V / 2A, 12V / 1.5A – 18W max. 1 × iP port – 5V / 2.4A, 9V / 2A – 18W max.",
@@ -42,7 +42,7 @@
  },
  "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j160b-original-pd20w-wireless-charging-20000mah": {
   "model": "Hoco J160B Original",
-  "scannedAt": "2026-11-26T02:47:07.338Z",
+  "scannedAt": "2026-11-26T02:49:27.337Z",
   "specs": {
    "Capacity": "20000mAh, 77Wh, rated capacity: 11500mAh (5V TYP 2A).",
    "Input": "1 × Type-C port – 5V / 3A, 9V / 2A, 12V / 1.5A – 18W max. 1 × iP port – 5V / 2.4A, 9V / 2A – 18W max.",
@@ -55,7 +55,7 @@
  },
  "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j160-original-10w-wireless-charging-5000mah": {
   "model": "Hoco J160 Original",
-  "scannedAt": "2026-11-26T02:47:07.339Z",
+  "scannedAt": "2026-11-26T02:49:27.336Z",
   "specs": {
    "Capacity": "5000mAh, 19.25Wh, rated capacity: 2600mAh (5V TYP 2A).",
    "Input": "1 × Type-C port – 5V / 2A – 10W max. 1 × iP port – 5V / 2A – 10W max.",
@@ -411,6 +411,141 @@
    "Indication": "LED digital display of power level. Green indicator of PD / QC fast charging.",
    "Sizes": "118 × 72 × 31mm.",
    "Weight": "350g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j149-victory-pd20w-wireless-charging-5000mah": {
+  "model": "Hoco J149 Victory",
+  "scannedAt": "2026-11-26T02:47:28.326Z",
+  "specs": {
+   "Capacity": "5000mAh, 19.25Wh. Rated capacity: 2500mAh (5V TYP 2A).",
+   "Power bank mode": "Input: 1 × Type-C port – 5V / 3A, 9V / 2A – 18W. Output: 1 × Type-C port – 5V / 3A, 9V / 2.22A, 12V /1.67A – 20W. Phone wireless charging output: 5W / 7.5W / 10W / 15W. Total output: 5V / 2A (max).",
+   "Wireless charger mode": "Input: 1 × Type-C port – 5V / 3A, 9V / 3A, 12V / 2.5A – 30W. Output: Phone wireless charging output: 5W / 7.5W / 10W / 15W. Headset wireless charging output: 5W. Watch wireless charging output: 2.5W.",
+   "Fast charging protocol support": "for PD3.0 / PD20W / QC3.0 / QC2.0 / FCP / SCP / AFC and other fast charging protocols.",
+   "Material": "PC+ABS flame-retardant casing + lithium polymer battery cell.",
+   "Indication": "Power bank mode: LED indicator of remaining battery charge level, fast charging input/output and wireless charging output. Wireless charger mode: LED indicator of working status.",
+   "Sizes": "115 × 75 × 108mm.",
+   "Weight": "300g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-qs5-refined-jump-starter-6000mah": {
+  "model": "Hoco QS5 Refined",
+  "scannedAt": "2026-11-26T02:47:28.327Z",
+  "specs": {
+   "Capacity": "6000mAh, 22.2Wh.",
+   "Input": "1 × Type-C port – 5V / 2A.",
+   "Output": "1 × USB-A port – 5V / 2A. Car emergency starter output – 12V, current – 200A, peak current – 400A.",
+   "Material": "ABS + PC flame retardant shell + lithium ion polymer battery.",
+   "Indication": "LED indicator of power level. 6. Jump starter is suitable for gasoline cars below 4.0L and diesel cars below 2.0L. 7. Flashlight with SOS mode.",
+   "Operating temperature": "-20～60°C.",
+   "Sizes": "143.5 × 81 × 18mm. 10. Weight: 235g + clamps – 190g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-qs3-victory-jump-starter-10000mah": {
+  "model": "Hoco QS3 Victory",
+  "scannedAt": "2026-11-26T02:47:28.330Z",
+  "specs": {
+   "Capacity": "10000mAh, 37Wh.",
+   "Input": "1 × Type-C port – 5V / 2A, 9V / 2A – 18W.",
+   "Output": "1 × USB-A1 port – 5V / 2.4A – 12W. 1 × USB-A2 port – 5V / 3A, 9V / 2A, 12V / 1.5A – 18W. USB-A1 + USB-A2 = 5V / 2.4A – 12W. Car emergency starter output – 12V, current – 600A, peak current – 1200A.",
+   "Fast charging protocol support": "for QC3.0 / QC2.0 / FCP / AFC and other fast charging protocols.",
+   "Material": "ABS + PC flame retardant casing + lithium ion polymer battery.",
+   "Indication": "LED digital display of power level. 7. Flashlight with SOS mode. 8. Jump starter is suitable for gasoline cars below 4.0l and diesel cars below 2.0l.",
+   "Operating temperature": "-20～60°C. 10. Sizes: 175 × 75 × 32mm. 11. Weight: 366g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j147-prospero-3000mah-ip-ver": {
+  "model": "Hoco J147 Prospero",
+  "scannedAt": "2026-11-26T02:47:28.335Z",
+  "specs": {
+   "Capacity": "3000mAh, 11.1Wh. Rated capacity: 1800mAh (5V TYP 2A).",
+   "Input": "1 × Type-C port – 5V / 2A.",
+   "Output": "1 × iP plug – 5V / 2A.",
+   "Material": "PC + ABS flame-retardant shell + lithium polymer battery.",
+   "Indication": "LED indicator of power level. 7. Output iP plug with cover.",
+   "Sizes": "79 × 36 × 27mm.",
+   "Weight": "88g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-q37-graceful-22-5w-pd20w-10000mah": {
+  "model": "Hoco Q37 Graceful",
+  "scannedAt": "2026-11-26T02:47:28.336Z",
+  "specs": {
+   "Capacity": "10000mAh, 38.5Wh. Rated capacity: 5500mAh (5V TYP 2A).",
+   "Input": "1 × Type-C port – 5V / 3A, 9V / 2A, 12V / 1.5A – 18W. 1 × built-in Type-C cable – 5V / 3A, 9V / 2A, 12V / 1.5A – 18W.",
+   "Output": "1 × Type-C port – 5V / 3A, 9V / 2.22A, 12V / 1.67A – 20W. 1 × USB-A port – 5V / 3A, 9V / 2A, 10V / 2.25 (SCP), 12V / 1.5A – 22.5W. 1 × built-in Type-C cable – 5V / 3A, 9V / 2.22A, 12V / 1.67A – 20W. 1 × built-in iP cable – 5V / 2A – 10W. Total output: 5V / 2A (max).",
+   "Fast charging protocol support": "for PD3.0 / PD20W / QC3.0 / QC2.0 / FCP / SCP / AFC and other fast charging protocols.",
+   "Material": "ABS + PC flame retardant casing + lithium ion polymer battery.",
+   "Indication": "LED digital display of power level. Green indicator of PD / QC fast charging.",
+   "Sizes": "118 × 72 × 19mm.",
+   "Weight": "200g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j148-handy-pd20w-5000mah-eu-plug": {
+  "model": "Hoco J148 Handy",
+  "scannedAt": "2026-11-26T02:47:28.337Z",
+  "specs": {
+   "Capacity": "5000mAh, 18.5Wh. Rated capacity: 2600mAh (5V TYP 2A).",
+   "Input": "Adapter mode (AC): 100V – 240V, 50 / 60Hz, 0.3A. Power bank mode: 1 × Type-C port – 5V / 3A, 9V / 2A, 12V / 1.5A – 18W.",
+   "Output": "Adapter mode (AC): 1 × built-in Type-C cable – 5V / 2A. 1 × Type-C port – 5V / 2A. Total output: 5V / 2A (max). Power bank mode: 1 × Type-C port – 5V / 3A, 9V / 2.22A, 12V / 1.67A – 20W. 1 × built-in Type-C cable – 5V / 3A, 9V / 2.22A, 12V / 1.67A – 20W. Total output: 5V / 2A (max).",
+   "Fast charging protocol support": "for PD3.0 / PD20W / QC3.0 / QC2.0 / FCP / SCP / AFC and other fast charging protocols.",
+   "Material": "ABS + PC flame retardant casing + lithium ion polymer battery.",
+   "Indication": "LED digital display of power level. Green indicator of PD / QC fast charging.",
+   "Sizes": "50.5 × 32.5 × 118mm.",
+   "Weight": "190g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j152-tough-22-5wpd20w-80000mah": {
+  "model": "Hoco J152 Tough",
+  "scannedAt": "2026-11-26T02:47:28.338Z",
+  "specs": {
+   "Capacity": "80000mAh, 308Wh. Rated capacity: 44000mAh (5V TYP 2A).",
+   "Input": "1 × Type-C1 port – 5V / 3A, 9V / 2A, 12V / 1.5A – 18W. 1 × Type-C2 port – 5V / 3A, 9V / 2A, 12V / 1.5A – 18W.",
+   "Output": "1 × Type-C1 port – 5V / 3A, 9V / 2.22A, 12V / 1.67A – 20W. 1 × Type-C2 port – 5V / 3A, 9V / 2.22A, 12V / 1.67A – 20W. 1 × USB-A1 port – 5V / 3A, 9V / 2A, 10V / 2.25A (SCP), 12V / 1.67A – 22.5W. 1 × USB-A2 port – 5V / 2A. 1 × USB-A3 port – 5V / 2A. 1 × USB-A4 port – 5V / 2A. Total output: 5V / 2A (max).",
+   "Fast charging protocol support": "for PD3.0 / PD20W / QC3.0 / QC2.0 / FCP / SCP / AFC and other fast charging protocols.",
+   "Material": "ABS + PC flame retardant casing + lithium ion polymer battery.",
+   "Indication": "LED digital display. Short press the power button to check remaining battery charge level at any time. Green fast charging indicator stays on during PD/QC fast charging input/output. Long press the power button to turn on the lamp, short press again for high brightness mode, short press again for flashing mode, short press again for SOS mode, and short press again to turn off the lamp. 7. With LED lamp. With handle.",
+   "Sizes": "111 × 92 × 116mm.",
+   "Weight": "1380g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-qs4-intelligent-jump-starter-air-pump-10000mah": {
+  "model": "Hoco QS4 Intelligent",
+  "scannedAt": "2026-11-26T02:47:28.338Z",
+  "specs": {
+   "Capacity": "10000mAh, 38.5Wh.",
+   "Input": "1 × Type-C port – 5V / 2A, 9V / 2A – 18W. 1 × DC – 12V / 10A.",
+   "Output": "1 × USB-A port – 5V / 2A. Car emergency starter output – 12V, current – 360A, peak current – 800A.",
+   "Material": "ABS + PC flame retardant shell + lithium ion polymer battery.",
+   "Indication": "LED digital display of power level and tire pressure level. 6. Jump starter is suitable for gasoline cars below 4.0L and diesel cars below 2.0L.",
+   "Air pressure range": "1.8 – 3.8 bar (3 – 150PSI). Can fill 185 / 65 / R15 tire (0 – 2.5bar) in about 6 minutes. Five inflatable modes (car tire, motorcycle tire, bicycle tire, basketball ball, custom). 8. Flashlight with SOS mode.",
+   "Operating temperature": "-10～60°C. 10. Sizes: 212 × 99 × 122mm. 11. Weight: 1080g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j147-prospero-3000mah-type-c-ver": {
+  "model": "Hoco J147 Prospero",
+  "scannedAt": "2026-11-26T02:47:28.338Z",
+  "specs": {
+   "Capacity": "3000mAh, 11.1Wh. Rated capacity: 1800mAh (5V TYP 2A).",
+   "Input": "1 × Type-C port – 5V / 2A.",
+   "Output": "1 × Type-C plug – 5V / 2A.",
+   "Material": "PC + ABS flame-retardant shell + lithium polymer battery.",
+   "Indication": "LED indicator of power level. 7. Output Type-C plug with cover.",
+   "Sizes": "79 × 36 × 27mm.",
+   "Weight": "88g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j152-pro-tough-pd65w-80000mah": {
+  "model": "Hoco J152 Pro Tough",
+  "scannedAt": "2026-11-26T02:47:28.339Z",
+  "specs": {
+   "Capacity": "80000mAh, 308Wh. Rated capacity: 44000mAh (5V TYP 2A).",
+   "Input": "1 × Type-C1 port – 5V / 3A, 9V / 3A, 12V / 3A, 15V / 3A, 20V / 3.25A – 65W. 1 × Type-C2 port – 5V / 3A, 9V / 3A, 12V / 3A, 15V / 3A, 20V / 3.25A – 65W.",
+   "Output": "1 × Type-C1 port – 5V / 3A, 9V / 3A, 12V / 3A, 15V / 3A, 20V / 3.25A – 65W. 1 × Type-C2 port – 5V / 3A, 9V / 3A, 12V / 3A, 15V / 3A, 20V / 3.25A – 65W. 1 × USB-A1 port – 5V / 3A, 9V / 2A, 10V / 2.25A (SCP), 12V / 1.5A – 22.5W. 1 × USB-A2 port – 5V / 2A. 1 × USB-A3 port – 5V / 2A. 1 × USB-A4 port – 5V / 2A. Total output: 5V / 2A (max).",
+   "Fast charging protocol support": "for PD3.0 / PD65W / QC3.0 / QC2.0 / FCP / SCP / AFC and other fast charging protocols.",
+   "Material": "ABS + PC flame retardant casing + lithium ion polymer battery.",
+   "Indication": "LED digital display. Short press the power button to check remaining battery charge level at any time. Green fast charging indicator stays on during PD/QC fast charging input/output. Long press the power button to turn on the lamp, short press again for high brightness mode, short press again for flashing mode, short press again for SOS mode, and short press again to turn off the lamp. 7. With LED lamp. With handle.",
+   "Sizes": "111 × 92 × 116mm.",
+   "Weight": "1380g."
   }
  }
 }
