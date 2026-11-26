@@ -4027,7 +4027,7 @@
  },
  "https://www.iremax.net/product/5469": {
   "model": "REMAX FP-28",
-  "scannedAt": "2026-11-26T05:12:40.542Z",
+  "scannedAt": "2026-11-26T05:36:25.533Z",
   "specs": {
    "1. Product Color": "White",
    "2. Battery Type": "Lithium-polymer",
@@ -4035,19 +4035,33 @@
    "4. Total Battery Power": "10,000 mAh / 3.85 V / 38.5 Wh",
    "5. Rated Capacity": "5,800 mAh (5V-2A)",
    "6. Input Voltage and Current": "Adapter Mode: AC 100V–240V, 50/60 Hz, 0.3A (18W)",
-   "Power Bank Mode": "Type-C Input: 5V=3A, 9V=2A, 12V=1.5A, 18W Max; Protocols: PD2.0/PD3.0/QC2.0/QC3.0/AFC/FCP"
+   "Power Bank Mode": "Type-C Input: 5V=3A, 9V=2A, 12V=1.5A, 18W Max; Protocols: PD2.0/PD3.0/QC2.0/QC3.0/AFC/FCP",
+   "7. Output Voltage and Current": "Type-C Output: 5V–3A, 9V = 2.22A, 10V = 2.25A, 12V = 1.67A, 22.5W Max",
+   "Type-C Cable Output": "5V–3A, 9V = 2.22A, 10V=2.25A, 12V=1.67A, 22.5W Max",
+   "iPh Cable Output": "5V=2.4A, 12W Max; Total Output: 5V-3A, 15W Max",
+   "8. Total Output for Multiple Ports": "5V 3A",
+   "9. Energy Conversion Efficiency": "≥65%",
+   "10. Unit Weight": "US: 217g, EU: 220g",
+   "11. Unit Dimensions": "95*70*29mm"
   }
  },
  "https://www.iremax.net/product/5481": {
   "model": "REMAX MH158-B/MH159-B",
-  "scannedAt": "2026-11-26T05:04:59.565Z",
+  "scannedAt": "2026-11-26T05:36:26.548Z",
   "specs": {
-   "1. Product Colors": "Purple/Silver/Rhenium",
-   "2. Battery Type": "Lithium-polymer battery cell",
-   "3. Battery Capacity": "10,000 mAh",
-   "4. Total Battery Power": "37 Wh",
-   "5. Rated Capacity": "5,300 mAh (5V/3A)",
-   "6. Input Voltage and Current": "Type-C Input: 5V/3A, 9V/2.22A, 12V/1.67A"
+   "1. Product Colors": "Purple/Silver/Tantalum",
+   "2. Battery Type": "Lithium-polymer cell",
+   "3. Battery Capacity": "20,000 mAh",
+   "4. Total Battery Power": "74 Wh",
+   "5. Rated Capacity": "11,000 mAh (5V/3A)",
+   "6. Input Voltage and Current": "Type-C Input: 5V/3A, 9V/2.22A, 12V/1.67A",
+   "Lightning Input": "5V/3A, 9V/2A, 12V/1.5A; Supports QC 2.0, QC 3.0, PD 2.0, PD 3.0",
+   "7. Output Voltage and Current": "Type-C Output: 5V/3A, 9V/2.22A, 10V/2.25A, 12V/1.67A, 22.5W (Max); Lightning Output: 5V/3A, 9V/2.22A, 12V/1.67A, 20W (Max), supports QC 2.0, QC 3.0, PD 2.0, and PD 3.0",
+   "8. Total Output for Multiple Ports": "Type-C Output: 5V/3A, 9V/2.22A, 10V/2.25A, 12V/1.67A, 22.5W (Max); Lightning Output: 5V/3A, 9V/2.22A, 12V/1.67A, 20W (Max), supports QC 2.0, QC 3.0, PD 2.0, and PD 3.0",
+   "9. Energy Conversion Efficiency": "≥60%",
+   "10. Unit Weight": "Approx. 325g",
+   "11. Unit Dimensions": "95 × 68 × 34 mm",
+   "8. Total Output Across All Ports": "5V/3A (Max)"
   }
  },
  "https://www.iremax.net/product/5409": {
@@ -4070,20 +4084,24 @@
  },
  "https://www.iremax.net/product/5091": {
   "model": "REMAX FP-16",
-  "scannedAt": "2026-11-26T05:12:44.552Z",
+  "scannedAt": "2026-11-26T05:36:25.529Z",
   "specs": {
    "1. Product Colors": "Stone-Ground Black, Starry Orange, Starlight Silver",
    "2. Battery Capacity": "5000mAh",
    "3. Total Battery Power": "5000mAh/3.6V/18Wh",
    "4. Rated Output": "2600mAh (5V-2A)",
    "5. Input Voltage and Current": "Type-C Input: 5V-3A/9V-2A/12V-1.5A 18W (Max)",
-   "Protocol Support": "PPS/PD 2.0/PD 3.0/QC 2.0/QC 3.0/AFC/FCP/SCP/PE 2.0/PE 1.1",
-   "6. Output Voltage and Current": "Type-C: 5V-3A/9V-2.22A/12V-1.67A 20W (Max)"
+   "Protocol Support": "Wireless Charging Output: 2W/5W/7.5W/10W/15W PPS/PD2.0/PD3.0/QC2.0/QC3.0/AFC/FCP/SCP/PE2.0/PE1.1 Supports Apple/ Huawei Watches",
+   "6. Output Voltage and Current": "Type-C: 5V-3A/9V-2.22A/12V-1.67A 20W (Max)",
+   "7. Total Output (Multi-Port)": "5V-3A (Max)",
+   "8. Energy Conversion Efficiency": "≥65% (5V-2A)",
+   "9. Unit Weight": "148g",
+   "10. Unit Dimensions": "99.2 x 74.3 x 28mm"
   }
  },
  "https://www.iremax.net/product/5265": {
   "model": "REMAX FP-11",
-  "scannedAt": "2026-11-26T05:12:42.560Z",
+  "scannedAt": "2026-11-26T05:36:25.532Z",
   "specs": {
    "1. Product Color": "Starlight Silver",
    "2. Battery Type": "Lithium-ion",
@@ -4091,20 +4109,34 @@
    "4. Total Battery Capacity": "5000mAh × 2 pcs (typical); 7.7V/38.5Wh, 4900mAh × 2 (rated); 7.7V/37.73Wh",
    "5. Rated Capacity": "5500mAh (5V2A)",
    "6. Input Voltage and Current": "Charger Mode: 100V–240V, 50Hz/60Hz, 0.6A (Max) Protocol: No protocol",
-   "Power Bank Mode": "Type-C/Type-C Cable Input: 5V⎓3A, 9V⎓3A, 12V⎓2.5A, 30W (Max) Protocol: PD3.0/PD2.0"
+   "Power Bank Mode": "Type-C Output: 5V⎓3A, 9V⎓3A, 12V⎓3A, 15V⎓3A, 20V⎓2.25A 45W (Max)",
+   "7. Output Voltage and Current": "Adapter Mode: USB-A Output: 5V⎓2.4A, 9V⎓2A, 12V⎓1.5A, 18W (Max)",
+   "Protocols": "PD 3.0/PPS/QC 2.0/QC 3.0/AFC/FCP/SCP/Apple 2.4A/DCP-1.5A/Samsung-5V2A.",
+   "Type-C Output": "5V⎓2.4A, 9V⎓3A, 12V⎓3A, 15V⎓3A, 20V⎓2.25A 45W (Max)",
+   "Type-C Cable Output": "5⎓2.4A, 9V⎓2.22A, 12V⎓1.67A, 20W (Max)",
+   "Combined Output": "5V⎓3A 15W (Max)",
+   "USB-A Output": "5V⎓2.4A, 9V⎓2A, 10V⎓2.25A (SSCP), 12V⎓1.5A 22.5W (Max)",
+   "8. Total Output (Multiple Ports)": "Adapter Mode: USB-A + Type-C: 5V⎓3A (Max), USB-A + Type-C Cable: 5V⎓3A (Max), Type-C + Type-C Cable: 5V⎓3A (Max)",
+   "9. Energy Conversion Efficiency": "On-board conversion efficiency ≥ 88%, overall energy conversion efficiency ≥ 75%",
+   "10. Unit Weight": "256g",
+   "11. Unit Dimensions": "107 × 62 × 28.5 mm, 111 × 62 × 28.5"
   }
  },
  "https://www.iremax.net/product/5139": {
   "model": "REMAX 02PD",
-  "scannedAt": "2026-11-26T05:12:42.534Z",
+  "scannedAt": "2026-11-26T05:36:25.530Z",
   "specs": {
    "1. Battery capacity": "10,000 mAh × 2 (typical), 9,800 mAh × 2 (rated); 2. Total battery capacity: 10,000 mAh × 2 (typical); 7.7V/77Wh, 9800mAh × 2 (rated); 7.7V/75.46Wh",
    "3. Rated capacity": "11,000mAh (5V/2A)",
    "4. Input voltage and current": "Type-C port input: 5V⎓3A, 9V⎓3A, 12V⎓2.5A, 15V⎓2A, 20V⎓1.5A, 30W (Max) Protocols: PD 3.0/PD 2.0",
    "Type-C Cable Input": "5V⎓3A, 9V⎓3A, 12V⎓2.5A, 15V⎓2A, 20V⎓1.5A, 30W (Max) Protocols: PD 3.0/PD 2.0",
    "5. Output Voltage and Current": "Type-C Port Output: 5V⎓3A, 9V⎓3A, 12V⎓3A, 15V⎓3A, 20V⎓2.25A, 45W (Max)",
-   "Protocols": "PD 3.0/PPS/AVS/QC 2.0/QC 3.0/AFC/FCP/SCP/ Apple 2.4A/DCP 1.5A/Samsung 5V 2A.",
-   "Type-C Output": "5V⎓3A, 9V⎓3A, 12V⎓3A, 15V⎓3A, 20V⎓2.25A 45W (Max)"
+   "Protocols": "PD 3.0/PPS/AVS/QC 2.0/QC 3.0/AFC/FCP/SCP/ Apple 2.4A/DCP-1.5A/Samsung 5V2A. Combined Output: 5V-3A (Max) Protocol: No protocol",
+   "Type-C Output": "5V⎓3A, 9V⎓3A, 12V⎓3A, 15V⎓3A, 20V⎓2.25A 45W (Max)",
+   "6. Total Multi-Port Output": "Type-C Port + Type-C Cable: 5V⎓3A (Max) Protocol: No protocol",
+   "7. Energy Conversion Efficiency": "Board-level conversion efficiency ≥88%, overall energy conversion efficiency ≥75%",
+   "8. Unit Weight": "≈316g",
+   "9. Unit Dimensions": "100.5*65*34.7mm"
   }
  },
  "https://www.iremax.net/product/6153": {
@@ -4310,15 +4342,22 @@
  },
  "https://www.iremax.net/product/5169": {
   "model": "REMAX JP368",
-  "scannedAt": "2026-11-26T05:12:42.556Z",
+  "scannedAt": "2026-11-26T05:36:25.532Z",
   "specs": {
    "1. Product Colors": "Starlight Silver, Dark Blue",
    "2. Battery Capacity": "10,000mAh",
    "3. Rated Capacity": "5,100mAh (5V⎓3A)",
    "4. Input Voltage and Current": "C1/C2 Input: 5V⎓3A, 9V⎓3A, 12V⎓2.5A, 15V⎓2A, 20V⎓1.5A",
-   "Supported protocols": "PD 3.0, QC 3.0, PPS, AFC, FCP",
+   "Supported protocols": "QC, AFC, FCP, SCP, For Samsung: 2A, For iPhone: 2.4A",
    "5. Output Voltage and Current": "C2 Output: 5V⎓3A, 9V⎓3A, 12V⎓3A, 15V⎓3A, 20V⎓2.25A",
-   "Supported Protocols": "PD3.1, QC, AFC, FCP, PPS 3.3–11V 3A, 45W max, For Samsung: 2A, For iPhone: 2.4A, DCP 1.5A, BC 1.2, UFCS, SCP"
+   "Supported Protocols": "PD3.1, QC, AFC, FCP, PPS 3.3–11V 3A, 45W max, For Samsung: 2A, For iPhone: 2.4A, DCP 1.5A, BC 1.2, UFCS, SCP",
+   "C1 (cable) Output": "5V⎓3A, 9V⎓3A, 12V⎓3A, 15V⎓3A, 20V⎓2.25A",
+   "A Output": "5V⎓3A, 9V⎓2A, 10V⎓2.25A, 12V⎓1.5A",
+   "C1+C2+A Output": "5V⎓3A",
+   "6. Total Output": "C1+A: 5V⎓3A, C2+A: 5V⎓3A, C1+C2: 5V⎓3A",
+   "7. Energy conversion efficiency": "≥68%",
+   "8. Unit weight": "≈237g",
+   "9. Unit dimensions": "89*55*38.3"
   }
  },
  "https://www.iremax.net/product/5049": {
