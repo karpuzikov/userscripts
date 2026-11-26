@@ -154,6 +154,7 @@
       },
       {
        "name": "Rated capacity",
+       "optional": true,
        "afterLabel": "^Capacity:$",
        "labels": ".spec-param",
        "regex": "[Rr]ated capacity:\\s*(\\d+mAh)"
@@ -199,6 +200,7 @@
       },
       {
        "name": "Rated capacity",
+       "optional": true,
        "selector": ".elementor-widget-woocommerce-product-content p",
        "regex": "Rated capacity:\\s*(\\d+mAh)"
       },
@@ -211,7 +213,7 @@
       {
        "name": "Weight",
        "selector": ".elementor-widget-woocommerce-product-content p",
-       "regex": "Weight:\\s*(\\d+\\s*g)\\b"
+       "regex": "Weight:\\s*(?:main unit\\s*[–-]\\s*)?(\\d+\\s*g)\\b"
       },
       {
        "name": "Dimensions",
