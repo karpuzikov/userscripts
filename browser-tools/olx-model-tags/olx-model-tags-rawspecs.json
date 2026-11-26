@@ -1024,5 +1024,131 @@
    "Sizes": "103 × 67.5 × 17mm.",
    "Weight": "180g."
   }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-q34-clever-pd20w-wireless-charging-10000mah": {
+  "model": "Hoco Q34 Clever",
+  "scannedAt": "2026-11-26T02:51:13.347Z",
+  "specs": {
+   "Capacity": "10000mAh, 38.5Wh. Rated capacity: 5400mAh (5V TYP 2A).",
+   "Input": "1 × Type-C – 5V / 3A, 9V / 2A – 18W.",
+   "Output": "1 × Type-C – 5V / 3A, 9V / 2.22A, 12V / 1.67A – 20W max. Wireless output – 5W / 7.5W / 10W / 15W. Total output: 5V / 2A (max).",
+   "Fast charging protocol support": "for PD3.0 / PD20W / QC3.0 / QC2.0 / FCP / AFC and other fast charging protocols.",
+   "Material": "aluminum alloy + PC + ABS flame-retardant casing + high-efficiency polymer lithium battery cells.",
+   "Indication": "LED digital display of power level. Green indicator of PD / QC fast charging.",
+   "Sizes": "102 × 67 × 15mm.",
+   "Weight": "180g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-q33-outstanding-pd20w-10000mah": {
+  "model": "Hoco Q33 Outstanding",
+  "scannedAt": "2026-11-26T02:51:13.357Z",
+  "specs": {
+   "Capacity": "10000mAh, 37Wh. Rated capacity: 5400mAh (5V TYP 2A).",
+   "Input": "1 × Type-C1– 5V / 2A, 9V / 2A, 12V / 1.5A – 18W. 1 × Type-C2– 5V / 2A, 9V / 2A, 12V / 1.5A – 18W. 1 × for iP – 5V / 2A, 9V / 2A – 18W.",
+   "Output": "1 × Type-C1 – 5V / 3A, 9V / 2.22A, 12V / 1.67A – 20W max. 1 × Type-C2 – 5V / 3A, 9V / 2.22A, 12V / 1.67A – 20W max. 1 × for iP – 5V / 2.4A, 9V / 2.22A – 20W max. Total output: 5V / 2A (max).",
+   "Fast charging protocol support": "for PD3.0 / PD20W / QC3.0 / QC2.0 / FCP / AFC and other fast charging protocols.",
+   "Material": "PC + ABS flame-retardant casing + high-efficiency 21700 lithium battery cells.",
+   "Indication": "LED digital display of power level. Green indicator of PD / QC fast charging. 7. Included Type-C to iP charging cable, can be stored on the power bank as a lanyard.",
+   "Sizes": "90 × 61 × 25.5mm.",
+   "Weight": "195g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-qs2-land-jump-starter-8000mah": {
+  "model": "Hoco QS2 Land",
+  "scannedAt": "2026-11-26T02:51:13.361Z",
+  "specs": {
+   "Capacity": "8000mAh, 29.6Wh.",
+   "Input": "1 × Type-C – 5V / 2.4A.",
+   "Output": "1 × USB-A 1 – 5V / 2.4A. 1 × USB-A 2 – 5V / 2.4A. Total output: 5V / 2.4A (max). Car emergency starter output – 12V. 4. Automobile emergency starter is suitable for gasoline vehicles below 4.0L and diesel vehicles below 2.0L.",
+   "Inflation pressure value": "0-10.3 bar (0-150PSI). Four inflatable modes (car tire, motorcycle tire, bicycle tire, basketball ball).",
+   "Material": "ABS + PC flame retardant shell + high-rate lithium polymer battery.",
+   "Indication": "LED digital display of power level, 4 kinds of air pressure units (PSI, BAR, KPA, Kg/cm²), 4 inflating modes (car, motorcycle, bicycle, basketball ball).",
+   "Flashlight function": "after turning off, press the light button for a long time – light is always on. Press again – battery level is displayed on the screen. Press the button to switch lighting mode – always on, flashing, SOS, turn off.",
+   "Sizes": "210 × 110 × 44mm. 10. Weight: 778g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-q31-ingenious-pd20w-5000mah-type-c-ver": {
+  "model": "Hoco Q31 Ingenious",
+  "scannedAt": "2026-11-26T02:51:13.415Z",
+  "specs": {
+   "Capacity": "5000mAh, 18.5Wh. Rated capacity: 2600mAh (5V TYP 2A).",
+   "Input": "1 × Type-C port – 5V / 3A, 9V / 2A, 12V / 1.5A – 18W.",
+   "Output": "1 × Type-C port – 5V / 3A, 9V / 2.22A, 12V / 1.67A – 20W max. 1 × Type-C plug – 5V / 3A, 9V / 2.22A, 12V / 1.67A – 20W max. Total output: 5V / 2A (max).",
+   "Fast charging protocol support": "for PD3.0 / PD20W / QC3.0 / QC2.0 / FCP / SCP / AFC and other fast charging protocols.",
+   "Material": "PC + ABS flame-retardant casing + high-efficiency 21700 lithium battery cells.",
+   "Indication": "LED indicator of power level. Green indicator of PD / QC fast charging. 7. Foldable output plug for Type-C.",
+   "Sizes": "78 × 37 × 27mm.",
+   "Weight": "100g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-q26a-joy-pd20w-wireless-charging-10000mah": {
+  "model": "Hoco Q26A Joy",
+  "scannedAt": "2026-11-26T02:51:13.429Z",
+  "specs": {
+   "Capacity": "10000mAh, 38.7Wh. Rated capacity: 6000mAh (5V TYP 2A).",
+   "Input": "1 × Type-C – 5V / 2A, 9V / 2A – 18W.",
+   "Output": "1 × Type-C – 5V / 3A, 9V / 2.22A, 12V / 1.67A – 20W max. Wireless output – 5W / 7.5W / 10W / 15W. Total output: 5V / 2A (max).",
+   "Fast charging protocol support": "for PD3.0 / PD20W / QC3.0 / QC2.0 / FCP / SCP / AFC and other fast charging protocols.",
+   "Material": "aluminum alloy casing + high-efficiency polymer lithium battery cells.",
+   "Indication": "LED indicator of power level. Green indicator of PD / QC fast charging and wireless charging mode.",
+   "Sizes": "102 × 67 × 13.5mm.",
+   "Weight": "171g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-q31-ingenious-pd20w-5000mah-ip-ver": {
+  "model": "Hoco Q31 Ingenious",
+  "scannedAt": "2026-11-26T02:51:14.348Z",
+  "specs": {
+   "Capacity": "5000mAh, 18.5Wh. Rated capacity: 2600mAh (5V TYP 2A).",
+   "Input": "1 × Type-C port – 5V / 3A, 9V / 2A, 12V / 1.5A – 18W.",
+   "Output": "1 × Type-C port – 5V / 3A, 9V / 2.22A, 12V / 1.67A – 20W max. 1 × iP plug – 5V / 3A, 9V / 2.22A, 12V / 1.67A – 20W max. Total output: 5V / 2A (max).",
+   "Fast charging protocol support": "for PD3.0 / PD20W / QC3.0 / QC2.0 / FCP / SCP / AFC and other fast charging protocols.",
+   "Material": "PC + ABS flame-retardant casing + high-efficiency 21700 lithium battery cells.",
+   "Indication": "LED indicator of power level. Green indicator of PD / QC fast charging. 7. Foldable output iP plug.",
+   "Sizes": "78 × 37 × 27mm.",
+   "Weight": "100g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-q26-joy-pd20w-wireless-charging-5000mah": {
+  "model": "Hoco Q26 Joy",
+  "scannedAt": "2026-11-26T02:51:14.350Z",
+  "specs": {
+   "Capacity": "5000mAh, 19.35Wh. Rated capacity: 3000mAh (5V TYP 2A).",
+   "Input": "1 × Type-C – 5V / 2A, 9V / 2A – 18W.",
+   "Output": "1 × Type-C – 5V / 3A, 9V / 2.22A, 12V / 1.67A – 20W max. Wireless output – 5W / 7.5W / 10W / 15W. Total output: 5V / 2A (max).",
+   "Fast charging protocol support": "for PD3.0 / PD20W / QC3.0 / QC2.0 / FCP / SCP / AFC and other fast charging protocols.",
+   "Material": "aluminum alloy casing + high-efficiency polymer lithium battery cells.",
+   "Indication": "LED indicator of power level. Green indicator of PD / QC fast charging and wireless charging mode.",
+   "Sizes": "102 × 66 × 8.25mm.",
+   "Weight": "104g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-q32-bird-pd20w-wireless-charging-5000mah": {
+  "model": "Hoco Q32 Bird",
+  "scannedAt": "2026-11-26T02:51:14.350Z",
+  "specs": {
+   "Capacity": "5000mAh, 19.25Wh. Rated capacity: 2500mAh (5V TYP 2A).",
+   "Input": "1 × Type-C – 5V / 3A, 9V / 2A, 12V / 1.5A – 18W.",
+   "Output": "1 × Type-C – 5V / 3A, 9V / 2.22A, 12V / 1.67A – 20W max. Wireless output – 5W / 7.5W / 10W / 15W. Total output: 5V / 2A (max).",
+   "Fast charging protocol support": "for PD3.0 / PD20W / QC3.0 / QC2.0 / FCP / AFC and other fast charging protocols.",
+   "Material": "aluminum alloy + PC + ABS flame-retardant casing + high-efficiency polymer lithium battery cells.",
+   "Indication": "LED indicator of power level. Green indicator of PD / QC fast charging.",
+   "Sizes": "100.5 × 65.5 × 11mm.",
+   "Weight": "125g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-qs1-spring-jump-starter-10000mah": {
+  "model": "Hoco QS1 Spring",
+  "scannedAt": "2026-11-26T02:51:14.392Z",
+  "specs": {
+   "Capacity": "10000mAh, 36.6Wh.",
+   "Input": "1 × Type-C – 5V / 3A.",
+   "Output": "1 × USB-A 1 – 5V / 2.4A. 1 × USB-A 2 – 5V / 2.4A. Total output: 5V / 2.4A (max). Car emergency starter output – 12V. 4. Automobile emergency starter is suitable for gasoline vehicles below 4.0L and diesel vehicles below 2.0L.",
+   "Material": "ABS + PC flame retardant shell+high-rate lithium polymer battery.",
+   "Indication": "low battery alarm function – when the battery is too low, the LED flashes to prompt.",
+   "Flashlight function": "press and hold the button for 3 seconds – LED light is always on. Press again – SOS slow flash mode. Press again – SOS fast flash mode. Press again – red signal light flashing mode. Press again to turn off LED light.",
+   "Sizes": "175 × 75 × 32mm.",
+   "Weight": "366g."
+  }
  }
 }
