@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OLX - Model Tags
 // @namespace    https://www.olx.ua/
-// @version      0.15.2
+// @version      0.15.3
 // @description  Tag OLX ads by model (tags shared by every ad of that model) or per ad, mark broken ads, filter search results by tags, per-tag Hide (pixel mesh) / Highlight (outline). Shared model catalog is read from GitHub without any key; your own marks stay in this browser. Phone specs (year, DXOMARK camera, AnTuTu, sensor, display, battery, charger, NFC) are captured from the DXOMARK, Kimovil and GSMArena pages you open. OLX only gets read locally from the open page.
 // @match        https://www.olx.ua/*
 // @match        https://www.dxomark.com/smartphones/*
@@ -695,6 +695,7 @@
     // values are uploaded it writes a result and closes itself. Tabs that report nothing within SCAN_TAB_TIMEOUT_MS count as failed.
 
     const STORAGE_KEY_SCAN_JOB = 'olxModelTagsScanJob';
+    const STORAGE_KEY_SCAN_CONCURRENCY = 'olxModelTagsScanConcurrency';
     const SCAN_RESULT_KEY_PREFIX = 'olxModelTagsScanResult:';
     const SCAN_TAB_TIMEOUT_MS = 90 * 1000;
     const SCAN_UPLOAD_TIMEOUT_MS = 2 * 60 * 1000;
@@ -740,6 +741,9 @@
             <div class="status" id="status"></div></div>`;
         document.body.append(host);
         const element = (id) => shadow.getElementById(id);
+        // The panel is rebuilt on every page of the category: show the running job's value (or the last one used), not the default.
+        element('concurrency').value = GM_getValue(STORAGE_KEY_SCAN_JOB, null)?.concurrency || GM_getValue(STORAGE_KEY_SCAN_CONCURRENCY, 3);
+        element('concurrency').addEventListener('change', () => GM_setValue(STORAGE_KEY_SCAN_CONCURRENCY, element('concurrency').value));
         const readJob = () => { const job = GM_getValue(STORAGE_KEY_SCAN_JOB, null); return job && job.active && Date.now() - job.updatedAt > SCAN_JOB_STALE_MS ? { ...job, active: false } : job; };
         const saveJob = (job) => GM_setValue(STORAGE_KEY_SCAN_JOB, { ...job, updatedAt: Date.now() });
         const pageCount = Math.max(1, ...[...document.querySelectorAll(category.pageLinks || 'a.page-numbers')].map((link) => parseInt(link.textContent, 10) || 0));
