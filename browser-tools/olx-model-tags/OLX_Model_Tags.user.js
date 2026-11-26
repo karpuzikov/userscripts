@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OLX - Model Tags
 // @namespace    https://www.olx.ua/
-// @version      0.15.14
+// @version      0.16.0
 // @description  Tag OLX ads by model (tags shared by every ad of that model) or per ad, mark broken ads, filter search results by tags, per-tag Hide (pixel mesh) / Highlight (outline). Shared model catalog is read from GitHub without any key; your own marks stay in this browser. Phone specs (year, DXOMARK camera, AnTuTu, sensor, display, battery, charger, NFC) are captured from the DXOMARK, Kimovil and GSMArena pages you open. OLX only gets read locally from the open page.
 // @match        https://www.olx.ua/*
 // @match        https://www.dxomark.com/smartphones/*
@@ -9,6 +9,8 @@
 // @match        https://www.gsmarena.com/*
 // @match        https://hocotech.com/product/*
 // @match        https://hocotech.com/category/*
+// @match        https://www.iremax.net/product/*
+// @match        https://www.iremax.net/category/*
 // @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/browser-tools/olx-model-tags/OLX_Model_Tags.user.js
 // @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/browser-tools/olx-model-tags/OLX_Model_Tags.user.js
 // @run-at       document-idle
@@ -22,6 +24,7 @@
 // @grant        GM_registerMenuCommand
 // @connect      api.github.com
 // @connect      raw.githubusercontent.com
+// @connect      www.iremax.net
 // ==/UserScript==
 
 (() => {
@@ -256,6 +259,12 @@
             if (!watts.length) watts.push(...[...text.matchAll(/(\d+(?:\.\d+)?)\s*V\s*[\/\-–]?\s*(\d+(?:\.\d+)?)\s*A\b/g)].map((match) => Math.round(Number(match[1]) * Number(match[2]) * 100) / 100));
             return watts.length ? `${Math.max(...watts)}W` : '';
         },
+        // Highest of the listed watts and every volts x amps pair ("20V 2.75A" -> 55W): for sites that list per-voltage steps.
+        peakWatts: (text) => {
+            const watts = [...text.matchAll(/(\d+(?:\.\d+)?)\s*W\b/g)].map((match) => Number(match[1]));
+            watts.push(...[...text.matchAll(/(\d+(?:\.\d+)?)\s*V\s*[\/\-–]?\s*(\d+(?:\.\d+)?)\s*A(?![a-z])/g)].map((match) => Math.round(Number(match[1]) * Number(match[2]) * 100) / 100));
+            return watts.length ? `${Math.max(...watts)}W` : '';
+        },
         antutu: (text) => parseAnTuTuAnswer(text),
     };
 
@@ -271,7 +280,7 @@
     function findSourceCategory(sources, hostname, pathname, pageDocument) {
         for (const source of sources) {
             const category = source.category;
-            if (category && source.hosts.includes(hostname) && new RegExp(category.path).test(pathname) && pageDocument?.querySelector(category.products)) return { source, category };
+            if (category && source.hosts.includes(hostname) && new RegExp(category.path).test(pathname) && (category.api || pageDocument?.querySelector(category.products))) return { source, category };
         }
         return null;
     }
@@ -541,6 +550,11 @@
         const specs = {};
         if (rawSpecsSpec.rows) {
             for (const row of document.querySelectorAll(rawSpecsSpec.rows)) {
+                if (rawSpecsSpec.splitAtColon) { // one element per spec, "Label: value"
+                    const [label, ...value] = readTextOf(row).split(':');
+                    if (value.length && label.trim()) specs[label.trim()] = value.join(':').trim();
+                    continue;
+                }
                 const label = readTextOf(row.querySelector(rawSpecsSpec.label)).replace(/:$/, '');
                 if (label) specs[label] = readTextOf(row.querySelector(rawSpecsSpec.value));
             }
@@ -736,6 +750,35 @@
         }, 250);
     }
 
+    // Category pages that list products without links (REMAX: a Vue app routing by id) are scanned through the site's own public
+    // list API instead of the page's DOM. No token or login is sent to that site.
+    function postJsonWithoutCredentials(url, body) {
+        return new Promise((resolve, reject) => GM_xmlhttpRequest({
+            method: 'POST', url, headers: { 'Content-Type': 'application/json;charset=utf-8' }, data: JSON.stringify(body),
+            onload: (response) => { try { resolve(JSON.parse(response.responseText)); } catch { reject(new Error(`HTTP ${response.status}, not JSON: ${response.responseText.slice(0, 120)}`)); } },
+            onerror: () => reject(new Error(`${new URL(url).host} unreachable (allow it in Tampermonkey's connect prompt)`)),
+            ontimeout: () => reject(new Error(`${new URL(url).host} timed out`)),
+        }));
+    }
+
+    // The answer's shape is not documented: the product list is the first array of objects with an id.
+    function findProductRecords(value) {
+        if (Array.isArray(value)) return value.length && value.every((item) => item && typeof item === 'object' && 'id' in item) ? value : null;
+        if (value && typeof value === 'object') for (const child of Object.values(value)) { const found = findProductRecords(child); if (found) return found; }
+        return null;
+    }
+
+    async function fetchProductUrlsOfApiCategoryPage(api, pageNumber) {
+        const [category, category1 = ''] = decodeURIComponent(location.pathname).replace(/^\/category\//, '').split('_');
+        const answer = await postJsonWithoutCredentials(api.url, {
+            language: api.language, brand: (new URLSearchParams(location.search).get('brand') || 'remax').toUpperCase(),
+            category, category1, addBannerData: false, pageNum: pageNumber, pageSize: api.pageSize,
+        });
+        const records = findProductRecords(answer);
+        if (!records && pageNumber === 1) throw new Error(`no product list in the answer: ${JSON.stringify(answer).slice(0, 200)}`);
+        return (records || []).map((record) => api.productUrl + record.id);
+    }
+
     function startCategoryScanPanel({ category }) {
         const openTabs = {};
         const host = document.createElement('olx-model-tags-scan-panel');
@@ -775,8 +818,9 @@
         element('stop').addEventListener('click', () => { const job = readJob(); if (job) saveJob({ ...job, active: false }); });
 
         let isNavigatingToNextPage = false;
+        let isLoadingApiPage = false;
         function tick() {
-            if (isNavigatingToNextPage) return; // ticks keep firing until the page unloads; each one used to add +1 to the page counter
+            if (isNavigatingToNextPage || isLoadingApiPage) return; // ticks keep firing until the page unloads; each one used to add +1 to the page counter
             let job = readJob();
             const counts = (done) => Object.values(done).reduce((sum, result) => ({ ...sum, [result.status]: (sum[result.status] || 0) + 1 }), { saved: 0, partial: 0, failed: 0 });
             if (job?.active) {
@@ -797,8 +841,21 @@
                     else if (Date.now() - since > SCAN_UPLOAD_TIMEOUT_MS) { job.done[key] = { status: 'failed', message: `recorded but not uploaded (${synchronizationStatus.message || 'no sync result'})` }; delete job.awaiting[key]; }
                 }
                 if (Object.keys(job.awaiting).length && !synchronizationInProgress && Date.now() - lastScanUploadAt > 1500) { lastScanUploadAt = Date.now(); synchronizeWithGithub(); }
+                const isIdle = !job.queue.length && !Object.keys(job.inFlight).length && !Object.keys(job.awaiting).length;
+                if (category.api && isIdle) {
+                    // Every page of the category comes from the list API; this tab never navigates.
+                    const pageNumber = job.pageKey === null ? job.page : job.page + 1;
+                    saveJob(job); // keep the results moved to `done` above
+                    isLoadingApiPage = true;
+                    fetchProductUrlsOfApiCategoryPage(category.api, pageNumber).then((urls) => {
+                        const latest = readJob();
+                        if (urls.length) saveJob({ ...latest, page: pageNumber, pageKey: `api:${pageNumber}`, queue: urls });
+                        else saveJob({ ...latest, active: false, finished: true });
+                    }).catch((error) => saveJob({ ...readJob(), active: false, error: error.message })).finally(() => { isLoadingApiPage = false; });
+                    return;
+                }
                 const here = scanKeyOf(location.href);
-                if (job.pageKey !== here && !job.queue.length && !Object.keys(job.inFlight).length && !Object.keys(job.awaiting).length) {
+                if (!category.api && job.pageKey !== here && !job.queue.length && !Object.keys(job.inFlight).length && !Object.keys(job.awaiting).length) {
                     job.pageKey = here;
                     job.queue = [...new Set([...document.querySelectorAll(category.products)].map((item) => item.querySelector(category.link)?.href).filter(Boolean))];
                 }
@@ -807,7 +864,7 @@
                     job.inFlight[scanKeyOf(url)] = Date.now();
                     openTabs[scanKeyOf(url)] = GM_openInTab(url, { active: false, insert: true, setParent: true });
                 }
-                if (!job.queue.length && !Object.keys(job.inFlight).length && !Object.keys(job.awaiting).length) {
+                if (!category.api && !job.queue.length && !Object.keys(job.inFlight).length && !Object.keys(job.awaiting).length) {
                     const nextPageLink = document.querySelector(category.next);
                     if (nextPageLink) { isNavigatingToNextPage = true; job.page++; saveJob(job); location.href = nextPageLink.href; return; }
                     job.active = false;
@@ -824,6 +881,7 @@
                 const total = counts(job.done);
                 element('status').textContent = `${job.active ? 'Scanning' : job.finished ? 'Done' : 'Stopped'}: page ${job.page}/${pageCount}\n`
                     + `${Object.keys(job.inFlight).length} tabs open, ${job.queue.length} products not opened yet, ${Object.keys(job.awaiting || {}).length} uploading\nsaved ${total.saved}, partial ${total.partial}, failed ${total.failed}`
+                    + (job.error ? `\nError: ${job.error}` : '')
                     + (total.partial || total.failed ? '\nnot fully saved (click to open):' : '');
                 const problems = Object.entries(job.done).filter(([, result]) => result.status !== 'saved');
                 // Rebuild only when the list changed, so a link is not replaced under the mouse.

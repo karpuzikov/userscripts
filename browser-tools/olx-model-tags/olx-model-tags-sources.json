@@ -237,6 +237,57 @@
     "next": "a.next.page-numbers",
     "pageLinks": "a.page-numbers"
    }
+  },
+  {
+   "name": "REMAX",
+   "hosts": [
+    "www.iremax.net"
+   ],
+   "group": "Power banks",
+   "pages": [
+    {
+     "path": "^/product/\\d+",
+     "model": {
+      "selector": "#ProductView .text-\\[32px\\]",
+      "prefix": "REMAX "
+     },
+     "properties": [
+      {
+       "name": "Capacity",
+       "selector": "#ProductView div:has(> p.my-5.text-sm)",
+       "regex": "Battery Capacity:\\s*([\\d,]+\\s*mAh)",
+       "transform": "batteryMah"
+      },
+      {
+       "name": "Rated capacity",
+       "optional": true,
+       "selector": "#ProductView div:has(> p.my-5.text-sm)",
+       "regex": "Rated Capacity:\\s*([\\d,]+\\s*mAh)",
+       "transform": "batteryMah"
+      },
+      {
+       "name": "Output",
+       "selector": "#ProductView div:has(> p.my-5.text-sm)",
+       "regex": "Output Voltage and Current:(.*)$",
+       "transform": "peakWatts"
+      }
+     ],
+     "rawSpecs": {
+      "rows": "#ProductView div:has(> p.my-5.text-sm) > p",
+      "splitAtColon": true
+     }
+    }
+   ],
+   "category": {
+    "path": "^/category/%E7%A7%BB%E5%8A%A8%E7%94%B5%E6%BA%90",
+    "api": {
+     "url": "https://www.iremax.net/api/home/products",
+     "language": "EN-US",
+     "pageSize": 12,
+     "productUrl": "https://www.iremax.net/product/"
+    },
+    "pageLinks": ".el-pager li.number"
+   }
   }
  ]
 }

@@ -279,3 +279,18 @@ test('Hoco free-text adapter reads an Output block spread over several lines (QS
   const text = '2. Input:\n1 × Type-C port – 5V / 2A, 9V / 2A – 18W.\n3. Output:\n2 × USB-A ports – 5V / 2.4A – 12W max.\nTotal USB-A ports output – 5V / 2.4A – 12W max.\n4. Jump starter is suitable for cars.';
   assert.equal(olxModelTags.SOURCE_VALUE_TRANSFORMS.maxWatts(text.match(new RegExp(page.properties.find((property) => property.name === 'Output').regex))[1]), '12W');
 });
+
+test('peakWatts takes the highest of listed watts and volts x amps (REMAX FP-32 output block)', () => {
+  const output = 'Type-C 1/C2 Output: 5V 3A, 9V 3A, 15V 3A, 20V 2.25A, Protocols: PD 3.0 PPS Priority: 5–11V/4.5A, 5–16V/3A, 5–20V/2.75A; USB-A1: 5V3A, 9V2A, 12V1.5A, 10V2.25A, 22.5W; Protocols: QC, Samsung 2A, Apple 2.4A';
+  assert.equal(olxModelTags.SOURCE_VALUE_TRANSFORMS.peakWatts(output), '55W');
+  assert.equal(olxModelTags.SOURCE_VALUE_TRANSFORMS.peakWatts('no figures'), '');
+});
+
+test('REMAX adapter reads the FP-32 spec block', () => {
+  const page = JSON.parse(require('fs').readFileSync(__dirname + '/olx-model-tags-sources.json', 'utf8')).sources.find((source) => source.name === 'REMAX').pages[0];
+  const text = 'Product Colors: Dark Blue, OrangeBattery Type: Lithium-PolymerBattery Capacity: 10,000 mAhBattery Voltage/Total Power: 3.7 V/37 WhRated Capacity: 11,000 mAhInput Voltage and Current: Type-C: 5V 3A, 45WOutput Voltage and Current: Type-C Output: 20V 2.25A, 5–20V/2.75AMore Parameters';
+  const read = (name) => text.match(new RegExp(page.properties.find((property) => property.name === name).regex))?.[1];
+  assert.equal(olxModelTags.SOURCE_VALUE_TRANSFORMS.batteryMah(read('Capacity')), '10000mAh');
+  assert.equal(olxModelTags.SOURCE_VALUE_TRANSFORMS.batteryMah(read('Rated capacity')), '11000mAh');
+  assert.equal(olxModelTags.SOURCE_VALUE_TRANSFORMS.peakWatts(read('Output')), '55W');
+});
