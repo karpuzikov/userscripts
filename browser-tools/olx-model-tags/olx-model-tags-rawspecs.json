@@ -3462,5 +3462,38 @@
    "Compatibility": "compatible with more than 99% of mobile phones / tablets and USB input digital devices.",
    "Size": "14.0 * 5.9 * 1.3cm. Weight: 178g."
   }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j12-amazing-star-10000-mah": {
+  "model": "Hoco J12 Amazing star",
+  "scannedAt": "2026-11-26T02:56:11.363Z",
+  "specs": {
+   "Battery capacity": "10000mAh, rated output capacity: 6400mAh (5V TYP 1A).",
+   "Input": "Type-C: DC5V / 3.0A (PD), DC9V / 2.0A (PD), DC12V / 1.5A(PD), 18W, Micro-USB: DC5V / 2.0A MAX.",
+   "Total output": "18W. Type-C: DC5V / 3.0A (PD), DC9V / 2.0A (PD), DC12V / 1.5A(PD) 18W, USB1 / 2: DC5V / 2.4A MAX. 4. PC flame retardant material. 5. The product surface texture with a clear cross pattern, eco-PU leather cover design, will not wear the phone surface in contact. 6.LED power display, you can check the charging power and remaining power (LED1: 1-25%, LED2: 26% -50%, LED3: 51% -75%, LED4: 76% -100%). 7. High performance A + grade polymer batteries.",
+   "Compatibility": "Compatible with more than 99% of the PD input phone / tablet and QC3 .0 / QC2.0 digital equipment. 9. L.W.H: 15.5 * 7.4 * 2.0cm, weight: 230g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j17a-clear-power-10000mah-with-led": {
+  "model": "Hoco J17A Clear power",
+  "scannedAt": "2026-11-26T02:56:12.368Z",
+  "specs": {
+   "Battery capacity": "10000mAh / 37Wh Rated output capacity: 6400mAh (5V TYP 1A).",
+   "Input": "Micro-USB 5V/2.0A Max.",
+   "Output": "USB1: DC5V/2.1A Max, USB2: DC5V/2.1A Max. 4. PC flame retardant material + aluminum oxidation process, scratch resistance, comfort grip. 5. LED power display, you can check the charging capacity and remaining power (LED1: 1-25%, LED2: 26% -50 %, LED3: 51% -75%, LED4: 76% -100%). 6. High-performance A + grade polymer batteries.",
+   "Compatibility": "compatible with more than 99% of the phones / tablets and USB input digital devices.",
+   "Size": "15.1*7.1*1.2cm. Weight: 240g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j15-contented-pd-qc3-0": {
+  "model": "Hoco J15 Contented",
+  "scannedAt": "2026-11-26T02:56:12.370Z",
+  "specs": {
+   "Capacity": "10000mAh, rated capacity: 6400mAh.",
+   "Battery": "20650 lithium batteries, a single 3350mAh, a total of 3 sections.",
+   "Input": "Type-C: 5V/3A, 9V/2A, 12V/1.5A（18W), Micro-USB: QC3.0 / Huawei FCP output.",
+   "Output": "Type-C: 5V/3A, 9V/2A, 12V/1.5A (18W), USB1/2: QC3.0 / Huawei FCP output.",
+   "Material": "PC flame retardant material, the rubber oil surface spray.",
+   "Display": "4 LED lights. 7. Support iPhone 8 / 8Plus, iPhone X, PD fast charge, the maximum charging power of 18W, while supporting QC3.0 / Huawei FCP fast charge."
+  }
  }
 }
