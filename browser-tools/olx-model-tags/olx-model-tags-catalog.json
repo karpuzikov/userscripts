@@ -3026,6 +3026,83 @@
     "mAh per liter: 68484"
    ],
    "group": "Power banks"
+  },
+  "HOCOJ76BOBBY": {
+   "name": "Hoco J76 Bobby",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5800mAh",
+    "Output: 22.5W",
+    "Weight: 240g",
+    "Dimensions: 145×69×20mm",
+    "mAh per g: 41.7",
+    "mAh per liter: 49975"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ78OUTSTANDING": {
+   "name": "Hoco J78 Outstanding",
+   "tags": [
+    "Capacity: 30000mAh",
+    "Rated capacity: 17700mAh",
+    "Output: 22.5W",
+    "Weight: 667g",
+    "Dimensions: 166×81×32mm",
+    "mAh per g: 45.0",
+    "mAh per liter: 69723"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ79SUCCESS": {
+   "name": "Hoco J79 Success",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5900mAh",
+    "Output: 22.5W",
+    "Weight: 206g",
+    "Dimensions: 112×71×18mm",
+    "mAh per g: 48.5",
+    "mAh per liter: 69864"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOQ5AEGIS": {
+   "name": "Hoco Q5 Aegis",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5500mAh",
+    "Output: 30W",
+    "Weight: 166g",
+    "Dimensions: 104×53×25mm",
+    "mAh per g: 60.2",
+    "mAh per liter: 72569"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOQ6AEGIS": {
+   "name": "Hoco Q6 Aegis",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5900mAh",
+    "Output: 22.5W",
+    "Weight: 166g",
+    "Dimensions: 104×53×25mm",
+    "mAh per g: 60.2",
+    "mAh per liter: 72569"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ84COOLPLUG": {
+   "name": "Hoco J84 Cool plug",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5900mAh",
+    "Weight: 239g",
+    "Dimensions: 140×70×16mm",
+    "mAh per g: 41.8",
+    "mAh per liter: 63776"
+   ],
+   "group": "Power banks"
   }
  },
  "stopPhrases": [
