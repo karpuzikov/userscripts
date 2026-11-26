@@ -882,7 +882,9 @@
     "Rated capacity: 5500mAh",
     "Output: 20W",
     "Weight: 210g",
-    "mAh per g: 47.6"
+    "Dimensions: 117×77×19.5mm",
+    "mAh per g: 47.6",
+    "mAh per liter: 56923"
    ],
    "group": "Power banks"
   },
@@ -1166,7 +1168,9 @@
    "name": "Hoco QS7 Source",
    "tags": [
     "Capacity: 10000mAh",
-    "Output: 12W"
+    "Output: 12W",
+    "Dimensions: 153×87×37mm",
+    "mAh per liter: 20304"
    ],
    "group": "Power banks"
   },
