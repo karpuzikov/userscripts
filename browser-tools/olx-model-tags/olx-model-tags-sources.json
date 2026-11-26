@@ -209,7 +209,7 @@
       {
        "name": "Output",
        "selector": ".elementor-widget-woocommerce-product-content p",
-       "regex": "(?:\\d USB ports? output|Battery output|Power bank output|Output):\\s*(.*?)(?=\\s\\d+\\.\\s[A-Z]|$)",
+       "regex": "(?:\\d+\\.\\s+[A-Za-z0-9 ]*?|\\b)[Oo]utput:\\s*(.*?)(?=\\s\\d+\\.\\s[A-Z]|$)",
        "transform": "maxWatts"
       },
       {

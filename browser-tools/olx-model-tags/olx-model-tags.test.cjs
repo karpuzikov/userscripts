@@ -254,3 +254,12 @@ test('Hoco free-text adapter reads B12D, B36 and J28 / B38 wordings', () => {
   assert.equal(maxWatts(read('Output', '2. Power bank input: 5V / 2A. 3. Power bank output: USB 1 / 2: DC5V / 2A Max. 4. LED')), '10W');
   assert.equal(read('Dimensions', '6. Size: 13cm * 7.4cm * 1.5cm. Weight: 212g.'), '13cm * 7.4cm * 1.5cm');
 });
+
+test('Hoco free-text adapter finds the Output line under any "N. <words> output:" label', () => {
+  const page = JSON.parse(require('fs').readFileSync(__dirname + '/olx-model-tags-sources.json', 'utf8')).sources.find((source) => source.name === 'HOCO').pages.at(-1);
+  const output = (text) => olxModelTags.SOURCE_VALUE_TRANSFORMS.maxWatts(text.match(new RegExp(page.properties.find((property) => property.name === 'Output').regex))?.[1] || '');
+  assert.equal(output('2. Input: USB / Type-C: 5V / 2A Max. 3. Power bank total output: DC5V/2A Max. 4. LED digital display.'), '10W');
+  assert.equal(output('2. Input: Micro-USB – 5V / 2A. Output: USB 1 / 2: DC5V / 2.1A. Total output DC5V / 2.1A. 3. LED display'), '10.5W');
+  assert.equal(output('3. 4 USB port output: USB 1 / 2 / 3 / 4: DC5V / 2A max. Total output: DC5V / 2A max. 4. LED'), '10W');
+  assert.equal(output('3. Output: USB: QC/FCP (18W), Type-C: PD/QC (18W). Total output: DC5V / 3A max. 4. LED'), '18W');
+});
