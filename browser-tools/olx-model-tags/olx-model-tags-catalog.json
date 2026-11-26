@@ -3164,6 +3164,94 @@
     "mAh per liter: 84345"
    ],
    "group": "Power banks"
+  },
+  "HOCOQ1AKRAFT": {
+   "name": "Hoco Q1A Kraft",
+   "tags": [
+    "Capacity: 20000mAh",
+    "Rated capacity: 11800mAh",
+    "Output: 22.5W",
+    "Weight: 313g",
+    "Dimensions: 117×63×29mm",
+    "mAh per g: 63.9",
+    "mAh per liter: 93563"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ69SPEEDFLASH": {
+   "name": "Hoco J69 Speed flash",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5900mAh",
+    "Output: 18W",
+    "Weight: 243g",
+    "Dimensions: 144×69×16mm",
+    "mAh per g: 41.2",
+    "mAh per liter: 62903"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ42BHIGHPOWER": {
+   "name": "Hoco J42B High power",
+   "tags": [
+    "Capacity: 30000mAh",
+    "Rated capacity: 17700mAh",
+    "Weight: 672g",
+    "Dimensions: 163×81×33mm",
+    "mAh per g: 44.6",
+    "mAh per liter: 68855"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ62AJOVE": {
+   "name": "Hoco J62A Jove",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5900mAh",
+    "Weight: 213g",
+    "Dimensions: 134×50×23mm",
+    "mAh per g: 46.9",
+    "mAh per liter: 64893"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOQ2GALAX": {
+   "name": "Hoco Q2 Galax",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5900mAh",
+    "Output: 22.5W",
+    "Weight: 186g",
+    "Dimensions: 114×68×17mm",
+    "mAh per g: 53.8",
+    "mAh per liter: 75882"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOQ2AGALAX": {
+   "name": "Hoco Q2A Galax",
+   "tags": [
+    "Capacity: 20000mAh",
+    "Rated capacity: 11800mAh",
+    "Output: 22.5W",
+    "Weight: 334g",
+    "Dimensions: 116×73×31mm",
+    "mAh per g: 59.9",
+    "mAh per liter: 76188"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ75TRESOR": {
+   "name": "Hoco J75 Tresor",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5900mAh",
+    "Weight: 225g",
+    "Dimensions: 141×67×16mm",
+    "mAh per g: 44.4",
+    "mAh per liter: 66159"
+   ],
+   "group": "Power banks"
   }
  },
  "stopPhrases": [
