@@ -2185,5 +2185,64 @@
    "Sizes": "136 × 68 × 15mm.",
    "Weight": "220g."
   }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-q10-transparent-discovery-edition-pd20w-5000mah": {
+  "model": "Hoco Q10",
+  "scannedAt": "2026-11-26T02:52:35.346Z",
+  "specs": {
+   "Capacity": "5000mAh / 19Wh. Rated capacity: 3000mAh.",
+   "Input": "Type-C – 18W (for QC / for FCP / for AFC).",
+   "Output": "Type-C – 20W (for PD / for QC / for FCP / for AFC). Wireless charging output – 5W / 7.5W / 10W / 15W (MgS wireless output 7.5W). Total output – 5V / 2A. 4. LED indicator.",
+   "Material": "PC+ABS flame retardant + lithium polymer battery.",
+   "Sizes": "105*66*16mm. Weight: 152g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-q9-shell-pd20w-qc3-0-10000mah": {
+  "model": "Hoco Q9 Shell",
+  "scannedAt": "2026-11-26T02:52:35.346Z",
+  "specs": {
+   "Capacity": "10000mAh / 38Wh. Rated capacity: 5900mAh.",
+   "Input": "for Lightning – 5V / 2A. Type-C – 18W (for PD, for QC, for FCP, for AFC).",
+   "Output": "USB – 18W (for QC, for FCP, for AFC). Type-C – 20W (for PD, for QC, for FCP, for AFC). Total output: 5V / 3A.",
+   "Display": "LED digital display.",
+   "Material": "ABS + PC flame retardant shell + lithium polymer battery.",
+   "Sizes": "122*62*16mm. Weight: 225g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j87b-tacker-pd20w-qc3-0-30000mah": {
+  "model": "Hoco J87B Tacker",
+  "scannedAt": "2026-11-26T02:52:35.348Z",
+  "specs": {
+   "Capacity": "30000mAh 111Wh. Rated capacity: 17700mAh.",
+   "Input": "Micro-USB – 18W (for QC, for FCP, for AFC), Type-C – 18W (for PD, for QC, for FCP, for AFC).",
+   "Output": "USB – 18W (for QC, for FCP, for AFC). Type-C – 20W (for PD, for QC, for FCP, for AFC). Total output – 5V / 3A.",
+   "Indicator": "LED indicator.",
+   "Material": "ABS + PC flame retardant shell + lithium polymer battery.",
+   "Sizes": "137*68*40mm. Weight: 586g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-q9-pro-shell-22-5w-pd20w-10000mah": {
+  "model": "Hoco Q9 Pro Shell",
+  "scannedAt": "2026-11-26T02:52:35.348Z",
+  "specs": {
+   "Capacity": "10000mAh / 38Wh. Rated capacity: 5900mAh.",
+   "Input": "for Lightning – 18W (for PD, for QC, for FCP, for AFC). Type-C – 18W (for PD, for QC, for FCP, for AFC).",
+   "Output": "USB – 22.5W (for QC, for FCP, for SCP, for AFC). Built-in cable Type-C – 22.5W (for QC, for FCP, for SCP, for AFC). Built-in cable for Lightning – 20W (for PD, for QC, for FCP, for AFC). Total output: 5V / 3A.",
+   "Display": "LED digital display.",
+   "Material": "ABS + PC flame retardant shell + lithium polymer battery.",
+   "Sizes": "122*62*18mm. Weight: 243g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j94-overlord-22-5w-75000mah": {
+  "model": "Hoco J94 Overlord",
+  "scannedAt": "2026-11-26T02:52:35.386Z",
+  "specs": {
+   "Capacity": "75000mAh 277.5Wh. Rated capacity: 44000mAh.",
+   "Input": "Micro-USB / Type-C – 18W (for QC, for FCP, for AFC).",
+   "Output": "USB 1 – 22.5W (for QC, for FCP, for SCP, for AFC), USB 2 / 3 – 5V / 2.1A. Type-C – 20W (for PD, for QC, for FCP, for AFC). Total output – 5V / 3A.",
+   "Display": "LED digital display.",
+   "Material": "ABS + PC flame retardant shell + lithium polymer battery.",
+   "Sizes": "157*116*45mm. Weight: 1400g."
+  }
  }
 }
