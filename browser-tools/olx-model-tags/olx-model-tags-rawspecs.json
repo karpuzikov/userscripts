@@ -3454,7 +3454,7 @@
  },
  "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j17-clear-power-7000mah-with-led": {
   "model": "Hoco J17 Clear power",
-  "scannedAt": "2026-11-26T03:52:14.479Z",
+  "scannedAt": "2026-11-26T04:25:24.551Z",
   "specs": {
    "Battery capacity": "7000mAh / 25.9Wh, rated output capacity: 4480mAh (5V TYP 1A).",
    "Input": "Micro-USB 5V / 2.0A Max, Type-C 5V / 2.0A Max.",
@@ -3486,7 +3486,7 @@
  },
  "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j15-contented-pd-qc3-0": {
   "model": "Hoco J15 Contented",
-  "scannedAt": "2026-11-26T04:19:40.542Z",
+  "scannedAt": "2026-11-26T04:25:21.516Z",
   "specs": {
    "Capacity": "10000mAh, rated capacity: 6400mAh.",
    "Battery": "20650 lithium batteries, a single 3350mAh, a total of 3 sections.",
@@ -4003,7 +4003,7 @@
  },
  "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-b33-20000-flower-story-20000mah-with-led-display": {
   "model": "Hoco B33-20000 Flower story",
-  "scannedAt": "2026-11-26T03:52:14.480Z",
+  "scannedAt": "2026-11-26T04:25:21.516Z",
   "specs": {
    "Cell capacity": "20000mAh.",
    "Input": "Micro-USB 5V / 2.0A Max, Lightning 5V / 1.5A Max.",
