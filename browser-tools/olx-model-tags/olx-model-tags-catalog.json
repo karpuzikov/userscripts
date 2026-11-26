@@ -4714,7 +4714,8 @@
    "name": "REMAX FP-28",
    "tags": [
     "Capacity: 10000mAh",
-    "Rated capacity: 5800mAh"
+    "Rated capacity: 5800mAh",
+    "Output: 22.5W"
    ],
    "group": "Power banks"
   },
@@ -4722,7 +4723,8 @@
    "name": "REMAX MH158-B/MH159-B",
    "tags": [
     "Capacity: 10000mAh",
-    "Rated capacity: 5300mAh"
+    "Rated capacity: 5300mAh",
+    "Output: 22.5W"
    ],
    "group": "Power banks"
   },
@@ -4747,7 +4749,8 @@
    "name": "REMAX FP-11",
    "tags": [
     "Capacity: 5000mAh",
-    "Rated capacity: 5500mAh"
+    "Rated capacity: 5500mAh",
+    "Output: 45W"
    ],
    "group": "Power banks"
   },
