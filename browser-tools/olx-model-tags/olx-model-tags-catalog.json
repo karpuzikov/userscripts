@@ -4522,6 +4522,58 @@
     "mAh per liter: 63621"
    ],
    "group": "Power banks"
+  },
+  "HOCOJ11ASTUTE": {
+   "name": "Hoco J11 Astute",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Output: 5W",
+    "Weight: 246g",
+    "mAh per g: 40.7"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOB32ENERGETIC": {
+   "name": "Hoco B32 Energetic",
+   "tags": [
+    "Capacity: 8000mAh",
+    "Output: 10.5W",
+    "Weight: 200g",
+    "Dimensions: 145×71×17mm",
+    "mAh per g: 40.0",
+    "mAh per liter: 45710"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOB2010000MIGE": {
+   "name": "Hoco B20-10000 Mige",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Output: 10.5W",
+    "Weight: 168g",
+    "mAh per g: 59.5"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOB215200TINYCONCAVE": {
+   "name": "Hoco B21-5200 Tiny Concave",
+   "tags": [
+    "Capacity: 5200mAh",
+    "Output: 5W",
+    "Weight: 115g",
+    "mAh per g: 45.2"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOB20A20000MIGE": {
+   "name": "Hoco B20A-20000 Mige",
+   "tags": [
+    "Capacity: 20000mAh",
+    "Output: 10.5W",
+    "Weight: 321g",
+    "mAh per g: 62.3"
+   ],
+   "group": "Power banks"
   }
  },
  "stopPhrases": [
