@@ -3855,6 +3855,27 @@
     "mAh per g: 52.9"
    ],
    "group": "Power banks"
+  },
+  "HOCOB36WOODEN": {
+   "name": "Hoco B36 Wooden",
+   "tags": [
+    "Weight: 212g"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOB35BENTOURAGE": {
+   "name": "Hoco B35B Entourage",
+   "tags": [
+    "Weight: 174g"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOB35CENTOURAGE": {
+   "name": "Hoco B35C Entourage",
+   "tags": [
+    "Weight: 227g"
+   ],
+   "group": "Power banks"
   }
  },
  "stopPhrases": [
