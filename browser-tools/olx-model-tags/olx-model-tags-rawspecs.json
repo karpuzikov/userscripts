@@ -4205,7 +4205,7 @@
  },
  "https://www.iremax.net/product/5751": {
   "model": "REMAX AS-217-45",
-  "scannedAt": "2026-11-26T05:15:15.535Z",
+  "scannedAt": "2026-11-26T05:35:44.544Z",
   "specs": {
    "Color": "Blue",
    "Battery Type": "Polymer",
@@ -4213,12 +4213,16 @@
    "Battery Voltage/Total Power": "37Wh (7.45V / 2 x 5000mAh batteries in series)",
    "Rated Capacity": "6000mAh (5V/2A)",
    "Input Voltage and Current": "Type-C Female Port Input: 5V-3A, 9V-3A, 12V-2.5A, 15V-2A, 20V-1.5A (AFC, FCP, PD30W); Type-C built-in cable input: 5V–3A, 9V–3A, 12V–2.5A, 15V–2A, 20V–1.5A (AFC, FCP, PD30W)",
-   "Output Voltage and Current": "Type-C output: 5V-3A, 9V-3A, 12V-3A, 15V-3A, 20V-2.25A (QC2.0, QC3.0, AFC, FCP, SCP, PD45W); Type-C Built-in Cable Output: 5V-3A, 9V-3A, 12V-3A, 15V-3A, 20V-2.25A (QC 2.0, QC 3.0, AFC, FCP, SCP, PD 45W); Lightning (with included cable) output: 5V/2.4A, 9V/2.22A (Apple 2.4A, PD 20W); Total output: 5V/3A"
+   "Output Voltage and Current": "Type-C output: 5V-3A, 9V-3A, 12V-3A, 15V-3A, 20V-2.25A (QC2.0, QC3.0, AFC, FCP, SCP, PD45W); Type-C Built-in Cable Output: 5V-3A, 9V-3A, 12V-3A, 15V-3A, 20V-2.25A (QC 2.0, QC 3.0, AFC, FCP, SCP, PD 45W); Lightning (with included cable) output: 5V/2.4A, 9V/2.22A (Apple 2.4A, PD 20W); Total output: 5V/3A",
+   "Total output across all ports": "5V/3A",
+   "Energy conversion rate": "≥80%; Energy conversion efficiency = (Output capacity * Output voltage / Battery capacity) * 100%",
+   "Unit weight": "approx. 184g",
+   "Unit dimensions": "72.7 × 56 × 32.1"
   }
  },
  "https://www.iremax.net/product/5745": {
   "model": "REMAX AS-218-65",
-  "scannedAt": "2026-11-26T05:12:35.572Z",
+  "scannedAt": "2026-11-26T05:35:44.536Z",
   "specs": {
    "Color": "Ruthenium, Starlight Silver",
    "Battery Type": "Lithium-polymer cells",
@@ -4226,12 +4230,16 @@
    "Battery Voltage/ Total Power": "77 Wh (15.4 V / 4 × 5,000 mAh batteries in series)",
    "Rated Capacity": "12,000 mAh (5 V / 2 A)",
    "Input Voltage and Current": "Type-C Female Port Input: 5V=3A, 9V=3A, 12V=3A, 15V=3A, 20V=3A (AFC, FCP, SCP, PD60W); Built-in Type-C Cable Input: 5V=3A, 9V=3A, 12V=3A, 15V=3A, 20V=3A (AFC, FCP, SCP, PD60W)",
-   "Output Voltage and Current": "Type-C Output: 10V–2.25A, 5V–3A, 9V–3A, 12V–3A, 15V–3A, 20V–3.25A (QC 2.0, QC 3.0, AFC, FCP, SCP, PD 65W); Type-C built-in cable output: 10V–2.25A, 5V–3A, 9V–3A, 12V–3A, 15V -3A, 20V-3.25A (QC 2.0, QC 3.0, AFC, FCP, SCP, PD 65W); Lightning built-in cable output: 5V/2.4A, 9V/2.22A (Apple 2.4A, PD20W); USB-A port output: 10V-2.25A, 5V-3A, 9V-2A, 12V-1.5A (QC 2.0, QC 3.0, AFC, FCP, SCP); Total output: 5V/3A"
+   "Output Voltage and Current": "Type-C Output: 10V–2.25A, 5V–3A, 9V–3A, 12V–3A, 15V–3A, 20V–3.25A (QC 2.0, QC 3.0, AFC, FCP, SCP, PD 65W); Type-C built-in cable output: 10V–2.25A, 5V–3A, 9V–3A, 12V–3A, 15V -3A, 20V-3.25A (QC 2.0, QC 3.0, AFC, FCP, SCP, PD 65W); Lightning built-in cable output: 5V/2.4A, 9V/2.22A (Apple 2.4A, PD20W); USB-A port output: 10V-2.25A, 5V-3A, 9V-2A, 12V-1.5A (QC 2.0, QC 3.0, AFC, FCP, SCP); Total output: 5V/3A",
+   "Total output across all ports": "5V 3A",
+   "Energy conversion efficiency": "≥80% Energy conversion efficiency = (Output capacity × Output voltage / Battery capacity) × 100%",
+   "Weight (unit only)": "approx. 336 g",
+   "Dimensions (unit only)": "99.8 × 63.4 × 34.0 mm"
   }
  },
  "https://www.iremax.net/product/5739": {
   "model": "REMAX AS-219-100",
-  "scannedAt": "2026-11-26T05:12:35.590Z",
+  "scannedAt": "2026-11-26T05:35:44.543Z",
   "specs": {
    "Color": "Ruthenium, Starlight Silver",
    "Battery Type": "Lithium-polymer cell",
@@ -4239,7 +4247,11 @@
    "Battery Voltage/ Total Power": "96.25 Wh (19.25 V / 5 x 5,000 mAh cells in series [5S])",
    "Rated Capacity": "15,000 mAh (5 V / 2 A)",
    "Input Voltage and Current": "Type-C Female Port Input: 5V=3A, 9V=3A, 12V=3A, 15V=3A, 20V=3A (AFC, FCP, SCP, PD60W); Built-in Type-C Cable Input: 5V=3A, 9V=3A, 12V=3A, 15V=3A, 20V=3A (AFC, FCP, SCP, PD60W)",
-   "Output Voltage and Current": "Type-C Output: 10V–2.25A, 5V–3A, 9V–3A, 12V–3A, 15V–3A, 20V–5A (QC2.0, QC3.0, AFC, FCP, SCP, PD100W); Built-in Type-C Cable Output: 10V–2.25A, 5V–3A, 9V–3A, 12V–3A, 15V–3A, 20V –5A (QC 2.0, QC 3.0, AFC, FCP, SCP, PD 100W); Lightning Built-in Cable Output: 5V/2.4A, 9V/2.22A (Apple 2.4A, PD 20W); USB-A Port Output: 10V-2.25A, 5V-3A, 9V-2A, 12V-1.5A (QC 2.0, QC 3.0, AFC, FCP, SCP); Total Output: 5V/3A"
+   "Output Voltage and Current": "Type-C Output: 10V–2.25A, 5V–3A, 9V–3A, 12V–3A, 15V–3A, 20V–5A (QC2.0, QC3.0, AFC, FCP, SCP, PD100W); Built-in Type-C Cable Output: 10V–2.25A, 5V–3A, 9V–3A, 12V–3A, 15V–3A, 20V –5A (QC 2.0, QC 3.0, AFC, FCP, SCP, PD 100W); Lightning Built-in Cable Output: 5V/2.4A, 9V/2.22A (Apple 2.4A, PD 20W); USB-A Port Output: 10V-2.25A, 5V-3A, 9V-2A, 12V-1.5A (QC 2.0, QC 3.0, AFC, FCP, SCP); Total Output: 5V/3A",
+   "Total Output for Multiple Ports": "5V 3A",
+   "Energy Conversion Efficiency": "≥80% Energy Conversion Efficiency = (Output Capacity × Output Voltage / Battery Capacity) × 100%",
+   "Weight (Unit Only)": "Approx. 413 g",
+   "Dimensions (Unit Only)": "100.8 × 63.6 × 42.7 mm"
   }
  },
  "https://www.iremax.net/product/5679": {
