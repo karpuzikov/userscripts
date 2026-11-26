@@ -2074,6 +2074,18 @@
     "mAh per liter: 47536"
    ],
    "group": "Power banks"
+  },
+  "HOCOJ128POWERFUL": {
+   "name": "Hoco J128 Powerful",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5000mAh",
+    "Weight: 230g",
+    "Dimensions: 149×68×16mm",
+    "mAh per g: 43.5",
+    "mAh per liter: 61686"
+   ],
+   "group": "Power banks"
   }
  },
  "stopPhrases": [
