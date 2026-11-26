@@ -990,7 +990,9 @@
     "Capacity: 20000mAh",
     "Rated capacity: 11000mAh",
     "Weight: 426g",
-    "mAh per g: 46.9"
+    "Dimensions: 150×70×28mm",
+    "mAh per g: 46.9",
+    "mAh per liter: 68027"
    ],
    "group": "Power banks"
   },
@@ -1044,7 +1046,9 @@
     "Rated capacity: 16500mAh",
     "Output: 22.5W",
     "Weight: 650g",
-    "mAh per g: 46.2"
+    "Dimensions: 152×67×43mm",
+    "mAh per g: 46.2",
+    "mAh per liter: 68507"
    ],
    "group": "Power banks"
   },
@@ -1055,7 +1059,9 @@
     "Rated capacity: 6000mAh",
     "Output: 20W",
     "Weight: 200g",
-    "mAh per g: 50.0"
+    "Dimensions: 101×65×12mm",
+    "mAh per g: 50.0",
+    "mAh per liter: 126936"
    ],
    "group": "Power banks"
   },
@@ -1066,7 +1072,9 @@
     "Rated capacity: 5400mAh",
     "Output: 20W",
     "Weight: 205g",
-    "mAh per g: 48.8"
+    "Dimensions: 108×69×20mm",
+    "mAh per g: 48.8",
+    "mAh per liter: 67096"
    ],
    "group": "Power banks"
   },
@@ -1265,7 +1273,9 @@
     "Rated capacity: 2800mAh",
     "Output: 20W",
     "Weight: 128g",
-    "mAh per g: 39.1"
+    "Dimensions: 101×65×10mm",
+    "mAh per g: 39.1",
+    "mAh per liter: 76161"
    ],
    "group": "Power banks"
   },
@@ -1847,6 +1857,19 @@
     "Dimensions: 152×67×19mm",
     "mAh per g: 38.5",
     "mAh per liter: 51681"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ131SPIRIT": {
+   "name": "Hoco J131 Spirit",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5300mAh",
+    "Output: 22.5W",
+    "Weight: 245g",
+    "Dimensions: 116×63.5×29mm",
+    "mAh per g: 40.8",
+    "mAh per liter: 46813"
    ],
    "group": "Power banks"
   }
