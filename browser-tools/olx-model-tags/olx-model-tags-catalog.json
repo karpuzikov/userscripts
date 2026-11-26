@@ -3770,6 +3770,32 @@
     "mAh per liter: 4027"
    ],
    "group": "Power banks"
+  },
+  "HOCOB35EENTOURAGE": {
+   "name": "Hoco B35E Entourage",
+   "tags": [
+    "Dimensions: 121×67×9.5mm"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ27AWIDEENERGY": {
+   "name": "Hoco J27A Wide energy",
+   "tags": [
+    "Rated capacity: 11800mAh",
+    "Weight: 425g"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOB31CSHARP": {
+   "name": "Hoco B31C Sharp",
+   "tags": [
+    "Capacity: 5200mAh",
+    "Weight: 120g",
+    "Dimensions: 98×46×23mm",
+    "mAh per g: 43.3",
+    "mAh per liter: 50152"
+   ],
+   "group": "Power banks"
   }
  },
  "stopPhrases": [
