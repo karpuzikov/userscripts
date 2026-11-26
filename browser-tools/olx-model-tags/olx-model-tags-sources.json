@@ -218,7 +218,7 @@
       {
        "name": "Dimensions",
        "selector": ".elementor-widget-woocommerce-product-content p",
-       "regex": "(?:Sizes?|Dimensions|Length \\* width \\* height)\\s*:?\\s*(\\d+(?:\\.\\d+)?\\s*[×x*]\\s*\\d+(?:\\.\\d+)?\\s*[×x*]\\s*\\d+(?:\\.\\d+)?\\s*(?:mm|cm))",
+       "regex": "(?:(?:Sizes?|Dimensions|Length \\* width \\* height)\\s*:?\\s*)?(\\d+(?:\\.\\d+)?\\s*(?:mm|cm)?\\s*[×x*]\\s*\\d+(?:\\.\\d+)?\\s*(?:mm|cm)?\\s*[×x*]\\s*\\d+(?:\\.\\d+)?\\s*(?:mm|cm))",
        "transform": "dimensionsMm"
       }
      ],

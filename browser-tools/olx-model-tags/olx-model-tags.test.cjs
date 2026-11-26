@@ -194,6 +194,7 @@ test('dimensionsMm converts centimetres to millimetres', () => {
   const { dimensionsMm } = olxModelTags.SOURCE_VALUE_TRANSFORMS;
   assert.equal(dimensionsMm('15.1*7.1*1.2cm'), '151×71×12mm');
   assert.equal(dimensionsMm('135*66*15mm'), '135×66×15mm');
+  assert.equal(dimensionsMm('10cm*6cm*1.4cm'), '100×60×14mm');
 });
 
 test('Hoco free-text adapter reads the J68 and J17A wordings', () => {
@@ -225,4 +226,11 @@ test('Hoco free-text adapter reads the J42A and B35E output and capacity wording
   assert.equal(maxWatts(read('Output', j42a)), '10W');
   assert.equal(maxWatts(read('Output', b35e)), '10W');
   assert.equal(read('Capacity', b35e), '30000mAh');
+});
+
+test('Hoco free-text adapter reads unlabeled dimensions with a unit on every number (B12A)', () => {
+  const page = JSON.parse(require('fs').readFileSync(__dirname + '/olx-model-tags-sources.json', 'utf8')).sources.find((source) => source.name === 'HOCO').pages.at(-1);
+  const regex = new RegExp(page.properties.find((property) => property.name === 'Dimensions').regex);
+  assert.equal('7. 10cm*6cm*1.4cm (L×W×H) weight: 204g.'.match(regex)[1], '10cm*6cm*1.4cm');
+  assert.equal('8. Sizes: 145 * 69 * 30mm. Weight: 425g.'.match(regex)[1], '145 * 69 * 30mm');
 });
