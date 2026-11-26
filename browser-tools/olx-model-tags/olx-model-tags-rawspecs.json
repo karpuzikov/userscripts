@@ -79,5 +79,32 @@
    "Dimensions": "143.5 × 68 × 16mm.",
    "Weight": "225g."
   }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j158-pro-runner-22-5w-pd20w-10000mah": {
+  "model": "Hoco J158 Pro Runner",
+  "scannedAt": "2026-11-26T02:43:54.306Z",
+  "specs": {
+   "Capacity": "10000mAh, 37Wh, rated capacity: 6000mAh (5V TYP 2A).",
+   "Input": "1 × Type-C port – 5V / 2A, 9V / 2A – 18W. 1 × Micro-USB port – 5V / 2A, 9V / 2A – 18W.",
+   "Output": "1 × Type-C port – 5V / 3A, 9V / 2.22A, 12V / 1.67A – 20W. 2 × USB-A ports – 5V / 3A, 9V / 2A, 10V / 2.25 (SCP), 12V / 1.5A – 22.5W each. Total output: 5V / 2A – 10W (max).",
+   "Fast charge": "Supports PD3.0 / PD20W / QC3.0 / QC2.0 / FCP / SCP / AFC and other charging protocols.",
+   "Indication": "LED digital display, green fast charging indicator.",
+   "Material": "ABS + PC flame retardant casing, lithium-ion polymer battery, electronic components.",
+   "Dimensions": "142 × 64 × 22.5mm.",
+   "Weight": "290g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j158a-runner-10w-10000mah": {
+  "model": "Hoco J158A Runner",
+  "scannedAt": "2026-11-26T02:43:54.323Z",
+  "specs": {
+   "Capacity": "10000mAh, 37Wh, rated capacity: 6000mAh (5V TYP 2A).",
+   "Input": "1 × Type-C port – 5V / 2A – 10W. 1 × Micro-USB port – 5V / 2A – 10W.",
+   "Output": "2 × USB-A ports – 5V / 2A – 10W each. Total output: 5V / 2A – 10W (max).",
+   "Indication": "LED indicator of power level.",
+   "Material": "ABS + PC flame retardant casing, lithium-ion polymer battery, electronic components.",
+   "Dimensions": "142 × 64 × 23mm.",
+   "Weight": "290g."
+  }
  }
 }
