@@ -5197,5 +5197,210 @@
    "USB-A output": "5V⎓3A/9V⎓2A/10V⎓2.25A/12V ⎓1.5A",
    "13.Total Output": "Adapter Mode : 5V⎓3A Mobile Power Mode : 5V⎓3A,"
   }
+ },
+ "https://www.iremax.net/product/1650": {
+  "model": "REMAX RPP-38",
+  "scannedAt": "2026-11-26T05:37:36.544Z",
+  "specs": {
+   "1.Product Color": "Dark Night Black, Moonlight White",
+   "2.Battery Capacity": "20000mAh",
+   "3.Actual Capacity": "20000mAh/3.7V/74Wh",
+   "4.Rated Capacity": "10400mAh(5V-3A)",
+   "5.Input Voltage": "Type-C: 5V-3A/9V-2A/12-1.5A",
+   "Type-C comes with cable": "5V-3A/ 9V-2A/12-1.5A",
+   "Supporting Symbol": "QC3.0 QC2.0 FCP SSCP AFC Apple 2.4A BC1.2 VOOC",
+   "6.Output Voltage": "USB1: 5V-3A/9V-2A/10V-2.25V/12V-1.5A 22.5W(Max)",
+   "Type-C with cable output": "5V-3A/9V-2.22A/10V-2.25V/12V-1.67A 22.5W(Max)",
+   "Support co-processor": "PD3.0 PD2.0 QC3.0 QC2.0 Apple 2.4A BC1.2",
+   "IPH with cable output": "5V-3A/9V-2.22A/12V-1.5A 22.5W(Max)",
+   "Total Output": "5V-3A(Max)",
+   "7.Energy Conversion Rate": "≥65%",
+   "8.Product Material Process": "ABS+PC V0 Fireproof",
+   "9.Bare Weight": "≈413g",
+   "10.Bare Size": "146.5 *69*31mm"
+  }
+ },
+ "https://www.iremax.net/product/1017": {
+  "model": "REMAX FCP-9",
+  "scannedAt": "2026-11-26T05:37:37.544Z",
+  "specs": {
+   "1.Product Color": "Gold, Silver, FOH",
+   "2.Battery Capacity": "10000mAh",
+   "3.Total Battery Power": "3.85V/38.5Wh",
+   "4.Battery Cell Type/Use": "115252 /5000mAh",
+   "5.Battery Cell Size": "11*52*52",
+   "6.Energy Conversion Rate": "≥70%",
+   "7.Product Material Process": "PC+ABS V0 Fireproof",
+   "8. Bare metal size": "68*59.5*25.5mm",
+   "9. Bare metal weight": "170g",
+   "10. Battery display": "white digital tube percentage display",
+   "11. Input port type/quantity": "Type-C*1",
+   "12. Output port type/quantity": "Type-C*1",
+   "13. Input voltage and current": "Type-C input: 5V⎓ 2.9A/9V⎓2A/12V⎓1.5A, support PD2.0 / PD3.0 / AFC / FCP protocols",
+   "14.Output Voltage and Current": "Type-C Output: 5V⎓3A/9V⎓2.22A/12V ⎓1.67A/10V/2.25A",
+   "15.Total Output": "5V⎓3A(Max)"
+  }
+ },
+ "https://www.iremax.net/product/1647": {
+  "model": "REMAX RPP-109",
+  "scannedAt": "2026-11-26T05:37:37.545Z",
+  "specs": {
+   "6. Output Voltage": "Type-C: 5V-3A/9V-2.22A/12V-1.67A 20W (Max)",
+   "Protocol Support": "PPS/PD2.0/PD3.0/QC2.0/ QC3.0/AFC/FCP/SCP/PE2.0/PE1.1/SFCP",
+   "Wireless Charging Output": "5W 7.5W 10W 15W",
+   "7.Energy Conversion Rate": "≥65%",
+   "8.Product Material Process": "Aluminum Alloy+ABS+PC V0 Fireproof",
+   "9.Bare Weight": "About 178 g, real 181",
+   "10.Bare Dimensions": "102*65.7*15.1"
+  }
+ },
+ "https://www.iremax.net/product/1035": {
+  "model": "REMAX CP-5",
+  "scannedAt": "2026-11-26T05:37:37.577Z",
+  "specs": {
+   "1.Battery Capacity": "5000mAh*2PCS/3.85V/38.5Wh",
+   "2.Total Battery Power": "38.5Wh",
+   "3.Rated Capacity": "6000mAh(5V/3A)",
+   "4.Cell Type": "105555/2PCS",
+   "5.Energy Conversion Ratio": "≥80%",
+   "6.Bare Bones Dimension": "121*65*28",
+   "7.Bare Bones Weight": "about 256 , real 269g",
+   "8.Product material process + fireproof level": "PC + ABS / sun pattern (94 V-0)",
+   "9.Input port type / number": "AC or Type-C",
+   "10.Input voltage and current": "",
+   "Adapter mode": "AC input: 110V-240V 50/60Hz 0.3A Max",
+   "Mobile Power Mode": "Type-C: 5V / 3A,9V/ 3A,12V/2.5A,15V/2A,20V/1.5A (AFC FCP PD)",
+   "11, Output Voltage and Current": "",
+   "Type-C Output": "5V/3A,9V/3A,12V/2.5A,15V/2A,20V/1.75A",
+   "Type-C Cable Output": "5V/3A,9V/3A,12V/2.5A,15V/2A,20V/1.75A",
+   "USB-A Output": "5V/3A,9V/2A,12V/1.5A",
+   "USB -A Output": "5V/3A,9V/2A,10V/2.25A, 12V/1.5A",
+   "12, Total Output": "Adapter mode:5V-3A, Mobile power mode:5V-3A"
+  }
+ },
+ "https://www.iremax.net/product/1572": {
+  "model": "REMAX RPP-117",
+  "scannedAt": "2026-11-26T05:37:38.528Z",
+  "specs": {
+   "1. Product color": "Space gray, Mousse white",
+   "2. Battery capacity": "50000mAh/3.7V/185Wh",
+   "3. Rated energy": "50000mAh (typical) 185Wh, 47500mAh (rated) 175.75Wh",
+   "4. Rated capacity": "28000mAh (5V-3A)",
+   "5. Input voltage": "Micro USB Input: 5V-3A/9V-2A/12V-1.5A 18 (Max)",
+   "Type-C input": "5V-3A/9V-2A/12V-1.5A 18 (Max)",
+   "Protocol support": "Supports instruments: PD3.0, PD2.0, QC3.0, QC2.0, Apple 2.4A, BC1.2",
+   "6. Output voltage": "Type-C output: 5V-3A/9V-3A 27 (Max)",
+   "Supporting instruments": "QC3.0, QC2.0, FCP, SCP, AFC, Apple 2.4A, BC1.2, VOOC",
+   "USB1/USB2 output": "5V-4.5A/4.5V-5A/9V-2A/12V-1.5A 22.5W (Max)",
+   "Total output": "5V-3A (Max)",
+   "7. Energy conversion rate": "≥ 65% (5V-3A)",
+   "8. Product Material and Process": "ABS+PC V0 Fireproof",
+   "9. Bare machine size": "150 * 68 * 64.5",
+   "10. Bare weight": "≈ 978"
+  }
+ },
+ "https://www.iremax.net/product/1740": {
+  "model": "REMAX FP-22",
+  "scannedAt": "2026-11-26T05:37:38.539Z",
+  "specs": {
+   "1.Product Color": "Dark Night Black, Moonlight White",
+   "2.Battery Type": "Li-Polymer",
+   "3.Battery Capacity": "30,000mAh/3.7V/111Wh",
+   "4.Total Battery Power": "111Wh",
+   "5.Rated Capacity": "16,500mAh (5V-2A)",
+   "6.Input Voltage and Current": "Type-C: 5V-3A/9V-2A/12V-1.5A 18W(Max)",
+   "Support Co-Instrument": "QC3.0 QC2.0 FCP SCP AFC Apple 2.4A BC1.2 VOOC",
+   "7.Output Voltage and Current": "USB1/USB2: 5V-3A/9V-2A/10V-2.25A/12V-1.5A 22.5W(Max)",
+   "Type-C Output": "5V⎓3A/9V⎓2.22A/12V⎓1.67A 20W(Max)",
+   "Support Co-processor": "PD3.0 PD2.0 QC3.0 QC2.0 Apple 2.4A BC1.2",
+   "Multi-port Total Output": "5V-3A (Max)",
+   "8.Multi-port Total Output": "5V-3A (Max)",
+   "9.Energy Conversion Rate": "≥65%",
+   "10.Bare Weight": "≈583g",
+   "11.Bare Dimensions": "141.2*68.7*40.3mm",
+   "12.Product Material Craftsmanship+Fire Protection Level": "ABS+PC+V0 Fire Protection",
+   "13.Finished Size": "162*92*46mm",
+   "Finished Weight": "640g"
+  }
+ },
+ "https://www.iremax.net/product/1641": {
+  "model": "REMAX CX-1",
+  "scannedAt": "2026-11-26T05:37:38.539Z",
+  "specs": {
+   "1.Product Color": "Silver",
+   "2.Battery Capacity": "5000mAh",
+   "3.Total Battery Power": "5000mAh/3.85V19.25Wh",
+   "4.Rated Capacity": "2600mAh(5V-3A)",
+   "5.Input Voltage and Current": "Type-C Input: 5V-3A/9V-2A 12V-1.5A 18W(Max)",
+   "Protocol Support": "PPS/PD2.0/PD3.0/QC2.0/QC3.0/AFC/FCP/SCP/PE2.0/PE1.1/SFCP",
+   "6. Total Input": "18W",
+   "7. Output Voltage and Current": "Type-C/Type-C with cable: 5V-3A/9V-2.22A/12V-1.67A 20W(Max)",
+   "8. iPh comes with cable": "5V-2.4A (Max)",
+   "Protocol support": "PPS/PD2.0/PD3.0/QC2.0/QC3.0/AFC/FCP/SCP/PE2.0/PE1.1/SFCP",
+   "Wireless Charging Output": "5W/7.5W/10W/15W",
+   "9. Total Output": "Multi-Port Total Output: 5V-3A (Max)",
+   "10. Energy Conversion Rate": "≥65%",
+   "11.Product Material Process+Fire Rating": "ABS+PC+VO Fireproof",
+   "12.Bare Machine Dimensions": "108.8*67.6*15.5",
+   "13.Bare Machine Weight": "≈147"
+  }
+ },
+ "https://www.iremax.net/product/1575": {
+  "model": "REMAX RPP-118",
+  "scannedAt": "2026-11-26T05:37:39.535Z",
+  "specs": {
+   "1. Product color": "Space gray, Mousse white",
+   "2. Typical energy": "80000mAh/3.7V/296Wh",
+   "3. Rated energy": "76000mAh/3.7V/281.2Wh",
+   "4. Rated capacity": "44000mAh (5V-3A)",
+   "5. Input voltage": "",
+   "Type-C 1 (Orange) Input": "5V-3A/9V-2A/12V-1.5A 18W (Max)",
+   "Type-C 2 (black) input": "5V-3A/9V-2A/12V-1.5A 18W (Max)",
+   "Protocol support": "Supports instruments: PD3.0, PD2.0, QC3.0, QC2.0, Apple 2.4A, BC1.2",
+   "6. Output voltage": "Type-C1 (orange) Output: 5V/3A, 9V/3A 27 (Max)",
+   "Supporting instruments": "QC3.0, QC2.0, FCP, SCP, AFC, Apple 2.4A, BC1.2, VOOC",
+   "USB1 (Orange) output": "5V-4.5A/4.5V-5A/5V-3A/9V-2.0A/12V-1.5A 22.5W (Max)",
+   "USB2/3 (black) output": "5V-2A",
+   "7. Total output": "5V-3A (Max)",
+   "8. Energy conversion rate": "≥ 65% (5V-3A)",
+   "9. Product Material and Process": "ABS+PC V0 Fireproof",
+   "10. Bare machine size": "162.6 * 118 * 69",
+   "11. Bare weight": "actual 1639"
+  }
+ },
+ "https://www.iremax.net/product/1566": {
+  "model": "REMAX RPP-71",
+  "scannedAt": "2026-11-26T05:37:39.535Z",
+  "specs": {
+   "1. Product color": "Dark Night Black, Moonlight White",
+   "2. Battery capacity": "10000mAh",
+   "3. Rated capacity": "5200mAh",
+   "4. Product weight": "≈ 226g",
+   "5. Battery display mode": "digital display",
+   "6. Product size": "140 * 67.5 * 16mm",
+   "7. Battery type": "Lithium polymer",
+   "8. Input voltage": "Type-C: 5V-3A/9V-2A/12V-1.5A 18W (Max)",
+   "9. Output voltage": "USB 1:5V-3A/9V-2A/12V-1.5A/10V-2.25A 22.5W (Max)"
+  }
+ },
+ "https://www.iremax.net/product/1632": {
+  "model": "REMAX RPP-65",
+  "scannedAt": "2026-11-26T05:37:39.537Z",
+  "specs": {
+   "1.Battery Type": "Polymer",
+   "2.Battery Capacity": "10000mAh",
+   "3.Rated Capacity": "6000mAh",
+   "4.Actual Capacity": "10000mA",
+   "5.Total Battery Power": "37W",
+   "6.Total Input": "20W",
+   "7.Input Voltage and Current": "5V3.0A/9V2.23A/12V1.67A(max 20W)",
+   "8.Total Output": "20W",
+   "8. 9.Output voltage and current": "PD:5V3A/9V2.23A/12V1.67A(max 20W)Wireless charging: 5W 7.5W 10W 15W",
+   "10.Bare metal size": "96.0*64.2*17.5mm",
+   "11.Bare metal weight": "188g",
+   "12.Product material process": "V0",
+   "13.Conversion rate": "Output capacity (5V1A) Efficiency greater than 60%",
+   "14.Power display mode": "indicator light"
+  }
  }
 }
