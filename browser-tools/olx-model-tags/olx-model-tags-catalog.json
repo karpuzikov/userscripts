@@ -3644,6 +3644,52 @@
     "mAh per liter: 45592"
    ],
    "group": "Power banks"
+  },
+  "HOCOJ45ELEGANTSHELL": {
+   "name": "Hoco J45 Elegant shell",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5900mAh",
+    "Weight: 196g",
+    "Dimensions: 115×52×23mm",
+    "mAh per g: 51.0",
+    "mAh per liter: 72706"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ41TREASURE": {
+   "name": "Hoco J41 Treasure",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5900mAh",
+    "Weight: 203g",
+    "Dimensions: 119×51×24mm",
+    "mAh per g: 49.3",
+    "mAh per liter: 68655"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ46STAROCEAN": {
+   "name": "Hoco J46 Star ocean",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Weight: 215g",
+    "Dimensions: 119×51×24mm",
+    "mAh per g: 46.5",
+    "mAh per liter: 68655"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOS9LUCKY": {
+   "name": "Hoco S9 Lucky",
+   "tags": [
+    "Capacity: 5000mAh",
+    "Rated capacity: 3200mAh",
+    "Output: 5W",
+    "Dimensions: 119×51×24mm",
+    "mAh per liter: 34327"
+   ],
+   "group": "Power banks"
   }
  },
  "stopPhrases": [
