@@ -807,6 +807,17 @@
     "mAh per g: 58.0"
    ],
    "group": "Power banks"
+  },
+  "HOCOQ37AGRACEFUL": {
+   "name": "Hoco Q37A Graceful",
+   "tags": [
+    "Capacity: 20000mAh",
+    "Rated capacity: 11000mAh",
+    "Output: 22.5W",
+    "Weight: 350g",
+    "mAh per g: 57.1"
+   ],
+   "group": "Power banks"
   }
  },
  "stopPhrases": [
