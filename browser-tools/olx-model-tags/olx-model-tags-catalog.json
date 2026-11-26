@@ -4899,6 +4899,15 @@
     "Rated capacity: 5500mAh"
    ],
    "group": "Power banks"
+  },
+  "REMAXFP12": {
+   "name": "REMAX FP-12",
+   "tags": [
+    "Capacity: 5000mAh",
+    "Rated capacity: 2900mAh",
+    "Output: 22.5W"
+   ],
+   "group": "Power banks"
   }
  },
  "stopPhrases": [
