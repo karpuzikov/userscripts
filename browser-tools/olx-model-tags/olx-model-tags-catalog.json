@@ -3976,7 +3976,8 @@
    "name": "Hoco J25B New power",
    "tags": [
     "Rated capacity: 6000mAh",
-    "Weight: 197g"
+    "Weight: 197g",
+    "Output: 10.5W"
    ],
    "group": "Power banks"
   },
@@ -3984,7 +3985,8 @@
    "name": "Hoco J25A New power",
    "tags": [
     "Rated capacity: 6000mAh",
-    "Weight: 197g"
+    "Weight: 197g",
+    "Output: 10.5W"
    ],
    "group": "Power banks"
   },
@@ -3992,7 +3994,8 @@
    "name": "Hoco J25 New power",
    "tags": [
     "Rated capacity: 6000mAh",
-    "Weight: 197g"
+    "Weight: 197g",
+    "Output: 10.5W"
    ],
    "group": "Power banks"
   },
