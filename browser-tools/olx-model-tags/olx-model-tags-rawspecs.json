@@ -1514,7 +1514,7 @@
  },
  "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j123c-element-22-5w-60000mah": {
   "model": "Hoco J123C Element",
-  "scannedAt": "2026-11-26T03:18:09.445Z",
+  "scannedAt": "2026-11-26T03:26:57.439Z",
   "specs": {
    "Input": "1 × Type-C – 5V / 3A, 9V / 2A, 12V / 1.5A – 18W max. 1 × Micro-USB – 5V / 3A, 9V / 2A, 12V / 1.5A – 18W max. 1 × for Lightning – 5V / 3A, 9V / 2A, 12V / 1.5A – 18W max.",
    "Output": "1 × USB-A 1 – 4.5V / 5A, 5V / 4.5A, 9V / 2A, 12V / 1.5A – 22.5W. 1 × USB-A 2 – 5V / 2A. 1 × USB-A 3 – 5V / 2A. 1 × Type-C – 5V / 3A, 9V / 2.22, 12V / 1.67A – 20W. Total output: 5V / 3A (max).",
@@ -1568,7 +1568,7 @@
  },
  "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j119a-sharp-charger-22-5w-20000mah": {
   "model": "Hoco J119A Sharp charger",
-  "scannedAt": "2026-11-26T03:18:12.426Z",
+  "scannedAt": "2026-11-26T03:26:56.437Z",
   "specs": {
    "Capacity": "20000mAh, 74Wh. Rated capacity: 11000mAh (5V TYP 3A).",
    "Input": "1 × Type-C – 5V / 2A, 9V / 2A, 12V / 1.5A – 18W max.",
@@ -1582,7 +1582,7 @@
  },
  "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j119b-sharp-charger-22-5w-30000mah": {
   "model": "Hoco J119B Sharp charger",
-  "scannedAt": "2026-11-26T03:18:12.426Z",
+  "scannedAt": "2026-11-26T03:26:56.437Z",
   "specs": {
    "Capacity": "30000mAh, 111Wh. Rated capacity: 16500mAh (5V TYP 3A).",
    "Input": "1 × Type-C – 5V / 2A, 9V / 2A, 12V / 1.5A – 18W max. 1 × Micro-USB – 5V / 2A, 9V / 2A, 12V / 1.5A – 18W max.",
@@ -1596,7 +1596,7 @@
  },
  "https://hocotech.com/product/home-office/watch-accessories/power-bank-j120-1000mah-watch-charger": {
   "model": "Hoco J120",
-  "scannedAt": "2026-11-26T03:18:12.427Z",
+  "scannedAt": "2026-11-26T03:26:56.437Z",
   "specs": {
    "Capacity": "1000mAh, 3.7Wh.",
    "Input": "1 × USB-A connector – 5V / 1A.",
@@ -1609,7 +1609,7 @@
  },
  "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j118b-speed-energy-30000mah": {
   "model": "Hoco J118B Speed energy",
-  "scannedAt": "2026-11-26T03:18:12.434Z",
+  "scannedAt": "2026-11-26T03:26:56.470Z",
   "specs": {
    "Capacity": "30000mAh, 111Wh. Rated capacity: 16500mAh (5V TYP 2A).",
    "Input": "1 × Type-C – 5V / 2A. 1 × Micro-USB – 5V / 2A.",
@@ -1636,7 +1636,7 @@
  },
  "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j119-sharp-charger-22-5w-10000mah": {
   "model": "Hoco J119 Sharp charger",
-  "scannedAt": "2026-11-26T03:18:12.426Z",
+  "scannedAt": "2026-11-26T03:26:56.438Z",
   "specs": {
    "Capacity": "10000mAh, 37Wh. Rated capacity: 5500mAh (5V TYP 3A).",
    "Input": "1 × Type-C – 5V / 2A, 9V / 2A, 12V / 1.5A – 18W max.",
