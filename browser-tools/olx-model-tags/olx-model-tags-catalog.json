@@ -3998,7 +3998,8 @@
    "name": "Hoco B36 Wooden",
    "tags": [
     "Weight: 212g",
-    "Output: 10W"
+    "Output: 10W",
+    "Dimensions: 130×74×15mm"
    ],
    "group": "Power banks"
   },
@@ -4032,7 +4033,9 @@
     "Capacity: 10000mAh",
     "Weight: 194g",
     "Output: 10.5W",
-    "mAh per g: 51.5"
+    "Dimensions: 100×61×22mm",
+    "mAh per g: 51.5",
+    "mAh per liter: 74516"
    ],
    "group": "Power banks"
   },
