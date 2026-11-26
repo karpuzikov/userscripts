@@ -39,5 +39,31 @@
    "Dimensions": "101 × 66 × 19mm.",
    "Weight": "195g."
   }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j160b-original-pd20w-wireless-charging-20000mah": {
+  "model": "Hoco J160B Original",
+  "scannedAt": "2026-11-26T02:43:34.311Z",
+  "specs": {
+   "Capacity": "20000mAh, 77Wh, rated capacity: 11500mAh (5V TYP 2A).",
+   "Input": "1 × Type-C port – 5V / 3A, 9V / 2A, 12V / 1.5A – 18W max. 1 × iP port – 5V / 2.4A, 9V / 2A – 18W max.",
+   "Output": "1 × Type-C port – 5V / 3A, 9V / 2.22A, 12V / 1.67A – 20W max. Magnetic wireless charging output – 5W / 7.5W / 10W / 15W max. Total output: 5V / 2A – 10W max.",
+   "Indication": "LED power level indicator, the charge level is indicated by four LEDs: ● ○ ○ ○ > 1 – 25%, ● ● ○ ○ > 26 – 50%, ● ● ● ○ > 51 – 75%, ● ● ● ● > 76 – 100%. Red indicator for wireless charging. Green indicator for PD/QC fast charging.",
+   "Material": "PC flame retardant casing, lithium-ion polymer battery, electronic components.",
+   "Dimensions": "110 × 70 × 30mm.",
+   "Weight": "340g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j160-original-10w-wireless-charging-5000mah": {
+  "model": "Hoco J160 Original",
+  "scannedAt": "2026-11-26T02:43:34.312Z",
+  "specs": {
+   "Capacity": "5000mAh, 19.25Wh, rated capacity: 2600mAh (5V TYP 2A).",
+   "Input": "1 × Type-C port – 5V / 2A – 10W max. 1 × iP port – 5V / 2A – 10W max.",
+   "Output": "1 × Type-C port – 5V / 2A – 10W max. Magnetic wireless charging output – 5W max. Total output: 5V / 2A – 10W max.",
+   "Indication": "LED indicator of power level, red wireless charging indicator.The charge level is indicated by four LEDs: ● ○ ○ ○ > 1 – 25%, ● ● ○ ○ > 26 – 50%, ● ● ● ○ > 51 – 75%, ● ● ● ● > 76 – 100%.",
+   "Material": "PC flame retardant casing, lithium-ion polymer battery, electronic components.",
+   "Dimensions": "100 × 66 × 14mm.",
+   "Weight": "125g."
+  }
  }
 }
