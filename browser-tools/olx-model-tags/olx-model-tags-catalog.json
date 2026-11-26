@@ -1238,6 +1238,17 @@
     "mAh per g: 61.5"
    ],
    "group": "Power banks"
+  },
+  "HOCOQ31INGENIOUS": {
+   "name": "Hoco Q31 Ingenious",
+   "tags": [
+    "Capacity: 5000mAh",
+    "Rated capacity: 2600mAh",
+    "Output: 20W",
+    "Weight: 100g",
+    "mAh per g: 50.0"
+   ],
+   "group": "Power banks"
   }
  },
  "stopPhrases": [
