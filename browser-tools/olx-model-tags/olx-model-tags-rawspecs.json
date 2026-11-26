@@ -2530,5 +2530,77 @@
    "Material": "aluminum alloy shell + lithium polymer battery.",
    "Sizes": "142*70*16mm. Weight: 270g."
   }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j76-bobby-wireless-charging-10000mah": {
+  "model": "Hoco J76 Bobby",
+  "scannedAt": "2026-11-26T02:53:05.358Z",
+  "specs": {
+   "Capacity": "10000mAh, 37Wh. Rated capacity: 5800mAh.",
+   "Input": "Micro-USB QC18W, Type-C PD18W.",
+   "Output": "USB 22.5W, Type-C PD20W, wireless charging output 5W / 7.5W / 10W / 15W (“MgSf” wireless output 7.5W). Total output: 5V / 3A. 4. Support for PD20W, QC3.0, FCP / SCP, AFC, VOOC, DASH and other fast charging protocols.",
+   "Display": "LED digital display.",
+   "Material": "ABS + PC flame retardant + lithium polymer battery cell.",
+   "Sizes": "145*69*20mm. Weight: 240g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j78-outstanding-30000mah": {
+  "model": "Hoco J78 Outstanding",
+  "scannedAt": "2026-11-26T02:53:05.361Z",
+  "specs": {
+   "Capacity": "30000mAh, 111Wh. Rated capacity: 17700mAh,.",
+   "Input": "for Lightning / Type-C / Micro-USB – 18W (PD / QC).",
+   "Output": "USB-A – 22.5W, Type-C – PD 20W, USB-A 2 / 3 / 4 – 5V / 2A. Total output – 5V / 3A.",
+   "Display": "LED digital display, fast charging indicator.",
+   "Material": "ABS + PC flame-retardant shell + lithium polymer battery. 6. Support for PD 20W, QC, FCP/SCP, AFC, VOOC, DASH, etc. fast charging protocols.",
+   "Sizes": "166*81*32mm. Weight: 667g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j79-success-wireless-charging-10000mah": {
+  "model": "Hoco J79 Success",
+  "scannedAt": "2026-11-26T02:53:05.362Z",
+  "specs": {
+   "Capacity": "10000mAh, 37Wh. Rated capacity: 5900mAh.",
+   "Input": "Type-C – PD 18W.",
+   "Output": "USB-A – 22.5W, Type-C – PD 20W, wireless charging output 5W / 7.5W / 10W / 15W (“MgSf” wireless output 7.5W). Total output: 5V / 3A. 4. Support for PD3.0, QC, FCP / SCP, AFC, VOOC, DASH and other charging protocols.",
+   "Display": "LED indicator, fast charging green indicator, wireless charging blue light.",
+   "Material": "ABS + PC flame-retardant shell + lithium polymer battery.",
+   "Sizes": "112*71*18mm. Weight: 206g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-q5-aegis-30w-10000mah": {
+  "model": "Hoco Q5 Aegis",
+  "scannedAt": "2026-11-26T02:53:06.350Z",
+  "specs": {
+   "Capacity": "10000mAh, 37Wh. Rated capacity: 5500mAh.",
+   "Input": "Type-C PD 30W.",
+   "Output": "Type-C PD 30W, USB 22.5W. Total output: 5V / 3A. 5. Support for PD, QC, FCP, SCP, AFC, VOOC, DASH and other fast charging protocols.",
+   "Display": "LED digital display, fast charging indicator.",
+   "Material": "21700 batteries + ABS + PC flame retardant shell.",
+   "Sizes": "104*53*25mm. Weight: 166g. With 1m Type-C to Type-C charging cable. 9. CE and FCC certification."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-q6-aegis-22-5w-wireless-charging-10000mah": {
+  "model": "Hoco Q6 Aegis",
+  "scannedAt": "2026-11-26T02:53:06.350Z",
+  "specs": {
+   "Capacity": "10000mAh, 38Wh. Rated capacity: 5900mAh.",
+   "Input": "Micro-USB QC 18W, Type-C / Lightning PD 18W.",
+   "Output": "USB 22.5W, Type-C PD 20W, wireless charging output: 5W / 7.5W / 10W / 15W. Total output: 5V / 3A. 4. Support for PD3.0 / 2.0, QC3.0 / 2.0, FCP / SCP, AFC, VOOC, DASH and other fast charging protocols.",
+   "Display": "LED digital display.",
+   "Material": "aluminum alloy shell + lithium polymer battery.",
+   "Sizes": "104*53*25mm. Weight: 166g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j84-cool-plug-10000mah": {
+  "model": "Hoco J84 Cool plug",
+  "scannedAt": "2026-11-26T02:53:07.352Z",
+  "specs": {
+   "Capacity": "10000mAh, 37Wh. Rated capacity: 5900mAh.",
+   "Input": "Micro-USB / Type-C – 5V / 2A.",
+   "Output": "USB 1 / 2 – 5V / 2A. Total output: 5V / 2A.",
+   "Display": "LED digital display.",
+   "Material": "ABS + PC flame-retardant shell + lithium polymer battery cell.",
+   "Sizes": "140*70*16mm. Weight: 239g."
+  }
  }
 }
