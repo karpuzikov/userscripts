@@ -3924,5 +3924,70 @@
    "Material": "ABS+PC flame retardant material, surface with matte grains.",
    "Display": "LED digital display of battery status. 9. With LED lighting function."
   }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-b20-10000-mige-10000-mah-with-led-display": {
+  "model": "Hoco B20-10000 Mige",
+  "scannedAt": "2026-11-26T03:39:56.471Z",
+  "specs": {
+   "Capacity": "10000mAh.",
+   "Battery": "18650 lithium battery.",
+   "Size": "94mm*65mm*24mm (L*W*H).",
+   "Weight": "168g.",
+   "Input": "5V/2A.",
+   "Output": "dual USB: 5V/2.1A.",
+   "Material": "ABS+PC flame retardant material, carbon fiber surface pattern.",
+   "Display": "digital battery indicator. 9. Dual LED light for flashlight, double brightness."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j11-astute-10000-mah-wireless-charging": {
+  "model": "Hoco J11 Astute",
+  "scannedAt": "2026-11-26T03:39:56.471Z",
+  "specs": {
+   "Capacity": "10000mAh.",
+   "Input": "Micro-USB input: 5V / 2.0A Max, Lightning: 5V / 1.5A Max, Type-C: 5V / 2.0A Max.",
+   "Output": "wireless output: 5W, USB1: DC5V / 1.0A, USB2: DC5V / 2.1A. 4. ABS + PC flame retardant materials, carbon fiber pattern shell design. 5. High performance A + grade polymer batteries.",
+   "LWH": "147 * 74 * 15mm. Weight: 246g. Selling points: 1. Micro-USB / Lightning / Type-C 3 specifications input. 2. Wireless charging output + dual USB output."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-b32-energetic-8000-mah-wireless-charging": {
+  "model": "Hoco B32 Energetic",
+  "scannedAt": "2026-11-26T03:39:56.472Z",
+  "specs": {
+   "Capacity": "8000mAh.",
+   "Battery": "lithium polymer.",
+   "Size": "145*71*17mm. Weight: 200g.",
+   "Input": "Type-C, 5V / 2A.",
+   "Output": "USB: 5V / 2.1A; wireless output: 5V / 1A.",
+   "Material": "private mold products, flame retardant ABS+PC.",
+   "Display": "LED light to indicate the battery status."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-b21-5200-tiny-concave-5200-mah-power-indicator": {
+  "model": "Hoco B21-5200 Tiny Concave",
+  "scannedAt": "2026-11-26T03:39:56.472Z",
+  "specs": {
+   "Capacity": "5200mAh.",
+   "Battery": "18650 lithium battery.",
+   "Size": "96mm*45mm*23mm (L*W*H).",
+   "Weight": "115g.",
+   "Input": "5V/1A.",
+   "Output": "single USB: 5V/1A.",
+   "Material": "ABS+PC flame retardant material, carbon fiber surface pattern.",
+   "Display": "LED battery indicator."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-b20a-20000-mige-20000-mah-with-led-display": {
+  "model": "Hoco B20A-20000 Mige",
+  "scannedAt": "2026-11-26T03:39:56.473Z",
+  "specs": {
+   "Capacity": "20000mAh.",
+   "Battery": "18650 lithium battery.",
+   "Size": "160mm*65mm*24mm (L*W*H).",
+   "Weight": "321g.",
+   "Input": "5V/2A.",
+   "Output": "dual USB: 5V/2.1A.",
+   "Material": "ABS+PC flame retardant material, carbon fiber surface pattern.",
+   "Display": "digital battery indicator. 9. Dual LED light for flashlight, double brightness."
+  }
  }
 }
