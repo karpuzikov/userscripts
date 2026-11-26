@@ -106,5 +106,18 @@
    "Dimensions": "142 × 64 × 23mm.",
    "Weight": "290g."
   }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j158-runner-10w-5000mah": {
+  "model": "Hoco J158 Runner",
+  "scannedAt": "2026-11-26T02:43:58.325Z",
+  "specs": {
+   "Capacity": "5000mAh, 18.5Wh, rated capacity: 3000mAh (5V TYP 2A).",
+   "Input": "1 × Type-C port – 5V / 2A – 10W. 1 × Micro-USB port – 5V / 2A – 10W.",
+   "Output": "1 × USB-A port – 5V / 2A – 10W.",
+   "Indication": "LED indicator of power level.",
+   "Material": "ABS + PC flame retardant casing, lithium-ion polymer battery, electronic components.",
+   "Dimensions": "76 × 56 × 23mm.",
+   "Weight": "130g."
+  }
  }
 }
