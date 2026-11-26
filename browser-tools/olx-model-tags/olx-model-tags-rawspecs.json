@@ -1983,5 +1983,73 @@
    "Sizes": "142 × 68 × 29mm.",
    "Weight": "406g."
   }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j104a-discovery-edition-22-5w-20000mah": {
+  "model": "Hoco J104A Discovery edition",
+  "scannedAt": "2026-11-26T02:52:23.353Z",
+  "specs": {
+   "Capacity": "20000mAh, 74Wh. Rated capacity: 11000mAh (5V TYP 3A). 1 × Type-C – 5V / 3A, 9V / 2A, 12V / 1.5A – 18W max.",
+   "Output": "1 × USB-A – 4.5V / 5A, 5V / 4.5A, 5V / 3A, 9V / 2A, 12V / 1.5A – 22.5W max. 1 × Type-C – 5V / 2.4A, 9V / 2.22A, 12V / 1.67A – 20W max. 1 × built-in cable Type-C – 4.5V / 5A, 5V / 4.5A, 5V / 3A, 9V / 2A, 12V / 1.5A – 22.5W max 1 × built-in cable for Lightning – 5V / 2A. Total output: 5V / 3A (max).",
+   "Fast charging protocol support": "for PD3.0 / PD20W / QC3.0 / QC2.0 / FCP / SCP / AFC / VOOC / DASH and other fast charging protocols.",
+   "Material": "ABS + PC flame retardant shell + lithium polymer battery.",
+   "Indication": "LED digital display of power level. Green indicator of PD / QC fast charging.",
+   "Sizes": "146 × 67 × 29mm.",
+   "Weight": "436g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j106-pocket-5000mah-for-lightning": {
+  "model": "Hoco J106 Pocket",
+  "scannedAt": "2026-11-26T02:52:23.356Z",
+  "specs": {
+   "Capacity": "5000mAh, 18.5Wh. Rated capacity: 2900mAh (5V TYP 2A).",
+   "Input": "1 × Type-C port – 5V / 2A.",
+   "Output": "1 × connector for Lightning – 5V / 2A.",
+   "Material": "ABS + PC flame retardant shell + 21700 battery.",
+   "Indication": "LED indicator of power level.",
+   "Sizes": "78 × 47 × 28mm.",
+   "Weight": "95g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j105-discovery-edition-22-5w-10000mah": {
+  "model": "Hoco J105 Discovery edition",
+  "scannedAt": "2026-11-26T02:52:23.358Z",
+  "specs": {
+   "Capacity": "10000mAh, 37Wh. Rated capacity: 5400mAh (5V TYP 3A).",
+   "Input": "1 × Type-C – 5V / 3A, 9V / 2A, 12V / 1.5A – 18W max. 1 × Micro-USB – 5V / 3A, 9V / 2A, 12V / 1.5A – 18W max. 1 × for Lightning – 5V / 3A, 9V / 2A, 12V / 1.5A – 18W max.",
+   "Output": "1 × USB-A 1 – 4.5V / 5A, 5V / 4.5A, 5V / 3A, 9V / 2A, 12V / 1.5A – 22.5W max. 1 × USB-A 2 – 4.5V / 5A, 5V / 4.5A, 5V / 3A, 9V / 2A, 12V / 1.5A – 22.5W max. 1 × Type-C – 5V / 2.4A, 9V / 2.22A, 12V / 1.67A – 20W max. Total output: 5V / 3A (max).",
+   "Fast charging protocol support": "for PD3.0 / PD20W / QC3.0 / QC2.0 / FCP / SCP / AFC / VOOC / DASH and other fast charging protocols.",
+   "Material": "ABS + PC flame retardant + two 21700 batteries.",
+   "Indication": "LED digital display of power level, current and voltage. Fast charging indicator.",
+   "Sizes": "84 × 54 × 38mm.",
+   "Weight": "192g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j103a-discovery-edition-22-5w-20000mah": {
+  "model": "Hoco J103A Discovery edition",
+  "scannedAt": "2026-11-26T02:52:23.383Z",
+  "specs": {
+   "Capacity": "20000mAh, 74Wh. Rated capacity: 11000mAh (5V TYP 3A).",
+   "Input": "1 × Type-C – 5V / 3A, 9V / 2A, 12V / 1.5A – 18W max.",
+   "Output": "1 × USB-A 1 – 4.5V / 5A, 5V / 4.5A, 5V / 3A, 9V / 2A, 12V / 1.5A – 22.5W max. 1 × USB-A 2 – 4.5V / 5A, 5V / 4.5A, 5V / 3A, 9V / 2A, 12V / 1.5A – 22.5W max. 1 × Type-C – 5V / 2.4A, 9V / 2.22A, 12V / 1.67A – 20W max. Total output: 5V / 3A (max).",
+   "Fast charging protocol support": "for PD3.0 / PD20W / QC3.0 / QC2.0 / FCP / SCP / AFC / VOOC / DASH and other fast charging protocols.",
+   "Material": "ABS + PC flame retardant shell + lithium polymer battery.",
+   "Indication": "LED digital display of power level. Green indicator of PD / QC fast charging.",
+   "Sizes": "146 × 67 × 28.5mm.",
+   "Weight": "426g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j104-discovery-edition-22-5w-10000mah": {
+  "model": "Hoco J104 Discovery edition",
+  "scannedAt": "2026-11-26T02:52:23.394Z",
+  "specs": {
+   "Capacity": "10000mAh, 37Wh. Rated capacity: 5500mAh (5V TYP 3A).",
+   "Input": "1 × Type-C – 5V / 3A, 9V / 2A, 12V / 1.5A – 18W max.",
+   "Output": "1 × USB-A – 4.5V / 5A, 5V / 4.5A, 5V / 3A, 9V / 2A, 12V / 1.5A – 22.5W max. 1 × Type-C – 5V / 2.4A, 9V / 2.22A, 12V / 1.67A – 20W max. 1 × built-in cable Type-C – 4.5V / 5A, 5V / 4.5A, 5V / 3A, 9V / 2A, 12V / 1.5A – 22.5W max 1 × built-in cable for Lightning – 5V / 2A. Total output: 5V / 3A (max).",
+   "Fast charging protocol support": "for PD3.0 / PD20W / QC3.0 / QC2.0 / FCP / SCP / AFC / VOOC / DASH and other fast charging protocols.",
+   "Material": "ABS + PC flame retardant shell + lithium polymer battery.",
+   "Indication": "LED digital display of power level. Green indicator of PD / QC fast charging.",
+   "Sizes": "146 × 67 × 16.5mm.",
+   "Weight": "251g."
+  }
  }
 }
