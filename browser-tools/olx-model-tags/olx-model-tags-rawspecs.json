@@ -3445,7 +3445,7 @@
  },
  "https://hocotech.com/product/power/portable-chargers/power-banks/wall-charger-c36-wellspring-dual-usb-built-in-power-bank-5000-mah": {
   "model": "Hoco C36 Wellspring",
-  "scannedAt": "2026-11-26T02:55:55.368Z",
+  "scannedAt": "2026-11-26T03:12:49.448Z",
   "specs": {
    "Input": "AC100-240V, 50/60Hz 0.3A, Micro-USB: DC5V/2A.",
    "Charger output": "single port maximum DC5V / 2.2A, total output DC5V / 2.2A. Mobile power bank output: single port maximum DC5V/2.4A total output DC5V/2.4A.",
@@ -3454,7 +3454,7 @@
  },
  "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j17-clear-power-7000mah-with-led": {
   "model": "Hoco J17 Clear power",
-  "scannedAt": "2026-11-26T02:56:07.363Z",
+  "scannedAt": "2026-11-26T03:12:56.453Z",
   "specs": {
    "Battery capacity": "7000mAh / 25.9Wh, rated output capacity: 4480mAh (5V TYP 1A).",
    "Input": "Micro-USB 5V / 2.0A Max, Type-C 5V / 2.0A Max.",
@@ -3465,7 +3465,7 @@
  },
  "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j12-amazing-star-10000-mah": {
   "model": "Hoco J12 Amazing star",
-  "scannedAt": "2026-11-26T02:56:11.363Z",
+  "scannedAt": "2026-11-26T03:12:56.416Z",
   "specs": {
    "Battery capacity": "10000mAh, rated output capacity: 6400mAh (5V TYP 1A).",
    "Input": "Type-C: DC5V / 3.0A (PD), DC9V / 2.0A (PD), DC12V / 1.5A(PD), 18W, Micro-USB: DC5V / 2.0A MAX.",
@@ -3475,7 +3475,7 @@
  },
  "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j17a-clear-power-10000mah-with-led": {
   "model": "Hoco J17A Clear power",
-  "scannedAt": "2026-11-26T02:56:12.368Z",
+  "scannedAt": "2026-11-26T03:12:56.405Z",
   "specs": {
    "Battery capacity": "10000mAh / 37Wh Rated output capacity: 6400mAh (5V TYP 1A).",
    "Input": "Micro-USB 5V/2.0A Max.",
@@ -3486,7 +3486,7 @@
  },
  "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j15-contented-pd-qc3-0": {
   "model": "Hoco J15 Contented",
-  "scannedAt": "2026-11-26T02:56:12.370Z",
+  "scannedAt": "2026-11-26T03:12:56.411Z",
   "specs": {
    "Capacity": "10000mAh, rated capacity: 6400mAh.",
    "Battery": "20650 lithium batteries, a single 3350mAh, a total of 3 sections.",
