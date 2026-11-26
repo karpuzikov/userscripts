@@ -3569,5 +3569,63 @@
    "Output": "USB 1 / 2: DC5V / 2.1A. Total output DC5V / 2.1A. 4. The digital display shows the power in real time, which is more intuitive. 5. The product uses high performance A+ grade polymer batteries.",
    "Material": "ABS+PC flame retardant materials. 7. Multiple circuit protection, compatible with more than 99% of digital devices such as mobile phones / tablets. 8. Length * width * height: 130 * 69 * 16mm. Weight: 188g."
   }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-b35a-entourage-5200-mah-single-usb-output": {
+  "model": "Hoco B35A Entourage",
+  "scannedAt": "2026-11-26T03:39:26.460Z",
+  "specs": {
+   "Capacity": "5200mAh / 19.24Wh.",
+   "Input": "Micro-USB DC5V / 1.0A.",
+   "Output": "USB DC5V / 1.0A. 4. Flame-retardant PC material, durable, automatic identification, intelligent output. 5. The product uses high-performance 18650 lithium battery, intelligent protection features: overcharge, overdischarge, overcurrent, short circuit and other protection.",
+   "LED lamp power display": "check the charging power and remaining power in time ( LED1: 1-25%, LED2: 26%-50%, LED3: 51%-75%, LED4: 76%-100%). 7. Compatible with more than 99% of Micro-USB / Lightning / Type-C interface input digital devices such as mobile phones/tablets.",
+   "Sizes": "9.3*4.4*2.3cm (length*width*high). Weight: 120g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-b35-entourage-2600-mah-single-usb-output": {
+  "model": "Hoco B35 Entourage",
+  "scannedAt": "2026-11-26T03:39:26.460Z",
+  "specs": {
+   "Capacity": "2600mAh.",
+   "Size": "93*24mm. Weight: 62g.",
+   "Input": "DC5V / 1A.",
+   "Output": "DC5V / 1A.",
+   "Material": "ABS+PC flame retardant material."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j24-cool-energy-8000-mah-dual-usb-output": {
+  "model": "Hoco J24 Cool energy",
+  "scannedAt": "2026-11-26T03:39:26.461Z",
+  "specs": {
+   "Capacity": "8000mAh. Rated capacity: 5120mAh.",
+   "Size": "84*41.5*41.5mm. Weight: 236g.",
+   "Input": "5V/2A.",
+   "Output": "dual port 5V/2.1A. 5. 4 section 18650 batteries. 6. Aluminum alloy shell."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-b31-rege-20000-mah-dual-usb-output": {
+  "model": "Hoco B31 Rege",
+  "scannedAt": "2026-11-26T03:39:26.462Z",
+  "specs": {
+   "Capacity": "20000mAh.",
+   "Battery": "18650.",
+   "Size": "145*82*23mm. Weight: 330g.",
+   "Input": "DC5V / 2A.",
+   "Output": "USB1: DC5V / 2.1A, USB2: DC5V / 2.1A.",
+   "Material": "private mold products, flame retardant ABS+PC, product surface with clear yellow stripes + matte spark pattern.",
+   "Display": "LED light to indicate the battery status."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-b31a-rege-30000-mah-dual-usb-output": {
+  "model": "Hoco B31A Rege",
+  "scannedAt": "2026-11-26T03:39:26.462Z",
+  "specs": {
+   "Capacity": "30000mAh.",
+   "Battery": "18650.",
+   "Size": "160*82*23mm. Weight: 415g.",
+   "Input": "DC5V / 2A.",
+   "Output": "USB1: DC5V / 2.1A, USB2: DC5V / 2.1A.",
+   "Material": "private mold products, flame retardant ABS+PC, product surface with clear yellow stripes + matte spark pattern.",
+   "Display": "LED light to indicate the battery status."
+  }
  }
 }
