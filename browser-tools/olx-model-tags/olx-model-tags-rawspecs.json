@@ -4773,5 +4773,149 @@
    "11. Bare machine dimensions": "110.2*69.5*18.3mm",
    "12. Product Material Process + Fire Resistance Level": "ABS + PC + VO Fireproof"
   }
+ },
+ "https://www.iremax.net/product/1848": {
+  "model": "REMAX FP-5",
+  "scannedAt": "2026-11-26T05:37:05.544Z",
+  "specs": {
+   "1.Product Color": "FOH Gray",
+   "2.Battery Type": "Li-Polymer",
+   "3.Battery Capacity": "60,000mAh",
+   "4.Total Battery Power": "60,000mAh/3.85V/231Wh",
+   "5.Rated Capacity": "31,200mAh(5V-2A)",
+   "6.Input Voltage and Current": "Type-C1/Type-C2 Inputinput: 5V-3A, 9V-2A,12V-1.5A 18W(Max)",
+   "7.Multi-port Total Output": "5V-3A (Max)",
+   "8.Output Voltage and Current": "Type-C1 Outputoutput:5V-3A/9V-3A 27W(Max)",
+   "USB-A1/USB-A2 Outputoutput": "5V-3A,5V/4.5A,9V/2A. 12V/1.5A 22.5W(Max)",
+   "USB-A3 Outputoutput": "5V-2A",
+   "9.Energy Conversion Rate": "≥65%",
+   "10.Bare Metal Dimension": "137*103*42mm",
+   "11.Bare Metal Weight": "≈940g",
+   "12.Product Material Craftsmanship + Fireproofing Level": "ABS+PC+VO fireproof fireproof"
+  }
+ },
+ "https://www.iremax.net/product/1851": {
+  "model": "REMAX CX08",
+  "scannedAt": "2026-11-26T05:37:05.545Z",
+  "specs": {
+   "1.Product Color": "Deep Sky Gray",
+   "2.Battery Type": "Li-Polymer Battery",
+   "3.Battery Capacity": "5000mAh",
+   "4.Total Battery Power": "3.85V/19.25Wh",
+   "5.Rated Capacity": "2800mAh (5V⎓3A)",
+   "6.Input Voltage and Current": "Type-C Input: 5V⎓ 3A 9V⎓2A, support PD2.0 / PD3.0 / AFC / FCP/SCP protocols",
+   "7. Total Output": "5V⎓3A",
+   "8. Output Voltage and Current": "Type-C Output: 5V⎓3A 9V⎓2.22A 12V⎓1.67A",
+   "Wireless Charging Output": "5W 7.5W 10W 15W",
+   "9.Energy Conversion Rate": "≥65%",
+   "10.Bare Metal Size": "99.5* 65.7*9.7mm",
+   "11.Bare metal weight": "≈126g"
+  }
+ },
+ "https://www.iremax.net/product/1854": {
+  "model": "REMAX CX09",
+  "scannedAt": "2026-11-26T05:37:05.545Z",
+  "specs": {
+   "1.Product Color": "Deep Sky Gray",
+   "2.Battery Type": "Li-Polymer Battery",
+   "3.Battery Capacity": "10000mAh",
+   "4.Total Battery Power": "3.85V/38.5Wh",
+   "5.Rated Capacity": "5800mAh (5V⎓3A)",
+   "6.Input Voltage and Current": "Type-C Input: 5V⎓ 3A 9V⎓2A, support PD2.0 / PD3.0 / AFC / FCP/SCP protocols",
+   "7. Material": "48 spindles braided + zinc alloy shell",
+   "8. Core specification": "PE core wire (65/0.10TC+250D nylon filament)*2 red, black] + [(16/0,08TC+250D nylon filament)*3C] PVC center Quilt +48 spindle braid",
+   "9.Core material": "tinned copper",
+   "10.Function": "Charging, data output",
+   "11.Bare metal size": "1.2M",
+   "12.Bare metal weight": "88g"
+  }
+ },
+ "https://www.iremax.net/product/3831": {
+  "model": "REMAX FP-60",
+  "scannedAt": "2026-11-26T05:37:05.546Z",
+  "specs": {
+   "1.Product Color": "Pearl White, Pearl Black, Sky Blue, Taro Purple",
+   "2.Battery Type": "Li-Polymer",
+   "3.Battery Capacity": "10000mAh",
+   "4.Battery Voltage/Total Power": "3.7V 37Wh",
+   "5.Rated Capacity": "5200mAh(5V-2A)",
+   "6.Input Voltage and Current": "Type-C Input: 5V-3A/9V-2A/12V- 1.5A 18W(Max)",
+   "7. Output Voltage and Current": "Type-C Output: 5V-3A/9V-2.22A/12V-1.67A 20W(Max)",
+   "Type-C with cable output": "5V-3A/9V-2.22A/10V-2.25A/12V-1.67A 22.5W(Max)",
+   "iPh with cable output 5V-2A (Max) (Support protocol": "QC2.0/QC3.0/FCP/AFC/SFCP/PE1.1/PE2.0/PD2.0/PD3.0)",
+   "8.Multi-port Total Output": "Multi-port Total Output: 5V-3A (Max)",
+   "9.Energy Conversion Rate": "≥65%",
+   "10.Bare Weight": "≈175g"
+  }
+ },
+ "https://www.iremax.net/product/1833": {
+  "model": "REMAX FP-38",
+  "scannedAt": "2026-11-26T05:37:05.577Z",
+  "specs": {
+   "1.Product Color": "Pearl White, Sky Blue, Mint Green, Cherry Blossom Pink",
+   "2.Battery Type": "Polymer Li-ion Cell",
+   "3.Battery Capacity": "10000mAh",
+   "4.Total Battery Power": "3.85V/38.5Wh",
+   "5.Rated Capacity": "5300mAh(5V⎓3A)",
+   "6.Battery Cell Model/Use": "115252/ 2Pcs",
+   "7.Cell Size": "11*52*52",
+   "8.Input Voltage and Current": "Type-C Input: 5V⎓3A/9V⎓2A/12V⎓1.5A 18W(Max) Support PD2.0 PD3.0",
+   "9.Output Voltage and Current": "Type-C output: 5V⎓3A/9V⎓2.22A/12V⎓1.67A 20W(Max) Support PD2.0 PD3.0",
+   "Type-C cable output": "5V⎓3A/9V ⎓2A/10V⎓2.25A/12V⎓1.5A 22.5W(Max) Support QC2.0 QC3.0 AFC FCP SCP PD2.0 PD3.0",
+   "Lightning cable output": "5V⎓ 2.4A",
+   "10.Total Output": "Total Output: 5V⎓3A(Max)",
+   "11.Energy Conversion Rate": "≥60%",
+   "12.Bare Weight": "≈181g",
+   "13.Bare Dimensions": "80.5*62.8*30mm",
+   "14.Product Material Process+Fire Protection Level": "ABS+PC/Fire V-0"
+  }
+ },
+ "https://www.iremax.net/product/1275": {
+  "model": "REMAX CP-18",
+  "scannedAt": "2026-11-26T05:37:07.547Z",
+  "specs": {
+   "1.Product Color": "Sky Blue Gray, Beige Orange",
+   "2.Battery Type": "Polymer Li-ion Cells",
+   "3.Battery Capacity": "5000mAh*2PCS",
+   "4.Total Battery Power": "7.7V/38.5Wh",
+   "5.Rated Capacity": "5300mAh(5V/3A)",
+   "6.Battery Cell Model/Use": "105555/2 Strings",
+   "7.Battery Cell Size": "10*55*55",
+   "8 .Input Voltage and Current": "",
+   "Type-C Input": "",
+   "iPh Input": "5V/2.4A 9V/3A",
+   "Adapter Mode": "USB/Type-C/iPh Output:5V/2.4A (Max)",
+   "AC Input": "",
+   "9.Output Voltage and Current": "",
+   "Mobile Power Mode": "",
+   "USB Output": "",
+   "Type-C Output": "",
+   "iPH Output": "",
+   "Wireless Charging Output": "5W (Max)",
+   "10.Total Output": "5V/3A Max",
+   "11.Energy Conversion Rate": "≥60%",
+   "13.Bare weight": "≈245g",
+   "14.Bare size": "97*63*30mm"
+  }
+ },
+ "https://www.iremax.net/product/1809": {
+  "model": "REMAX FC-02",
+  "scannedAt": "2026-11-26T05:37:08.537Z",
+  "specs": {
+   "1.Product Color": "Phantom Black, Star Ocean Blue",
+   "2.Battery Type": "Li-Polymer",
+   "3.Battery Capacity": "10000mAh",
+   "4.Total Battery Power": "7.7V/77Wh",
+   "5.Input Voltage and Current": "Type-C/Type-C Cable Input: 5V⎓3A,9V⎓3A 27W(Max ) Protocol: PD3.0/PD2.0",
+   "6. Output voltage and current": "Type-C/Type-C line output: 5V⎓3A,9V⎓3A,12V⎓3A.15V⎓3A,20V ⎓2.25A 45W(Max)",
+   "Protocol": "QC2.0/QC3.0/AFC/FCP/SCP/Apple2.4A/DCP-1.5A/Samsung- 5V2A.",
+   "USB Output": "5V⎓2.4A,9V ⎓2A,10V⎓2.25A(SCP),12V⎓1.5A 22.5W(Mac)",
+   "iPh Line Output": "5V⎓2.4A,9V⎓3A,27W(Max) Protocol:PD3.0",
+   "7.Multi-Port Total Output": "Combined Total Output:5V⎓3A(Max)",
+   "8.Energy Conversion Rate": "Energy Conversion Rate ≧70%",
+   "9.Bare Metal Weight": "≈326g,",
+   "10.Bare Machine Dimension": "102*71*34mm",
+   "11.Product Material Process+Fireproof Level": "ABS+PC V1 Fireproof"
+  }
  }
 }
