@@ -3496,6 +3496,115 @@
     "mAh per liter: 66078"
    ],
    "group": "Power banks"
+  },
+  "HOCOJ55ANEOTERIC": {
+   "name": "Hoco J55A Neoteric",
+   "tags": [
+    "Capacity: 20000mAh",
+    "Rated capacity: 11800mAh",
+    "Weight: 398g",
+    "Dimensions: 145×68×26mm",
+    "mAh per g: 50.3",
+    "mAh per liter: 78015"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ52ANEWJOY": {
+   "name": "Hoco J52A New joy",
+   "tags": [
+    "Capacity: 20000mAh",
+    "Rated capacity: 11800mAh",
+    "Weight: 393g",
+    "Dimensions: 140×68×29mm",
+    "mAh per g: 50.9",
+    "mAh per liter: 72443"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ51COOLPOWER": {
+   "name": "Hoco J51 Cool power",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5900mAh",
+    "Output: 18W",
+    "Weight: 204g",
+    "Dimensions: 120×51×22mm",
+    "mAh per g: 49.0",
+    "mAh per liter: 74272"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ55NEOTERIC": {
+   "name": "Hoco J55 Neoteric",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5900mAh",
+    "Weight: 210g",
+    "Dimensions: 134×68×15mm",
+    "mAh per g: 47.6",
+    "mAh per liter: 73164"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ54SPIRITPOWER": {
+   "name": "Hoco J54 Spirit power",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5900mAh",
+    "Weight: 220g",
+    "Dimensions: 124×50×22mm",
+    "mAh per g: 45.5",
+    "mAh per liter: 73314"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ56SEAPOWER": {
+   "name": "Hoco J56 Sea power",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5900mAh",
+    "Output: 18W",
+    "Weight: 232g",
+    "Dimensions: 149×69×20mm",
+    "mAh per g: 43.1",
+    "mAh per liter: 48633"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ53EXCEPTIONAL": {
+   "name": "Hoco J53 Exceptional",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5900mAh",
+    "Weight: 256g",
+    "Dimensions: 97×66×25mm",
+    "mAh per g: 39.1",
+    "mAh per liter: 62480"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ49JEWEL": {
+   "name": "Hoco J49 Jewel",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5900mAh",
+    "Output: 18W",
+    "Dimensions: 135×71×16mm",
+    "mAh per liter: 65206"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ40POWERFUL": {
+   "name": "Hoco J40 Powerful",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5900mAh",
+    "Weight: 204g",
+    "Dimensions: 99×64×24mm",
+    "mAh per g: 49.0",
+    "mAh per liter: 65762"
+   ],
+   "group": "Power banks"
   }
  },
  "stopPhrases": [
