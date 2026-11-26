@@ -1804,6 +1804,19 @@
     "mAh per liter: 71171"
    ],
    "group": "Power banks"
+  },
+  "HOCOJ135RICO": {
+   "name": "Hoco J135 Rico",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5400mAh",
+    "Output: 22.5W",
+    "Weight: 220g",
+    "Dimensions: 113.5×72×24mm",
+    "mAh per g: 45.5",
+    "mAh per liter: 50987"
+   ],
+   "group": "Power banks"
   }
  },
  "stopPhrases": [
