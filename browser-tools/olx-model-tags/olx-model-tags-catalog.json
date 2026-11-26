@@ -902,7 +902,9 @@
     "Rated capacity: 2600mAh",
     "Output: 10W",
     "Weight: 125g",
-    "mAh per g: 40.0"
+    "Dimensions: 100×66×14mm",
+    "mAh per g: 40.0",
+    "mAh per liter: 54113"
    ],
    "group": "Power banks"
   },
@@ -1122,7 +1124,9 @@
     "Rated capacity: 11500mAh",
     "Output: 20W",
     "Weight: 340g",
-    "mAh per g: 58.8"
+    "Dimensions: 110×70×30mm",
+    "mAh per g: 58.8",
+    "mAh per liter: 86580"
    ],
    "group": "Power banks"
   },
