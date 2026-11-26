@@ -1150,7 +1150,9 @@
     "Rated capacity: 5500mAh",
     "Output: 22.5W",
     "Weight: 268g",
-    "mAh per g: 37.3"
+    "Dimensions: 149.7×70×22mm",
+    "mAh per g: 37.3",
+    "mAh per liter: 43377"
    ],
    "group": "Power banks"
   },
@@ -1426,6 +1428,19 @@
     "Dimensions: 149.7×70×31mm",
     "mAh per g: 44.4",
     "mAh per liter: 61567"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ156BFOUNDER": {
+   "name": "Hoco J156B Founder",
+   "tags": [
+    "Capacity: 30000mAh",
+    "Rated capacity: 16500mAh",
+    "Output: 22.5W",
+    "Weight: 640g",
+    "Dimensions: 149.7×70×43mm",
+    "mAh per g: 46.9",
+    "mAh per liter: 66578"
    ],
    "group": "Power banks"
   }
