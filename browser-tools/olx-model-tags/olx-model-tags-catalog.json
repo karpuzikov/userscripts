@@ -3856,7 +3856,8 @@
    "name": "Hoco J27A Wide energy",
    "tags": [
     "Rated capacity: 11800mAh",
-    "Weight: 425g"
+    "Weight: 425g",
+    "Output: 10W"
    ],
    "group": "Power banks"
   },
@@ -3866,6 +3867,7 @@
     "Capacity: 5200mAh",
     "Weight: 120g",
     "Dimensions: 98×46×23mm",
+    "Output: 5W",
     "mAh per g: 43.3",
     "mAh per liter: 50152"
    ],
