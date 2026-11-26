@@ -2437,6 +2437,133 @@
     "mAh per liter: 71746"
    ],
    "group": "Power banks"
+  },
+  "HOCOJ111SMARTCHARGE": {
+   "name": "Hoco J111 Smart charge",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5500mAh",
+    "Weight: 222g",
+    "Dimensions: 150×68×16mm",
+    "mAh per g: 45.0",
+    "mAh per liter: 61275"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ115JOURNEY": {
+   "name": "Hoco J115 Journey",
+   "tags": [
+    "Capacity: 5000mAh",
+    "Rated capacity: 2800mAh",
+    "Weight: 121g",
+    "Dimensions: 95×64×15mm",
+    "mAh per g: 41.3",
+    "mAh per liter: 54825"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ110APOWERFUL": {
+   "name": "Hoco J110A Powerful",
+   "tags": [
+    "Capacity: 60000mAh",
+    "Rated capacity: 32400mAh",
+    "Output: 65W",
+    "Weight: 1263g",
+    "Dimensions: 142×96×71mm",
+    "mAh per g: 47.5",
+    "mAh per liter: 61992"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ109EASY": {
+   "name": "Hoco J109 Easy",
+   "tags": [
+    "Capacity: 5000mAh",
+    "Rated capacity: 2900mAh",
+    "Output: 20W",
+    "Weight: 135g",
+    "Dimensions: 100×65×13mm",
+    "mAh per g: 37.0",
+    "mAh per liter: 59172"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ110POWERFUL": {
+   "name": "Hoco J110 Powerful",
+   "tags": [
+    "Capacity: 60000mAh",
+    "Rated capacity: 32400mAh",
+    "Output: 22.5W",
+    "Weight: 1263g",
+    "Dimensions: 142×96×71mm",
+    "mAh per g: 47.5",
+    "mAh per liter: 61992"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ107SUPER": {
+   "name": "Hoco J107 Super",
+   "tags": [
+    "Capacity: 90000mAh",
+    "Rated capacity: 50000mAh",
+    "Output: 22.5W",
+    "Weight: 1887g",
+    "Dimensions: 175×90×84mm",
+    "mAh per g: 47.7",
+    "mAh per liter: 68027"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ108UNIVERSE": {
+   "name": "Hoco J108 Universe",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5500mAh",
+    "Output: 22.5W",
+    "Weight: 225g",
+    "Dimensions: 141×68×16mm",
+    "mAh per g: 44.4",
+    "mAh per liter: 65186"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ108BUNIVERSE": {
+   "name": "Hoco J108B Universe",
+   "tags": [
+    "Capacity: 30000mAh",
+    "Rated capacity: 16500mAh",
+    "Output: 22.5W",
+    "Weight: 663g",
+    "Dimensions: 161×82×33mm",
+    "mAh per g: 45.2",
+    "mAh per liter: 68860"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ106POCKET": {
+   "name": "Hoco J106 Pocket",
+   "tags": [
+    "Capacity: 5000mAh",
+    "Rated capacity: 2900mAh",
+    "Weight: 95g",
+    "Dimensions: 78×47×28mm",
+    "mAh per g: 52.6",
+    "mAh per liter: 48710"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ108AUNIVERSE": {
+   "name": "Hoco J108A Universe",
+   "tags": [
+    "Capacity: 20000mAh",
+    "Rated capacity: 11000mAh",
+    "Output: 22.5W",
+    "Weight: 406g",
+    "Dimensions: 142×68×29mm",
+    "mAh per g: 49.3",
+    "mAh per liter: 71422"
+   ],
+   "group": "Power banks"
   }
  },
  "stopPhrases": [
