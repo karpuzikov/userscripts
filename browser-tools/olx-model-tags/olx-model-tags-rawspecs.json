@@ -4104,7 +4104,7 @@
  },
  "https://www.iremax.net/product/6153": {
   "model": "REMAX FP-128",
-  "scannedAt": "2026-11-26T05:35:33.537Z",
+  "scannedAt": "2026-11-26T05:36:07.530Z",
   "specs": {
    "Product Color": "Graphite Black",
    "Battery Type": "Lithium-polymer cells",
@@ -4117,7 +4117,7 @@
  },
  "https://www.iremax.net/product/6159": {
   "model": "REMAX FP-32",
-  "scannedAt": "2026-11-26T05:35:35.538Z",
+  "scannedAt": "2026-11-26T05:36:07.531Z",
   "specs": {
    "Product Colors": "Dark Blue, Orange, Silver-Gray",
    "Battery Type": "Lithium-Polymer",
@@ -4134,7 +4134,7 @@
  },
  "https://www.iremax.net/product/6147": {
   "model": "REMAX FP-135",
-  "scannedAt": "2026-11-26T05:17:28.549Z",
+  "scannedAt": "2026-11-26T05:36:09.530Z",
   "specs": {
    "Product Color": "Dark Blue",
    "Battery Type": "Lithium-ion Battery",
@@ -4142,12 +4142,13 @@
    "Battery Voltage": "50,000 mAh / 3.2 V / 160 Wh",
    "Rated Capacity": "25,000 mAh (5 V–2 A)",
    "Input Voltage and Current": "Input: Type-C: 5 V/2.5 A, 9 V/2 A, 12 V/1.5 A; Type-C Cable: 5V/2.5A, 9V/2A, 12V/1.5A",
-   "Output Voltage and Current": "Output: Type-C1: 5V/3A, 9V/2.22A, 12V/1.67A; Type-C Cable: 5V/3A, 9V/2.22A, 12V/1.67A; USB-A1: SCP 10V/2.25A, 5V/3A, 9V/2A, 12V/1.5A (22.5W Max); USB-A1: SCP 10V/2.25A, 5V/3A, 9V/2A, 12V/1.5A (22.5W Max); USB-A2: SCP 10V/2.25A, 5V/3A, 9V/2A, 12V/1.5A (22.5W Max); Total output for multiple ports: Shared 5V/3A; Energy conversion efficiency: 78% (5V/3A discharge); Unit Weight: ~343 g"
+   "Output Voltage and Current": "Output: Type-C1: 5V/3A, 9V/2.22A, 12V/1.67A; Type-C Cable: 5V/3A, 9V/2.22A, 12V/1.67A; USB-A1: SCP 10V/2.25A, 5V/3A, 9V/2A, 12V/1.5A (22.5W Max); USB-A1: SCP 10V/2.25A, 5V/3A, 9V/2A, 12V/1.5A (22.5W Max); USB-A2: SCP 10V/2.25A, 5V/3A, 9V/2A, 12V/1.5A (22.5W Max); Total output for multiple ports: Shared 5V/3A; Energy conversion efficiency: 78% (5V/3A discharge); Unit Weight: ~343 g",
+   "Unit Dimensions": "112 × 71.5 × 30 mm"
   }
  },
  "https://www.iremax.net/product/5865": {
   "model": "REMAX AS-214-A",
-  "scannedAt": "2026-11-26T05:17:28.551Z",
+  "scannedAt": "2026-11-26T05:36:07.532Z",
   "specs": {
    "Product Colors": "Pearl White/Graphite Blue/Star Purple",
    "Battery capacity": "20000mAh (3.85V)",
@@ -4155,12 +4156,17 @@
    "Rated capacity": "12000mAh (5V/2A)",
    "Input voltage and current": "TYPE-C port input: 5V-3A 9V-3A 12V-1.5A (AFC FCP PD18W); TYPE-C comes with cable input: TYPE-C female port input: 5V-3A 9V-3A 12V-1.5A (AFC FCP PD18W)",
    "Output voltage and current": "Type-C port output port output:5V-3A 9V-2.22A 10V-2.25A 12V-1.67A (QC2.0 QC3.0 AFC FCP SCP PD22.5W)； TYPE-C comes with built-in cable output cable output:5V-3A 9V-2.22A 10V-2.25A 12V-1.67A (QC2.0 QC3.0 AFC FCP SCP PD22.5W)； Comes with line output: 5V/2.4A",
-   "Total output": "5V/3A"
+   "Total output": "5V/3A",
+   "Energy conversion rate": "≥ 80%",
+   "Bare weight": "approximately 325g",
+   "Bare machine size": "111.2 * 66.3 * 34mm",
+   "Finished product size": "160 * 90 * 40mm",
+   "Finished product weight": "373.3g"
   }
  },
  "https://www.iremax.net/product/6051": {
   "model": "REMAX FP-131",
-  "scannedAt": "2026-11-26T05:17:28.619Z",
+  "scannedAt": "2026-11-26T05:36:06.545Z",
   "specs": {
    "Product Color": "Mousse White / Midnight Black",
    "Battery Capacity": "10,000 mAh (7.4 V)",
@@ -4168,7 +4174,11 @@
    "Rated Capacity": "11,600 mAh (5V/2A)",
    "Input Voltage and Current": "Input via Type-C Female Port: 5V/3A, 9V/3A, 12V/2.5A, 15V/2A, 20V/1.5A (AFC, FCP, SCP, PD30W); Input via Built-in Type-C Cable: 5V/3A, 9V/3A, 12V/2.5A, 15V/2A, 20V/1.5A (AFC, FCP, SCP, PD30W); Lightning Female Port Input: 5V/3A, 9V/3A, 12V/2.5A, 15V/2A, 20V/1.5A (AFC FCP SCP PD30W); Output Voltage and Current: Type-C Output: 5V/3A, 9V/3A, 12V/3A, 15V/3A, 20V/2.25A (QC 2.0, QC 3.0, AFC, FCP, SCP, PD 45W); Type-C output via built-in cable: 5V/3A, 9V/3A, 12V/3A, 15V/3A, 20V/2.25A (QC 2.0, QC 3.0, AFC, FCP, SCP, PD 45W); Lightning built-in cable output: 5V/2.4A, 9V/3A (Apple 2.4A, PD 27W); USB-A1/A2 port output: 5V/3A (Apple 2.4A); Total output: 5V/3A",
    "Total output across all ports": "5V/3A",
-   "Energy conversion efficiency": "≥80%"
+   "Energy conversion efficiency": "≥80%",
+   "Unit weight": "approx. 440g",
+   "Unit Dimensions": "143.3 × 68 × 28 mm",
+   "Packaged Dimensions": "160 × 89 × 36 mm",
+   "Packaged Weight": "480 g"
   }
  },
  "https://www.iremax.net/product/5775": {
@@ -4189,7 +4199,7 @@
  },
  "https://www.iremax.net/product/5769": {
   "model": "REMAX FP-62",
-  "scannedAt": "2026-11-26T05:35:39.548Z",
+  "scannedAt": "2026-11-26T05:36:08.533Z",
   "specs": {
    "Colors": "Orange, Silver, Blue",
    "Battery Capacity": "5000mAh",
@@ -4320,7 +4330,7 @@
  },
  "https://www.iremax.net/product/6165": {
   "model": "REMAX FP-12",
-  "scannedAt": "2026-11-26T05:35:33.559Z",
+  "scannedAt": "2026-11-26T05:36:07.541Z",
   "specs": {
    "Product Colors": "Rose Purple, Alpha",
    "Battery type": "Semi solid state battery",
@@ -4339,7 +4349,7 @@
  },
  "https://www.iremax.net/product/5847": {
   "model": "REMAX FP-92",
-  "scannedAt": "2026-11-26T05:35:38.549Z",
+  "scannedAt": "2026-11-26T05:36:09.535Z",
   "specs": {
    "Product Colors": "Dark Blue, Starlight Silver",
    "Battery Capacity": "20,000 mAh",
