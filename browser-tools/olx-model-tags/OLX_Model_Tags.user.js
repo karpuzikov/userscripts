@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OLX - Model Tags
 // @namespace    https://www.olx.ua/
-// @version      0.15.1
+// @version      0.15.2
 // @description  Tag OLX ads by model (tags shared by every ad of that model) or per ad, mark broken ads, filter search results by tags, per-tag Hide (pixel mesh) / Highlight (outline). Shared model catalog is read from GitHub without any key; your own marks stay in this browser. Phone specs (year, DXOMARK camera, AnTuTu, sensor, display, battery, charger, NFC) are captured from the DXOMARK, Kimovil and GSMArena pages you open. OLX only gets read locally from the open page.
 // @match        https://www.olx.ua/*
 // @match        https://www.dxomark.com/smartphones/*
@@ -380,7 +380,7 @@
         storePendingOperation(operation);
         applyOlxModelTagsOperation(olxModelTagsData, operation);
         renderEverything();
-        if (!hasGithubToken()) return;
+        if (!hasGithubToken() || isScanTab) return;
         clearTimeout(uploadDebounceTimer);
         uploadDebounceTimer = setTimeout(synchronizeWithGithub, UPLOAD_DEBOUNCE_MS);
     }
@@ -675,10 +675,10 @@
     async function startSpecsCapture() {
         olxModelTagsData = olxModelTagsData ? rebuildLocalDataFromCacheAndPendingOperations(olxModelTagsData) : createEmptyOlxModelTagsData();
         olxModelTagsSources = await loadSourceAdapters();
-        if (hasGithubToken() && listPendingOperationKeys().length) synchronizeWithGithub(); // leftovers of earlier tabs
         const categoryMatch = findSourceCategory(olxModelTagsSources, location.hostname, location.pathname, document);
         if (categoryMatch) { startCategoryScanPanel(categoryMatch); return; }
         startScanTabReporting();
+        if (!isScanTab && hasGithubToken() && listPendingOperationKeys().length) synchronizeWithGithub(); // leftovers of earlier tabs
         setInterval(renderSourceBadge, 3000);
         // A page the cached adapters could not read may be covered by adapters added since: refetch once and retry.
         if (!captureSpecsOfOpenPage()) {
@@ -697,27 +697,28 @@
     const STORAGE_KEY_SCAN_JOB = 'olxModelTagsScanJob';
     const SCAN_RESULT_KEY_PREFIX = 'olxModelTagsScanResult:';
     const SCAN_TAB_TIMEOUT_MS = 90 * 1000;
+    const SCAN_UPLOAD_TIMEOUT_MS = 2 * 60 * 1000;
+    let lastScanUploadAt = 0;
     const SCAN_JOB_STALE_MS = 5 * 60 * 1000;
     const scanKeyOf = (url) => { const parsed = new URL(url, location.href); return parsed.origin + parsed.pathname.replace(/\/+$/, ''); };
 
-    // Product tab: report once everything this tab read is saved (or has failed), then close.
+    // Product tab: record the page's values, report which operations hold them, close at once. The category tab uploads all
+    // tabs' operations in one go (one upload per few seconds instead of one per tab) and confirms them.
+    let isScanTab = false;
+
     function startScanTabReporting() {
         const job = GM_getValue(STORAGE_KEY_SCAN_JOB, null);
         const pageKey = scanKeyOf(location.href);
         if (!job?.active || !(pageKey in job.inFlight)) return;
+        isScanTab = true;
         const timer = setInterval(() => {
             if (!lastSourceCapture) return;
-            const unsavedCount = [...ownPendingOperationKeys].filter((key) => GM_listValues().includes(key)).length;
-            let result = null;
-            if (lastSourceCapture.state === 'notSourced') result = { status: 'failed', message: lastSourceCapture.message };
-            else if (!hasGithubToken()) result = { status: 'failed', message: 'no GitHub token in this browser' };
-            else if (synchronizationStatus.state === 'error') result = { status: 'failed', message: `upload failed: ${synchronizationStatus.message}` };
-            else if (!unsavedCount && !synchronizationInProgress) result = { status: lastSourceCapture.state === 'partial' ? 'partial' : 'saved', message: lastSourceCapture.message };
-            if (!result) return;
             clearInterval(timer);
-            GM_setValue(SCAN_RESULT_KEY_PREFIX + pageKey, result);
+            GM_setValue(SCAN_RESULT_KEY_PREFIX + pageKey, lastSourceCapture.state === 'notSourced'
+                ? { status: 'failed', message: lastSourceCapture.message }
+                : { status: lastSourceCapture.state === 'partial' ? 'partial' : 'saved', message: lastSourceCapture.message, keys: [...ownPendingOperationKeys] });
             window.close();
-        }, 1000);
+        }, 250);
     }
 
     function startCategoryScanPanel({ category }) {
@@ -745,7 +746,7 @@
 
         element('start').addEventListener('click', () => {
             if (!hasGithubToken()) { element('status').textContent = 'Set the GitHub token first (Tampermonkey menu); a scan has to save to GitHub.'; return; }
-            saveJob({ active: true, concurrency: Math.min(10, Math.max(1, parseInt(element('concurrency').value, 10) || 3)), page: 1, pageKey: null, queue: [], inFlight: {}, done: {} });
+            saveJob({ active: true, concurrency: Math.min(10, Math.max(1, parseInt(element('concurrency').value, 10) || 3)), page: 1, pageKey: null, queue: [], inFlight: {}, awaiting: {}, done: {} });
         });
         element('stop').addEventListener('click', () => { const job = readJob(); if (job) saveJob({ ...job, active: false }); });
 
@@ -753,16 +754,25 @@
             let job = readJob();
             const counts = (done) => Object.values(done).reduce((sum, result) => ({ ...sum, [result.status]: (sum[result.status] || 0) + 1 }), { saved: 0, partial: 0, failed: 0 });
             if (job?.active) {
+                job.awaiting = job.awaiting || {};
                 for (const key of Object.keys(job.inFlight)) {
                     const result = GM_getValue(SCAN_RESULT_KEY_PREFIX + key, null);
                     if (!result && Date.now() - job.inFlight[key] < SCAN_TAB_TIMEOUT_MS) continue;
                     openTabs[key]?.close();
                     GM_deleteValue(SCAN_RESULT_KEY_PREFIX + key);
                     delete job.inFlight[key];
-                    job.done[key] = result || { status: 'failed', message: 'no result within 90 s' };
+                    if (result?.keys?.length) job.awaiting[key] = { result, since: Date.now() };
+                    else job.done[key] = result || { status: 'failed', message: 'no result within 90 s' };
                 }
+                // A page counts as saved only when every operation its tab recorded is gone from storage (= uploaded).
+                const storedKeys = new Set(GM_listValues());
+                for (const [key, { result, since }] of Object.entries(job.awaiting)) {
+                    if (result.keys.every((operationKey) => !storedKeys.has(operationKey))) { job.done[key] = result; delete job.awaiting[key]; }
+                    else if (Date.now() - since > SCAN_UPLOAD_TIMEOUT_MS) { job.done[key] = { status: 'failed', message: `recorded but not uploaded (${synchronizationStatus.message || 'no sync result'})` }; delete job.awaiting[key]; }
+                }
+                if (Object.keys(job.awaiting).length && !synchronizationInProgress && Date.now() - lastScanUploadAt > 1500) { lastScanUploadAt = Date.now(); synchronizeWithGithub(); }
                 const here = scanKeyOf(location.href);
-                if (job.pageKey !== here && !job.queue.length && !Object.keys(job.inFlight).length) {
+                if (job.pageKey !== here && !job.queue.length && !Object.keys(job.inFlight).length && !Object.keys(job.awaiting).length) {
                     job.pageKey = here;
                     job.queue = [...new Set([...document.querySelectorAll(category.products)].map((item) => item.querySelector(category.link)?.href).filter(Boolean))];
                 }
@@ -771,7 +781,7 @@
                     job.inFlight[scanKeyOf(url)] = Date.now();
                     openTabs[scanKeyOf(url)] = GM_openInTab(url, { active: false, insert: true, setParent: true });
                 }
-                if (!job.queue.length && !Object.keys(job.inFlight).length) {
+                if (!job.queue.length && !Object.keys(job.inFlight).length && !Object.keys(job.awaiting).length) {
                     const nextPageLink = document.querySelector(category.next);
                     if (nextPageLink) { job.page++; saveJob(job); location.href = nextPageLink.href; return; }
                     job.active = false;
@@ -787,11 +797,11 @@
             if (job) {
                 const total = counts(job.done);
                 element('status').textContent = `${job.active ? 'Scanning' : job.finished ? 'Done' : 'Stopped'}: page ${job.page}/${pageCount}\n`
-                    + `${Object.keys(job.inFlight).length} tabs open, ${job.queue.length} products not opened yet\nsaved ${total.saved}, partial ${total.partial}, failed ${total.failed}`
+                    + `${Object.keys(job.inFlight).length} tabs open, ${job.queue.length} products not opened yet, ${Object.keys(job.awaiting || {}).length} uploading\nsaved ${total.saved}, partial ${total.partial}, failed ${total.failed}`
                     + (!job.active && (total.partial || total.failed) ? '\n(details in the browser console)' : '');
             }
         }
-        setInterval(tick, 1000);
+        setInterval(tick, 500);
         tick();
     }
 
