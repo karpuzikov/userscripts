@@ -4052,7 +4052,7 @@
  },
  "https://www.iremax.net/product/5409": {
   "model": "REMAX T201ALP",
-  "scannedAt": "2026-11-26T05:12:40.570Z",
+  "scannedAt": "2026-11-26T05:36:23.544Z",
   "specs": {
    "1. Product Colors": "Starlight Silver, Modern Gray",
    "2. Battery Type": "Lithium-polymer",
@@ -4060,7 +4060,12 @@
    "4. Total Battery Power": "38.5 Wh (7.7 VDC) (2 cells in series)",
    "5. Rated Capacity": "5,800 mAh (5V⎓3A)",
    "6. Input Voltage and Current": "USB-C/USB-C Cable Input: 5V⎓3A, 9V⎓2.22A, 12V⎓1.67A, 20W Max",
-   "Protocols": "PD 2.0/PD 3.0/QC 2.0/QC 3.0/AFC/FCP"
+   "Protocols": "QC 2.0/QC 3.0/AFC/FCP/SCP/PD 2.0/PD 3.0, PPS 3.3–11V 3A",
+   "7. Output Voltage and Current": "USB-C to USB-C Cable: Output: 5V⎓3A, 9V⎓3A, 10V⎓2.25A, 12V⎓2.5A, 15V⎓2.33A, 35W Max",
+   "8. Total Output (Multi-Port)": "5V⎓3A 15W Max",
+   "9. Energy Conversion Efficiency": "≥65%",
+   "10. Unit Weight": "Approx. 205g",
+   "11. Unit Dimensions": "112×61×26.5mm"
   }
  },
  "https://www.iremax.net/product/5091": {
@@ -4266,7 +4271,7 @@
  },
  "https://www.iremax.net/product/5679": {
   "model": "REMAX FP-18",
-  "scannedAt": "2026-11-26T05:12:38.542Z",
+  "scannedAt": "2026-11-26T05:36:24.544Z",
   "specs": {
    "Product Color": "Ruthenium, Starlight Silver",
    "Battery Type": "Lithium-ion Polymer",
@@ -4274,20 +4279,33 @@
    "Battery Voltage/Total Power": "19.25Wh",
    "Rated Capacity": "3,000 mAh (5V/2A)",
    "Input Voltage and Current": "Input: Type-C1: 5V 3A, 9V 1.67A; Supported Protocols: PD 3.0/PD 2.0/AFC/FCP/SCP/PE 1.1",
-   "Output Voltage and Current": "Output: Type-C1: 5V 3A, 9V 2.22A, 12V 1.67A; Wireless Charging Output: 15W (Max) Supported Protocols: PPS/PD 3.0/PD 2.0/QC 3.0/QC 2.0/AFC/FCP/PE 2.0/PE 1.1/SFCP"
+   "Output Voltage and Current": "Output: Type-C1: 5V 3A, 9V 2.22A, 12V 1.67A; Wireless Charging Output: 15W (Max) Supported Protocols: PPS/PD 3.0/PD 2.0/QC 3.0/QC 2.0/AFC/FCP/PE 2.0/PE 1.1/SFCP",
+   "Total Output Across Multiple Ports": "5V 3A",
+   "Energy Conversion Efficiency": "60%",
+   "Product Materials, Construction, and Fire Rating": "Mid-frame: Zinc alloy; Cover: High-aluminum glass",
+   "Weight (unit only)": "221 g",
+   "Dimensions (unit only)": "105.9 × 72.5 × 14.6 mm"
   }
  },
  "https://www.iremax.net/product/5337": {
   "model": "REMAX FP-151",
-  "scannedAt": "2026-11-26T05:12:40.540Z",
+  "scannedAt": "2026-11-26T05:36:24.541Z",
   "specs": {
    "1. Product Color": "Dark Blue",
    "2. Battery Capacity": "5000",
    "3. Battery Voltage/Total Power": "3.7V/18.5Wh",
    "4. Rated Capacity": "10,000 mAh (5V/3A)",
    "5. Input Voltage and Current": "Type-C1 Input: 5V/3A, 9V/3A, 12V/3A, 15V/3A, 20V/3.25A, 65W",
-   "Protocols": "PD 3.1 / QC 2.0 / UFCS / AFC / FCP / SCP",
-   "Type-C2 (with built-in cable) Input": "5V 3A, 9V 3A, 12V 3A, 15V 3A, 20V 3.25A, 65W"
+   "Protocols": "UFCS/PE1.1/PE2.0/QC3+/QC3.0/QC2.0/AFC/FCP/SCP/SFCP",
+   "Type-C2 (with built-in cable) Input": "5V 3A, 9V 3A, 12V 3A, 15V 3A, 20V 3.25A, 65W",
+   "6. Output Voltage and Current": "Type-C1 Output: 5V 3A, 9V 3A, 12V 3A, 15V 3A, 20V 5A, 100W",
+   "TYPE-C2 Built-in Cable Output": "5V3A, 9V3A, 12V3A, 15V3A, 20V5A, 100W",
+   "Socket": "5V 3A, 9V 3A, 12V2.5A, 10V2.25A, 30W",
+   "7. Total Output (Multiple Ports)": "Maximum Power per Port: Type-C: 100W, Type-C Cable: 100W, USBA: 30W; Simultaneous Use: C+A = 15W, Type-C Cable: 100W",
+   "8. Energy Conversion Efficiency": "75%",
+   "9. Unit Weight (without packaging)": "516 g",
+   "10. Unit Dimensions (without packaging)": "156 × 53 × 41",
+   "11. Materials, Construction, and Fire Rating": "Aluminum Alloy + V0"
   }
  },
  "https://www.iremax.net/product/5169": {
