@@ -818,6 +818,70 @@
     "mAh per g: 57.1"
    ],
    "group": "Power banks"
+  },
+  "HOCOJ147PROSPERO": {
+   "name": "Hoco J147 Prospero",
+   "tags": [
+    "Capacity: 3000mAh",
+    "Rated capacity: 1800mAh",
+    "Weight: 88g",
+    "mAh per g: 34.1"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ138DISTANT": {
+   "name": "Hoco J138 Distant",
+   "tags": [
+    "Capacity: 60000mAh",
+    "Rated capacity: 33000mAh",
+    "Output: 22.5W",
+    "Weight: 1360g",
+    "mAh per g: 44.1"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ139HERO": {
+   "name": "Hoco J139 Hero",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5400mAh",
+    "Output: 22.5W",
+    "Weight: 195g",
+    "mAh per g: 51.3"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ136SIRUI": {
+   "name": "Hoco J136 Sirui",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5500mAh",
+    "Output: 22.5W",
+    "Weight: 245g",
+    "mAh per g: 40.8"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ134ASTRONG": {
+   "name": "Hoco J134A Strong",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5500mAh",
+    "Weight: 215g",
+    "mAh per g: 46.5"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOQ47SHINE": {
+   "name": "Hoco Q47 Shine",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5500mAh",
+    "Output: 20W",
+    "Weight: 210g",
+    "mAh per g: 47.6"
+   ],
+   "group": "Power banks"
   }
  },
  "stopPhrases": [
