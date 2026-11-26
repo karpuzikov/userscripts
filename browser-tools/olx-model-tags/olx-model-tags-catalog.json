@@ -3992,7 +3992,9 @@
    "tags": [
     "Rated capacity: 6000mAh",
     "Weight: 197g",
-    "Output: 10.5W"
+    "Output: 10.5W",
+    "Capacity: 10000mAh",
+    "mAh per g: 50.8"
    ],
    "group": "Power banks"
   },
@@ -4001,7 +4003,9 @@
    "tags": [
     "Rated capacity: 6000mAh",
     "Weight: 197g",
-    "Output: 10.5W"
+    "Output: 10.5W",
+    "Capacity: 10000mAh",
+    "mAh per g: 50.8"
    ],
    "group": "Power banks"
   },
@@ -4010,7 +4014,9 @@
    "tags": [
     "Rated capacity: 6000mAh",
     "Weight: 197g",
-    "Output: 10.5W"
+    "Output: 10.5W",
+    "Capacity: 10000mAh",
+    "mAh per g: 50.8"
    ],
    "group": "Power banks"
   },
