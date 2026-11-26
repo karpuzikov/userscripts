@@ -4868,7 +4868,9 @@
    "tags": [
     "Capacity: 5000mAh",
     "Rated capacity: 5500mAh",
-    "Output: 40W"
+    "Output: 40W",
+    "Weight: 216g",
+    "mAh per g: 23.1"
    ],
    "group": "Power banks"
   },
@@ -4915,7 +4917,8 @@
    "name": "REMAX FP-17",
    "tags": [
     "Capacity: 5000mAh",
-    "Rated capacity: 5500mAh"
+    "Rated capacity: 5500mAh",
+    "Output: 40W"
    ],
    "group": "Power banks"
   },
