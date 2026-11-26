@@ -3941,21 +3941,24 @@
   "HOCOB36WOODEN": {
    "name": "Hoco B36 Wooden",
    "tags": [
-    "Weight: 212g"
+    "Weight: 212g",
+    "Output: 10W"
    ],
    "group": "Power banks"
   },
   "HOCOB35BENTOURAGE": {
    "name": "Hoco B35B Entourage",
    "tags": [
-    "Weight: 174g"
+    "Weight: 174g",
+    "Output: 10.5W"
    ],
    "group": "Power banks"
   },
   "HOCOB35CENTOURAGE": {
    "name": "Hoco B35C Entourage",
    "tags": [
-    "Weight: 227g"
+    "Weight: 227g",
+    "Output: 10.5W"
    ],
    "group": "Power banks"
   },
@@ -3964,6 +3967,7 @@
    "tags": [
     "Capacity: 10000mAh",
     "Weight: 194g",
+    "Output: 10.5W",
     "mAh per g: 51.5"
    ],
    "group": "Power banks"
@@ -4011,6 +4015,13 @@
    "tags": [
     "Capacity: 10000mAh",
     "Output: 18W"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOB37PERSISTENT": {
+   "name": "Hoco B37 Persistent",
+   "tags": [
+    "Output: 5W"
    ],
    "group": "Power banks"
   }
