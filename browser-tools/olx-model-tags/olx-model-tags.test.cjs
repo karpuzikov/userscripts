@@ -273,3 +273,9 @@ test('Hoco free-text adapter finds Capacity under any "N. <words> capacity:" lab
   assert.equal(capacity('1. Battery capacity: 10000mAh / 37Wh Rated output capacity: 6400mAh (5V TYP 1A).'), '10000mAh');
   assert.equal(capacity('2. Rated output capacity: 6400mAh.'), undefined);
 });
+
+test('Hoco free-text adapter reads an Output block spread over several lines (QS7 jump starter)', () => {
+  const page = JSON.parse(require('fs').readFileSync(__dirname + '/olx-model-tags-sources.json', 'utf8')).sources.find((source) => source.name === 'HOCO').pages.at(-1);
+  const text = '2. Input:\n1 × Type-C port – 5V / 2A, 9V / 2A – 18W.\n3. Output:\n2 × USB-A ports – 5V / 2.4A – 12W max.\nTotal USB-A ports output – 5V / 2.4A – 12W max.\n4. Jump starter is suitable for cars.';
+  assert.equal(olxModelTags.SOURCE_VALUE_TRANSFORMS.maxWatts(text.match(new RegExp(page.properties.find((property) => property.name === 'Output').regex))[1]), '12W');
+});
