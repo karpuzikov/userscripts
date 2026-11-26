@@ -3251,5 +3251,27 @@
    "Battery": "high performance 18650 lithium battery. 6. With LED light to display the power level.",
    "Size": "98*46*23mm. Weight: 120g."
   }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j28a-20000mah-dual-usb": {
+  "model": "Hoco J28A Shock power",
+  "scannedAt": "2026-11-26T02:54:51.352Z",
+  "specs": {
+   "Power bank capacity": "20000mAh 74Wh. Rated capacity: 11800mAh.",
+   "Battery input": "Micro-USB / Type-C: 5V / 2A max.",
+   "Battery output": "USB1: DC5V / 2A max. 4. LED digital display for power level (button activation). 5. Energy-efficient A+ polymer batteries.",
+   "Power bank material": "ABS+PC flame retardant. 7. Multiple circuit protection, compatible with more than 99% of digital devices such as mobile phones and tablets.",
+   "Power bank size": "147*73*26mm. Weight: 411g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j33-10000mah-dual-usb": {
+  "model": "Hoco J33 Cool freedom",
+  "scannedAt": "2026-11-26T02:54:52.368Z",
+  "specs": {
+   "Power bank capacity": "10000mAh 37Wh. Rated capacity: 6000mAh (5V TYP 2A).",
+   "Input": "Micro-USB / Type-C 5V / 2A Max.",
+   "Output": "USB 1 / USB 2: DC5V / 2A Max. Total output: DC5V / 2A Max. 4. LED indicator shows the battery power level (button activation).",
+   "Material": "ABS+PC flame retardant material. 6. Cable X25 (Lightning+Micro-USB), cable length: 10cm.",
+   "Power bank size": "length * width * height: 14.2 * 6.7 * 1.6cm. Weight: 212g."
+  }
  }
 }
