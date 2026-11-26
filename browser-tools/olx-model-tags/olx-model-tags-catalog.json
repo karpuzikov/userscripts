@@ -2086,6 +2086,121 @@
     "mAh per liter: 61686"
    ],
    "group": "Power banks"
+  },
+  "HOCOJ122ARESPECT": {
+   "name": "Hoco J122A Respect",
+   "tags": [
+    "Capacity: 20000mAh",
+    "Rated capacity: 11000mAh",
+    "Output: 22.5W",
+    "Weight: 403g",
+    "Dimensions: 145×72×30mm",
+    "mAh per g: 49.6",
+    "mAh per liter: 63857"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ123ELEMENT": {
+   "name": "Hoco J123 Element",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5500mAh",
+    "Weight: 227g",
+    "Dimensions: 143×68×16mm",
+    "mAh per g: 44.1",
+    "mAh per liter: 64274"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ121AFAST": {
+   "name": "Hoco J121A Fast",
+   "tags": [
+    "Capacity: 20000mAh",
+    "Rated capacity: 11000mAh",
+    "Output: 22.5W",
+    "Weight: 415g",
+    "Dimensions: 145×69×28mm",
+    "mAh per g: 48.2",
+    "mAh per liter: 71393"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ123DELEMENT": {
+   "name": "Hoco J123D Element",
+   "tags": [
+    "Capacity: 90000mAh",
+    "Rated capacity: 49500mAh",
+    "Output: 22.5W",
+    "Weight: 1795g",
+    "Dimensions: 168×83×90mm",
+    "mAh per g: 50.1",
+    "mAh per liter: 71715"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ125POWER": {
+   "name": "Hoco J125 Power",
+   "tags": [
+    "Capacity: 5000mAh",
+    "Rated capacity: 2800mAh",
+    "Output: 20W",
+    "Weight: 140g",
+    "Dimensions: 107×66×13mm",
+    "mAh per g: 35.7",
+    "mAh per liter: 54463"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ123CELEMENT": {
+   "name": "Hoco J123C Element",
+   "tags": [
+    "Capacity: 60000mAh",
+    "Rated capacity: 33000mAh",
+    "Output: 22.5W",
+    "Weight: 1025g",
+    "Dimensions: 168×83×62mm",
+    "mAh per g: 58.5",
+    "mAh per liter: 69402"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ122RESPECT": {
+   "name": "Hoco J122 Respect",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5500mAh",
+    "Output: 22.5W",
+    "Weight: 230g",
+    "Dimensions: 145×70×16mm",
+    "mAh per g: 43.5",
+    "mAh per liter: 61576"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ121FAST": {
+   "name": "Hoco J121 Fast",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5500mAh",
+    "Output: 22.5W",
+    "Weight: 232g",
+    "Dimensions: 145×69×16mm",
+    "mAh per g: 43.1",
+    "mAh per liter: 62469"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ123AELEMENT": {
+   "name": "Hoco J123A Element",
+   "tags": [
+    "Capacity: 20000mAh",
+    "Rated capacity: 11000mAh",
+    "Weight: 411g",
+    "Dimensions: 145×70×29mm",
+    "mAh per g: 48.7",
+    "mAh per liter: 67946"
+   ],
+   "group": "Power banks"
   }
  },
  "stopPhrases": [
