@@ -129,6 +129,46 @@
      ]
     }
    ]
+  },
+  {
+   "name": "HOCO",
+   "hosts": [
+    "hocotech.com"
+   ],
+   "group": "Power banks",
+   "pages": [
+    {
+     "path": "^/product/",
+     "model": {
+      "selector": "h1.product_title",
+      "regex": "[“\"]([^”\"]+)[”\"]",
+      "prefix": "Hoco "
+     },
+     "properties": [
+      {
+       "name": "Capacity",
+       "selector": ".elementor-widget-woocommerce-product-content p",
+       "regex": "\\bCapacity:\\s*(\\d+mAh)"
+      },
+      {
+       "name": "Rated capacity",
+       "selector": ".elementor-widget-woocommerce-product-content p",
+       "regex": "Rated capacity:\\s*(\\d+mAh)"
+      },
+      {
+       "name": "Output",
+       "selector": ".elementor-widget-woocommerce-product-content p",
+       "regex": "Output:\\s*(.*?)(?=\\s\\d\\.\\s[A-Z]|$)",
+       "transform": "maxWatts"
+      },
+      {
+       "name": "Weight",
+       "selector": ".elementor-widget-woocommerce-product-content p",
+       "regex": "Weight:\\s*(\\d+\\s*g)\\b"
+      }
+     ]
+    }
+   ]
   }
  ]
 }

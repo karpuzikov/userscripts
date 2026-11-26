@@ -146,3 +146,9 @@ test('source adapters: page chosen by host and path, shipped file only uses know
     assert.ok(olxModelTags.SOURCE_VALUE_TRANSFORMS[property.transform || 'text'], `unknown transform ${property.transform}`);
   }
 });
+
+test('maxWatts picks the highest output of a free-text output block', () => {
+  const { maxWatts } = olxModelTags.SOURCE_VALUE_TRANSFORMS;
+  assert.equal(maxWatts('USB 1 – 22.5W (for QC), USB 2 / 3 – 5V / 2.1A. Type-C – 20W (for PD). Total output – 5V / 3A.'), '22.5W');
+  assert.equal(maxWatts('5V / 3A'), '');
+});

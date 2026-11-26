@@ -1,12 +1,13 @@
 // ==UserScript==
 // @name         OLX - Model Tags
 // @namespace    https://www.olx.ua/
-// @version      0.11.1
+// @version      0.12.0
 // @description  Tag OLX ads by model (tags shared by every ad of that model) or per ad, mark broken ads, filter search results by tags, per-tag Hide (pixel mesh) / Highlight (outline). Shared model catalog is read from GitHub without any key; your own marks stay in this browser. Phone specs (year, DXOMARK camera, AnTuTu, sensor, display, battery, charger, NFC) are captured from the DXOMARK, Kimovil and GSMArena pages you open. OLX only gets read locally from the open page.
 // @match        https://www.olx.ua/*
 // @match        https://www.dxomark.com/smartphones/*
 // @match        https://www.kimovil.com/*
 // @match        https://www.gsmarena.com/*
+// @match        https://hocotech.com/product/*
 // @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/browser-tools/olx-model-tags/OLX_Model_Tags.user.js
 // @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/browser-tools/olx-model-tags/OLX_Model_Tags.user.js
 // @run-at       document-idle
@@ -210,6 +211,7 @@
         yesNo: (text) => extractNfcSupport(text),
         unknownIfEmpty: (text) => (!text || /^(unknown|-+)$/i.test(text) ? 'Unknown' : text),
         chargerPower: (text, element) => extractChargerPower(element.innerHTML.split(/<hr[^>]*>/).map((html) => html.replace(/<[^>]+>/g, ' '))),
+        maxWatts: (text) => { const watts = [...text.matchAll(/(\d+(?:\.\d+)?)\s*W\b/g)].map((match) => Number(match[1])); return watts.length ? `${Math.max(...watts)}W` : ''; },
         antutu: (text) => parseAnTuTuAnswer(text),
     };
 
@@ -446,6 +448,8 @@
         }
         let text = valueSpec.fromTitle ? (document.title.match(new RegExp(valueSpec.fromTitle))?.[1] || '') : readTextOf(element);
         if (valueSpec.attribute && element) text = (element.getAttribute(valueSpec.attribute) || '').trim();
+        if (valueSpec.regex) text = text.match(new RegExp(valueSpec.regex))?.[1] || '';
+        if (text && valueSpec.prefix) text = valueSpec.prefix + text;
         if (valueSpec.ignoreRegex && new RegExp(valueSpec.ignoreRegex).test(text)) text = '';
         return { element: element || (valueSpec.fromTitle ? document.body : null), text };
     }
