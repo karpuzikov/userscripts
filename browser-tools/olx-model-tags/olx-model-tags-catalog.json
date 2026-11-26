@@ -2201,6 +2201,82 @@
     "mAh per liter: 67946"
    ],
    "group": "Power banks"
+  },
+  "HOCOJ119ASHARPCHARGER": {
+   "name": "Hoco J119A Sharp charger",
+   "tags": [
+    "Capacity: 20000mAh",
+    "Rated capacity: 11000mAh",
+    "Output: 22.5W",
+    "Weight: 437g",
+    "Dimensions: 149×69×33mm",
+    "mAh per g: 45.8",
+    "mAh per liter: 58950"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ119BSHARPCHARGER": {
+   "name": "Hoco J119B Sharp charger",
+   "tags": [
+    "Capacity: 30000mAh",
+    "Rated capacity: 16500mAh",
+    "Output: 22.5W",
+    "Weight: 631g",
+    "Dimensions: 149×69×44mm",
+    "mAh per g: 47.5",
+    "mAh per liter: 66318"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ118BSPEEDENERGY": {
+   "name": "Hoco J118B Speed energy",
+   "tags": [
+    "Capacity: 30000mAh",
+    "Rated capacity: 16500mAh",
+    "Weight: 612g",
+    "Dimensions: 149×69×44mm",
+    "mAh per g: 49.0",
+    "mAh per liter: 66318"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ120": {
+   "name": "Hoco J120",
+   "tags": [
+    "Capacity: 1000mAh",
+    "Output: 2.5W",
+    "Weight: 43g",
+    "Dimensions: 68×40×16mm",
+    "mAh per g: 23.3",
+    "mAh per liter: 22978"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ123BELEMENT": {
+   "name": "Hoco J123B Element",
+   "tags": [
+    "Capacity: 30000mAh",
+    "Rated capacity: 16500mAh",
+    "Output: 22.5W",
+    "Weight: 630g",
+    "Dimensions: 168×83×33mm",
+    "mAh per g: 47.6",
+    "mAh per liter: 65196"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ119SHARPCHARGER": {
+   "name": "Hoco J119 Sharp charger",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5500mAh",
+    "Output: 22.5W",
+    "Weight: 241g",
+    "Dimensions: 149×69×20mm",
+    "mAh per g: 41.5",
+    "mAh per liter: 48633"
+   ],
+   "group": "Power banks"
   }
  },
  "stopPhrases": [
