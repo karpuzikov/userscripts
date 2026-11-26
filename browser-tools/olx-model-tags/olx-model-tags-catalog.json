@@ -926,6 +926,17 @@
     "mAh per g: 46.0"
    ],
    "group": "Power banks"
+  },
+  "HOCOJ133TRIUMPH": {
+   "name": "Hoco J133 Triumph",
+   "tags": [
+    "Capacity: 5000mAh",
+    "Rated capacity: 2750mAh",
+    "Output: 20W",
+    "Weight: 115g",
+    "mAh per g: 43.5"
+   ],
+   "group": "Power banks"
   }
  },
  "stopPhrases": [
