@@ -1679,6 +1679,18 @@
     "mAh per liter: 22918"
    ],
    "group": "Power banks"
+  },
+  "HOCOJ146ANIGHTTIDE": {
+   "name": "Hoco J146A Night tide",
+   "tags": [
+    "Capacity: 20000mAh",
+    "Rated capacity: 11000mAh",
+    "Weight: 450g",
+    "Dimensions: 149.7×70×31mm",
+    "mAh per g: 44.4",
+    "mAh per liter: 61567"
+   ],
+   "group": "Power banks"
   }
  },
  "stopPhrases": [
