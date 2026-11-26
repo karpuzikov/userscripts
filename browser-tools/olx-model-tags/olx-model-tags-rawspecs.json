@@ -3412,5 +3412,35 @@
    "Output": "USB DC5V / 2.1A Max. 4. LED power display, you can check the charging power and remaining battery power, as a result, your device always full of juice.",
    "Material": "ABS+PC flame retardant materials, even more safe. 6. Length * Width * Height: 10 * 6.1 * 2.2cm. Weight: 194g, therefore you never feel weighting."
   }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j25b-new-power-10000mah-single-usb-built-in-type-c-cable": {
+  "model": "Hoco J25B New power",
+  "scannedAt": "2026-11-26T02:55:20.359Z",
+  "specs": {
+   "Battery capacity": "10000mAh / 37Wh. Rated capacity: 6000mAh (5V TYP 2.1A).",
+   "Input": "Micro-USB: 5V / 2A Max.",
+   "Output": "total output: DC5V / 2.1A Max, USB: DC5V / 2.1A Max, Type-C: DC5V / 2.1A Max. 4. LED light shows the power level (shake and activate).",
+   "Material": "ABS+PC flame retardant material, surface plush paint process. 6. Multiple circuit protection, with built-in Type-C charging cable (length – 12cm). 7. Length * width * height: 136 * 78 * 14mm. Weight: 197g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j25a-new-power-10000mah-single-usb-built-in-micro-usb-cable": {
+  "model": "Hoco J25A New power",
+  "scannedAt": "2026-11-26T02:55:21.369Z",
+  "specs": {
+   "Battery capacity": "10000mAh / 37Wh. Rated capacity: 6000mAh (5V TYP 2.1A).",
+   "Input": "Micro-USB: 5V / 2A Max.",
+   "Output": "total output: DC5V / 2.1A Max, USB: DC5V / 2.1A Max, Micro-USB: DC5V / 2.1A Max. 4. LED light shows the power level (shake and activate).",
+   "Material": "ABS+PC flame retardant material, surface plush paint process. 6. Multiple circuit protection, with built-in Micro-USB charging cable (length – 12cm). 7. Length * width * height: 136 * 78 * 14mm. Weight: 197g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j25-new-power-10000mah-single-usb-built-in-lightning-cable": {
+  "model": "Hoco J25 New power",
+  "scannedAt": "2026-11-26T02:55:21.373Z",
+  "specs": {
+   "Battery capacity": "10000mAh / 37Wh. Rated capacity: 6000mAh (5V TYP 2.1A).",
+   "Input": "Micro-USB: 5V / 2A Max.",
+   "Output": "total output: DC5V / 2.1A Max, USB: DC5V / 2.1A Max, Lightning: DC5V / 2.1A Max. 4. LED light shows the power level (shake and activate).",
+   "Material": "ABS+PC flame retardant material, surface plush paint process. 6. Multiple circuit protection, with built-in Lightning charging cable (length – 12cm). 7. Length * width * height: 136 * 78 * 14mm. Weight: 197g."
+  }
  }
 }
