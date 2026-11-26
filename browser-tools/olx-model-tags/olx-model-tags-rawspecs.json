@@ -3064,5 +3064,39 @@
    "Input": "Micro-USB / Type-C: 5V / 2A max.",
    "Output": "USB DC5V / 2A. 6. LED digital display shows the power level (button activation). 7. Energy-efficient A+ polymer lithium battery. 8. With built-in Lightning, Micro-USB or Type-C charging cable, more convenient to use."
   }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j47-element-pd-qc3-0-10000mah": {
+  "model": "Hoco J47 Element",
+  "scannedAt": "2026-11-26T02:54:12.362Z",
+  "specs": {
+   "Capacity": "10000mAh 37Wh. Rated capacity: 5900mAh.",
+   "Sizes": "143*68*17mm. Weight: 204g.",
+   "Input": "Micro-USB: 5V-2A, 9V-2A. Type-C: 5V / 2.4A (PD), 9V / 2A (PD), 12V / 1.5A (PD), 18W.",
+   "Output": "USB 1 / 2: 3.6V – 6.5V / 3A, 6.6V – 9V / 2A, 9.1V – 12V / 1.5A, 18W. Type-C: 5V / 2.4A (PD), 9V / 2A (PD), 12V / 1.5A (PD) 18W. Total output: 5V / 3A. 5. LED digital display shows the power level. 6. Energy-efficient A+ polymer lithium battery.",
+   "Material": "PC flame retardant material."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j58-cosmo-10000mah-pd-qc3-0": {
+  "model": "Hoco J58 Cosmo",
+  "scannedAt": "2026-11-26T02:54:12.362Z",
+  "specs": {
+   "Capacity": "10000mAh, 37Wh. Rated capacity: 5900mAh.",
+   "Input": "Micro-USB / Type-C: 18W.",
+   "Output": "USB 1 / Type-C: 18W, USB 2: 5V-2A. Fast charge protocol not available while simultaneous output, the total output: 5V / 3A. 4. Support for PD3.0, QC3.0 / 2.0, Huawei FCP, Samsung AFC and other charging protocols.",
+   "Display": "LED light shows power level, fast charge mode green indicator.",
+   "Materials": "ABS + PC flame retardant material.",
+   "Sizes": "143*68*16mm. Weight: 227g."
+  }
+ },
+ "https://hocotech.com/product/power/stands-docks/charging-docks/power-bank-s16-energy-lake-wireless-charging-10000mah-pd": {
+  "model": "Hoco S16 Energy lake",
+  "scannedAt": "2026-11-26T02:54:15.360Z",
+  "specs": {
+   "Capacity": "10000mAh 37Wh. Rated capacity: 6000mAh.",
+   "Sizes": "156*74*19mm. Weight: 245g.",
+   "Input": "Micro-USB: 5V / 2A, 9V / 2A, 12V/1.5A, 18W. Type-C: 5V / 2.4A (PD), 9V / 2A (PD), 12V / 1.5A (PD), 18W.",
+   "Output": "USB: 5V / 3A, 9V / 2A, 12V / 1.5A, 18W. Type-C: 5V / 2.4A (PD), 9V / 2A (PD), 12V / 1.5A (PD), 18W. Wireless charging output: 10W / 7.5W / 5W. Total output: DC5V / 3A max. 5. LED indicator shows power level (button activation). 6. Wireless charging function. Mobile phone holder function. 7. Energy-efficient A+ polymer lithium battery.",
+   "Material": "PC flame retardant material."
+  }
  }
 }
