@@ -3348,6 +3348,85 @@
     "mAh per liter: 74822"
    ],
    "group": "Power banks"
+  },
+  "HOCOJ59AFAMOUS": {
+   "name": "Hoco J59A Famous",
+   "tags": [
+    "Capacity: 20000mAh",
+    "Rated capacity: 11800mAh",
+    "Weight: 422g",
+    "Dimensions: 139×70×28mm",
+    "mAh per g: 47.4",
+    "mAh per liter: 73411"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ57EXCELLENTNRG": {
+   "name": "Hoco J57 Excellent NRG",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5900mAh",
+    "Weight: 207g",
+    "Dimensions: 125×55×25mm",
+    "mAh per g: 48.3",
+    "mAh per liter: 58182"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ64TOUGH": {
+   "name": "Hoco J64 Tough",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5900mAh",
+    "Weight: 230g",
+    "Dimensions: 128×60×25mm",
+    "mAh per g: 43.5",
+    "mAh per liter: 52083"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOS29NIMBLE": {
+   "name": "Hoco S29 Nimble",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Weight: 236g",
+    "Dimensions: 116×72×29mm",
+    "mAh per g: 42.4",
+    "mAh per liter: 41287"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ66FOUNTAIN": {
+   "name": "Hoco J66 Fountain",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5900mAh",
+    "Dimensions: 140×68×16mm",
+    "mAh per liter: 65651"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ66AFOUNTAIN": {
+   "name": "Hoco J66A Fountain",
+   "tags": [
+    "Capacity: 20000mAh",
+    "Rated capacity: 11800mAh",
+    "Dimensions: 142×70×29mm",
+    "mAh per liter: 69382"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ67RILL": {
+   "name": "Hoco J67 Rill",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5900mAh",
+    "Weight: 235g",
+    "Dimensions: 131×60×23mm",
+    "mAh per g: 42.6",
+    "mAh per liter: 55316"
+   ],
+   "group": "Power banks"
   }
  },
  "stopPhrases": [
