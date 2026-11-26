@@ -1150,5 +1150,90 @@
    "Sizes": "175 × 75 × 32mm.",
    "Weight": "366g."
   }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-q21-great-22-5w-10000mah": {
+  "model": "Hoco Q21 Great",
+  "scannedAt": "2026-11-26T02:51:16.353Z",
+  "specs": {
+   "Capacity": "10000mAh, 38.5Wh. Rated capacity: 5500mAh (5V TYP 3A).",
+   "Input": "1 × Type-C – 5V / 3A, 9V / 2A, 12V / 1.5A – 18W (max).",
+   "Output": "1 × USB-A – 4.5V / 5A, 5V / 4.5A, 9V / 2A, 12V / 1.5A – 22.5W (max). 1 × Type-C – 5V / 3A, 9V / 2.22A, 12V / 1.67A – 20W (max). Total output: 5V / 3A (max).",
+   "Fast charging protocol support": "for PD3.0 / PD2.0 / PD20W / QC3.0 / QC2.0 / FCP / SCP / AFC and other fast charging protocols.",
+   "Material": "ABS + PC flame retardant shell + lithium polymer battery.",
+   "Indication": "LED digital display of power level. Green indicator of PD / QC fast charging.",
+   "Sizes": "118 × 72 × 17mm.",
+   "Weight": "187g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-q23-blade-22-5w-10000mah": {
+  "model": "Hoco Q23 Blade",
+  "scannedAt": "2026-11-26T02:51:16.357Z",
+  "specs": {
+   "Capacity": "10000mAh, 38.5Wh. Rated capacity: 5500mAh (5V TYP 3A).",
+   "Input": "1 × Type-C – 5V / 2.4A, 9V / 2A, 12V / 1.5A – 18W (max).",
+   "Output": "1 × USB-A – 4.5V / 5A, 5V / 4.5A, 9V / 2A, 12V / 1.5A – 22.5W (max). 1 × built-in cable Type-C – 4.5V / 5A, 5V / 4.5A, 9V / 2A, 12V / 1.5A – 22.5W (max). 1 × built-in cable for Lightning – 5V / 2.4A, 9V / 2.22A, 12V / 1.67A – 20W (max). Total output: 5V / 3A (max).",
+   "Fast charging protocol support": "for PD3.0 / PD2.0 / PD20W / QC3.0 / QC2.0 / FCP / SCP / AFC and other fast charging protocols.",
+   "Material": "ABS + PC flame retardant shell + lithium polymer battery.",
+   "Indication": "LED indicator of power level. Green indicator of PD / QC fast charging.",
+   "Sizes": "127 × 70 × 19mm.",
+   "Weight": "224g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-q21a-great-22-5w-20000mah": {
+  "model": "Hoco Q21A Great",
+  "scannedAt": "2026-11-26T02:51:16.357Z",
+  "specs": {
+   "Capacity": "20000mAh, 77Wh. Rated capacity: 11000mAh (5V TYP 3A).",
+   "Input": "1 × Type-C – 5V / 3A, 9V / 2A, 12V / 1.5A – 18W (max).",
+   "Output": "1 × USB-A – 4.5V / 5A, 5V / 4.5A, 9V / 2A, 12V / 1.5A – 22.5W (max). 1 × Type-C – 5V / 3A, 9V / 2.22A, 12V / 1.67A – 20W (max). Total output: 5V / 3A (max).",
+   "Fast charging protocol support": "for PD3.0 / PD2.0 / PD20W / QC3.0 / QC2.0 / FCP / SCP / AFC and other fast charging protocols.",
+   "Material": "ABS + PC flame retardant shell + lithium polymer battery.",
+   "Indication": "LED digital display of power level. Green indicator of PD / QC fast charging.",
+   "Sizes": "118 × 72 × 30mm.",
+   "Weight": "334g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-q17b-electric-pd130w-qc3-0-20000mah": {
+  "model": "Hoco Q17B Electric",
+  "scannedAt": "2026-11-26T02:51:17.438Z",
+  "specs": {
+   "Capacity": "20000mAh, 72Wh. Rated capacity: 10800mAh (5V TYP 3A).",
+   "Input": "1 × Type-C1 – 5V / 3A, 9V / 3A, 12V / 3A, 15V / 3A, 20V / 3.25A – 65W. 1 × Type-C2 – 5V / 3A, 9V / 3A, 12V / 3A, 15V / 3A, 20V / 3A – 60W.",
+   "Output": "1 × Type-C1 – 5V / 3A, 9V / 3A, 12V / 3A, 15V / 3A, 20V / 5A – 100W. PPS: 3.3 – 11V / 5A, 3.3 – 21V / 5A. 1 × Type-C2 – 5V / 3A, 9V / 3A, 12V / 3A, 15V / 3A, 20V / 3A – 60W. PPS: 3.3 – 11V / 3A, 3.3 – 21V / 3A. 1 × USB-A – 5V / 3A, 9V / 3A, 10V / 2.25 (SCP), 12V / 2.5A – 30W. Type-C1 + USB-A = 100W + 30W = 130W. Total output: 5V / 3A (max).",
+   "Fast charging protocol support": "PD3.0 / QC3.0 / QC2.0 / FCP / SCP / AFC and other fast charging protocols.",
+   "Material": "aluminum alloy casing + high-efficiency 21700 polymer lithium cells.",
+   "Indication": "Color TFT display. Real-time display of battery level, input/output power for corresponding ports. Clock, alarm, stopwatch, countdown, screen off option, battery health and cycle count display. High/low temperature warnings.",
+   "Includes": "Type-C to Type-C PD100W charging data cable.",
+   "Sizes": "153 × 66 × 30mm.",
+   "Weight": "492g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-q22-taurus-22-5w-wireless-charging-10000mah": {
+  "model": "Hoco Q22 Taurus",
+  "scannedAt": "2026-11-26T02:51:20.349Z",
+  "specs": {
+   "Capacity": "10000mAh, 38.5Wh. Rated capacity: 5400mAh (5V TYP 3A).",
+   "Input": "1 × Type-C – 5V / 2.4A, 9V / 2A, 12V / 1.5A – 18W (max).",
+   "Output": "1 × USB-A 1 – 4.5V / 5A, 5V / 4.5A, 9V / 2A, 12V / 1.5A – 22.5W (max). 1 × USB-A 2 – 5V / 3A, 9V / 2A, 12V / 1.5A – 18W (max). 1 × Type-C – 5V / 2.4A, 9V / 2.22A, 12V / 1.67A – 20W (max). Wireless charging output – 5W / 7.5W / 10W / 15W. Total output: 5V / 3A (max).",
+   "Fast charging protocol support": "for PD3.0 / PD2.0 / PD20W / QC3.0 / QC2.0 / FCP / SCP / AFC and other fast charging protocols.",
+   "Material": "ABS + PC flame retardant shell + lithium polymer battery.",
+   "Indication": "LED digital display of power level. Green indicator of PD / QC fast charging.",
+   "Sizes": "127 × 70 × 19mm.",
+   "Weight": "224g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-q25-graceful-pd20w-qc3-0-10000mah": {
+  "model": "Hoco Q25 Graceful",
+  "scannedAt": "2026-11-26T02:51:20.352Z",
+  "specs": {
+   "Capacity": "10000mAh, 38.5Wh. Rated capacity: 5500mAh (5V TYP 2A).",
+   "Input": "1 × Type-C – 5V / 3A, 9V / 2A, 12V / 1.5A – 18W. 1 × built-in cable Type-C – 5V / 3A, 9V / 2A, 12V / 1.5A – 18W.",
+   "Output": "1 × built-in cable Type-C – 5V / 2.4A, 9V / 2.22A, 12V / 1.67A – 20W. 1 × built-in cable for Lightning – 5V / 2.4A, 9V / 2.22A, 12V / 1.67A – 20W. Total output: 5V / 2A (max).",
+   "Fast charging protocol support": "for PD3.0 / PD20W / QC3.0 / QC2.0 / FCP / AFC and other fast charging protocols.",
+   "Material": "ABS + PC flame retardant shell + lithium polymer battery.",
+   "Indication": "LED digital display of power level. Green indicator of PD / QC fast charging.",
+   "Sizes": "108 × 52 × 28mm.",
+   "Weight": "191g."
+  }
  }
 }
