@@ -3289,6 +3289,65 @@
     "mAh per liter: 70904"
    ],
    "group": "Power banks"
+  },
+  "HOCOJ62JOVE": {
+   "name": "Hoco J62 Jove",
+   "tags": [
+    "Capacity: 30000mAh",
+    "Rated capacity: 17700mAh",
+    "Weight: 710g",
+    "Dimensions: 168×83×33mm",
+    "mAh per g: 42.3",
+    "mAh per liter: 65196"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ60SNOWFLAKE": {
+   "name": "Hoco J60 Snowflake",
+   "tags": [
+    "Capacity: 30000mAh",
+    "Rated capacity: 17700mAh",
+    "Weight: 697g",
+    "Dimensions: 165×84×32mm",
+    "mAh per g: 43.0",
+    "mAh per liter: 67641"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ63VELOCITY": {
+   "name": "Hoco J63 Velocity",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5900mAh",
+    "Output: 18W",
+    "Weight: 232g",
+    "Dimensions: 150×68×17mm",
+    "mAh per g: 43.1",
+    "mAh per liter: 57670"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ42AHIGHPOWER": {
+   "name": "Hoco J42A High power",
+   "tags": [
+    "Capacity: 20000mAh",
+    "Rated capacity: 11800mAh",
+    "Weight: 425g",
+    "Dimensions: 145×69×30mm",
+    "mAh per g: 47.1",
+    "mAh per liter: 66633"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ68RESOURCEFUL": {
+   "name": "Hoco J68 Resourceful",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5900mAh",
+    "Dimensions: 135×66×15mm",
+    "mAh per liter: 74822"
+   ],
+   "group": "Power banks"
   }
  },
  "stopPhrases": [
