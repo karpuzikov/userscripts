@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Rozetka - Price per unit
 // @namespace    https://rozetka.com.ua/
-// @version      0.1.0
+// @version      0.1.1
 // @description  Shows the price per unit you choose (GB, л, кг, шт, рулон...) under every Rozetka catalog price.
 // @match        https://*.rozetka.com.ua/*
 // @match        https://rozetka.com.ua/*
@@ -28,6 +28,8 @@
     const NOT_PART_OF_WORD_AFTER = '(?![\\p{L}])';
     const MULTIPLIER_BEFORE_PATTERN = /(\d+)\s*(?:шт\.?|pcs)?\s*(?:[xх×*]|шт\.?\s*по)\s*$/iu;
     const MULTIPLIER_AFTER_PATTERN = /^\s*(?:[xх×*]\s*(\d+)|(\d+)\s*(?:шт|pcs))/iu;
+    // "Набір пива 12 банок ... 0,5 л": a pack count elsewhere in the title.
+    const PACK_COUNT_ANYWHERE_PATTERN = /(?<![\p{L}\d.,])(\d+)\s*(?:шт|pcs|бан\p{L}*|пляш\p{L}*|пач\p{L}*|рул\p{L}*)/iu;
 
     function escapeForRegExp(text) {
         return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -53,7 +55,8 @@
         if (before) return Number(before[1]);
         const after = title.slice(matchEnd).match(MULTIPLIER_AFTER_PATTERN);
         if (after) return Number(after[1] || after[2]);
-        return 1;
+        const packCount = title.match(PACK_COUNT_ANYWHERE_PATTERN);
+        return packCount ? Number(packCount[1]) : 1;
     }
 
     // Returns how many typed units the title describes, or null when it names none.
@@ -72,7 +75,8 @@
         if (!match) return null;
         const aliasFactor = family ? family.aliases[match[2].toLowerCase()] : 1;
         const typedFactor = family ? family.typedFactor : 1;
-        const multiplier = readMultiplierAround(title, match.index, match.index + match[0].length);
+        const unitIsCounted = !family || family.aliases === PRICE_PER_UNIT_FAMILIES.pieces;
+        const multiplier = unitIsCounted ? 1 : readMultiplierAround(title, match.index, match.index + match[0].length);
         const quantity = parseLocalizedNumber(match[1]) * multiplier * aliasFactor / typedFactor;
         return quantity > 0 ? quantity : null;
     }

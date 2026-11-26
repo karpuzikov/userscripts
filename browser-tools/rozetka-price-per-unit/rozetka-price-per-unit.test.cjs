@@ -12,5 +12,8 @@ test('reads quantities in the typed unit, multipacks and counted words', () => {
   assert.equal(quantity('Павербанк Xiaomi 20000 mAh', 'mAh'), 20000);
   assert.equal(quantity('Смартфон 8/256GB', 'г'), null);
   assert.equal(quantity('Кава в зернах 1 кг', 'г'), 1000);
+  assert.equal(quantity('Набір пива Ципа №2 12 банок 5-7,9% 0,5 л', 'л'), 6);
+  assert.equal(quantity('Пиво Krombacher Pils 4.8% 5 л', 'л'), 5);
+  assert.equal(quantity('Туалетний папір 8 рулонів по 150 м', 'м'), 1200);
   assert.equal(quantity('Без кількості', 'GB'), null);
 });

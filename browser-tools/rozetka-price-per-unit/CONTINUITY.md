@@ -1,7 +1,7 @@
 # Rozetka - Price per unit - Continuity
 
 ## Product
-- Version: 0.1.0 - Under construction ⚠️ (needs user testing in Tampermonkey).
+- Version: 0.1.1 - Under construction ⚠️ (needs user testing in Tampermonkey).
 - Repository/branch: `karpuzikov/userscripts`, `main`.
 - Script: `browser-tools/rozetka-price-per-unit/Rozetka_Price_per_Unit.user.js`. Tests: `node --test browser-tools/rozetka-price-per-unit/rozetka-price-per-unit.test.cjs`.
 - Rules: root `SOFTWARE_RULES.md`, `UI_UX_RULES.md`, `DESIGN.md`. No project-specific rules file.
@@ -11,15 +11,16 @@
 - Single userscript, `@grant none`, `@run-at document-idle`, no dependencies. Tampermonkey-native updates via clean `main` raw `@updateURL`/`@downloadURL`.
 - Persistent data: `localStorage['rozetka-price-per-unit:<category id>']` (typed unit, per Rozetka subdomain; non-category pages share key `other`). Empty field removes the key and all badges.
 - Unit families (converted to the typed unit): storage MB/GB/TB (decimal, 1 TB = 1000 GB, as sellers label drives), volume мл/л, mass г/кг, length мм/см/м, battery mAh, pieces шт/pcs. Unknown word = counted word: `<number> <word>…` (`рулон` matches `8 рулонів`).
-- Quantity = first `<number><unit>` in the tile title × multipack multiplier (`6 шт х 1,5 л`, `1.5 л x 6 шт`, `2x16GB`).
+- Quantity = first `<number><unit>` in the tile title × multipack multiplier: adjacent (`6 шт х 1,5 л`, `1.5 л x 6 шт`, `2x16GB`), else a pack count anywhere (`12 банок`, `8 рулонів`, шт, пляшок, пачок). Counted units (шт, unknown words) never multiply.
 - Price = tile `.price` (current price, not `.old-price` or the Rozetka-card `.red-price`).
 - Badge is a `data-rozetka-price-per-unit` attribute on `.price`, rendered by CSS `::after`. No DOM nodes are inserted into product tiles (Angular hydration contract, see Rozetka - Only in stock).
 - The field mounts before `rz-filter-stack` only after it loses `ngh` (same hydration rule as Only in stock). Coexists with Only in stock.
 - Karpuzikov design system colors: dark field card, lime mono badge.
 
 ## Tests and acceptance (2026-11-26)
-- Unit: 1/1 pass (10 title cases).
-- Live, Claude built-in browser (Chromium), `hard.rozetka.com.ua/ua/ssd/c80109/`, script injected by page eval (not Tampermonkey): PASS typing `GB` badges all 60 tiles (e.g. Kingston NV3 1TB 7 259 ₴ → 7,26 ₴/GB · 1 000 GB); PASS field mounted after hydration, typed by real clicks/keys.
+- Unit: 1/1 pass (13 title cases).
+- 0.1.1 (pack count anywhere) verified on Rozetka beer titles by page-eval of the parser only (`Набір пива Ципа №2 12 банок 0,5 л` was 0,5 л in 0.1.0, now 6 л).
+- Live, Claude built-in browser (Chromium), `hard.rozetka.com.ua/ua/ssd/c80109/`, script injected by page eval (not Tampermonkey): PASS typing `GB` badges all 60 tiles (e.g. Kingston NV3 1TB 7 259 ₴ → 7,26 ₴/GB · 1 000 GB); PASS beer category `л` and `шт` parse (Corona 24×0.355 л → 8,52 л). PASS field mounted after hydration, typed by real clicks/keys.
 - NOT RUN: Tampermonkey on the user's Windows browser; categories other than SSD live; keyboard-only, zoom, mobile layout; Rozetka filters with the field present (hydration rule reused, not re-tested).
 
 ## Known limits
