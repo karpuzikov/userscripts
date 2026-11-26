@@ -4014,7 +4014,7 @@
  },
  "https://www.iremax.net/product/5547": {
   "model": "REMAX 01PD",
-  "scannedAt": "2026-11-26T05:12:38.544Z",
+  "scannedAt": "2026-11-26T05:36:27.542Z",
   "specs": {
    "Product Colors": "Phantom Black, Mousse White",
    "Battery type": "Polymer cell",
@@ -4022,7 +4022,14 @@
    "Battery voltage": "5000mAh*2pcs (Typical); 7.4V/37Wh; 4950mAh*2pcs (Rated); 7.4V/36.63Wh",
    "Rated capacity": "5500mAh (5V3A)",
    "Input voltage and current": "Type-C port input: 5V⎓3A 9V⎓2.22A 20W (Max); protocols: PD3.0/PD2.0; Type-C cable input: 5V⎓3A 9V⎓2.22A 20W (Max); protocols: PD3.0/PD2.0",
-   "Output voltage and current": "Type-C port output: 5V⎓3A, 9V⎓3A, 12V⎓2A, 15V⎓2.67A, 20V⎓2A, 40W (Max). Protocols: PD3.0/PPS/AVS/QC2.0/QC3.0/AFC/FCP/SCP/Apple2.4A/DCP-1.5A/Samsung-5V2A. Type-C cable output: 5V⎓3A, 9V⎓3A, 12V⎓2A, 15V⎓2.67A, 20V⎓2A, 40W (Max). Protocols: PD3.0/PPS/AVS/QC2.0/QC3.0/AFC/FCP/SCP/Apple2.4A/DCP-1.5A/Samsung-5V2A"
+   "Output voltage and current": "Type-C port output: 5V⎓3A, 9V⎓3A, 12V⎓2A, 15V⎓2.67A, 20V⎓2A, 40W (Max). Protocols: PD3.0/PPS/AVS/QC2.0/QC3.0/AFC/FCP/SCP/Apple2.4A/DCP-1.5A/Samsung-5V2A. Type-C cable output: 5V⎓3A, 9V⎓3A, 12V⎓2A, 15V⎓2.67A, 20V⎓2A, 40W (Max). Protocols: PD3.0/PPS/AVS/QC2.0/QC3.0/AFC/FCP/SCP/Apple2.4A/DCP-1.5A/Samsung-5V2A",
+   "Combined output": "5V-3A (Max); Protocol: No protocol",
+   "Multi-port total output": "C port + C-cable: 5V⎓3A (Max); Protocol: No protocol",
+   "Energy conversion rate": "Panel-side conversion rate ≥88%; Overall machine energy conversion rate ≥75%",
+   "Net weight": "≈181g",
+   "Bare machine dimensions": "75.1*55.5*33.5mm",
+   "Finished size": "90*157*37mm",
+   "Finished product weight": "216g"
   }
  },
  "https://www.iremax.net/product/5469": {
@@ -4362,7 +4369,7 @@
  },
  "https://www.iremax.net/product/5049": {
   "model": "REMAX T202ALP",
-  "scannedAt": "2026-11-26T05:12:44.565Z",
+  "scannedAt": "2026-11-26T05:36:27.544Z",
   "specs": {
    "1. Product Colors": "Modern Gray, Shimmering Gold and Silver",
    "2. Battery Capacity": "20000mAh",
@@ -4370,19 +4377,30 @@
    "4. Rated Capacity": "11600mAh (5V⎓3A)",
    "5. Input Voltage and Current": "USB-C/USB-C Cable Input: 5V⎓3A, 9V=3A, 12V⎓2.5A, 15V⎓2A, 20V⎓1.5A 30W Max",
    "6. Output Voltage and Current": "USB-C Output: 5V⎓3A, 9V⎓3A, 12V⎓3A, 15V⎓3A, 20V⎓2.25A 45W Max",
-   "USB-C Cable Output": "5V⎓3A, 9V⎓3A, 12V⎓3A, 15V⎓3A, 20V⎓2.25A 45W Max"
+   "USB-C Cable Output": "5V⎓3A, 9V⎓3A, 12V⎓3A, 15V⎓3A, 20V⎓2.25A 45W Max",
+   "USB-A Output": "5V⎓3A, 9V⎓2A, 10V⎓2.25A, 12V⎓1.5A 22.5W Max",
+   "7. Total Output (All Ports)": "5V⎓3A, 15W Max",
+   "8. Energy Conversion Efficiency": "≥65%",
+   "9. Unit Weight": "≈370g",
+   "10. Unit Dimensions": "127.8*70.6*33.5mm"
   }
  },
  "https://www.iremax.net/product/4917": {
   "model": "REMAX FP-17",
-  "scannedAt": "2026-11-26T05:12:45.535Z",
+  "scannedAt": "2026-11-26T05:36:29.534Z",
   "specs": {
    "1.Product Color": "Dark Blue, Starlight Silver, Starry Orange",
    "2.Battery Type": "Li-Polymer",
    "3.Battery Capacity": "5000mAh/7.4V/37Wh (Cells in series 2PCS)",
    "4.Rated Capacity": "5500mAh (5V⎓2A)",
    "5.Input Voltage and Current": "Adapter Mode IN: 110V-220VAC 50/60Hz 0.25A Max",
-   "Mobile Power Mode": "Type-C Input: 5V⎓3A, 9V⎓3A, 12V⎓2.25A, 15V⎓2A, 20V⎓1.5A 30W(Max)"
+   "Mobile Power Mode": "Multi-port Total Output: 5V⎓3A(Max)",
+   "Protocol Support": "PPS/PD2.0/PD3.0/QC2.0/QC3.0",
+   "6.Output Voltage and Current": "Adapter Mode: Type-C/Type-C Cable Output: 5V⎓2A",
+   "Protocol support": "PPS/PD2.0/PD3.0/QC2.0/QC3.0/AFC/FCP/SCP/SSCP/PE2.0/PE1.1/SFCP",
+   "Multiple-port Total Output": "Adapter Mode: Multiple-port Total Output: 5V⎓2A( Max)",
+   "8. Energy Conversion Rate": "10000mAh FP-17≥65%",
+   "9. Bare Metal Size": "90*54.3*30.8mm"
   }
  },
  "https://www.iremax.net/product/6165": {
