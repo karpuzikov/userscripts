@@ -169,3 +169,20 @@ test('updateDerivedTags adds "mAh per g" to a model saved before the tag existed
   olxModelTags.applyOlxModelTagsOperation(data, { type: 'updateDerivedTags', modelName: 'Hoco J94 Overlord' });
   assert.deepEqual(data.models.HOCOJ94OVERLORD.tags.slice(-1), ['mAh per g: 53.6']);
 });
+
+test('derived liter tag, dimensions transform, category lookup', () => {
+  const { computeDerivedTags, SOURCE_VALUE_TRANSFORMS, findSourceCategory } = olxModelTags;
+  assert.deepEqual(computeDerivedTags(['Capacity: 75000mAh', 'Weight: 1400g', 'Dimensions: 157×116×45mm']), ['mAh per g: 53.6', 'mAh per liter: 91515']);
+  assert.equal(SOURCE_VALUE_TRANSFORMS.dimensionsMm('157 * 116*45mm'), '157×116×45mm');
+  assert.equal(SOURCE_VALUE_TRANSFORMS.dimensionsMm('big'), '');
+  const sources = [{ hosts: ['h.com'], category: { path: '^/category/', products: 'li' } }];
+  const fakeDocument = { querySelector: () => ({}) };
+  assert.ok(findSourceCategory(sources, 'h.com', '/category/x/', fakeDocument));
+  assert.equal(findSourceCategory(sources, 'h.com', '/product/x/', fakeDocument), null);
+});
+
+test('unifyRawSpecs maps labels and splits a merged last line', () => {
+  const { unified, labelCounts } = require('./unify-rawspecs.cjs').unifyRawSpecs({ 'https://x/1': { model: 'M', specs: { Sizes: '157*116*45mm. Weight: 1400g.', Output: '20W', Odd: 'v' } } });
+  assert.deepEqual(unified['https://x/1'].specs, { Dimensions: '157*116*45mm.', Weight: '1400g.', Output: '20W', 'UNMAPPED: Odd': 'v' });
+  assert.equal(labelCounts.odd.mapped, false);
+});

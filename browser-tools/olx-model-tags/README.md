@@ -5,6 +5,7 @@ One userscript (`OLX_Model_Tags.user.js`) and three kinds of data in this folder
 | Cluster | File | Who writes it |
 | --- | --- | --- |
 | Data: models, groups, specs, stop phrases, brands | `olx-model-tags-catalog.json` | The owner (token). Everyone else reads it with no key and suggests changes through GitHub issues (`Suggest model` button). |
+| Raw specs: every spec of every scanned product page (unified later by `unify-rawspecs.cjs`) | `olx-model-tags-rawspecs.json` | The owner's scan. |
 | Sources: websites the specs are captured from | `olx-model-tags-sources.json` | The owner. Everyone else submits a new site as an issue (below). |
 | Personal: your ads, broken marks, filters | your browser (the owner's also `olx-model-tags-data.json`, read by the private Google Sheet) | You. |
 
@@ -37,3 +38,7 @@ The script only reads the page you already have open and contacts only GitHub.
 - `transform`: `text` (default), `year`, `digits`, `displayType`, `batteryMah`, `yesNo`, `unknownIfEmpty`, `chargerPower`, `maxWatts`, `antutu` (gives its own property name, e.g. `AnTuTu v10`). Nothing else is accepted; no code comes from this file.
 
 Values are saved as `Name: value` tags of the model named on the page, one value per name.
+
+## Scan a whole category (owner)
+
+Open a category page of a source that has a `category` entry (hocotech.com power banks), click `Scan specs`. Product pages open in background tabs (`Tabs at once`), each tab saves its values to GitHub and closes itself, then the next page of the category follows. Needs the GitHub token. A green badge in a product tab means saved; an amber one lists the specs that were not found.

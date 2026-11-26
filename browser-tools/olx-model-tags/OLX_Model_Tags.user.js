@@ -1,13 +1,14 @@
 // ==UserScript==
 // @name         OLX - Model Tags
 // @namespace    https://www.olx.ua/
-// @version      0.14.1
+// @version      0.15.0
 // @description  Tag OLX ads by model (tags shared by every ad of that model) or per ad, mark broken ads, filter search results by tags, per-tag Hide (pixel mesh) / Highlight (outline). Shared model catalog is read from GitHub without any key; your own marks stay in this browser. Phone specs (year, DXOMARK camera, AnTuTu, sensor, display, battery, charger, NFC) are captured from the DXOMARK, Kimovil and GSMArena pages you open. OLX only gets read locally from the open page.
 // @match        https://www.olx.ua/*
 // @match        https://www.dxomark.com/smartphones/*
 // @match        https://www.kimovil.com/*
 // @match        https://www.gsmarena.com/*
 // @match        https://hocotech.com/product/*
+// @match        https://hocotech.com/category/*
 // @updateURL    https://raw.githubusercontent.com/karpuzikov/userscripts/main/browser-tools/olx-model-tags/OLX_Model_Tags.user.js
 // @downloadURL  https://raw.githubusercontent.com/karpuzikov/userscripts/main/browser-tools/olx-model-tags/OLX_Model_Tags.user.js
 // @run-at       document-idle
@@ -15,6 +16,7 @@
 // @grant        GM_setValue
 // @grant        GM_deleteValue
 // @grant        GM_listValues
+// @grant        GM_openInTab
 // @grant        GM_xmlhttpRequest
 // @grant        GM_addStyle
 // @grant        GM_registerMenuCommand
@@ -74,24 +76,29 @@
     }
 
     // Operations are idempotent, so replaying them on fresh GitHub data (or twice from two tabs) is safe.
-    // "Capacity: 75000mAh" + "Weight: 1400g" -> "mAh per g: 53.6" (recomputed whenever either value is set).
-    const CAPACITY_PER_GRAM_PROPERTY = 'mAh per g';
+    // Derived tags, recomputed whenever a model's values change:
+    // "Capacity: 75000mAh" + "Weight: 1400g" -> "mAh per g: 53.6"; + "Dimensions: 157×116×45mm" -> "mAh per liter: 91518".
+    const DERIVED_TAG_PROPERTIES = ['mAh per g', 'mAh per liter'];
 
-    function computeCapacityPerGramTag(tags) {
+    function computeDerivedTags(tags) {
         const valueOf = (property) => tags.map(splitTagIntoPropertyAndValue).find((tag) => tag.property.toLowerCase() === property)?.value;
         const capacity = parseFloat(valueOf('capacity'));
         const weight = parseFloat(valueOf('weight'));
-        return capacity > 0 && weight > 0 ? `${CAPACITY_PER_GRAM_PROPERTY}: ${(capacity / weight).toFixed(1)}` : null;
+        const sidesInMillimetres = (valueOf('dimensions') || '').match(/(\d+(?:\.\d+)?)×(\d+(?:\.\d+)?)×(\d+(?:\.\d+)?)mm/)?.slice(1).map(Number);
+        const derivedTags = [];
+        if (capacity > 0 && weight > 0) derivedTags.push(`${DERIVED_TAG_PROPERTIES[0]}: ${(capacity / weight).toFixed(1)}`);
+        if (capacity > 0 && sidesInMillimetres) derivedTags.push(`${DERIVED_TAG_PROPERTIES[1]}: ${Math.round(capacity / (sidesInMillimetres[0] * sidesInMillimetres[1] * sidesInMillimetres[2] / 1e6))}`);
+        return derivedTags;
     }
 
-    function updateCapacityPerGramTag(modelEntry) {
-        const derivedTag = computeCapacityPerGramTag(modelEntry.tags);
-        if (!derivedTag) return;
-        modelEntry.tags = modelEntry.tags.filter((tag) => splitTagIntoPropertyAndValue(tag).property.toLowerCase() !== CAPACITY_PER_GRAM_PROPERTY.toLowerCase());
-        modelEntry.tags.push(derivedTag);
+    function updateDerivedTags(modelEntry) {
+        const derivedTags = computeDerivedTags(modelEntry.tags);
+        const derivedProperties = derivedTags.map((tag) => splitTagIntoPropertyAndValue(tag).property.toLowerCase());
+        modelEntry.tags = [...modelEntry.tags.filter((tag) => !derivedProperties.includes(splitTagIntoPropertyAndValue(tag).property.toLowerCase())), ...derivedTags];
     }
 
     function applyOlxModelTagsOperation(data, operation) {
+        if (operation.type === 'addRawSpecs') return; // goes to its own file at upload time, never into the local data
         if (['addPhrase', 'removePhrase', 'addStopPhrase', 'removeStopPhrase'].includes(operation.type)) {
             const listName = operation.listName || 'stopPhrases'; // 0.4.0 ops had no listName
             if (!PHRASE_LISTS[listName]) throw new Error(`Unknown OLX Model Tags phrase list: ${listName}`);
@@ -107,7 +114,7 @@
             return;
         }
         if (operation.type === 'updateDerivedTags') {
-            updateCapacityPerGramTag(ensureModelEntry(data, operation.modelName));
+            updateDerivedTags(ensureModelEntry(data, operation.modelName));
             return;
         }
         if (operation.type === 'setModelProperty') {
@@ -117,7 +124,7 @@
             modelEntry.tags = modelEntry.tags.filter((tag) => splitTagIntoPropertyAndValue(tag).property.toLowerCase() !== propertyKey);
             modelEntry.tags.push(`${operation.property}: ${operation.value}`);
             if (operation.groupIfEmpty && !modelEntry.group) modelEntry.group = operation.groupIfEmpty;
-            updateCapacityPerGramTag(modelEntry);
+            updateDerivedTags(modelEntry);
             return;
         }
         if (operation.type === 'setAdInfo') {
@@ -235,6 +242,7 @@
         yesNo: (text) => extractNfcSupport(text),
         unknownIfEmpty: (text) => (!text || /^(unknown|-+)$/i.test(text) ? 'Unknown' : text),
         chargerPower: (text, element) => extractChargerPower(element.innerHTML.split(/<hr[^>]*>/).map((html) => html.replace(/<[^>]+>/g, ' '))),
+        dimensionsMm: (text) => { const sides = text.replace(/\s+/g, '').replace(/[x*]/gi, '×'); return /^[\d.]+×[\d.]+×[\d.]+mm$/.test(sides) ? sides : ''; },
         maxWatts: (text) => { const watts = [...text.matchAll(/(\d+(?:\.\d+)?)\s*W\b/g)].map((match) => Number(match[1])); return watts.length ? `${Math.max(...watts)}W` : ''; },
         antutu: (text) => parseAnTuTuAnswer(text),
     };
@@ -244,6 +252,14 @@
             if (!source.hosts.includes(hostname)) continue;
             const page = source.pages.find((candidate) => (!candidate.path || new RegExp(candidate.path).test(pathname)) && (!candidate.whenSelector || pageDocument?.querySelector(candidate.whenSelector)));
             if (page) return { source, page };
+        }
+        return null;
+    }
+
+    function findSourceCategory(sources, hostname, pathname, pageDocument) {
+        for (const source of sources) {
+            const category = source.category;
+            if (category && source.hosts.includes(hostname) && new RegExp(category.path).test(pathname) && pageDocument?.querySelector(category.products)) return { source, category };
         }
         return null;
     }
@@ -269,7 +285,7 @@
     }
 
     if (typeof module === 'object') {
-        module.exports = { normalizeModelKey, createEmptyOlxModelTagsData, detectModelKeyInTitle, resolveAdTagging, applyOlxModelTagsOperation, encodeUtf8TextAsBase64, decodeBase64AsUtf8Text, doesAdMatchActiveFilters, resolveAdDisplayEffects, getPhraseList, findPhraseInText, splitTagIntoPropertyAndValue, splitDataIntoCatalogAndPersonal, joinCatalogAndPersonal, extractYearFromText, classifyDisplayType, extractBatteryCapacity, extractChargerPower, extractNfcSupport, parseAnTuTuAnswer, isModelPropertyAlreadySet, findSourcePage, SOURCE_VALUE_TRANSFORMS };
+        module.exports = { normalizeModelKey, createEmptyOlxModelTagsData, detectModelKeyInTitle, resolveAdTagging, applyOlxModelTagsOperation, encodeUtf8TextAsBase64, decodeBase64AsUtf8Text, doesAdMatchActiveFilters, resolveAdDisplayEffects, getPhraseList, findPhraseInText, splitTagIntoPropertyAndValue, splitDataIntoCatalogAndPersonal, joinCatalogAndPersonal, extractYearFromText, classifyDisplayType, extractBatteryCapacity, extractChargerPower, extractNfcSupport, parseAnTuTuAnswer, isModelPropertyAlreadySet, findSourcePage, findSourceCategory, computeDerivedTags, SOURCE_VALUE_TRANSFORMS };
         return;
     }
 
@@ -294,6 +310,7 @@
     const GITHUB_CATALOG_FILE_PATH = 'browser-tools/olx-model-tags/olx-model-tags-catalog.json';
     const GITHUB_SOURCES_FILE_PATH = 'browser-tools/olx-model-tags/olx-model-tags-sources.json';
     const STORAGE_KEY_CACHED_SOURCES = 'olxModelTagsCachedSources';
+    const GITHUB_RAW_SPECS_FILE_PATH = 'browser-tools/olx-model-tags/olx-model-tags-rawspecs.json';
     const GITHUB_PERSONAL_FILE_PATH = 'browser-tools/olx-model-tags/olx-model-tags-data.json';
     const githubApiFileUrl = (filePath) => `https://api.github.com/repos/${GITHUB_DATA_REPOSITORY}/contents/${filePath}`;
     const githubRawFileUrl = (filePath) => `https://raw.githubusercontent.com/${GITHUB_DATA_REPOSITORY}/${GITHUB_DATA_BRANCH}/${filePath}`;
@@ -390,12 +407,12 @@
 
     // No token: the public raw file (no API rate limit; GitHub's CDN may serve a copy up to ~5 min old).
     // Token: the contents API, which also gives the sha needed to upload.
-    async function downloadJsonFileFromGithub(filePath) {
+    async function downloadJsonFileFromGithub(filePath, fileMayBeMissing = false) {
         const response = hasGithubToken()
             ? await requestGithub('GET', `${githubApiFileUrl(filePath)}?ref=${GITHUB_DATA_BRANCH}&t=${Date.now()}`)
             : await requestGithub('GET', githubRawFileUrl(filePath));
         // A missing file is only normal for the owner before the first sync; afterwards it must not silently wipe the local data.
-        if (response.status === 404 && hasGithubToken() && !GM_getValue(STORAGE_KEY_CACHED_AT, 0)) return { data: {}, sha: null };
+        if (response.status === 404 && hasGithubToken() && (fileMayBeMissing || !GM_getValue(STORAGE_KEY_CACHED_AT, 0))) return { data: {}, sha: null };
         if (response.status !== 200) throw new Error(`GitHub download failed for ${filePath} (HTTP ${response.status}${response.json?.message ? `: ${response.json.message}` : ''})`);
         if (!hasGithubToken()) {
             if (!response.json) throw new Error(`${filePath} is not valid JSON`);
@@ -433,11 +450,16 @@
                 const personalFile = canUpload ? await downloadJsonFileFromGithub(GITHUB_PERSONAL_FILE_PATH) : { data: {}, sha: null };
                 remoteData = joinCatalogAndPersonal(catalogFile.data, personalFile.data);
                 if (!canUpload || !pendingOperations.length) break;
+                // Raw page specs (scan) live in their own file: { pageUrl: { model, scannedAt, specs } }.
+                const rawSpecOperations = pendingOperations.filter((operation) => operation.type === 'addRawSpecs');
+                const rawFile = rawSpecOperations.length ? await downloadJsonFileFromGithub(GITHUB_RAW_SPECS_FILE_PATH, true) : null;
+                const rawSpecs = rawFile ? { ...rawFile.data } : null;
+                for (const { url, model, scannedAt, specs } of rawSpecOperations) rawSpecs[url] = { model, scannedAt, specs };
                 const updatedData = structuredClone(remoteData);
                 for (const operation of pendingOperations) applyOlxModelTagsOperation(updatedData, operation);
                 const { catalog, personal } = splitDataIntoCatalogAndPersonal(updatedData);
                 let hasConflict = false;
-                for (const [filePath, file, content] of [[GITHUB_CATALOG_FILE_PATH, catalogFile, catalog], [GITHUB_PERSONAL_FILE_PATH, personalFile, personal]]) {
+                for (const [filePath, file, content] of [[GITHUB_CATALOG_FILE_PATH, catalogFile, catalog], [GITHUB_PERSONAL_FILE_PATH, personalFile, personal], ...(rawFile ? [[GITHUB_RAW_SPECS_FILE_PATH, rawFile, rawSpecs]] : [])]) {
                     if (JSON.stringify(content) === JSON.stringify(file.data)) continue;
                     if (await uploadJsonFileToGithub(filePath, content, file.sha) === 'conflict') { hasConflict = true; break; }
                 }
@@ -500,6 +522,22 @@
         return { element: element || (valueSpec.fromTitle ? document.body : null), text };
     }
 
+    // Every label/value pair of the product's spec section, as shown (unified later by unify-rawspecs.cjs).
+    // `rows` layout: one element per spec with label and value elements; `text` layout: numbered lines "3. Output: ..." in one block.
+    function readRawSpecsOfPage(rawSpecsSpec) {
+        const specs = {};
+        if (rawSpecsSpec.rows) {
+            for (const row of document.querySelectorAll(rawSpecsSpec.rows)) {
+                const label = readTextOf(row.querySelector(rawSpecsSpec.label)).replace(/:$/, '');
+                if (label) specs[label] = readTextOf(row.querySelector(rawSpecsSpec.value));
+            }
+        } else if (rawSpecsSpec.text) {
+            const text = readTextOf(document.querySelector(rawSpecsSpec.text));
+            for (const [, label, value] of text.matchAll(new RegExp(rawSpecsSpec.itemRegex, 'g'))) specs[label.trim()] = value.trim();
+        }
+        return specs;
+    }
+
     function readCapturesOfSourcePage(page) {
         const headerClassNames = page.columns ? [...document.querySelectorAll(page.columns.headers)].map((header) => header.className) : [];
         const columnIndexByName = {};
@@ -548,6 +586,7 @@
     // What the page read gave (set by the capture) combined with whether it really reached GitHub (checked every few seconds):
     // green only when every value this tab recorded is uploaded, so a green check can no longer mean "read but lost".
     let lastSourceCapture = null;
+    let rawSpecsRecorded = false;
 
     function setSourceCapture(state, message) {
         lastSourceCapture = { state, message };
@@ -578,6 +617,13 @@
             setSourceCapture('notSourced', `Not sourced: ${error.message}`);
             throw error;
         }
+        if (match.page.rawSpecs && !rawSpecsRecorded && captures[0]?.modelName) {
+            const specs = readRawSpecsOfPage(match.page.rawSpecs);
+            if (Object.keys(specs).length) {
+                rawSpecsRecorded = true;
+                recordOperation({ type: 'addRawSpecs', url: scanKeyOf(location.href), model: captures[0].modelName, scannedAt: new Date().toISOString(), specs });
+            }
+        }
         let readModelCount = 0, readValueCount = 0;
         const modelCountMissingProperty = {};
         for (const { modelName, properties } of captures) {
@@ -591,9 +637,7 @@
                 recordOperation({ type: 'setModelProperty', modelName, property, value, groupIfEmpty: match.source.group });
             }
             const modelEntry = olxModelTagsData.models[normalizeModelKey(modelName)];
-            if (modelEntry && computeCapacityPerGramTag(modelEntry.tags) !== (modelEntry.tags.find((tag) => tag.startsWith(CAPACITY_PER_GRAM_PROPERTY + ':')) || null)) {
-                recordOperation({ type: 'updateDerivedTags', modelName });
-            }
+            if (modelEntry && !computeDerivedTags(modelEntry.tags).every((tag) => modelEntry.tags.includes(tag))) recordOperation({ type: 'updateDerivedTags', modelName });
         }
         const missingProperties = Object.entries(modelCountMissingProperty).map(([property, count]) => (readModelCount > 1 ? `${property} (${count} of ${readModelCount} models)` : property));
         if (!readValueCount) {
@@ -632,6 +676,9 @@
         olxModelTagsData = olxModelTagsData ? rebuildLocalDataFromCacheAndPendingOperations(olxModelTagsData) : createEmptyOlxModelTagsData();
         olxModelTagsSources = await loadSourceAdapters();
         if (hasGithubToken() && listPendingOperationKeys().length) synchronizeWithGithub(); // leftovers of earlier tabs
+        const categoryMatch = findSourceCategory(olxModelTagsSources, location.hostname, location.pathname, document);
+        if (categoryMatch) { startCategoryScanPanel(categoryMatch); return; }
+        startScanTabReporting();
         setInterval(renderSourceBadge, 3000);
         // A page the cached adapters could not read may be covered by adapters added since: refetch once and retry.
         if (!captureSpecsOfOpenPage()) {
@@ -641,6 +688,111 @@
         let captureTimer = 0;
         new MutationObserver(() => { clearTimeout(captureTimer); captureTimer = setTimeout(captureSpecsOfOpenPage, 1000); })
             .observe(document.body, { childList: true, subtree: true });
+    }
+
+    // ---------- Category scan (owner): opens every product of a category page in background tabs, one after another ----------
+    // The category tab keeps the job in Tampermonkey storage and runs it; each product tab reads its page like normal, and once its
+    // values are uploaded it writes a result and closes itself. Tabs that report nothing within SCAN_TAB_TIMEOUT_MS count as failed.
+
+    const STORAGE_KEY_SCAN_JOB = 'olxModelTagsScanJob';
+    const SCAN_RESULT_KEY_PREFIX = 'olxModelTagsScanResult:';
+    const SCAN_TAB_TIMEOUT_MS = 90 * 1000;
+    const SCAN_JOB_STALE_MS = 5 * 60 * 1000;
+    const scanKeyOf = (url) => { const parsed = new URL(url, location.href); return parsed.origin + parsed.pathname.replace(/\/+$/, ''); };
+
+    // Product tab: report once everything this tab read is saved (or has failed), then close.
+    function startScanTabReporting() {
+        const job = GM_getValue(STORAGE_KEY_SCAN_JOB, null);
+        const pageKey = scanKeyOf(location.href);
+        if (!job?.active || !(pageKey in job.inFlight)) return;
+        const timer = setInterval(() => {
+            if (!lastSourceCapture) return;
+            const unsavedCount = [...ownPendingOperationKeys].filter((key) => GM_listValues().includes(key)).length;
+            let result = null;
+            if (lastSourceCapture.state === 'notSourced') result = { status: 'failed', message: lastSourceCapture.message };
+            else if (!hasGithubToken()) result = { status: 'failed', message: 'no GitHub token in this browser' };
+            else if (synchronizationStatus.state === 'error') result = { status: 'failed', message: `upload failed: ${synchronizationStatus.message}` };
+            else if (!unsavedCount && !synchronizationInProgress) result = { status: lastSourceCapture.state === 'partial' ? 'partial' : 'saved', message: lastSourceCapture.message };
+            if (!result) return;
+            clearInterval(timer);
+            GM_setValue(SCAN_RESULT_KEY_PREFIX + pageKey, result);
+            window.close();
+        }, 1000);
+    }
+
+    function startCategoryScanPanel({ category }) {
+        const openTabs = {};
+        const host = document.createElement('olx-model-tags-scan-panel');
+        host.style.cssText = 'position:fixed;right:16px;bottom:64px;z-index:2147483647';
+        const shadow = host.attachShadow({ mode: 'open' });
+        shadow.innerHTML = `<style>
+            .panel{box-sizing:border-box;width:280px;padding:12px;border-radius:8px;background:#1E2329;color:#EAECEF;font:13px/1.4 Inter,system-ui,sans-serif;box-shadow:0 2px 12px rgba(0,0,0,.6);display:grid;gap:8px}
+            .row{display:flex;gap:8px;align-items:center}
+            button{box-sizing:border-box;padding:8px 12px;border-radius:6px;border:1px solid #474D57;background:#2B3139;color:#EAECEF;font:inherit;cursor:pointer}
+            button.primary{background:#C6F432;color:#181A20;border-color:#C6F432;font-weight:600}
+            button:disabled{opacity:.5;cursor:not-allowed}
+            input{box-sizing:border-box;width:56px;padding:8px 12px;border-radius:6px;border:1px solid #474D57;background:#0B0E11;color:#EAECEF;font:12px 'JetBrains Mono',monospace}
+            .status{color:#848E9C;font-family:'JetBrains Mono',monospace;font-size:12px;white-space:pre-wrap}
+        </style><div class="panel">
+            <div class="row"><button class="primary" id="start">Scan specs</button><button id="stop" hidden>Stop</button></div>
+            <label class="row">Tabs at once <input id="concurrency" type="number" min="1" max="10" value="3"></label>
+            <div class="status" id="status"></div></div>`;
+        document.body.append(host);
+        const element = (id) => shadow.getElementById(id);
+        const readJob = () => { const job = GM_getValue(STORAGE_KEY_SCAN_JOB, null); return job && job.active && Date.now() - job.updatedAt > SCAN_JOB_STALE_MS ? { ...job, active: false } : job; };
+        const saveJob = (job) => GM_setValue(STORAGE_KEY_SCAN_JOB, { ...job, updatedAt: Date.now() });
+        const pageCount = Math.max(1, ...[...document.querySelectorAll(category.pageLinks || 'a.page-numbers')].map((link) => parseInt(link.textContent, 10) || 0));
+
+        element('start').addEventListener('click', () => {
+            if (!hasGithubToken()) { element('status').textContent = 'Set the GitHub token first (Tampermonkey menu); a scan has to save to GitHub.'; return; }
+            saveJob({ active: true, concurrency: Math.min(10, Math.max(1, parseInt(element('concurrency').value, 10) || 3)), page: 1, pageKey: null, queue: [], inFlight: {}, done: {} });
+        });
+        element('stop').addEventListener('click', () => { const job = readJob(); if (job) saveJob({ ...job, active: false }); });
+
+        function tick() {
+            let job = readJob();
+            const counts = (done) => Object.values(done).reduce((sum, result) => ({ ...sum, [result.status]: (sum[result.status] || 0) + 1 }), { saved: 0, partial: 0, failed: 0 });
+            if (job?.active) {
+                for (const key of Object.keys(job.inFlight)) {
+                    const result = GM_getValue(SCAN_RESULT_KEY_PREFIX + key, null);
+                    if (!result && Date.now() - job.inFlight[key] < SCAN_TAB_TIMEOUT_MS) continue;
+                    openTabs[key]?.close();
+                    GM_deleteValue(SCAN_RESULT_KEY_PREFIX + key);
+                    delete job.inFlight[key];
+                    job.done[key] = result || { status: 'failed', message: 'no result within 90 s' };
+                }
+                const here = scanKeyOf(location.href);
+                if (job.pageKey !== here && !job.queue.length && !Object.keys(job.inFlight).length) {
+                    job.pageKey = here;
+                    job.queue = [...new Set([...document.querySelectorAll(category.products)].map((item) => item.querySelector(category.link)?.href).filter(Boolean))];
+                }
+                while (Object.keys(job.inFlight).length < job.concurrency && job.queue.length) {
+                    const url = job.queue.shift();
+                    job.inFlight[scanKeyOf(url)] = Date.now();
+                    openTabs[scanKeyOf(url)] = GM_openInTab(url, { active: false, insert: true, setParent: true });
+                }
+                if (!job.queue.length && !Object.keys(job.inFlight).length) {
+                    const nextPageLink = document.querySelector(category.next);
+                    if (nextPageLink) { job.page++; saveJob(job); location.href = nextPageLink.href; return; }
+                    job.active = false;
+                    job.finished = true;
+                    const problems = Object.entries(job.done).filter(([, result]) => result.status !== 'saved');
+                    if (problems.length) console.warn('OLX Model Tags scan: pages that were not fully saved', problems);
+                }
+                saveJob(job);
+            }
+            element('start').disabled = Boolean(job?.active);
+            element('stop').hidden = !job?.active;
+            element('concurrency').disabled = Boolean(job?.active);
+            if (job) {
+                const total = counts(job.done);
+                element('status').textContent = `${job.active ? 'Scanning' : job.finished ? 'Done' : 'Stopped'}: page ${job.page}/${pageCount}\n`
+                    + `open ${Object.keys(job.inFlight).length}, waiting ${job.queue.length}\nsaved ${total.saved}, partial ${total.partial}, failed ${total.failed}`
+                    + (!job.active && (total.partial || total.failed) ? '\n(details in the browser console)' : '');
+            }
+        }
+        setInterval(tick, 1000);
+        tick();
     }
 
     if (!IS_OLX_PAGE) { startSpecsCapture(); return; }

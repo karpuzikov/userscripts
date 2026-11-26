@@ -169,8 +169,20 @@
        "afterLabel": "^Weight:$",
        "labels": ".spec-param",
        "regex": "^(\\d+\\s*g)\\b"
+      },
+      {
+       "name": "Dimensions",
+       "afterLabel": "^(Dimensions|Sizes?):$",
+       "labels": ".spec-param",
+       "regex": "(\\d+(?:\\.\\d+)?\\s*[×x*]\\s*\\d+(?:\\.\\d+)?\\s*[×x*]\\s*\\d+(?:\\.\\d+)?\\s*mm)",
+       "transform": "dimensionsMm"
       }
-     ]
+     ],
+     "rawSpecs": {
+      "rows": ".power-bank-specs-table tbody tr",
+      "label": ".spec-param",
+      "value": ".spec-value"
+     }
     },
     {
      "path": "^/product/",
@@ -200,10 +212,27 @@
        "name": "Weight",
        "selector": ".elementor-widget-woocommerce-product-content p",
        "regex": "Weight:\\s*(\\d+\\s*g)\\b"
+      },
+      {
+       "name": "Dimensions",
+       "selector": ".elementor-widget-woocommerce-product-content p",
+       "regex": "(?:Sizes?|Dimensions):\\s*(\\d+(?:\\.\\d+)?\\s*[×x*]\\s*\\d+(?:\\.\\d+)?\\s*[×x*]\\s*\\d+(?:\\.\\d+)?\\s*mm)",
+       "transform": "dimensionsMm"
       }
-     ]
+     ],
+     "rawSpecs": {
+      "text": ".elementor-widget-woocommerce-product-content p",
+      "itemRegex": "(?:^|\\s)\\d\\.\\s*([A-Za-z][A-Za-z ]*?):\\s*(.*?)(?=\\s\\d\\.\\s*[A-Za-z][A-Za-z ]*?:|$)"
+     }
     }
-   ]
+   ],
+   "category": {
+    "path": "^/category/.*power-banks/?(page/\\d+/?)?$",
+    "products": "[data-widget_type=\"wc-archive-products.default\"] ul.products > li.product",
+    "link": "a.woocommerce-LoopProduct-link",
+    "next": "a.next.page-numbers",
+    "pageLinks": "a.page-numbers"
+   }
   }
  ]
 }
