@@ -2051,5 +2051,139 @@
    "Sizes": "146 × 67 × 16.5mm.",
    "Weight": "251g."
   }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j102-cool-figure-pd20w-qc3-0-10000mah": {
+  "model": "Hoco J102 Cool figure",
+  "scannedAt": "2026-11-26T02:52:32.352Z",
+  "specs": {
+   "Capacity": "10000mAh, 37Wh. Rated capacity: 5900mAh (5V TYP 3A).",
+   "Input": "1 × Micro-USB – 5V / 3A, 9V / 2A, 12V / 1.5A – 18W max. 1 × Type-C – 5V / 2.4A (PD), 9V / 2A (PD), 12V / 1.5A (PD) – 18W max.",
+   "Output": "1 × USB-A – 5V / 3A, 9V / 2A, 12V / 1.5A – 18W max. 1 × Type-C – 5V / 2.4A (PD), 9V / 2.22A (PD), 12V / 1.67A (PD) – 20W max. Total output: 5V / 3A (max).",
+   "Fast charging protocol support": "for PD3.0 / PD2.0 / PD20W / QC3.0 / QC2.0 / FCP / AFC and other fast charging protocols.",
+   "Material": "ABS + PC flame retardant shell + lithium polymer battery.",
+   "Indication": "LED digital display of power level. Green indicator of PD / QC fast charging.",
+   "Sizes": "149 × 70 × 17mm.",
+   "Weight": "230g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j103-discovery-edition-22-5w-10000mah": {
+  "model": "Hoco J103 Discovery edition",
+  "scannedAt": "2026-11-26T02:52:32.353Z",
+  "specs": {
+   "Capacity": "10000mAh, 37Wh. Rated capacity: 5500mAh (5V TYP 3A).",
+   "Input": "1 × Type-C – 5V / 3A, 9V / 2A, 12V / 1.5A – 18W max.",
+   "Output": "1 × USB-A 1 – 4.5V / 5A, 5V / 4.5A, 5V / 3A, 9V / 2A, 12V / 1.5A – 22.5W max. 1 × USB-A 2 – 4.5V / 5A, 5V / 4.5A, 5V / 3A, 9V / 2A, 12V / 1.5A – 22.5W max. 1 × Type-C – 5V / 2.4A, 9V / 2.22A, 12V / 1.67A – 20W max. Total output: 5V / 3A (max).",
+   "Fast charging protocol support": "for PD3.0 / PD20W / QC3.0 / QC2.0 / FCP / SCP / AFC / VOOC / DASH and other fast charging protocols.",
+   "Material": "ABS + PC flame retardant shell + lithium polymer battery.",
+   "Indication": "LED digital display of power level. Green indicator of PD / QC fast charging.",
+   "Sizes": "146 × 67 × 16.5mm.",
+   "Weight": "241g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j102a-cool-figure-pd20w-qc3-0-20000mah": {
+  "model": "Hoco J102A Cool figure",
+  "scannedAt": "2026-11-26T02:52:32.355Z",
+  "specs": {
+   "Capacity": "20000mAh, 74Wh. Rated capacity: 11800mAh (5V TYP 3A).",
+   "Input": "1 × Micro-USB – 5V / 3A, 9V / 2A, 12V / 1.5A – 18W max. 1 × Type-C – 5V / 2.4A (PD), 9V / 2A (PD), 12V / 1.5A (PD) – 18W max.",
+   "Output": "1 × USB-A – 5V / 3A, 9V / 2A, 12V / 1.5A – 18W max. 1 × Type-C – 5V / 2.4A (PD), 9V / 2.22A (PD), 12V / 1.67A (PD) – 20W max. Total output: 5V / 3A (max).",
+   "Fast charging protocol support": "for PD3.0 / PD2.0 / PD20W / QC3.0 / QC2.0 / FCP / AFC and other fast charging protocols.",
+   "Material": "ABS + PC flame retardant shell + lithium polymer battery.",
+   "Indication": "LED digital display of power level. Green indicator of PD / QC fast charging.",
+   "Sizes": "149 × 71 × 28mm.",
+   "Weight": "418g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-q17-electric-pd140w-25000mah": {
+  "model": "Hoco Q17 Electric",
+  "scannedAt": "2026-11-26T02:52:32.355Z",
+  "specs": {
+   "Capacity": "25000mAh 90Wh. Rated capacity: 15000mAh.",
+   "Input": "Type-C 1 / 2 – 140W (for PD / for PPS / for QC / for FCP / for AFC).",
+   "Output": "Type-C 1 / 2 – 140W (for PD / for PPS / for QC / for FCP / for AFC). USB – 22.5W (for QC / for FCP / for SCP / for AFC). Type-C 1 + Type-C 2 + USB = 140W.",
+   "Display": "color LED digital display, actual charging power and battery charge level.",
+   "Material": "aluminum alloy + 21700 battery.",
+   "Sizes": "155 * 50 * 53mm. Weight: 652g. 7. With 1m Type-C to Type-C 100W cable."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j101b-astute-22-5w-30000mah": {
+  "model": "Hoco J101B Astute",
+  "scannedAt": "2026-11-26T02:52:32.355Z",
+  "specs": {
+   "Capacity": "30000mAh, 111Wh. Rated capacity: 17700mAh (5V TYP 3A).",
+   "Input": "1 × Micro-USB – 5V / 3A, 9V / 2A, 12V / 1.5A – 18W max. 1 × Type-C – 5V / 2.4A (PD), 9V / 2A (PD), 12V / 1.5A (PD) – 18W max.",
+   "Output": "1 × USB-A 1 – 4.5V / 5A, 5V / 4.5A, 9V / 2A, 12V / 1.5A – 22.5W max. 1 × USB-A 2 – 4.5V / 5A, 5V / 4.5A, 9V / 2A, 12V / 1.5A – 22.5W max. 1 × Type-C – 5V / 2.4A (PD), 9V / 2.22A (PD), 12V / 1.67A (PD) – 20W max. Total output: 5V / 3A (max).",
+   "Fast charging protocol support": "for PD3.0 / PD2.0 / PD20W / QC3.0 / QC2.0 / FCP / AFC / SCP and other fast charging protocols.",
+   "Material": "ABS + PC flame retardant shell + lithium polymer battery.",
+   "Indication": "LED indicator of power level. Green indicator of PD / QC fast charging.",
+   "Sizes": "146 × 68 × 41mm.",
+   "Weight": "596g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j101a-astute-22-5w-20000mah": {
+  "model": "Hoco J101A Astute",
+  "scannedAt": "2026-11-26T02:52:32.356Z",
+  "specs": {
+   "Capacity": "20000mAh, 74Wh. Rated capacity: 11800mAh (5V TYP 3A).",
+   "Input": "1 × Micro-USB – 5V / 3A, 9V / 2A, 12V / 1.5A – 18W max. 1 × Type-C – 5V / 2.4A (PD), 9V / 2A (PD), 12V / 1.5A (PD) – 18W max.",
+   "Output": "1 × USB-A 1 – 4.5V / 5A, 5V / 4.5A, 9V / 2A, 12V / 1.5A – 22.5W max. 1 × USB-A 2 – 4.5V / 5A, 5V / 4.5A, 9V / 2A, 12V / 1.5A – 22.5W max. 1 × Type-C – 5V / 2.4A (PD), 9V / 2.22A (PD), 12V / 1.67A (PD) – 20W max. Total output: 5V / 3A (max).",
+   "Fast charging protocol support": "for PD3.0 / PD2.0 / PD20W / QC3.0 / QC2.0 / FCP / AFC / SCP and other fast charging protocols.",
+   "Material": "ABS + PC flame retardant shell + lithium polymer battery.",
+   "Indication": "LED indicator of power level. Green indicator of PD / QC fast charging.",
+   "Sizes": "140 × 68 × 28mm.",
+   "Weight": "400g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j96-strider-power-5000mah": {
+  "model": "Hoco J96 Strider",
+  "scannedAt": "2026-11-26T02:52:32.358Z",
+  "specs": {
+   "Capacity": "5000mAh 18.5Wh. Rated capacity: 3000mAh.",
+   "Input": "Type-C – 5V / 2A.",
+   "Output": "USB-A – 5V / 2A.",
+   "Indicator": "LED indicator.",
+   "Material": "ABS + PC flame retardant shell + 22650 battery.",
+   "Sizes": "81*62*25mm. Weight: 170g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j101-astute-22-5w-10000mah": {
+  "model": "Hoco J101 Astute",
+  "scannedAt": "2026-11-26T02:52:32.358Z",
+  "specs": {
+   "Capacity": "10000mAh, 37Wh. Rated capacity: 5900mAh (5V TYP 3A).",
+   "Input": "1 × Micro-USB – 5V / 3A, 9V / 2A, 12V / 1.5A – 18W max. 1 × Type-C – 5V / 2.4A (PD), 9V / 2A (PD), 12V / 1.5A (PD) – 18W max.",
+   "Output": "1 × USB-A 1 – 4.5V / 5A, 5V / 4.5A, 9V / 2A, 12V / 1.5A – 22.5W max. 1 × USB-A 2 – 4.5V / 5A, 5V / 4.5A, 9V / 2A, 12V / 1.5A – 22.5W max. 1 × Type-C – 5V / 2.4A (PD), 9V / 2.22A (PD), 12V / 1.67A (PD) – 20W max. Total output: 5V / 3A (max).",
+   "Fast charging protocol support": "for PD3.0 / PD2.0 / PD20W / QC3.0 / QC2.0 / FCP / AFC / SCP and other fast charging protocols.",
+   "Material": "ABS + PC flame retardant shell + lithium polymer battery.",
+   "Indication": "LED indicator of power level. Green indicator of PD / QC fast charging.",
+   "Sizes": "140 × 68 × 16mm.",
+   "Weight": "230g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j100a-high-ranking-20000mah": {
+  "model": "Hoco J100A High-ranking",
+  "scannedAt": "2026-11-26T02:52:32.410Z",
+  "specs": {
+   "Capacity": "20000mAh, 74Wh. Rated capacity: 11800mAh (5V TYP 2.1A).",
+   "Input": "1 × Type-C – 5V / 2A. 1 × Micro-USB – 5V / 2A.",
+   "Output": "1 × USB-A 1 – 5V / 2.1A. 1 × USB-A 2 – 5V / 2.1A. Total output: USB-A 1 + USB-A 2 = 5V / 2.1A (max).",
+   "Material": "ABS + PC flame retardant shell + lithium polymer battery.",
+   "Indication": "LED indicator of power level.",
+   "Sizes": "138 × 69 × 27mm.",
+   "Weight": "401g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j100-high-ranking-10000mah": {
+  "model": "Hoco J100 High-ranking",
+  "scannedAt": "2026-11-26T02:52:32.417Z",
+  "specs": {
+   "Capacity": "10000mAh, 37Wh. Rated capacity: 5900mAh (5V TYP 2.1A).",
+   "Input": "1 × Type-C – 5V / 2A. 1 × Micro-USB – 5V / 2A.",
+   "Output": "1 × USB-A 1 – 5V / 2.1A. 1 × USB-A 2 – 5V / 2.1A. Total output: USB-A 1 + USB-A 2 = 5V / 2.1A (max).",
+   "Material": "ABS + PC flame retardant shell + lithium polymer battery.",
+   "Indication": "LED indicator of power level.",
+   "Sizes": "136 × 68 × 15mm.",
+   "Weight": "220g."
+  }
  }
 }
