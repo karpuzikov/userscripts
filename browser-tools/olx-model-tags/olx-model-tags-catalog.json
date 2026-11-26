@@ -1415,6 +1415,19 @@
     "mAh per liter: 60716"
    ],
    "group": "Power banks"
+  },
+  "HOCOJ156AFOUNDER": {
+   "name": "Hoco J156A Founder",
+   "tags": [
+    "Capacity: 20000mAh",
+    "Rated capacity: 11000mAh",
+    "Output: 22.5W",
+    "Weight: 450g",
+    "Dimensions: 149.7×70×31mm",
+    "mAh per g: 44.4",
+    "mAh per liter: 61567"
+   ],
+   "group": "Power banks"
   }
  },
  "stopPhrases": [
