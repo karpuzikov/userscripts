@@ -1029,7 +1029,9 @@
     "Rated capacity: 3000mAh",
     "Output: 20W",
     "Weight: 147g",
-    "mAh per g: 34.0"
+    "Dimensions: 105×67×12mm",
+    "mAh per g: 34.0",
+    "mAh per liter: 59228"
    ],
    "group": "Power banks"
   },
@@ -1340,7 +1342,9 @@
     "Rated capacity: 5500mAh",
     "Output: 22.5W",
     "Weight: 293g",
-    "mAh per g: 34.1"
+    "Dimensions: 108×43×43mm",
+    "mAh per g: 34.1",
+    "mAh per liter: 50077"
    ],
    "group": "Power banks"
   },
@@ -1935,6 +1939,110 @@
     "Dimensions: 100.5×65.5×11mm",
     "mAh per g: 40.0",
     "mAh per liter: 69051"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOQ18TOURER": {
+   "name": "Hoco Q18 Tourer",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5400mAh",
+    "Output: 22.5W",
+    "Weight: 187g",
+    "Dimensions: 105×68×14mm",
+    "mAh per g: 53.5",
+    "mAh per liter: 100040"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOQ14AICECRYSTAL": {
+   "name": "Hoco Q14A Ice Crystal",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5400mAh",
+    "Output: 20W",
+    "Weight: 227g",
+    "Dimensions: 105×67×19mm",
+    "mAh per g: 44.1",
+    "mAh per liter: 74814"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ127AMECHA": {
+   "name": "Hoco J127A Mecha",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5500mAh",
+    "Output: 20W",
+    "Weight: 241g",
+    "Dimensions: 146×70×21mm",
+    "mAh per g: 41.5",
+    "mAh per liter: 46594"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOQ19LUCKY": {
+   "name": "Hoco Q19 Lucky",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5400mAh",
+    "Output: 30W",
+    "Weight: 187g",
+    "Dimensions: 109×77×22mm",
+    "mAh per g: 53.5",
+    "mAh per liter: 54158"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ127BMECHA": {
+   "name": "Hoco J127B Mecha",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5500mAh",
+    "Output: 20W",
+    "Weight: 194g",
+    "Dimensions: 109×70×20mm",
+    "mAh per g: 51.5",
+    "mAh per liter: 65531"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOQ20FOUNTAIN": {
+   "name": "Hoco Q20 Fountain",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5400mAh",
+    "Output: 22.5W",
+    "Weight: 181g",
+    "Dimensions: 86×60×28mm",
+    "mAh per g: 55.2",
+    "mAh per liter: 69214"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ127MECHA": {
+   "name": "Hoco J127 Mecha",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5500mAh",
+    "Output: 20W",
+    "Weight: 178g",
+    "Dimensions: 109×70×19mm",
+    "mAh per g: 56.2",
+    "mAh per liter: 68980"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOQ16FRIENDLY": {
+   "name": "Hoco Q16 Friendly",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5500mAh",
+    "Output: 22.5W",
+    "Weight: 252g",
+    "Dimensions: 54×28.4×116mm",
+    "mAh per g: 39.7",
+    "mAh per liter: 56212"
    ],
    "group": "Power banks"
   }
