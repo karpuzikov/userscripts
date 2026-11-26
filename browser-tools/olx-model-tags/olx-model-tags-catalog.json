@@ -849,7 +849,9 @@
     "Rated capacity: 33000mAh",
     "Output: 22.5W",
     "Weight: 1360g",
-    "mAh per g: 44.1"
+    "Dimensions: 139×84×81mm",
+    "mAh per g: 44.1",
+    "mAh per liter: 63441"
    ],
    "group": "Power banks"
   },
@@ -860,7 +862,9 @@
     "Rated capacity: 5400mAh",
     "Output: 22.5W",
     "Weight: 195g",
-    "mAh per g: 51.3"
+    "Dimensions: 85×61.5×26mm",
+    "mAh per g: 51.3",
+    "mAh per liter: 73575"
    ],
    "group": "Power banks"
   },
@@ -1228,7 +1232,9 @@
     "Capacity: 15000mAh",
     "Rated capacity: 7200mAh",
     "Weight: 350g",
-    "mAh per g: 42.9"
+    "Dimensions: 164×80×19mm",
+    "mAh per g: 42.9",
+    "mAh per liter: 60173"
    ],
    "group": "Power banks"
   },
@@ -1689,6 +1695,83 @@
     "Dimensions: 149.7×70×31mm",
     "mAh per g: 44.4",
     "mAh per liter: 61567"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ140ATONY": {
+   "name": "Hoco J140A Tony",
+   "tags": [
+    "Capacity: 5000mAh",
+    "Rated capacity: 2700mAh",
+    "Output: 20W",
+    "Weight: 110g",
+    "Dimensions: 102×68×10mm",
+    "mAh per g: 45.5",
+    "mAh per liter: 72088"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ137": {
+   "name": "Hoco J137",
+   "tags": [
+    "Capacity: 2500mAh",
+    "Output: 2.5W",
+    "Weight: 70g",
+    "Dimensions: 80×48×17mm",
+    "mAh per g: 35.7",
+    "mAh per liter: 38297"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ143TITLE": {
+   "name": "Hoco J143 Title",
+   "tags": [
+    "Capacity: 80000mAh",
+    "Rated capacity: 44000mAh",
+    "Output: 22.5W",
+    "Weight: 1850g",
+    "Dimensions: 130×72×157mm",
+    "mAh per g: 43.2",
+    "mAh per liter: 54440"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ140TONY": {
+   "name": "Hoco J140 Tony",
+   "tags": [
+    "Capacity: 5000mAh",
+    "Rated capacity: 2700mAh",
+    "Output: 20W",
+    "Weight: 105g",
+    "Dimensions: 102×68×10mm",
+    "mAh per g: 47.6",
+    "mAh per liter: 72088"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ142SURPASS": {
+   "name": "Hoco J142 Surpass",
+   "tags": [
+    "Capacity: 100000mAh",
+    "Rated capacity: 55000mAh",
+    "Output: 22.5W",
+    "Weight: 2050g",
+    "Dimensions: 166×102×88mm",
+    "mAh per g: 48.8",
+    "mAh per liter: 67113"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ141GRACE": {
+   "name": "Hoco J141 Grace",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5400mAh",
+    "Output: 20W",
+    "Weight: 190g",
+    "Dimensions: 106×70×17.5mm",
+    "mAh per g: 52.6",
+    "mAh per liter: 77012"
    ],
    "group": "Power banks"
   }
