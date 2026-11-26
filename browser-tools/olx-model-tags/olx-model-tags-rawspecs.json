@@ -805,5 +805,19 @@
    "Sizes": "102.5 × 64 × 26mm.",
    "Weight": "215g."
   }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j135-rico-22-5w-wireless-charging-10000mah": {
+  "model": "Hoco J135 Rico",
+  "scannedAt": "2026-11-26T02:50:41.347Z",
+  "specs": {
+   "Capacity": "10000mAh, 38.5Wh. Rated capacity: 5400mAh (5V TYP 2A).",
+   "Input": "1 × Type-C port – 5V / 2A, 9V / 2A, 12V / 1.5A – 18W. 1 × iP port – 5V / 2A, 9V / 2A, 12V / 1.5A – 18W. 1 × built-in USB-A cable – 5V / 2.4A – 12W.",
+   "Output": "1 × Type-C port – 5V / 3A, 9V / 2.22A, 12V / 1.67A – 20W max. 1 × USB-A port – 5V / 3A, 9V / 2A, 10V / 2.25 (SCP), 12V / 1.5A – 22.5W max. 1 × built-in Type-C cable – 5V / 3A, 9V / 2A, 10V / 2.25 (SCP), 12V / 1.5A – 22.5W max. 1 × built-in Micro-USB cable – 5V / 2A. 1 × built-in cable for iP – 5V / 2A. Magnetic wireless charging output – 5W / 7.5W / 10W / 15W. Total output: 5V / 2A (max).",
+   "Fast charging protocol support": "for PD3.0 / PD20W / QC3.0 / QC2.0 / FCP / SCP / AFC and other fast charging protocols.",
+   "Material": "ABS + PC flame retardant shell + lithium ion polymer battery.",
+   "Indication": "LED digital display of power level. Green indicator of PD / QC fast charging, wireless charging icon stays lit during wireless charging output. 7. Built-in foldable stand.",
+   "Sizes": "113.5 × 72 × 24mm.",
+   "Weight": "220g."
+  }
  }
 }
