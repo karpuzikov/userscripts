@@ -1235,5 +1235,145 @@
    "Sizes": "108 × 52 × 28mm.",
    "Weight": "191g."
   }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-q18-tourer-22-5w-wireless-charging-10000mah": {
+  "model": "Hoco Q18 Tourer",
+  "scannedAt": "2026-11-26T02:51:28.349Z",
+  "specs": {
+   "Capacity": "10000mAh, 38.5Wh. Rated capacity: 5400mAh (5V TYP 3A).",
+   "Input": "1 × Type-C – 5V / 2.4A, 9V / 2A, 12V / 1.5A – 18W (max).",
+   "Output": "1 × USB-A – 4.5V / 5A, 5V / 4.5A, 9V / 2A, 12V / 1.5A – 22.5W (max). 1 × Type-C – 5V / 2.4A, 9V / 2.22A, 12V / 1.67A – 20W (max). Wireless charging output – 5W / 7.5W / 10W / 15W (max). Total output: 5V / 3A (max).",
+   "Fast charging protocol support": "for PD3.0 / PD2.0 / PD20W / QC3.0 / QC2.0 / FCP / SCP / AFC and other fast charging protocols.",
+   "Material": "ABS + PC flame retardant shell + lithium polymer battery.",
+   "Indication": "LED indicator of power level. Green indicator of fast charging or wireless charging.",
+   "Sizes": "105 × 68 × 14mm.",
+   "Weight": "187g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-q19-lucky-pd30w-qc3-0-10000mah": {
+  "model": "Hoco Q19 Lucky",
+  "scannedAt": "2026-11-26T02:51:28.350Z",
+  "specs": {
+   "Capacity": "10000mAh, 38.5Wh. Rated capacity: 5400mAh (5V TYP 3A).",
+   "Input": "1 × Type-C – 5V / 3A, 9V / 3A, 12V / 2.5A, 15V / 2A, 20V / 1.5A – 30W (max).",
+   "Output": "1 × USB-A – 4.5V / 5A, 5V / 4.5A, 9V / 2A, 12V / 1.5A – 22.5W (max). 1 × Type-C – 5V / 3A, 9V / 3A, 12V / 2.5A, 15V / 2A, 20V / 1.5A – 30W (max). PPS: 3.3-20V / 1.5A. 1 × built-in cable Type-C – 4.5V / 5A, 5V / 4.5A, 9V / 2A, 12V / 1.5A – 22.5W (max). 1 × built-in cable for Lightning – 5V / 2.4A, 9V / 2.22A – 20W (max). Total output: 5V / 3A (max).",
+   "Fast charging protocol support": "for PD3.0 / PD30W / QC3.0 / QC2.0 / PPS / FCP / SCP / AFC and other fast charging protocols.",
+   "Material": "ABS + PC flame retardant shell + lithium polymer battery.",
+   "Indication": "LED digital display of power level. Green indicator of fast charging.",
+   "Sizes": "109 × 77 × 22mm.",
+   "Weight": "187g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-q14a-ice-crystal-pd20w-qc3-0-wireless-charging-10000mah": {
+  "model": "Hoco Q14A Ice Crystal",
+  "scannedAt": "2026-11-26T02:51:28.351Z",
+  "specs": {
+   "Capacity": "10000mAh, 38.5Wh. Rated capacity: 5400mAh (5V TYP 2A).",
+   "Input": "1 × Type-C – 5V / 3A, 9V / 2A – 18W (max).",
+   "Output": "1 × Type-C – 5V / 2A, 9V / 2.2A, 12V / 1.5A – 20W (max). Wireless charging output – 5W / 7.5W / 10W / 15W (max). Total output: 5V / 2A (max).",
+   "Fast charging protocol support": "for PD3.0 / PD2.0 / PD20W / QC3.0 / QC2.0 / FCP / AFC and other fast charging protocols.",
+   "Material": "PC fully transparent flame retardant shell + lithium polymer battery.",
+   "Indication": "LED digital display of power level. Red indicator of PD / QC fast charging. Green indicator of wireless charging.",
+   "Sizes": "105 × 67 × 19mm.",
+   "Weight": "227g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j127a-mecha-pd20w-qc3-0-10000mah": {
+  "model": "Hoco J127A Mecha",
+  "scannedAt": "2026-11-26T02:51:28.351Z",
+  "specs": {
+   "Capacity": "10000mAh, 38.5Wh. Rated capacity: 5500mAh (5V TYP 2A).",
+   "Input": "1 × Type-C – 5V / 2.4A, 9V / 2A, 12V / 1.5A – 18W. 1 × built-in cable for Type-C – 5V / 2.4A, 9V / 2A, 12V / 1.5A – 18W.",
+   "Output": "1 × built-in cable Type-C – 5V / 2.4A, 9V / 2.22A, 12V / 1.67A – 20W. 1 × built-in cable for Lightning – 5V / 2.4A, 9V / 2.22A, 12V / 1.67A – 20W. Total output: 5V / 2A (max).",
+   "Fast charging protocol support": "for PD3.0 / PD20W / QC3.0 / QC2.0 / FCP / AFC and other fast charging protocols.",
+   "Material": "ABS + PC flame retardant shell + lithium polymer battery.",
+   "Indication": "LED digital display of power level. Green indicator of PD / QC fast charging.",
+   "Sizes": "146 × 70 × 21mm.",
+   "Weight": "241g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-q15-flashlight-22-5w-10000mah": {
+  "model": "Hoco Q15 Flashlight",
+  "scannedAt": "2026-11-26T02:51:28.354Z",
+  "specs": {
+   "Capacity": "10000mAh, 37Wh. Rated capacity: 5500mAh (5V TYP 3A).",
+   "Input": "1 × Type-C – 5V / 2.4A, 9V / 2A, 12V / 1.5A – 18W (max).",
+   "Output": "1 × USB-A – 4.5V / 5A, 5V / 4.5A, 9V / 2A, 12V / 1.5A – 22.5W (max). 1 × Type-C – 5V / 2.4A, 9V / 2.22A, 12V / 1.67A – 20W (max). Total output: 5V / 3A (max).",
+   "Fast charging protocol support": "for PD3.0 / PD20W / QC3.0 / QC2.0 / FCP / SCP / AFC and other fast charging protocols.",
+   "Material": "aluminum alloy shell + 18650 batteries.",
+   "Indication": "LED digital display of power level. Green indicator of PD / QC fast charging. 7. Flashlight with 3 levels. Press and hold the button for 5s to turn on / off the light (1st lighting level), click again for 2nd lighting level, click again for 3rd lighting level. Effective lighting distance is 20 meters.",
+   "Sizes": "108 × 43 × 43mm.",
+   "Weight": "293g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-q20-fountain-22-5w-10000mah": {
+  "model": "Hoco Q20 Fountain",
+  "scannedAt": "2026-11-26T02:51:28.355Z",
+  "specs": {
+   "Capacity": "10000mAh, 37Wh. Rated capacity: 5400mAh (5V TYP 3A).",
+   "Input": "1 × Type-C – 5V / 2.4A, 9V / 2A, 12V / 1.5A – 18W (max).",
+   "Output": "1 × Type-C – 5V / 2.4A, 9V / 2.22A, 12V / 1.67A –20W (max). 1 × built-in cable Type-C – 4.5V / 5A, 5V / 4.5A, 9V / 2A, 12V / 1.5A – 22.5W (max). 1 × built-in cable for Lightning – 5V / 2.4A, 9V / 2.22A – 20W (max). Total output: 5V / 3A (max).",
+   "Fast charging protocol support": "for PD3.0 / PD2.0 / PD20W / QC3.0 / QC2.0 / FCP / SCP / AFC and other fast charging protocols.",
+   "Material": "ABS + PC flame retardant shell + 21700 batteries.",
+   "Indication": "LED digital display of power level. Green indicator of PD / QC fast charging.",
+   "Sizes": "86 × 60 × 28mm.",
+   "Weight": "181g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j127b-mecha-pd20w-qc3-0-wireless-charging-10000mah": {
+  "model": "Hoco J127B Mecha",
+  "scannedAt": "2026-11-26T02:51:28.355Z",
+  "specs": {
+   "Capacity": "10000mAh, 38.5Wh. Rated capacity: 5500mAh (5V TYP 2A).",
+   "Input": "1 × Type-C – 5V / 2.4A, 9V / 2A, 12V / 1.5A – 18W.",
+   "Output": "1 × Type-C – 5V / 2.4A, 9V / 2.22A, 12V / 1.67A – 20W. Wireless charging output – 5W / 7.5W / 10W / 15W. Total output: 5V / 2A (max).",
+   "Fast charging protocol support": "for PD3.0 / PD2.0 / PD20W / QC3.0 / QC2.0 / FCP / AFC and other fast charging protocols.",
+   "Material": "ABS + PC flame retardant shell + lithium polymer battery.",
+   "Indication": "LED digital display of power level. Green indicator of PD / QC fast charging.",
+   "Sizes": "109 × 70 × 20mm.",
+   "Weight": "194g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-q14-ice-crystal-pd20w-qc3-0-wireless-charging-5000mah": {
+  "model": "Hoco Q14 Ice Crystal",
+  "scannedAt": "2026-11-26T02:51:28.357Z",
+  "specs": {
+   "Capacity": "5000mAh, 19Wh. Rated capacity: 3000mAh (5V TYP 2A).",
+   "Input": "1 × Type-C – 5V / 3A, 9V / 2A – 18W (max).",
+   "Output": "1 × Type-C – 5V / 2A, 9V / 2.2A, 12V / 1.5A – 20W (max). Wireless charging output – 5W / 7.5W / 10W / 15W (max). Total output: 5V / 2A (max).",
+   "Fast charging protocol support": "for PD3.0 / PD2.0 / PD20W / QC3.0 / QC2.0 / FCP / AFC and other fast charging protocols.",
+   "Material": "PC fully transparent flame retardant shell + lithium polymer battery.",
+   "Indication": "LED digital display of power level. Red indicator of PD / QC fast charging. Green indicator of wireless charging.",
+   "Sizes": "105 × 67 × 12mm.",
+   "Weight": "147g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j127-mecha-pd20w-qc3-0-10000mah": {
+  "model": "Hoco J127 Mecha",
+  "scannedAt": "2026-11-26T02:51:28.363Z",
+  "specs": {
+   "Capacity": "10000mAh, 38.5Wh. Rated capacity: 5500mAh (5V TYP 2A).",
+   "Input": "1 × Type-C – 5V / 2.4A, 9V / 2A, 12V / 1.5A – 18W. 1 × built-in cable for Type-C – 5V / 2.4A, 9V / 2A, 12V / 1.5A – 18W.",
+   "Output": "1 × built-in cable Type-C – 5V / 2.4A, 9V / 2.22A, 12V / 1.67A – 20W. 1 × built-in cable for Lightning – 5V / 2.4A, 9V / 2.22A, 12V / 1.67A – 20W. Total output: 5V / 2A (max).",
+   "Fast charging protocol support": "for PD3.0 / PD20W / QC3.0 / QC2.0 / FCP / AFC and other fast charging protocols.",
+   "Material": "ABS + PC flame retardant shell + lithium polymer battery.",
+   "Indication": "LED digital display of power level. Green indicator of PD / QC fast charging.",
+   "Sizes": "109 × 70 × 19mm.",
+   "Weight": "178g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-q16-friendly-22-5w-10000mah-eu-us-plug": {
+  "model": "Hoco Q16 Friendly",
+  "scannedAt": "2026-11-26T02:51:28.405Z",
+  "specs": {
+   "Capacity": "10000mAh, 37Wh. Rated capacity: 5500mAh (5V TYP 3A).",
+   "Input": "AC100 – 240V, 50 / 60Hz, 0.8A max, EU / US plug. 1 × Type-C – 5V / 3A, 9V / 2A – 18W (max).",
+   "Output": "Adapter mode: 1 × USB-A – 5V / 3A. 1 × Type-C – 5V / 3A. Total output: 5V / 3A (max). Power bank mode: 1 × USB-A – 4.5V / 5A, 5V / 4.5A, 9V / 2A, 12V / 1.5A – 22.5W (max). 1 × Type-C – 5V / 3A, 9V / 2.2A, 12V / 1.5A – 20W (max). Total output: 5V / 3A (max).",
+   "Fast charging protocol support": "for PD3.0 / PD20W / QC3.0 / QC2.0 / FCP / SCP / AFC and other fast charging protocols.",
+   "Material": "PC + ABS flame-retardant shell + lithium polymer battery.",
+   "Indication": "LED indicator of power level. Red indicator of PD / QC fast charging.",
+   "Sizes": "54 × 28.4 × 116mm.",
+   "Weight": "252g."
+  }
  }
 }
