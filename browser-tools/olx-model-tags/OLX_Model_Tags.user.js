@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OLX - Model Tags
 // @namespace    https://www.olx.ua/
-// @version      0.13.0
+// @version      0.13.1
 // @description  Tag OLX ads by model (tags shared by every ad of that model) or per ad, mark broken ads, filter search results by tags, per-tag Hide (pixel mesh) / Highlight (outline). Shared model catalog is read from GitHub without any key; your own marks stay in this browser. Phone specs (year, DXOMARK camera, AnTuTu, sensor, display, battery, charger, NFC) are captured from the DXOMARK, Kimovil and GSMArena pages you open. OLX only gets read locally from the open page.
 // @match        https://www.olx.ua/*
 // @match        https://www.dxomark.com/smartphones/*
@@ -72,6 +72,16 @@
     }
 
     // Operations are idempotent, so replaying them on fresh GitHub data (or twice from two tabs) is safe.
+    // "Capacity: 75000mAh" + "Weight: 1400g" -> "mAh per g: 53.6" (recomputed whenever either value is set).
+    function updateCapacityPerGramTag(modelEntry) {
+        const valueOf = (property) => modelEntry.tags.map(splitTagIntoPropertyAndValue).find((tag) => tag.property.toLowerCase() === property)?.value;
+        const capacity = parseFloat(valueOf('capacity'));
+        const weight = parseFloat(valueOf('weight'));
+        if (!(capacity > 0 && weight > 0)) return;
+        modelEntry.tags = modelEntry.tags.filter((tag) => splitTagIntoPropertyAndValue(tag).property.toLowerCase() !== 'mah per g');
+        modelEntry.tags.push(`mAh per g: ${(capacity / weight).toFixed(1)}`);
+    }
+
     function applyOlxModelTagsOperation(data, operation) {
         if (['addPhrase', 'removePhrase', 'addStopPhrase', 'removeStopPhrase'].includes(operation.type)) {
             const listName = operation.listName || 'stopPhrases'; // 0.4.0 ops had no listName
@@ -94,6 +104,7 @@
             modelEntry.tags = modelEntry.tags.filter((tag) => splitTagIntoPropertyAndValue(tag).property.toLowerCase() !== propertyKey);
             modelEntry.tags.push(`${operation.property}: ${operation.value}`);
             if (operation.groupIfEmpty && !modelEntry.group) modelEntry.group = operation.groupIfEmpty;
+            updateCapacityPerGramTag(modelEntry);
             return;
         }
         if (operation.type === 'setAdInfo') {

@@ -152,3 +152,13 @@ test('maxWatts picks the highest output of a free-text output block', () => {
   assert.equal(maxWatts('USB 1 – 22.5W (for QC), USB 2 / 3 – 5V / 2.1A. Type-C – 20W (for PD). Total output – 5V / 3A.'), '22.5W');
   assert.equal(maxWatts('5V / 3A'), '');
 });
+
+test('setModelProperty derives "mAh per g" from Capacity and Weight', () => {
+  const data = olxModelTags.createEmptyOlxModelTagsData();
+  const set = (property, value) => olxModelTags.applyOlxModelTagsOperation(data, { type: 'setModelProperty', modelName: 'Hoco J94 Overlord', property, value });
+  set('Capacity', '75000mAh');
+  assert.equal(data.models.HOCOJ94OVERLORD.tags.some((tag) => tag.startsWith('mAh per g')), false);
+  set('Weight', '1400g');
+  set('Weight', '1400g');
+  assert.deepEqual(data.models.HOCOJ94OVERLORD.tags.filter((tag) => tag.startsWith('mAh per g')), ['mAh per g: 53.6']);
+});
