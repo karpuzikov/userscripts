@@ -750,5 +750,60 @@
    "Sizes": "106 × 70 × 17.5mm.",
    "Weight": "190g."
   }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j136-sirui-22-5w-pd20w-10000mah": {
+  "model": "Hoco J136 Sirui",
+  "scannedAt": "2026-11-26T02:50:36.337Z",
+  "specs": {
+   "Capacity": "10000mAh, 37Wh. Rated capacity: 5500mAh (5V TYP 2A).",
+   "Input": "1 × Type-C port – 5V / 2.4A, 9V / 2A, 12V / 1.5A – 18W. 1 × Micro-USB port – 5V / 2A, 9V / 2A, 12V / 1.5A – 18W.",
+   "Output": "1 × Type-C – 5V / 3A, 9V / 2.22A, 12V / 1.67A – 20W. 1 × USB-A1 – 5V / 3A, 9V / 2A, 10V / 2.25A (SCP), 12V / 1.5A – 22.5W. 1 × USB-A2 – 5V / 3A, 9V / 2A, 10V / 2.25A (SCP), 12V / 1.5A – 22.5W. Total output: 5V / 2A (max).",
+   "Fast charging protocol support": "for PD3.0 / PD20W / QC3.0 / QC2.0 / FCP / SCP / AFC and other fast charging protocols.",
+   "Material": "ABS + PC flame retardant shell + lithium ion polymer battery.",
+   "Indication": "LED digital display of power level. Green indicator of PD / QC fast charging.",
+   "Sizes": "149 × 69 × 17mm.",
+   "Weight": "245g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j136a-sirui-22-5w-pd20w-20000mah": {
+  "model": "Hoco J136A Sirui",
+  "scannedAt": "2026-11-26T02:50:36.337Z",
+  "specs": {
+   "Capacity": "20000mAh, 74Wh. Rated capacity: 11000mAh (5V TYP 2A).",
+   "Input": "1 × Type-C port – 5V / 2.4A, 9V / 2A, 12V / 1.5A – 18W. 1 × Micro-USB port – 5V / 2A, 9V / 2A, 12V / 1.5A – 18W.",
+   "Output": "1 × Type-C – 5V / 3A, 9V / 2.22A, 12V / 1.67A – 20W. 1 × USB-A1 – 5V / 3A, 9V / 2A, 10V / 2.25A (SCP), 12V / 1.5A – 22.5W. 1 × USB-A2 – 5V / 3A, 9V / 2A, 10V / 2.25A (SCP), 12V / 1.5A – 22.5W. Total output: 5V / 2A (max).",
+   "Fast charging protocol support": "for PD3.0 / PD20W / QC3.0 / QC2.0 / FCP / SCP / AFC and other fast charging protocols.",
+   "Material": "ABS + PC flame retardant shell + lithium ion polymer battery.",
+   "Indication": "LED digital display of power level. Green indicator of PD / QC fast charging.",
+   "Sizes": "149 × 69 × 29mm.",
+   "Weight": "425g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j136b-sirui-22-5w-pd20w-30000mah": {
+  "model": "Hoco J136B Sirui",
+  "scannedAt": "2026-11-26T02:50:36.340Z",
+  "specs": {
+   "Capacity": "30000mAh, 111Wh. Rated capacity: 16500mAh (5V TYP 2A).",
+   "Input": "1 × Type-C port – 5V / 2.4A, 9V / 2A, 12V / 1.5A – 18W. 1 × Micro-USB port – 5V / 2A, 9V / 2A, 12V / 1.5A – 18W.",
+   "Output": "1 × Type-C – 5V / 3A, 9V / 2.22A, 12V / 1.67A – 20W. 1 × USB-A1 – 5V / 3A, 9V / 2A, 10V / 2.25A (SCP), 12V / 1.5A – 22.5W. 1 × USB-A2 – 5V / 3A, 9V / 2A, 10V / 2.25A (SCP), 12V / 1.5A – 22.5W. Total output: 5V / 2A (max).",
+   "Fast charging protocol support": "for PD3.0 / PD20W / QC3.0 / QC2.0 / FCP / SCP / AFC and other fast charging protocols.",
+   "Material": "ABS + PC flame retardant shell + lithium ion polymer battery.",
+   "Indication": "LED digital display of power level. Green indicator of PD / QC fast charging.",
+   "Sizes": "149 × 69 × 41mm.",
+   "Weight": "608g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j134a-strong-10000mah-type-c-ver": {
+  "model": "Hoco J134A Strong",
+  "scannedAt": "2026-11-26T02:50:37.343Z",
+  "specs": {
+   "Capacity": "10000mAh, 37Wh. Rated capacity: 5500mAh (5V TYP 2A).",
+   "Input": "1 × Type-C port – 5V / 2A.",
+   "Output": "1 × built-in Type-C cable – 5V / 2A. 1 × USB-A port – 5V / 2A. Total output: 5V / 2A (max).",
+   "Material": "ABS + PC flame retardant shell + lithium ion polymer battery.",
+   "Indication": "LED indicator of power level. 6. Built-in Type-C cable. Small and lightweight.",
+   "Sizes": "102.5 × 64 × 26mm.",
+   "Weight": "215g."
+  }
  }
 }
