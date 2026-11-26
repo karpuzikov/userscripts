@@ -785,6 +785,28 @@
     "mAh per g: 53.3"
    ],
    "group": "Power banks"
+  },
+  "HOCOQ41BRIGHT": {
+   "name": "Hoco Q41 Bright",
+   "tags": [
+    "Capacity: 20000mAh",
+    "Rated capacity: 11000mAh",
+    "Output: 22.5W",
+    "Weight: 370g",
+    "mAh per g: 54.1"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ152PROTOUGH": {
+   "name": "Hoco J152 Pro Tough",
+   "tags": [
+    "Capacity: 80000mAh",
+    "Rated capacity: 44000mAh",
+    "Output: 65W",
+    "Weight: 1380g",
+    "mAh per g: 58.0"
+   ],
+   "group": "Power banks"
   }
  },
  "stopPhrases": [
