@@ -2136,7 +2136,7 @@
  },
  "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j96-strider-power-5000mah": {
   "model": "Hoco J96 Strider",
-  "scannedAt": "2026-11-26T04:22:13.528Z",
+  "scannedAt": "2026-11-26T04:30:25.516Z",
   "specs": {
    "Capacity": "5000mAh 18.5Wh. Rated capacity: 3000mAh.",
    "Input": "Type-C – 5V / 2A.",
@@ -2211,7 +2211,7 @@
  },
  "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j87b-tacker-pd20w-qc3-0-30000mah": {
   "model": "Hoco J87B Tacker",
-  "scannedAt": "2026-11-26T04:22:16.521Z",
+  "scannedAt": "2026-11-26T04:30:23.542Z",
   "specs": {
    "Capacity": "30000mAh 111Wh. Rated capacity: 17700mAh.",
    "Input": "Micro-USB – 18W (for QC, for FCP, for AFC), Type-C – 18W (for PD, for QC, for FCP, for AFC).",
@@ -2223,7 +2223,7 @@
  },
  "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-q9-pro-shell-22-5w-pd20w-10000mah": {
   "model": "Hoco Q9 Pro Shell",
-  "scannedAt": "2026-11-26T04:22:16.525Z",
+  "scannedAt": "2026-11-26T04:30:23.542Z",
   "specs": {
    "Capacity": "10000mAh / 38Wh. Rated capacity: 5900mAh.",
    "Input": "for Lightning – 18W (for PD, for QC, for FCP, for AFC). Type-C – 18W (for PD, for QC, for FCP, for AFC).",
@@ -2235,7 +2235,7 @@
  },
  "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j94-overlord-22-5w-75000mah": {
   "model": "Hoco J94 Overlord",
-  "scannedAt": "2026-11-26T04:22:16.522Z",
+  "scannedAt": "2026-11-26T04:30:23.514Z",
   "specs": {
    "Capacity": "75000mAh 277.5Wh. Rated capacity: 44000mAh.",
    "Input": "Micro-USB / Type-C – 18W (for QC, for FCP, for AFC).",
