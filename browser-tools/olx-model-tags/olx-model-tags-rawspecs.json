@@ -1647,5 +1647,97 @@
    "Sizes": "149 × 69 × 20mm.",
    "Weight": "241g."
   }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j116-pro-pocket-5000mah": {
+  "model": "Hoco J116 Pro Pocket",
+  "scannedAt": "2026-11-26T02:52:01.341Z",
+  "specs": {
+   "Capacity": "5000mAh, 18.5Wh. Rated capacity: 2800mAh (5V TYP 2A).",
+   "Input": "1 × Type-C port – 5V / 2A. 1 × built-in Type-C cable – 5V / 2A.",
+   "Output": "1 × connector for Lightning – 5V / 2A. 1 × built-in Type-C cable – 5V / 2A. Total output: 5V / 2A (max).",
+   "Material": "ABS + PC flame retardant + 21700 battery.",
+   "Indication": "LED digital display of power level.",
+   "Sizes": "80 × 52 × 27mm.",
+   "Weight": "97g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j117-esteem-pd20w-qc3-0-wireless-charging-5000mah": {
+  "model": "Hoco J117 Esteem",
+  "scannedAt": "2026-11-26T02:52:01.344Z",
+  "specs": {
+   "Capacity": "5000mAh, 19.25Wh. Rated capacity: 2800mAh (5V TYP 2A).",
+   "Input": "1 × Type-C – 5V / 2.4A, 9V / 2A, 12V / 1.5A – 18W max.",
+   "Output": "1 × Type-C – 5V / 2.4A, 9V / 2.22A, 12V / 1.67A – 20W max. Wireless charging output – 5W / 7.5W / 10W / 15W. Total output: 5V / 2A (max).",
+   "Fast charging protocol support": "for PD3.0 / PD2.0 / PD20W / QC3.0 / QC2.0 / FCP / AFC and other fast charging protocols.",
+   "Material": "ABS + PC flame retardant shell + lithium polymer battery.",
+   "Indication": "LED indicator of power level. Red indicator of PD / QC fast charging. Green indicator of wireless charging.",
+   "Sizes": "93 × 66 × 13mm.",
+   "Weight": "123g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j116-cool-charging-5000mah-for-lightning": {
+  "model": "Hoco J116 Cool charging",
+  "scannedAt": "2026-11-26T02:52:01.344Z",
+  "specs": {
+   "Capacity": "5000mAh, 18.5Wh. Rated capacity: 2800mAh (5V TYP 2A).",
+   "Input": "1 × Type-C port – 5V / 2A.",
+   "Output": "1 × connector for Lightning – 5V / 2A.",
+   "Material": "PC + ABS flame retardant shell + 21700 battery.",
+   "Indication": "LED digital display of power level.",
+   "Sizes": "78 × 50 × 23mm.",
+   "Weight": "97g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j114a-charger-20000mah": {
+  "model": "Hoco J114A Charger",
+  "scannedAt": "2026-11-26T02:52:01.344Z",
+  "specs": {
+   "Capacity": "20000mAh, 74Wh. Rated capacity: 11000mAh (5V TYP 2A).",
+   "Input": "1 × Type-C – 5V / 2A. 1 × Micro-USB – 5V / 2A.",
+   "Output": "1 × USB-A – 5V / 2A. 1 × built-in cable for Lightning – 5V / 2A. 1 × built-in cable for Type-C – 5V / 2A. 1 × built-in cable for Micro-USB – 5V / 2A. Total output: 5V / 2A (max).",
+   "Material": "ABS + PC flame retardant shell + lithium polymer battery.",
+   "Indication": "LED digital display of power level.",
+   "Sizes": "156 × 70 × 30mm.",
+   "Weight": "446g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j118a-speed-energy-20000mah": {
+  "model": "Hoco J118A Speed energy",
+  "scannedAt": "2026-11-26T02:52:01.344Z",
+  "specs": {
+   "Capacity": "20000mAh, 74Wh. Rated capacity: 11000mAh (5V TYP 2A).",
+   "Input": "1 × Type-C – 5V / 2A. 1 × Micro-USB – 5V / 2A.",
+   "Output": "1 × USB-A 1 – 5V / 2A. 1 × USB-A 2 – 5V / 2A. 1 × built-in cable for Lightning – 5V / 2A. 1 × built-in cable Type-C – 5V / 2A. Total output: 5V / 2A (max).",
+   "Material": "ABS + PC flame retardant shell + lithium polymer battery.",
+   "Indication": "LED indicator of power level.",
+   "Sizes": "149 × 69 × 33mm.",
+   "Weight": "436g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j114-charger-10000mah": {
+  "model": "Hoco J114 Charger",
+  "scannedAt": "2026-11-26T02:52:01.346Z",
+  "specs": {
+   "Capacity": "10000mAh, 37Wh. Rated capacity: 5500mAh (5V TYP 2A).",
+   "Input": "1 × Type-C – 5V / 2A. 1 × Micro-USB – 5V / 2A.",
+   "Output": "1 × USB-A – 5V / 2A. 1 × built-in cable for Lightning – 5V / 2A. 1 × built-in cable for Type-C – 5V / 2A. 1 × built-in cable for Micro-USB – 5V / 2A. Total output: 5V / 2A (max).",
+   "Material": "ABS + PC flame retardant shell + lithium polymer battery.",
+   "Indication": "LED digital display of power level.",
+   "Sizes": "150 × 68 × 16mm.",
+   "Weight": "222g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j113-energy-bar-5000mah-for-type-c": {
+  "model": "Hoco J113 Energy-bar",
+  "scannedAt": "2026-11-26T02:52:01.354Z",
+  "specs": {
+   "Capacity": "5000mAh, 18.5Wh. Rated capacity: 2800mAh (5V TYP 2A).",
+   "Input": "1 × Type-C port – 5V / 2A.",
+   "Output": "1 × built-in cable for Type-C – 5V / 2A.",
+   "Material": "PC + ABS flame retardant shell + 21700 battery.",
+   "Indication": "LED indicator of power level.",
+   "Sizes": "105 × 28 × 28mm.",
+   "Weight": "107g."
+  }
  }
 }
