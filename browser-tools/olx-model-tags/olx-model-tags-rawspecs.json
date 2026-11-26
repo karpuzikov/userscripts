@@ -3445,7 +3445,7 @@
  },
  "https://hocotech.com/product/power/portable-chargers/power-banks/wall-charger-c36-wellspring-dual-usb-built-in-power-bank-5000-mah": {
   "model": "Hoco C36 Wellspring",
-  "scannedAt": "2026-11-26T03:29:23.460Z",
+  "scannedAt": "2026-11-26T03:39:54.472Z",
   "specs": {
    "Input": "AC100-240V, 50/60Hz 0.3A, Micro-USB: DC5V/2A.",
    "Charger output": "single port maximum DC5V / 2.2A, total output DC5V / 2.2A. Mobile power bank output: single port maximum DC5V/2.4A total output DC5V/2.4A.",
@@ -3812,6 +3812,117 @@
    "Output": "USB1: DC5V / 2.1A, USB2: DC5V / 2.1A. 4. PC flame retardant material. 5. Using breathing backlight design patterns, simple, surface coating of environmentally friendly rubber paint, LED power display, you can check the charging level and remaining power (LED1: 1-25%, LED2: 26% -50 %, LED3: 51% -75%, LED4: 76% -100%). 6. Products using high-performance A + grade polymer batteries.",
    "Compatibility": "smart phones and 99% tablets.",
    "Size": "14.7cm * 7.5cm * 1.5cm. Weight: 216g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j14-graceful-energy-10000-mah-wireless-charging": {
+  "model": "Hoco J14 Graceful energy",
+  "scannedAt": "2026-11-26T03:39:53.472Z",
+  "specs": {
+   "Capacity": "10000mAh. Rated capacity: 6400mAh.",
+   "Battery": "lithium polymer battery.",
+   "Size": "150*73*14mm, weight: 238g.",
+   "Input": "Micro-USB: 2A, Type-C: 2A.",
+   "Output": "wireless output: 5W, USB1: 2.1A, USB2: 2.1A.",
+   "Material": "ABS + PC flame retardant material.",
+   "Display": "LED light power display, red breathing light 0-32%; blue breathing light 33% -66%: green breathing light 67% -99%; green constant light means full power. Metal foreign object detected: yellow light on."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j13-adorable-puppy-10000-mah-dual-usb-output": {
+  "model": "Hoco J13 Adorable puppy",
+  "scannedAt": "2026-11-26T03:39:53.480Z",
+  "specs": {
+   "Battery capacity": "10000mAh / 37Wh. Rated output capacity: 6400mAh (5V TYP 1A).",
+   "Input": "Micro-USB 5V / 2.0A Max, Type-C 5V / 2.0A Max.",
+   "Output": "USB1: DC5V / 2.1A, USB2: DC5V / 2.1A. 4. PC flame retardant material. 5. Product surface imported PU leather + imported ink printing technology, comes with LED power display, you can check the charging level and remaining power (LED1: 1-25%, LED2: 26% -50%, LED3: 51%-75%, LED4: 76% -100%). 6. Products using high performance A + grade polymer batteries.",
+   "Compatibility": "smart phones and 99% tablets.",
+   "Size": "15.5 * 7.4 * 2.0cm. Weight: 228g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j6-iridescence-10000mah-dual-usb-with-led-display": {
+  "model": "Hoco J6 Iridescence",
+  "scannedAt": "2026-11-26T03:39:53.482Z",
+  "specs": {
+   "Capacity": "10000mAh / 37Wh.",
+   "Battery": "Lithium polymer.",
+   "Size": "149 * 74 * 14mm.",
+   "Weight": "195g.",
+   "Input": "5V / 2.0A.",
+   "Output": "USB output: 5V / 2.1A, USB2: output: 5V / 2.1A.",
+   "Material": "Flame retardant ABS+PC.",
+   "Display": "LED light display of battery status. 9. Private mold products, high-grade crystal box packaging. 10. MOQ: 40pcs, each image 20pcs."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j23-new-style-2500mah-single-usb": {
+  "model": "Hoco J23 New style",
+  "scannedAt": "2026-11-26T03:39:53.482Z",
+  "specs": {
+   "Capacity": "2500mAh, 9.25Wh. Rated output capacity: 1600mAh (5V TYP 1A).",
+   "Input": "Micro-USB: 5V / 1.0A Max.",
+   "Output": "USB: DC5V / 1.0A. 4. PC flame-retardant material, the product uses a single lithium battery core design, compact and easy to carry, diagonal stripe appearance, anti-friction scratch-resistant.",
+   "Indicator light working mode": "red light flashes when input, full power-red light is always on. Blue light is always on while outputting, power level is below 25%- blue light flashes. Power level 0%- blue light turns off. 6. Product adopts high-performance 18650 lithium battery.",
+   "Compatibility": "compatible with more than 99% mobile phones and tablets with USB input.",
+   "Product size": "diameter * length: 9.6 * 2.7cm. Weight: 72g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j21-vintage-wine-10000-mah-led-power-indicator": {
+  "model": "Hoco J21 Vintage wine",
+  "scannedAt": "2026-11-26T03:39:53.484Z",
+  "specs": {
+   "Cell capacity": "10000mAh 37Wh. Rated output capacity: 6400mAh (5V TYP 1A).",
+   "Input": "Micro-USB: 5V / 2.0A Max.",
+   "Output": "USB: DC5V / 2.1A Max. 4. PC flame-retardant material + the surface of the wine bottle with inkjet design pattern, anti-friction scratch-resistant, comfortable grip. 5. LED power display, can check the charge power and the remaining power in time ( LED1: 1-25 % LED2: 26%-50% LED3: 51%-75% LED4: 76%-100%). 6. The product uses high performance 20650 lithium battery core.",
+   "Compatibility": "Compatible with 99% mobile phones, tablets and USB input digital devices.",
+   "Sizes": "11.9*6.9*2.5cm. Weight: 227g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j21a-heart-words-10000-mah-led-power-indicator": {
+  "model": "Hoco J21A Heart words",
+  "scannedAt": "2026-11-26T03:39:53.488Z",
+  "specs": {
+   "Cell capacity": "10000mAh 37Wh. Rated output capacity: 6400mAh (5V TYP 1A).",
+   "Input": "Micro-USB: 5V / 2.0A Max.",
+   "Output": "USB: DC5V / 2.1A Max. 4. PC flame-retardant material, anti-friction scratch-resistant, comfortable grip. 5. LED power display, can check the charge power and the remaining power in time ( LED1:1-25% LED2:26%-50% LED3: 51%-75% LED4:76%-100%). 6. The product adopts high performance 20650 lithium battery core.",
+   "Compatibility": "compatible with 99% mobile phones, tablets and USB input digital devices",
+   "Size": "11.9*6.9*2.5cm. Weight: 227g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j20-brilliant-sunshine-8000-mah-led-power-indicator": {
+  "model": "Hoco J20 Brilliant sunshine",
+  "scannedAt": "2026-11-26T03:39:53.489Z",
+  "specs": {
+   "Capacity": "8000mAh 29.6Wh. High-performance 18650 lithium battery. Rated output capacity: 5120mAh (5V TYP 1A).",
+   "Input": "Micro-USB 5V/2.0A Max.",
+   "Output": "USB1/2: DC5V/2.1A Max. USB total output: DC5V/2.1A Max. 4. PC flame-retardant material + surface adopts inkjet pattern design process + imported environmentally-friendly rubber oil spray exterior design, anti-friction scratch-resistant, comfortable grip. 5. LED power display, can check the charge power and the remaining power in time ( LED1:1 -25% LED2: 26%-50% LED3:51%-75% LED4:76%-100%). 6. Dual USB output + dual Micro-USB input + comes with silicone Apple + Micro-USB combo output line.",
+   "Compatibility": "Compatible with more than 99% mobile phone/tablet and USB input digital devices.",
+   "Size": "12.8*10.0*2.3cm. Weight: 275g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-b29-10000-domon-10000-mah-led-power-indicator": {
+  "model": "Hoco B29-10000 Domon",
+  "scannedAt": "2026-11-26T03:39:54.465Z",
+  "specs": {
+   "Capacity": "10000mAh.",
+   "Battery": "18650.",
+   "Size": "105*65*23mm.",
+   "Weight": "173g.",
+   "Input": "5V / 2A.",
+   "Output": "USB1: 5V / 2A, USB2: 5V / 1A.",
+   "Material": "flame retardant ABS+PC material, surface with matte grains.",
+   "Display": "LED digital display of battery status, and also the current and voltage when the power bank is charging a mobile phone. 9. LED lighting supported."
+  }
+ },
+ "https://hocotech.com/product/home-office/lamps/power-bank-b27-15000-pusi-15000-mah-with-tabletop-lamp": {
+  "model": "Hoco B27-15000 Pusi",
+  "scannedAt": "2026-11-26T03:39:54.469Z",
+  "specs": {
+   "Capacity": "15000mAh.",
+   "Battery": "18650 lithium battery.",
+   "Size": "153*67*23mm.",
+   "Weight": "282g.",
+   "Input": "5V / 2A Max.",
+   "Output": "USB1: 5V / 2.0A, USB2: 5V / 1A.",
+   "Material": "ABS+PC flame retardant material, surface with matte grains.",
+   "Display": "LED digital display of battery status. 9. With LED lighting function."
   }
  }
 }
