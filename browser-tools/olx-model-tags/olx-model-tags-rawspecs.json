@@ -194,5 +194,19 @@
    "Dimensions": "148 × 70 × 30.5mm.",
    "Weight": "435g."
   }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j154a-victorious-22-5w-pd20w-20000mah": {
+  "model": "Hoco J154A Victorious",
+  "scannedAt": "2026-11-26T02:44:45.317Z",
+  "specs": {
+   "Capacity": "20000mAh, 74Wh, rated capacity: 12000mAh (5V TYP 2A).",
+   "Input": "1 × Type-C port – 5V / 3A, 9V / 2A – 18W.",
+   "Output": "1 × Type-C port – 5V / 3A, 9V / 2.22A, 12V / 1.67A – 20W. 2 × USB-A ports – 5V / 3A, 9V / 2A, 10V / 2.25 (SCP), 12V / 1.5A – 22.5W. Total output: 5V / 2A – 10W (max).",
+   "Fast charge": "Supports PD3.0 / PD2.0 / PD20W / QC3.0 / QC2.0 / FCP / SCP / AFC and other charging protocols.",
+   "Indication": "LED digital display, green fast charging indicator.",
+   "Material": "ABS + PC flame retardant casing, lithium-ion polymer battery, electronic components.",
+   "Dimensions": "143 × 70 × 28mm.",
+   "Weight": "415g."
+  }
  }
 }
