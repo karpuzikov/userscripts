@@ -288,5 +288,32 @@
    "Sizes": "53 × 53 × 125mm.",
    "Weight": "375g."
   }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-qs7-source-jump-starter-10000mah": {
+  "model": "Hoco QS7 Source",
+  "scannedAt": "2026-11-26T02:45:25.331Z",
+  "specs": {
+   "Capacity": "10000mAh, 37Wh.",
+   "Input": "1 × Type-C port – 5V / 2A, 9V / 2A – 18W.",
+   "Output": "2 × USB-A ports – 5V / 2.4A – 12W max. Total USB-A ports output – 5V / 2.4A – 12W max. Car emergency starter output – 12V, current – 400A, peak current – 800A. 4. Jump starter is suitable for gasoline cars below 4.0L and diesel cars below 2.0L. 5. Flashlight with SOS mode.",
+   "Operating temperature": "-20 ～ 60°C.",
+   "Indication": "LED digital display of power level, working status.",
+   "Material": "ABS + PC flame retardant shell + lithium ion polymer battery + electronic components.",
+   "Accessories": "1 × smart battery clamps, 1 × USB-A to Type-C cable. 10. Sizes: 153 × 87 × 37mm. 11. Weight: main unit – 430g, clamps – 190g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-q47-shine-pd20w-10000mah-with-game-console": {
+  "model": "Hoco Q47 Shine",
+  "scannedAt": "2026-11-26T02:45:29.320Z",
+  "specs": {
+   "Capacity": "10000mAh, 38.5Wh. Rated capacity: 5500mAh (5V TYP 2A).",
+   "Input": "1 × Type-C port – 5V / 3A, 9V / 2A – 18W.",
+   "Output": "a) 1 × Type-C port – 5V / 3A, 9V / 2.22A, 12V / 1.67A – 20W max. b) when using the game console, 1 × Type-C port – 5V / 2A – 10W max.",
+   "Fast charging protocol support": "for PD3.0 / PD20W / QC3.0 / QC2.0 / FCP / SCP / AFC and other fast charging protocols.",
+   "Material": "ABS + PC flame retardant casing + lithium ion polymer battery.",
+   "Indication": "LED digital display of power level. Green indicator of PD / QC fast charging mode. 7. Game console with 1500 games. 512Mb TF card. Type-C charging cable can be used as lanyard.",
+   "Sizes": "117 × 77 × 19.5mm.",
+   "Weight": "210g."
+  }
  }
 }
