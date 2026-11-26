@@ -3955,7 +3955,9 @@
     "Rated capacity: 5900mAh",
     "Weight: 189g",
     "Output: 10W",
-    "mAh per g: 52.9"
+    "Dimensions: 97×63×25mm",
+    "mAh per g: 52.9",
+    "mAh per liter: 65456"
    ],
    "group": "Power banks"
   },
@@ -4076,14 +4078,16 @@
   "HOCOJ36AMPLEENERGY": {
    "name": "Hoco J36 Ample energy",
    "tags": [
-    "Weight: 228g"
+    "Weight: 228g",
+    "Dimensions: 142×73×17mm"
    ],
    "group": "Power banks"
   },
   "HOCOB38EXTREME": {
    "name": "Hoco B38 Extreme",
    "tags": [
-    "Weight: 104g"
+    "Weight: 104g",
+    "Dimensions: 101×64×25mm"
    ],
    "group": "Power banks"
   },
