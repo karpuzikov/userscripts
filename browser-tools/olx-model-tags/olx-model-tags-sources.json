@@ -189,7 +189,7 @@
      "path": "^/product/",
      "model": {
       "selector": "h1.product_title",
-      "regex": "[“\"]([^”\"]+)[”\"]",
+      "regex": "[“\"«]([^”\"»]+)[”\"»]",
       "prefix": "Hoco "
      },
      "properties": [
@@ -213,12 +213,12 @@
       {
        "name": "Weight",
        "selector": ".elementor-widget-woocommerce-product-content p",
-       "regex": "[Ww]eight:\\s*(?:main unit\\s*[–-]\\s*)?(\\d+\\s*g)\\b"
+       "regex": "[Ww]eight:?\\s*(?:main unit\\s*[–-]\\s*)?(\\d+\\s*g)\\b"
       },
       {
        "name": "Dimensions",
        "selector": ".elementor-widget-woocommerce-product-content p",
-       "regex": "(?:Sizes?|Dimensions)\\s*:\\s*(\\d+(?:\\.\\d+)?\\s*[×x*]\\s*\\d+(?:\\.\\d+)?\\s*[×x*]\\s*\\d+(?:\\.\\d+)?\\s*(?:mm|cm))",
+       "regex": "(?:Sizes?|Dimensions|Length \\* width \\* height)\\s*:?\\s*(\\d+(?:\\.\\d+)?\\s*[×x*]\\s*\\d+(?:\\.\\d+)?\\s*[×x*]\\s*\\d+(?:\\.\\d+)?\\s*(?:mm|cm))",
        "transform": "dimensionsMm"
       }
      ],

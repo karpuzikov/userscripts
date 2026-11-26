@@ -203,3 +203,14 @@ test('Hoco free-text adapter reads the J68 and J17A wordings', () => {
   assert.deepEqual(['Capacity', 'Rated capacity', 'Weight', 'Dimensions'].map((name) => read(name, j68)), ['10000mAh', '5900mAh', '241g', '135*66*15mm']);
   assert.deepEqual(['Capacity', 'Rated capacity', 'Weight', 'Dimensions'].map((name) => read(name, j17a)), ['10000mAh', '6400mAh', '240g', '15.1*7.1*1.2cm']);
 });
+
+test('Hoco free-text adapter reads the S10 and J30 wordings', () => {
+  const page = JSON.parse(require('fs').readFileSync(__dirname + '/olx-model-tags-sources.json', 'utf8')).sources.find((source) => source.name === 'HOCO').pages.at(-1);
+  const read = (name, text) => text.match(new RegExp(page.properties.find((property) => property.name === name).regex))?.[1];
+  assert.equal('Power bank «J30 Cool paint» 10000 mAh'.match(new RegExp(page.model.regex))[1], 'J30 Cool paint');
+  assert.equal('Power bank “S10” 10000mAh'.match(new RegExp(page.model.regex))[1], 'S10');
+  const s10 = '7. Size 143*73*17.5mm, weight 236g.';
+  const j30 = '7. Length * width * height: 115*70*12mm. Weight: 173g.';
+  assert.deepEqual([read('Dimensions', s10), read('Weight', s10)], ['143*73*17.5mm', '236g']);
+  assert.deepEqual([read('Dimensions', j30), read('Weight', j30)], ['115*70*12mm', '173g']);
+});
