@@ -1003,7 +1003,9 @@
     "Rated capacity: 10800mAh",
     "Output: 130W",
     "Weight: 492g",
-    "mAh per g: 40.7"
+    "Dimensions: 153×66×30mm",
+    "mAh per g: 40.7",
+    "mAh per liter: 66020"
    ],
    "group": "Power banks"
   },
@@ -1014,7 +1016,9 @@
     "Rated capacity: 5500mAh",
     "Output: 22.5W",
     "Weight: 187g",
-    "mAh per g: 53.5"
+    "Dimensions: 118×72×17mm",
+    "mAh per g: 53.5",
+    "mAh per liter: 69237"
    ],
    "group": "Power banks"
   },
@@ -1367,7 +1371,13 @@
   "HOCOQ25GRACEFUL": {
    "name": "Hoco Q25 Graceful",
    "tags": [
-    "Capacity: 10000mAh"
+    "Capacity: 10000mAh",
+    "Rated capacity: 5500mAh",
+    "Output: 20W",
+    "Weight: 191g",
+    "Dimensions: 108×52×28mm",
+    "mAh per g: 52.4",
+    "mAh per liter: 63594"
    ],
    "group": "Power banks"
   },
@@ -1389,7 +1399,9 @@
     "Rated capacity: 5500mAh",
     "Output: 22.5W",
     "Weight: 224g",
-    "mAh per g: 44.6"
+    "Dimensions: 127×70×19mm",
+    "mAh per g: 44.6",
+    "mAh per liter: 59203"
    ],
    "group": "Power banks"
   },
@@ -1400,7 +1412,9 @@
     "Rated capacity: 5400mAh",
     "Output: 22.5W",
     "Weight: 224g",
-    "mAh per g: 44.6"
+    "Dimensions: 127×70×19mm",
+    "mAh per g: 44.6",
+    "mAh per liter: 59203"
    ],
    "group": "Power banks"
   },
@@ -1411,7 +1425,9 @@
     "Rated capacity: 11000mAh",
     "Output: 22.5W",
     "Weight: 334g",
-    "mAh per g: 59.9"
+    "Dimensions: 118×72×30mm",
+    "mAh per g: 59.9",
+    "mAh per liter: 78468"
    ],
    "group": "Power banks"
   },
