@@ -1,9 +1,10 @@
 // ==UserScript==
 // @name         OLX - Model Tags
 // @namespace    https://www.olx.ua/
-// @version      0.16.5
+// @version      0.17.0
 // @description  Tag OLX ads by model (tags shared by every ad of that model) or per ad, mark broken ads, filter search results by tags, per-tag Hide (pixel mesh) / Highlight (outline). Shared model catalog is read from GitHub without any key; your own marks stay in this browser. Phone specs (year, DXOMARK camera, AnTuTu, sensor, display, battery, charger, NFC) are captured from the DXOMARK, Kimovil and GSMArena pages you open. OLX only gets read locally from the open page.
 // @match        https://www.olx.ua/*
+// @match        https://hotline.ua/*
 // @match        https://www.dxomark.com/smartphones/*
 // @match        https://www.kimovil.com/*
 // @match        https://www.gsmarena.com/*
@@ -327,6 +328,7 @@
     // over every fresh catalog. Only with the owner's token are the operations uploaded (catalog file + personal file).
 
     const IS_OLX_PAGE = location.hostname.endsWith('olx.ua');
+    const IS_HOTLINE_PAGE = location.hostname === 'hotline.ua';
     const GITHUB_DATA_REPOSITORY = 'karpuzikov/userscripts';
     const GITHUB_DATA_BRANCH = 'main';
     const GITHUB_CATALOG_FILE_PATH = 'browser-tools/olx-model-tags/olx-model-tags-catalog.json';
@@ -919,7 +921,7 @@
         tick();
     }
 
-    if (!IS_OLX_PAGE) { startSpecsCapture(); return; }
+    if (!IS_OLX_PAGE && !IS_HOTLINE_PAGE) { startSpecsCapture(); return; }
 
     // ---------- Page reading (local DOM only) ----------
 
@@ -1183,9 +1185,11 @@
         for (const { property, value, isAdTag, removeLabel, onRemove } of tableRows) {
             const row = createElement('tr', isAdTag ? 'olx-model-tags-row-ad' : '');
             row.append(createElement('th', '', property), createElement('td', '', value));
-            const removeCell = createElement('td');
-            removeCell.append(createIconButton('close', removeLabel, onRemove));
-            row.append(removeCell);
+            if (onRemove) { // read-only on hotline.ua
+                const removeCell = createElement('td');
+                removeCell.append(createIconButton('close', removeLabel, onRemove));
+                row.append(removeCell);
+            }
             table.append(row);
         }
         return table;
@@ -1419,6 +1423,81 @@
         for (const ad of findAdsOnPage()) renderTagBar(ad);
         renderFilterPanel();
     }
+
+    // ---------- hotline.ua: read-only spec tables of catalog models, in product lists and on product pages ----------
+
+    const STORAGE_KEY_HOTLINE_SHOWN_PROPERTIES = 'olxModelTagsHotlineShownProperties'; // null until picked: every property shows
+    let isHotlineSpecsPanelExpanded = false;
+
+    function findHotlineProductsOnPage() {
+        const listProducts = [...document.querySelectorAll('.list-item__info .item-title')].map((titleLink) => ({
+            title: readTextWithoutStyleTags(titleLink),
+            anchor: titleLink.closest('.list-item__info').querySelector('.list-item__specifications') || titleLink.parentElement,
+        }));
+        const productPageTitle = document.querySelector('h1.title__main');
+        return productPageTitle ? [...listProducts, { title: readTextWithoutStyleTags(productPageTitle), anchor: productPageTitle.closest('.header') || productPageTitle }] : listProducts;
+    }
+
+    function renderHotlineSpecs() {
+        const shownProperties = GM_getValue(STORAGE_KEY_HOTLINE_SHOWN_PROPERTIES, null);
+        const isPropertyShown = (property) => !shownProperties || shownProperties.includes(property);
+        const pageProperties = new Set();
+        for (const product of findHotlineProductsOnPage()) {
+            const modelEntry = olxModelTagsData.models[detectModelKeyInTitle(olxModelTagsData, product.title)];
+            const rows = (modelEntry?.tags || []).map(splitTagIntoPropertyAndValue).filter((tag) => tag.property);
+            rows.forEach((row) => pageProperties.add(row.property));
+            const shownRows = rows.filter((row) => isPropertyShown(row.property));
+            let bar = product.anchor.nextElementSibling?.classList.contains('olx-model-tags-bar') ? product.anchor.nextElementSibling : null;
+            const renderedKey = JSON.stringify([modelEntry?.name, shownRows]);
+            if (bar?.dataset.renderedKey === renderedKey) continue;
+            if (!modelEntry) { bar?.remove(); continue; }
+            if (!bar) { bar = createElement('olx-model-tags-bar', 'olx-model-tags-root olx-model-tags-bar'); product.anchor.after(bar); }
+            bar.dataset.renderedKey = renderedKey;
+            bar.replaceChildren(createElement('span', 'olx-model-tags-chip olx-model-tags-chip-model', modelEntry.name), ...(shownRows.length ? [createPropertyTable(shownRows)] : []));
+        }
+        renderHotlineSpecsPanel([...new Set([...pageProperties, ...(shownProperties || [])])].sort(), isPropertyShown);
+    }
+
+    function renderHotlineSpecsPanel(properties, isPropertyShown) {
+        let panel = document.querySelector('.olx-model-tags-panel');
+        if (!panel) {
+            panel = createElement('div', 'olx-model-tags-root olx-model-tags-panel');
+            panel.setAttribute('role', 'region');
+            panel.setAttribute('aria-label', 'OLX Model Tags: specs to show');
+            document.body.append(panel);
+        }
+        panel.classList.toggle('olx-model-tags-panel-collapsed', !isHotlineSpecsPanelExpanded);
+        const children = [createTextButton(`Specs ${properties.filter(isPropertyShown).length}/${properties.length}`, isHotlineSpecsPanelExpanded ? 'Close the spec picker' : 'Pick which specs show under products',
+            () => { isHotlineSpecsPanelExpanded = !isHotlineSpecsPanelExpanded; renderHotlineSpecs(); }, isHotlineSpecsPanelExpanded)];
+        if (isHotlineSpecsPanelExpanded) {
+            const propertyButtons = createElement('div', 'olx-model-tags-panel-filters');
+            for (const property of properties) {
+                propertyButtons.append(createTextButton(property, `${isPropertyShown(property) ? 'Hide' : 'Show'} ${property}`, () => {
+                    GM_setValue(STORAGE_KEY_HOTLINE_SHOWN_PROPERTIES, properties.filter((candidate) => (candidate === property) !== isPropertyShown(candidate)));
+                    renderHotlineSpecs();
+                }, isPropertyShown(property)));
+            }
+            children.push(propertyButtons);
+        }
+        panel.replaceChildren(...children);
+    }
+
+    // hotline.ua is a Vue app: lists change without a page load. Changes inside the script's own elements are ignored.
+    async function startHotlineSpecs() {
+        olxModelTagsData = olxModelTagsData ? rebuildLocalDataFromCacheAndPendingOperations(olxModelTagsData) : createEmptyOlxModelTagsData();
+        renderHotlineSpecs();
+        let hotlineRenderFrame = 0;
+        new MutationObserver((mutations) => {
+            if (hotlineRenderFrame || mutations.every((mutation) => mutation.target.closest?.('.olx-model-tags-root'))) return;
+            hotlineRenderFrame = requestAnimationFrame(() => { hotlineRenderFrame = 0; renderHotlineSpecs(); });
+        }).observe(document.body, { childList: true, subtree: true });
+        if (!GM_getValue(STORAGE_KEY_CACHED_DATA, null) || Date.now() - GM_getValue(STORAGE_KEY_CACHED_AT, 0) > CATALOG_REFRESH_INTERVAL_MS) {
+            await synchronizeWithGithub();
+            renderHotlineSpecs();
+        }
+    }
+
+    if (IS_HOTLINE_PAGE) { startHotlineSpecs(); return; }
 
     // OLX is a React app: re-attach bars to cards it adds or re-renders. Only bar-less ads trigger work.
     let renderFrame = 0;
