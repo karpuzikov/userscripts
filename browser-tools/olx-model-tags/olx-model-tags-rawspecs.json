@@ -928,5 +928,101 @@
    "Sizes": "152 × 67 × 19mm.",
    "Weight": "260g."
   }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-q36-sunlight-pd20w-wireless-charging-5000mah": {
+  "model": "Hoco Q36 Sunlight",
+  "scannedAt": "2026-11-26T02:50:55.361Z",
+  "specs": {
+   "Capacity": "5000mAh, 19.25Wh. Rated capacity: 2800mAh (5V TYP 2A).",
+   "Input": "1 × Type-C – 5V / 3A, 9V / 2A – 18W.",
+   "Output": "1 × Type-C – 5V / 3A, 9V / 2.22A – 20W max. Wireless output – 5W / 7.5W / 10W. Total output: 5V / 2A (max).",
+   "Fast charging protocol support": "for PD3.0 / PD2.0 / PD20W / QC3.0 / QC2.0 / FCP / AFC and other fast charging protocols.",
+   "Material": "aluminum alloy + PC + ABS flame-retardant casing + high-efficiency polymer lithium battery cells.",
+   "Indication": "LED indicator of power level. 7. Foldable stand.",
+   "Sizes": "101 × 65 × 10mm.",
+   "Weight": "128g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j131-spirit-22-5w-pd20w-10000mah": {
+  "model": "Hoco J131 Spirit",
+  "scannedAt": "2026-11-26T02:50:55.362Z",
+  "specs": {
+   "Capacity": "10000mAh, 37Wh. Rated capacity: 5300mAh (5V TYP 2A).",
+   "Input": "Adapter mode (AC): 100V – 240V, 50 / 60Hz, 0.3A (US / EU plug). Power bank mode: 1 × Type-C port – 5V / 3A, 9V / 2A, 12V / 1.5A – 18W.",
+   "Output": "Adapter mode (AC): 1 × built-in cable Type-C – 5V / 2A – 10W. 1 × built-in cable for iP – 5V / 2A – 10W. 1 × Type-C port – 5V / 2A – 10W. 1 × USB-A port – 5V / 2A – 10W. Total output: 5V / 2A (max). Power bank mode: 1 × Type-C port – 5V / 3A, 9V / 2.22A, 12V / 1.67A – 20W. 1 × built-in cable Type-C – 5V / 3A, 9V / 2.22A, 12V / 1.67A – 20W. 1 × built-in cable for iP – 5V / 2A – 10W. 1 × USB-A port – 5V / 2A, 9V / 2A, 10V / 2.25A (SCP), 12V / 1.5A – 22.5W. Total output: 5V / 2A (max).",
+   "Fast charging protocol support": "for PD3.0 / PD20W / QC3.0 / QC2.0 / FCP / SCP / AFC and other fast charging protocols.",
+   "Material": "ABS + PC flame retardant casing + lithium ion polymer battery.",
+   "Indication": "white dots LED digital display of power level. Green indicator of PD / QC fast charging. 7. Foldable US plug. Detachable EU adapter plug. 8. Two built-in cables Type-C and iP with storage slots. Type-C cable can be used as a lanyard.",
+   "Sizes": "116 × 63.5 × 29mm. 10. Weight: 245g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j129a-nature-20000mah-flashlight": {
+  "model": "Hoco J129A Nature",
+  "scannedAt": "2026-11-26T02:50:55.363Z",
+  "specs": {
+   "Capacity": "20000mAh, 74Wh. Rated capacity: 11000mAh (5V TYP 2A).",
+   "Input": "1 × Type-C – 5V / 2A.",
+   "Output": "1 × USB-A1 – 5V / 2A. 1 × USB-A2 – 5V / 2A. Total output: 5V / 2A (max).",
+   "Material": "ABS + PC flame retardant casing + high-efficiency polymer lithium battery cells.",
+   "Indication": "LED digital display of power level. 6. Powerful flashlight and lanyard.",
+   "Sizes": "150 × 70 × 28mm.",
+   "Weight": "426g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-q35-portable-pd20w-wireless-charging-10000mah": {
+  "model": "Hoco Q35 Portable",
+  "scannedAt": "2026-11-26T02:50:55.365Z",
+  "specs": {
+   "Capacity": "10000mAh, 38.5Wh. Rated capacity: 5400mAh (5V TYP 2A).",
+   "Input": "1 × Type-C port – 5V / 2A, 9V / 2A, 12V / 1.5A – 18W. 1 × Type-C cable – 5V / 2A, 9V / 2A, 12V / 1.5A – 18W. 1 × for iP cable – 5V / 2A, 9V / 2A, 12V / 1.5A – 18W.",
+   "Output": "1 × Type-C port – 5V / 2.4A, 9V / 2.22A, 12V / 1.67A – 20W max. 1 × Type-C cable – 5V / 2.4A, 9V / 2.22A, 12V / 1.67A – 20W max. 1 × for iP cable – 5V / 2.4A, 9V / 2.22A, 12V / 1.67A – 20W max. Wireless output – 5W / 7.5W / 10W / 15W, 2.5W for watch. Total output: 5V / 2A (max).",
+   "Fast charging protocol support": "for PD3.0 / PD20W / QC3.0 / QC2.0 / FCP / SCP / AFC and other fast charging protocols.",
+   "Material": "PC + ABS flame-retardant casing + high-efficiency polymer lithium battery cells.",
+   "Indication": "LED digital display of power level. Green indicator of PD / QC fast charging. 7. Included Type-C to iP bidirectional charging cable.",
+   "Sizes": "108 × 69 × 20mm.",
+   "Weight": "205g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-q36a-sunlight-pd20w-wireless-charging-10000mah": {
+  "model": "Hoco Q36A Sunlight",
+  "scannedAt": "2026-11-26T02:50:55.403Z",
+  "specs": {
+   "Capacity": "10000mAh, 38.5Wh. Rated capacity: 6000mAh (5V TYP 2A).",
+   "Input": "1 × Type-C – 5V / 3A, 9V / 2A – 18W.",
+   "Output": "1 × Type-C – 5V / 3A, 9V / 2.22A – 20W max. Wireless output – 5W / 7.5W / 10W / 15W. Total output: 5V / 2A (max).",
+   "Fast charging protocol support": "for PD3.0 / PD2.0 / PD20W / QC3.0 / QC2.0 / FCP / AFC and other fast charging protocols.",
+   "Material": "aluminum alloy casing + high-efficiency polymer lithium battery cells.",
+   "Indication": "LED indicator of power level. Green indicator of wireless charging state. 7. Foldable stand.",
+   "Sizes": "101 × 65 × 12mm.",
+   "Weight": "200g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j132b-sabio-22-5w-pd20w-30000mah": {
+  "model": "Hoco J132B Sabio",
+  "scannedAt": "2026-11-26T02:50:56.346Z",
+  "specs": {
+   "Capacity": "30000mAh, 111Wh. Rated capacity: 16500mAh (5V TYP 2A).",
+   "Input": "1 × Type-C port – 5V / 3A, 9V / 2A – 18W.",
+   "Output": "1 × Type-C port – 5V / 3A, 9V / 2.22A, 12V / 1.67A – 20W max. 1 × USB-A port – 5V / 3A – 15W max. 1 × built-in Type-C cable – 5V / 3A, 9V / 2A, 10V / 2.25 (SCP), 12V / 1.5A – 22.5W max. 1 × built-in iP cable – 5V / 2.4A – 12W. Total output: 5V / 2A (max).",
+   "Fast charging protocol": "for PD3.0 / PD20W / QC3.0 / QC2.0 / FCP / SCP / AFC and other fast charging protocols.",
+   "Material": "ABS + PC flame retardant casing + high-efficiency polymer lithium battery cells.",
+   "Indication": "LED digital display of power level. Green indicator of PD / QC fast charging. 7. Two built-in Type-C and iP cables with storage slots. Comes with Type-C to Type-C cable (18.5cm), can be used as a lanyard.",
+   "Sizes": "152 × 67 × 43mm.",
+   "Weight": "650g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j133a-triumph-pd20w-10000mah-type-c-ver": {
+  "model": "Hoco J133A Triumph",
+  "scannedAt": "2026-11-26T02:50:56.350Z",
+  "specs": {
+   "Capacity": "10000mAh, 38.5Wh. Rated capacity: 5500mAh (5V TYP 2A).",
+   "Input": "1 × Type-C port – 5V / 2.4A, 9V / 2A, 12V / 1.5A – 18W. 1 × iP port – 5V / 2A – 10W.",
+   "Output": "1 × Type-C port – 5V / 2.4A, 9V / 2.22A, 12V / 1.67A – 20W. 1 × built-in Type-C cable – 5V / 2.4A, 9V / 2.22A, 12V / 1.67A – 20W. Total output: 5V / 2A (max).",
+   "Fast charging protocol support": "for PD3.0 / PD2.0 / PD20W / QC3.0 / QC2.0 / FCP / AFC and other fast charging protocols.",
+   "Material": "ABS + PC flame retardant casing + high-efficiency polymer lithium battery cells.",
+   "Indication": "LED indicator of power level. 7. Magnetic, small and lightweight. Built-in short Type-C cable.",
+   "Sizes": "103 × 67.5 × 17mm.",
+   "Weight": "180g."
+  }
  }
 }
