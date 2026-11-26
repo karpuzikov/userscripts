@@ -3415,7 +3415,7 @@
  },
  "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j25b-new-power-10000mah-single-usb-built-in-type-c-cable": {
   "model": "Hoco J25B New power",
-  "scannedAt": "2026-11-26T03:29:04.453Z",
+  "scannedAt": "2026-11-26T03:39:23.477Z",
   "specs": {
    "Battery capacity": "10000mAh / 37Wh. Rated capacity: 6000mAh (5V TYP 2.1A).",
    "Input": "Micro-USB: 5V / 2A Max.",
@@ -3425,7 +3425,7 @@
  },
  "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j25a-new-power-10000mah-single-usb-built-in-micro-usb-cable": {
   "model": "Hoco J25A New power",
-  "scannedAt": "2026-11-26T03:29:04.478Z",
+  "scannedAt": "2026-11-26T03:39:23.474Z",
   "specs": {
    "Battery capacity": "10000mAh / 37Wh. Rated capacity: 6000mAh (5V TYP 2.1A).",
    "Input": "Micro-USB: 5V / 2A Max.",
@@ -3435,7 +3435,7 @@
  },
  "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j25-new-power-10000mah-single-usb-built-in-lightning-cable": {
   "model": "Hoco J25 New power",
-  "scannedAt": "2026-11-26T03:29:04.510Z",
+  "scannedAt": "2026-11-26T03:39:23.526Z",
   "specs": {
    "Battery capacity": "10000mAh / 37Wh. Rated capacity: 6000mAh (5V TYP 2.1A).",
    "Input": "Micro-USB: 5V / 2A Max.",
@@ -3505,6 +3505,69 @@
    "Battery output": "USB 1 / 2: DC5V / 2A max. Wireless output: 5W. Total Output DC5V / 2A max. 4. LED digital display for power level.",
    "Power bank material": "ABS+PC flame retardant. 7. Multiple circuit protection.",
    "Power bank size": "146*72*18mm, weight: 226g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j30-cool-paint-10000-mah-dual-usb-output": {
+  "model": "Hoco J30 Cool paint",
+  "scannedAt": "2026-11-26T03:39:23.472Z",
+  "specs": {
+   "Capacity": "10000mAh / 37Wh. Rated output capacity: 6400mAh (5V TYP 1A).",
+   "Input": "Micro-USB – 5V / 2A. Output: USB 1 / 2: DC5V / 2.1A. Total output DC5V / 2.1A.",
+   "LED display power": "timely check the charge and remaining power (LED1: 1-25%, LED2: 26%-50%, LED3: 51%-75%, LED4: 76%-100%). 4. The product uses high-performance A+ grade polymer batteries.",
+   "Material": "ABS+PC flame retardant material.",
+   "Compatibility": "compatible with 99% of mobile phones, tablets and USB input digital devices. 7. Length * width * height: 115*70*12mm. Weight: 173g.",
+   "MOQ": "each image 20 pcs."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j26-simple-energy-10000-mah-dual-usb-output": {
+  "model": "Hoco J26 Simple energy",
+  "scannedAt": "2026-11-26T03:39:23.473Z",
+  "specs": {
+   "Capacity": "10000mAh / 37Wh. Rated capacity: 6000mAh (5V TYP 2.1A).",
+   "Input": "Micro-USB, 5V / 2A Max.",
+   "Output": "USB 1 / 2: DC5V / 2.1A Max. Total output DC5V / 2.1A Max. 4. LED light shows the power (key activation): You can check the charge and remaining power at any time (light LED 1: 1-25%, LED2: 26%-50%, LED3: 51%-75%, LED4: 76%-100 %). 5. The product uses high performance A + grade polymer batteries.",
+   "Material": "ABS+ PC flame retardant material. 7. Multiple circuit protection, compatible with more than 99% of digital devices such as mobile phones/tablets. Length * width * height: 139 * 70 * 16mm. Weight: 231g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j29-cool-square-5000-mah-dual-usb-output": {
+  "model": "Hoco J29 Cool square",
+  "scannedAt": "2026-11-26T03:39:23.476Z",
+  "specs": {
+   "Capacity": "5000mAh / 18.5Wh. Rated capacity: 3200mAh (5V TYP 1A).",
+   "Input": "Micro-USB – 5V / 1A Max.",
+   "Output": "USB 1 / 2: DC5V / 1A. Total output DC5V / 1A.",
+   "LED light shows the power": "You can check the charge and remaining power at any time (LED 1: 1-25%, LED2: 26%-50%, LED3: 51%-75%, LED4: 76%-100%). 5. The product uses high performance A+ grade polymer batteries.",
+   "Material": "ABS+PC flame retardant material. 7. Multiple circuit protection, compatible with more than 99% of digital devices such as mobile phones / tablets. 8. Length * width * height: 120 * 69 * 13mm. Weight: 127g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j27-power-treasure-10000-mah-dual-usb-output": {
+  "model": "Hoco J27 Power treasure",
+  "scannedAt": "2026-11-26T03:39:23.477Z",
+  "specs": {
+   "Capacity": "10000mAh / 37Wh. Rated capacity: 6000mAh (5V TYP 2.1A).",
+   "Input": "Micro-USB / Type-C – 5V / 2A Max.",
+   "Output": "USB 1/2: DC5V / 2.1A Max. Total output DC5V/2.1A Max. 4. LED digital display for power level check in real time.",
+   "Material": "ABS+PC flame retardant materials. 6. Length * width * height: 14.2 * 6.6 * 1.4cm. Weight: 209g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j29b-cool-square-20000-mah-dual-usb-output": {
+  "model": "Hoco J29B Cool square",
+  "scannedAt": "2026-11-26T03:39:23.477Z",
+  "specs": {
+   "Capacity": "20000mAh / 74Wh. Rated capacity: 12000mAh (5V TYP 2.1A).",
+   "Input": "Micro-USB / Type-C – 5V / 2A Max.",
+   "Output": "USB 1 / 2: DC5V / 2.1A. Total output DC5V / 2.1A. 4. The digital display shows the power level in real time, which is more intuitive. 5. The product uses high performance A+ grade polymer batteries.",
+   "Material": "ABS+PC flame retardant materials. 7. Multiple circuit protection, compatible with more than 99% of digital devices such as mobile phones & tablets. 8. Length * width * height: 159 * 109 * 17mm. Weight: 372g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j29a-cool-square-10000-mah-dual-usb-output": {
+  "model": "Hoco J29A Cool square",
+  "scannedAt": "2026-11-26T03:39:23.522Z",
+  "specs": {
+   "Capacity": "10000mAh / 37Wh. Rated capacity: 6000mAh (5V TYP 2.1A).",
+   "Input": "Micro-USB – 5V / 2A Max.",
+   "Output": "USB 1 / 2: DC5V / 2.1A. Total output DC5V / 2.1A. 4. The digital display shows the power in real time, which is more intuitive. 5. The product uses high performance A+ grade polymer batteries.",
+   "Material": "ABS+PC flame retardant materials. 7. Multiple circuit protection, compatible with more than 99% of digital devices such as mobile phones / tablets. 8. Length * width * height: 130 * 69 * 16mm. Weight: 188g."
   }
  }
 }
