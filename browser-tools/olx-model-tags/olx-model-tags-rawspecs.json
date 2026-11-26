@@ -599,5 +599,18 @@
    "Sizes": "149.7 × 70 × 22mm.",
    "Weight": "268g."
   }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j146a-night-tide-4-cables-20000mah": {
+  "model": "Hoco J146A Night tide",
+  "scannedAt": "2026-11-26T02:50:25.345Z",
+  "specs": {
+   "Capacity": "20000mAh, 74Wh. Rated capacity: 11000mAh (5V TYP 2A).",
+   "Input": "1 × Type-C port – 5V / 2A. 1 × built-in USB-A cable – 5V / 2A.",
+   "Output": "1 × built-in Type-C cable – 5V / 2A. 1 × built-in Micro-USB cable – 5V / 2A. 1 × built-in iP cable – 5V / 2A. 1 × USB-A port – 5V / 2A. Total output: 5V / 2A (max).",
+   "Material": "ABS + PC flame retardant shell + lithium ion polymer battery.",
+   "Indication": "LED indicator of power level. 6. Built-in USB-A, iP, Type-C and Micro-USB cables.",
+   "Sizes": "149.7 × 70 × 31mm.",
+   "Weight": "450g."
+  }
  }
 }
