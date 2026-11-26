@@ -5151,6 +5151,24 @@
     "Output: 45W"
    ],
    "group": "Power banks"
+  },
+  "REMAXFP13": {
+   "name": "REMAX FP-13",
+   "tags": [
+    "Capacity: 5000mAh",
+    "Rated capacity: 2600mAh",
+    "Output: 20W"
+   ],
+   "group": "Power banks"
+  },
+  "REMAXCP19": {
+   "name": "REMAX CP-19",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 11000mAh",
+    "Output: 30W"
+   ],
+   "group": "Power banks"
   }
  },
  "stopPhrases": [
