@@ -2753,6 +2753,7 @@
     "Rated capacity: 3000mAh",
     "Weight: 170g",
     "Dimensions: 81×62×25mm",
+    "Output: 10W",
     "mAh per g: 29.4",
     "mAh per liter: 39825"
    ],
@@ -2765,6 +2766,7 @@
     "Rated capacity: 11800mAh",
     "Weight: 401g",
     "Dimensions: 138×69×27mm",
+    "Output: 10.5W",
     "mAh per g: 49.9",
     "mAh per liter: 77793"
    ],
@@ -2777,6 +2779,7 @@
     "Rated capacity: 5900mAh",
     "Weight: 220g",
     "Dimensions: 136×68×15mm",
+    "Output: 10.5W",
     "mAh per g: 45.5",
     "mAh per liter: 72088"
    ],
