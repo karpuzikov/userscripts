@@ -1429,5 +1429,18 @@
    "Sizes": "150 × 68 × 28mm.",
    "Weight": "432g."
   }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j128-powerful-10000mah": {
+  "model": "Hoco J128 Powerful",
+  "scannedAt": "2026-11-26T02:51:35.351Z",
+  "specs": {
+   "Capacity": "10000mAh, 32Wh. Rated capacity: 5000mAh (5V TYP 2A).",
+   "Input": "1 × Type-C – 5V / 2A. 1 × Micro-USB – 5V / 2A.",
+   "Output": "1 × USB-A 1 – 5V / 2A. 1 × USB-A 2 – 5V / 2A. Total output: 5V / 2A (max).",
+   "Material": "ABS + PC flame retardant shell + lithium polymer battery.",
+   "Indication": "LED indicator of power level.",
+   "Sizes": "149 × 68 × 16mm.",
+   "Weight": "230g."
+  }
  }
 }
