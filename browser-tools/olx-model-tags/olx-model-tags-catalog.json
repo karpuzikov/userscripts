@@ -1271,6 +1271,75 @@
     "mAh per g: 34.1"
    ],
    "group": "Power banks"
+  },
+  "HOCOQ26JOY": {
+   "name": "Hoco Q26 Joy",
+   "tags": [
+    "Capacity: 5000mAh",
+    "Rated capacity: 3000mAh",
+    "Output: 20W",
+    "Weight: 104g",
+    "mAh per g: 48.1"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOQS2LAND": {
+   "name": "Hoco QS2 Land",
+   "tags": [
+    "Capacity: 8000mAh",
+    "Weight: 778g",
+    "mAh per g: 10.3"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOQ25GRACEFUL": {
+   "name": "Hoco Q25 Graceful",
+   "tags": [
+    "Capacity: 10000mAh"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOQS1SPRING": {
+   "name": "Hoco QS1 Spring",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Weight: 366g",
+    "mAh per g: 27.3"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOQ23BLADE": {
+   "name": "Hoco Q23 Blade",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5500mAh",
+    "Output: 22.5W",
+    "Weight: 224g",
+    "mAh per g: 44.6"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOQ22TAURUS": {
+   "name": "Hoco Q22 Taurus",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5400mAh",
+    "Output: 22.5W",
+    "Weight: 224g",
+    "mAh per g: 44.6"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOQ21AGREAT": {
+   "name": "Hoco Q21A Great",
+   "tags": [
+    "Capacity: 20000mAh",
+    "Rated capacity: 11000mAh",
+    "Output: 22.5W",
+    "Weight: 334g",
+    "mAh per g: 59.9"
+   ],
+   "group": "Power banks"
   }
  },
  "stopPhrases": [
