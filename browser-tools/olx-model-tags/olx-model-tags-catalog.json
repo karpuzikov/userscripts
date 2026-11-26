@@ -1093,7 +1093,9 @@
     "Rated capacity: 11800mAh",
     "Output: 22.5W",
     "Weight: 400g",
-    "mAh per g: 50.0"
+    "Dimensions: 140×68×28mm",
+    "mAh per g: 50.0",
+    "mAh per liter: 75030"
    ],
    "group": "Power banks"
   },
@@ -2614,6 +2616,120 @@
     "Dimensions: 146×67×16.5mm",
     "mAh per g: 39.8",
     "mAh per liter: 61957"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ102COOLFIGURE": {
+   "name": "Hoco J102 Cool figure",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5900mAh",
+    "Output: 20W",
+    "Weight: 230g",
+    "Dimensions: 149×70×17mm",
+    "mAh per g: 43.5",
+    "mAh per liter: 56398"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ103DISCOVERYEDITION": {
+   "name": "Hoco J103 Discovery edition",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5500mAh",
+    "Output: 22.5W",
+    "Weight: 241g",
+    "Dimensions: 146×67×16.5mm",
+    "mAh per g: 41.5",
+    "mAh per liter: 61957"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ102ACOOLFIGURE": {
+   "name": "Hoco J102A Cool figure",
+   "tags": [
+    "Capacity: 20000mAh",
+    "Rated capacity: 11800mAh",
+    "Output: 20W",
+    "Weight: 418g",
+    "Dimensions: 149×71×28mm",
+    "mAh per g: 47.8",
+    "mAh per liter: 67519"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOQ17ELECTRIC": {
+   "name": "Hoco Q17 Electric",
+   "tags": [
+    "Capacity: 25000mAh",
+    "Rated capacity: 15000mAh",
+    "Output: 140W",
+    "Weight: 652g",
+    "Dimensions: 155×50×53mm",
+    "mAh per g: 38.3",
+    "mAh per liter: 60864"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ101BASTUTE": {
+   "name": "Hoco J101B Astute",
+   "tags": [
+    "Capacity: 30000mAh",
+    "Rated capacity: 17700mAh",
+    "Output: 22.5W",
+    "Weight: 596g",
+    "Dimensions: 146×68×41mm",
+    "mAh per g: 50.3",
+    "mAh per liter: 73701"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ101ASTUTE": {
+   "name": "Hoco J101 Astute",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5900mAh",
+    "Output: 22.5W",
+    "Weight: 230g",
+    "Dimensions: 140×68×16mm",
+    "mAh per g: 43.5",
+    "mAh per liter: 65651"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ96STRIDER": {
+   "name": "Hoco J96 Strider",
+   "tags": [
+    "Capacity: 5000mAh",
+    "Rated capacity: 3000mAh",
+    "Weight: 170g",
+    "Dimensions: 81×62×25mm",
+    "mAh per g: 29.4",
+    "mAh per liter: 39825"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ100AHIGHRANKING": {
+   "name": "Hoco J100A High-ranking",
+   "tags": [
+    "Capacity: 20000mAh",
+    "Rated capacity: 11800mAh",
+    "Weight: 401g",
+    "Dimensions: 138×69×27mm",
+    "mAh per g: 49.9",
+    "mAh per liter: 77793"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ100HIGHRANKING": {
+   "name": "Hoco J100 High-ranking",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5900mAh",
+    "Weight: 220g",
+    "Dimensions: 136×68×15mm",
+    "mAh per g: 45.5",
+    "mAh per liter: 72088"
    ],
    "group": "Power banks"
   }
