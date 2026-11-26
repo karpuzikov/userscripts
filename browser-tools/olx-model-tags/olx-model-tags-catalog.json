@@ -875,7 +875,9 @@
     "Rated capacity: 5500mAh",
     "Output: 22.5W",
     "Weight: 245g",
-    "mAh per g: 40.8"
+    "Dimensions: 149×69×17mm",
+    "mAh per g: 40.8",
+    "mAh per liter: 57216"
    ],
    "group": "Power banks"
   },
@@ -885,7 +887,9 @@
     "Capacity: 10000mAh",
     "Rated capacity: 5500mAh",
     "Weight: 215g",
-    "mAh per g: 46.5"
+    "Dimensions: 102.5×64×26mm",
+    "mAh per g: 46.5",
+    "mAh per liter: 58630"
    ],
    "group": "Power banks"
   },
@@ -1772,6 +1776,32 @@
     "Dimensions: 106×70×17.5mm",
     "mAh per g: 52.6",
     "mAh per liter: 77012"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ136ASIRUI": {
+   "name": "Hoco J136A Sirui",
+   "tags": [
+    "Capacity: 20000mAh",
+    "Rated capacity: 11000mAh",
+    "Output: 22.5W",
+    "Weight: 425g",
+    "Dimensions: 149×69×29mm",
+    "mAh per g: 47.1",
+    "mAh per liter: 67081"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ136BSIRUI": {
+   "name": "Hoco J136B Sirui",
+   "tags": [
+    "Capacity: 30000mAh",
+    "Rated capacity: 16500mAh",
+    "Output: 22.5W",
+    "Weight: 608g",
+    "Dimensions: 149×69×41mm",
+    "mAh per g: 49.3",
+    "mAh per liter: 71171"
    ],
    "group": "Power banks"
   }
