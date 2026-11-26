@@ -4795,7 +4795,11 @@
    "tags": [
     "Capacity: 20000mAh",
     "Rated capacity: 12000mAh",
-    "Output: 22.5W"
+    "Output: 22.5W",
+    "Dimensions: 160×90×40mm",
+    "Weight: 373.3g",
+    "mAh per g: 53.6",
+    "mAh per liter: 34722"
    ],
    "group": "Power banks"
   },
