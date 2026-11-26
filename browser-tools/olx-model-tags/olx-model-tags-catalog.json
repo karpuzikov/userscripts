@@ -1445,6 +1445,19 @@
     "mAh per liter: 66578"
    ],
    "group": "Power banks"
+  },
+  "HOCOJ154AVICTORIOUS": {
+   "name": "Hoco J154A Victorious",
+   "tags": [
+    "Capacity: 20000mAh",
+    "Rated capacity: 12000mAh",
+    "Output: 22.5W",
+    "Weight: 415g",
+    "Dimensions: 143×70×28mm",
+    "mAh per g: 48.2",
+    "mAh per liter: 71357"
+   ],
+   "group": "Power banks"
   }
  },
  "stopPhrases": [
