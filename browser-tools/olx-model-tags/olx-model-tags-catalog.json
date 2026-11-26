@@ -882,6 +882,50 @@
     "mAh per g: 47.6"
    ],
    "group": "Power banks"
+  },
+  "HOCOJ153STABILITY": {
+   "name": "Hoco J153 Stability",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5500mAh",
+    "Output: 10W",
+    "Weight: 220g",
+    "mAh per g: 45.5"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ160ORIGINAL": {
+   "name": "Hoco J160 Original",
+   "tags": [
+    "Capacity: 5000mAh",
+    "Rated capacity: 2600mAh",
+    "Output: 10W",
+    "Weight: 125g",
+    "mAh per g: 40.0"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ159AESSENCE": {
+   "name": "Hoco J159A Essence",
+   "tags": [
+    "Capacity: 20000mAh",
+    "Rated capacity: 12000mAh",
+    "Output: 22.5W",
+    "Weight: 400g",
+    "mAh per g: 50.0"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ155SHINE": {
+   "name": "Hoco J155 Shine",
+   "tags": [
+    "Capacity: 20000mAh",
+    "Rated capacity: 11800mAh",
+    "Output: 22.5W",
+    "Weight: 435g",
+    "mAh per g: 46.0"
+   ],
+   "group": "Power banks"
   }
  },
  "stopPhrases": [
