@@ -1023,6 +1023,28 @@
     "mAh per g: 50.0"
    ],
    "group": "Power banks"
+  },
+  "HOCOQ35PORTABLE": {
+   "name": "Hoco Q35 Portable",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5400mAh",
+    "Output: 20W",
+    "Weight: 205g",
+    "mAh per g: 48.8"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ101AASTUTE": {
+   "name": "Hoco J101A Astute",
+   "tags": [
+    "Capacity: 20000mAh",
+    "Rated capacity: 11800mAh",
+    "Output: 22.5W",
+    "Weight: 400g",
+    "mAh per g: 50.0"
+   ],
+   "group": "Power banks"
   }
  },
  "stopPhrases": [
