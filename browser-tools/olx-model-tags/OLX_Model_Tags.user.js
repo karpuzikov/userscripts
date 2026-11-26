@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OLX - Model Tags
 // @namespace    https://www.olx.ua/
-// @version      0.15.0
+// @version      0.15.1
 // @description  Tag OLX ads by model (tags shared by every ad of that model) or per ad, mark broken ads, filter search results by tags, per-tag Hide (pixel mesh) / Highlight (outline). Shared model catalog is read from GitHub without any key; your own marks stay in this browser. Phone specs (year, DXOMARK camera, AnTuTu, sensor, display, battery, charger, NFC) are captured from the DXOMARK, Kimovil and GSMArena pages you open. OLX only gets read locally from the open page.
 // @match        https://www.olx.ua/*
 // @match        https://www.dxomark.com/smartphones/*
@@ -787,7 +787,7 @@
             if (job) {
                 const total = counts(job.done);
                 element('status').textContent = `${job.active ? 'Scanning' : job.finished ? 'Done' : 'Stopped'}: page ${job.page}/${pageCount}\n`
-                    + `open ${Object.keys(job.inFlight).length}, waiting ${job.queue.length}\nsaved ${total.saved}, partial ${total.partial}, failed ${total.failed}`
+                    + `${Object.keys(job.inFlight).length} tabs open, ${job.queue.length} products not opened yet\nsaved ${total.saved}, partial ${total.partial}, failed ${total.failed}`
                     + (!job.active && (total.partial || total.failed) ? '\n(details in the browser console)' : '');
             }
         }
