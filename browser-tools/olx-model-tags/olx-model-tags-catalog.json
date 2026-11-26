@@ -3867,7 +3867,11 @@
    "name": "Hoco B35E Entourage",
    "tags": [
     "Dimensions: 121×67×9.5mm",
-    "Weight: 226g"
+    "Weight: 226g",
+    "Capacity: 30000mAh",
+    "Output: 10W",
+    "mAh per g: 132.7",
+    "mAh per liter: 389527"
    ],
    "group": "Power banks"
   },
@@ -3877,7 +3881,10 @@
     "Rated capacity: 11800mAh",
     "Weight: 425g",
     "Output: 10W",
-    "Dimensions: 145×73×25mm"
+    "Dimensions: 145×73×25mm",
+    "Capacity: 20000mAh",
+    "mAh per g: 47.1",
+    "mAh per liter: 75579"
    ],
    "group": "Power banks"
   },
@@ -4124,7 +4131,10 @@
    "name": "Hoco J37 Wisdom",
    "tags": [
     "Rated capacity: 5900mAh",
-    "Weight: 226g"
+    "Weight: 226g",
+    "Capacity: 10000mAh",
+    "Output: 5W",
+    "mAh per g: 44.2"
    ],
    "group": "Power banks"
   },
