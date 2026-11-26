@@ -4665,5 +4665,113 @@
    "11. Bare Dimensions": "85*60*32mm",
    "12. Product Material Craftsmanship+Fire Protection Level": "ABS+PC/V-0 Fire Protection"
   }
+ },
+ "https://www.iremax.net/product/1890": {
+  "model": "REMAX FC-15",
+  "scannedAt": "2026-11-26T05:37:03.537Z",
+  "specs": {
+   "1.Battery Type": "Polymer Li-ion Cell",
+   "2.Battery Capacity": "20000mAh",
+   "3.Total Battery Power": "20000mAh/3.85V/77Wh",
+   "4.Rated Capacity": "12000mAh(5V/2A)",
+   "5.Input Voltage and Current": "Type-C Input:5V/3A,9V/2A,12V/1.5A",
+   "6.Output Voltage and Current": "Type-C Output:5V/3A,9V/2.22A,10V/2.25A,12V/1.67",
+   "Support Protocol": "(QC2.0 QC3.0 AFC SCP PD20W)",
+   "USB-A Output": "5V/2.4A",
+   "Type-C Cable Output": "5V/3A,9V/ 2.22A,10V/2.25A,12V/1.67A",
+   "Support protocol": "(QC2.0 QC3.0 AFC SCP PD20W)",
+   "Lightning cable output": "5V/2.4A",
+   "7.Total output": "5V3A",
+   "8.Energy conversion rate %": "≥80%",
+   "9.Bare weight": "≈336g",
+   "10.Bare size": "115*71.3 *31.8mm",
+   "11.Product material technology + fire level": "PC + ABS / sun pattern (94 V-0)"
+  }
+ },
+ "https://www.iremax.net/product/3555": {
+  "model": "REMAX FP-36",
+  "scannedAt": "2026-11-26T05:37:03.538Z",
+  "specs": {
+   "1.Product Color": "Champagne Gold, Space Gray, Fantasy Purple",
+   "2.Battery Type": "Li-Polymer",
+   "3.Battery Capacity": "5000mAh",
+   "4.Total Battery Power": "3.85V/19.25Wh",
+   "5.Rated Capacity": "2800mAh(5V-2A)",
+   "6.Input Voltage and Current": "TType-C Input: 5V-3A / 9V-2A 18W (Max)",
+   "6. Protocol support": "PD2.0/PD3.0/QC2.0/QC3.0/AFC/FCP/SCP/PE2.0/PE+1.1/PE+2.0",
+   "7.Output Voltage and Current": "Type-C Output: 5V-3A / 9V-2.22A / 12V/1.67A 20W (Max)",
+   "Wireless charging output": "5W/7.5W/10W /15W",
+   "Protocol support": "PD2.0/PD3.0/QC2.0/QC3.0/AFC/FCP/SCP/PE2.0/PE+1.1/PE+2.0",
+   "8.Total Output": "Multi-port total output: 5V-3A(Max)",
+   "9.Energy Conversion Rate%": "≥65%",
+   "10.Product Material Process+Fireproofing Level": "Aluminum Alloy+Tempered Glass+ABS +PC+V0 fireproof",
+   "11.Bare machine weight": "≈110",
+   "12.Bare machine size": "95*46.3*13.7"
+  }
+ },
+ "https://www.iremax.net/product/1434": {
+  "model": "REMAX FC-13",
+  "scannedAt": "2026-11-26T05:37:03.540Z",
+  "specs": {
+   "1.Product Color": "Beige, Dark Night Black, Starfish Blue",
+   "2.Battery Type": "Polymer Li-ion Cells",
+   "3.Battery Capacity": "10000mAh",
+   "4.Total Battery Power": "3.85V/38.5Wh",
+   "5.Rated Capacity": "6000mAh(5V/2A)",
+   "6.Cell Type/Use": "146074*1PCS",
+   "8.Input Voltage and Current": "Type-C Input:5V/3A,9V/2A,12V/1.5A/Support Protocol:(AFC/FCP/PD3.0)",
+   "9.Output Voltage and Current": "Type-C Output:5V/3A,9V/2.22A,10V/2.25A,12V/1.67",
+   "Support Protocol": "(QC2.0) QC3.0 AFC SCP PD20W)",
+   "Type-C cable output": "5V/3A,9V/2.22A,10V/2.25A,12V/1.67A",
+   "Support protocol": "(QC2.0 QC3.0 AFC SCP PD20W)",
+   "USB-A output": "5V/2.4A",
+   "Lightning cable output": "5V/2.4A",
+   "10.Multi-port Total Output": "5V3A(Max)",
+   "11.Energy Conversion Rate": "≥80%",
+   "12.Product Material Process+Fire Rating": "PC+ABS/Sunburst(94 V-0)",
+   "13.Bare Weight": "≈195g",
+   "14.Bare Size": "115*71*21mm"
+  }
+ },
+ "https://www.iremax.net/product/4239": {
+  "model": "REMAX FP-90",
+  "scannedAt": "2026-11-26T05:37:04.540Z",
+  "specs": {
+   "1.Product Color": "Desert Gold, Starlight Silver, Deep FOH",
+   "2.Battery Type": "Li-Polymer",
+   "3.Battery Capacity": "10000mAh",
+   "4.Total Battery Power": "3.7V/37Wh",
+   "5.Rated Capacity": "5500mAh(5V-2A)",
+   "6.Input Voltage": "Adaptor Mode: 110V-220V AC 50/60HZ 0.25A (Max)",
+   "Mobile Power Mode": "Type-C: 5V/3A 9V/2A 12V/1.5A 18W (Max)",
+   "7. Output Voltage and Current": "Adapter Mode:",
+   "Mobile power mode": "",
+   "Type-C output": "5V-3A/9V-2.22A/12V-1.67A 20W(Max)",
+   "Type-C cable output": "5V-3A/9V-2.22A/10V-2.25A/12V-1.67A 22.5W(Max)",
+   "Multi-port total Output 5V/3A (Support protocol": "QC2.0/QC3.0/FCP/AFC/SSCP/PE1.1/PE2.0/PD2.0/PD3.0)",
+   "8.Multi-port Total Output": "5V/3A",
+   "9.Energy Conversion Rate": "≥65%",
+   "10.Bare Weight": "≈201g",
+   "11.Bare Dimension": "68*68*30mm",
+   "12.Product Material Process + Fire Rating": "Material: ABS+PC, Process: Oil Spraying, Fire Rating: v0"
+  }
+ },
+ "https://www.iremax.net/product/4089": {
+  "model": "REMAX FP-52",
+  "scannedAt": "2026-11-26T05:37:04.543Z",
+  "specs": {
+   "1. Product color": "Gunmetal, silver",
+   "2. Battery type": "Lithium polymer",
+   "3. Battery capacity": "10,000mAh",
+   "4. Total battery power": "5000mAh/7.7V/38.5Wh (2 battery cells in series)",
+   "5. Rated capacity": "5500mAh (5V-2A)",
+   "6. Input voltage and current": "Type-C/Type-C cable input: 5V/3A, 9V/3A, 12V/2.5A, 15V/2A, 20V/1.5A (Max 30W) Supported protocols: PPS/PD2.0/PD3.0/QC2.0/QC3.0",
+   "7. Output Voltage and Current": "Type-C/Type-C cable output: 5V/3A, 9V/3A, 10V/2.25A, 12V/3A, 15V/2.67A, 20V/2A (Max 40W) Supported protocols: PPS/PD2.0/PD3.0/QC2.0/QC3.0/AFC/FCP/SCP/SSCP/PE2.0/PE1.1/SFCP Wireless charging output: 2.5W, 5W/7.5W/10W/15W Watch support: Apple, Huawei protocols",
+   "8. Total Output": "Multi-port Total Output: 5V/3A (Max)",
+   "9. Energy conversion rate": "≥65%",
+   "10. Bare unit weight": "≈203g",
+   "11. Bare machine dimensions": "110.2*69.5*18.3mm",
+   "12. Product Material Process + Fire Resistance Level": "ABS + PC + VO Fireproof"
+  }
  }
 }
