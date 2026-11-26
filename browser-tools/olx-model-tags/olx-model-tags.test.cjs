@@ -151,6 +151,7 @@ test('maxWatts picks the highest output of a free-text output block', () => {
   const { maxWatts } = olxModelTags.SOURCE_VALUE_TRANSFORMS;
   assert.equal(maxWatts('USB 1 – 22.5W (for QC), USB 2 / 3 – 5V / 2.1A. Type-C – 20W (for PD). Total output – 5V / 3A.'), '22.5W');
   assert.equal(maxWatts('5V / 3A'), '15W');
+  assert.equal(maxWatts('USB 1 / 2: 5V-3A, Type-C: 5V-3A.'), '15W');
   assert.equal(maxWatts('1 × Type-C plug – 5V / 2A.'), '10W');
   assert.equal(maxWatts('Car starter output – 12V, current – 400A. USB-A – 5V / 2.4A – 12W max.'), '12W');
 });
