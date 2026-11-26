@@ -2782,5 +2782,58 @@
    "Material": "aluminum alloy shell.",
    "Display": "LED digital display of power level. 7. 4 USB ports output + 3 ports input."
   }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j62-jove-30000mah": {
+  "model": "Hoco J62 Jove",
+  "scannedAt": "2026-11-26T02:53:36.345Z",
+  "specs": {
+   "Capacity": "30000mAh. Rated capacity: 17700mAh.",
+   "Input": "Micro-USB / Type-C – 5V / 2A max.",
+   "Output": "USB 1 / 2 / 3: DC5V / 2A max. Total output: DC5V / 2A max.",
+   "Material": "ABS + PC flame retardant material. 5. High energy efficiency A + polymer lithium battery.",
+   "Sizes": "168 * 83 * 33mm. Weight: 710g. 7. 3 USB port output, white LED indicator shows power level (button activation), long press the power button for 3s to turn on the table lamp, double click to turn off the table lamp."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j60-snowflake-30000mah-with-table-lamp": {
+  "model": "Hoco J60 Snowflake",
+  "scannedAt": "2026-11-26T02:53:36.350Z",
+  "specs": {
+   "Capacity": "30000mAh, 111Wh. Rated capacity: 17700mAh.",
+   "Input": "Micro-USB / Type-C / Lightning: 5V / 2A max. 3. 4 USB port output: USB 1 / 2 / 3 / 4: DC5V / 2A max. Total output: DC5V / 2A max. 4. LED indicator of power level (button activation): long press the power button for 2s to activate the table lamp mode, short press to adjust the brightness (three brightness levels), the third short press or long press for 2s to turn off the table lamp. 5. High energy efficiency A + polymer lithium battery.",
+   "Material": "ABS + PC flame retardant material.",
+   "Sizes": "165 * 84 * 32mm. Weight: 697g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j63-velocity-pdqc3-0-wireless-charging-10000mah": {
+  "model": "Hoco J63 Velocity",
+  "scannedAt": "2026-11-26T02:53:36.350Z",
+  "specs": {
+   "Capacity": "10000mAh, 37Wh. Rated capacity: 5900mAh.",
+   "Input": "Micro-USB: 5V-2A, 9V-2A, 12V-1.5A, 18W. Type-C: 5V / 2.4A (PD), 9V / 2A (PD), 12V-1.5A (PD), 18W.",
+   "Output": "USB 1: 3.6V-6.5V / 3A, 6.6V-9V / 2A, 9.1V-12V / 1.5 A, 18W. Type-C: 5V / 2.4A (PD), 9V / 2A (PD), 12V / 1.5A (PD), 18W. Wireless charging output: 5W / 7.5W / 10W. Total output: 5V / 3A. 4. Wireless charging icon display (button activation), fast charging display when PD / QC input and output.",
+   "Material": "polymer lithium battery + ABS + PC flame retardant material.",
+   "Size": "150 * 68 * 17mm. Weight: 232g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j42a-high-power-20000mah": {
+  "model": "Hoco J42A High power",
+  "scannedAt": "2026-11-26T02:53:36.361Z",
+  "specs": {
+   "Capacity": "20000mAh, 74Wh. Rated capacity: 11800mAh.",
+   "Input": "Micro-USB / Type-C: 5V / 2A max. 3. 4 USB port output: USB 1 / 2 / 3 / 4: DC5V / 2A max. Total output: DC5V / 2A max. 4. LED digital display shows power level (button activated). 5. High energy efficiency A + polymer lithium battery.",
+   "Material": "ABS + PC flame retardant material.",
+   "Sizes": "145 * 69 * 30mm. Weight: 425g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j68-resourceful-10000mah": {
+  "model": "Hoco J68 Resourceful",
+  "scannedAt": "2026-11-26T02:53:36.364Z",
+  "specs": {
+   "Capacity": "10000mAh, 37Wh. Rated capacity: 5900mAh.",
+   "Input": "Micro-USB/Type-C: 5V / 2A max.",
+   "Output": "USB: DC5V / 2A. Total output: 5V / 2A max. 4. LED digital display shows power level (button activation).",
+   "Material": "high energy efficiency A + polymer lithium battery + aluminum alloy shell.",
+   "Sizes": "135*66*15mm, weight: 241g."
+  }
  }
 }
