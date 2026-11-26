@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OLX - Model Tags
 // @namespace    https://www.olx.ua/
-// @version      0.15.12
+// @version      0.15.13
 // @description  Tag OLX ads by model (tags shared by every ad of that model) or per ad, mark broken ads, filter search results by tags, per-tag Hide (pixel mesh) / Highlight (outline). Shared model catalog is read from GitHub without any key; your own marks stay in this browser. Phone specs (year, DXOMARK camera, AnTuTu, sensor, display, battery, charger, NFC) are captured from the DXOMARK, Kimovil and GSMArena pages you open. OLX only gets read locally from the open page.
 // @match        https://www.olx.ua/*
 // @match        https://www.dxomark.com/smartphones/*
@@ -244,7 +244,7 @@
         chargerPower: (text, element) => extractChargerPower(element.innerHTML.split(/<hr[^>]*>/).map((html) => html.replace(/<[^>]+>/g, ' '))),
         // "15.1*7.1*1.2cm" is converted to "151×71×12mm" so the volume math always works in mm.
         dimensionsMm: (text) => {
-            const sides = text.replace(/\s+/g, '').replace(/[x*]/gi, '×').replace(/(mm|cm)(?=×)/g, ''); // "10cm*6cm*1.4cm" has a unit on every number
+            const sides = text.replace(/\s+/g, '').replace(/(^|[×x*])[LWH](?=\d)/g, '$1').replace(/[x*]/gi, '×').replace(/(mm|cm)(?=×)/g, ''); // "10cm*6cm*1.4cm" has a unit on every number
             const match = sides.match(/^([\d.]+)×([\d.]+)×([\d.]+)(mm|cm)$/);
             if (!match) return '';
             const factor = match[4] === 'cm' ? 10 : 1;

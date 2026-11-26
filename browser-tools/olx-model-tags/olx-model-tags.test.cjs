@@ -195,6 +195,7 @@ test('dimensionsMm converts centimetres to millimetres', () => {
   assert.equal(dimensionsMm('15.1*7.1*1.2cm'), '151×71×12mm');
   assert.equal(dimensionsMm('135*66*15mm'), '135×66×15mm');
   assert.equal(dimensionsMm('10cm*6cm*1.4cm'), '100×60×14mm');
+  assert.equal(dimensionsMm('L136 * W68 * H16mm'), '136×68×16mm');
 });
 
 test('Hoco free-text adapter reads the J68 and J17A wordings', () => {
@@ -233,4 +234,12 @@ test('Hoco free-text adapter reads unlabeled dimensions with a unit on every num
   const regex = new RegExp(page.properties.find((property) => property.name === 'Dimensions').regex);
   assert.equal('7. 10cm*6cm*1.4cm (L×W×H) weight: 204g.'.match(regex)[1], '10cm*6cm*1.4cm');
   assert.equal('8. Sizes: 145 * 69 * 30mm. Weight: 425g.'.match(regex)[1], '145 * 69 * 30mm');
+});
+
+test('Hoco free-text adapter reads J28 "L136 * W68 * H16mm, weight: 196g"', () => {
+  const page = JSON.parse(require('fs').readFileSync(__dirname + '/olx-model-tags-sources.json', 'utf8')).sources.find((source) => source.name === 'HOCO').pages.at(-1);
+  const read = (name, text) => text.match(new RegExp(page.properties.find((property) => property.name === name).regex))?.[1];
+  const text = '8. Power bank size: L136 * W68 * H16mm, weight: 196g.';
+  assert.equal(read('Dimensions', text), 'L136 * W68 * H16mm');
+  assert.equal(read('Weight', text), '196g');
 });
