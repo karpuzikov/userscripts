@@ -2938,5 +2938,36 @@
    "Battery": "lithium polymer.",
    "Material": "aluminum alloy."
   }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j50-surf-wireless-charging-10000mah": {
+  "model": "Hoco J50 Surf",
+  "scannedAt": "2026-11-26T02:54:04.351Z",
+  "specs": {
+   "Capacity": "10000mAh, 37Wh. Rated capacity: 5900mAh (5V TYP 2A).",
+   "Input": "Micro-USB/Type-C: 5V/2A max, Lightning: 5V/1.5A.",
+   "Output": "USB DC5V/2A, wireless charging: 5W. Total output: 5V/2A.",
+   "Sizes": "139*69*20mm. Weight: 246g. 5. ABS + PC flame retardant material. High energy efficiency A+ polymer lithium battery."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j52-new-joy-10000mah": {
+  "model": "Hoco J52 New joy",
+  "scannedAt": "2026-11-26T02:54:04.352Z",
+  "specs": {
+   "Capacity": "10000mAh, 37Wh. Rated capacity: 5900mAh.",
+   "Input": "Micro-USB / Type-C: 5V/2A max.",
+   "Output": "USB 1 / 2 5V/2A. Total output: 5V/2A max. 4. LED light white display of power level (button activation).",
+   "Material": "lithium polymer battery, ABS + PC flame retardant material.",
+   "Sizes": "139 * 68 * 16mm. Weight: 219g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j53a-exceptional-20000mah": {
+  "model": "Hoco J53A Exceptional",
+  "scannedAt": "2026-11-26T02:54:04.352Z",
+  "specs": {
+   "Capacity": "20000mAh, 74Wh. Rated capacity: 11800mAh (5V TYP 2A).",
+   "Input": "Micro-USB / Type-C: 5V/2A max.",
+   "Output": "USB 1 / 2 5V/2A. Total output: 5V/2A max. 5. High energy efficiency A+ polymer lithium battery, ABS+PC flame retardant material.",
+   "Sizes": "147*71*29mm. Weight: 401g."
+  }
  }
 }
