@@ -3252,6 +3252,43 @@
     "mAh per liter: 66159"
    ],
    "group": "Power banks"
+  },
+  "HOCOQ1KRAFT": {
+   "name": "Hoco Q1 Kraft",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5900mAh",
+    "Output: 22.5W",
+    "Weight: 148g",
+    "Dimensions: 95×64×17mm",
+    "mAh per g: 67.6",
+    "mAh per liter: 96749"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ69ASPEEDFLASH": {
+   "name": "Hoco J69A Speed flash",
+   "tags": [
+    "Capacity: 15000mAh",
+    "Rated capacity: 8850mAh",
+    "Output: 18W",
+    "Weight: 339g",
+    "Dimensions: 145×70×23mm",
+    "mAh per g: 44.2",
+    "mAh per liter: 64254"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ46ASTAROCEAN": {
+   "name": "Hoco J46A Star ocean",
+   "tags": [
+    "Capacity: 20000mAh",
+    "Weight: 479g",
+    "Dimensions: 146×69×28mm",
+    "mAh per g: 41.8",
+    "mAh per liter: 70904"
+   ],
+   "group": "Power banks"
   }
  },
  "stopPhrases": [
