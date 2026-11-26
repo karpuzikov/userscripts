@@ -1045,6 +1045,72 @@
     "mAh per g: 50.0"
    ],
    "group": "Power banks"
+  },
+  "HOCOQ9PROSHELL": {
+   "name": "Hoco Q9 Pro Shell",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5900mAh",
+    "Output: 22.5W",
+    "Weight: 243g",
+    "mAh per g: 41.2"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ89": {
+   "name": "Hoco J89",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5900mAh",
+    "Output: 20W",
+    "Weight: 234g",
+    "mAh per g: 42.7"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ86BELECTRIC": {
+   "name": "Hoco J86B Electric",
+   "tags": [
+    "Capacity: 60000mAh",
+    "Rated capacity: 35400mAh",
+    "Output: 22.5W",
+    "Weight: 1200g",
+    "mAh per g: 50.0"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ90A": {
+   "name": "Hoco J90A",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5900mAh",
+    "Output: 22.5W",
+    "Weight: 243g",
+    "mAh per g: 41.2"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOQ11EXPRESSAR": {
+   "name": "Hoco Q11 Expressar",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5700mAh",
+    "Output: 20W",
+    "Weight: 200g",
+    "mAh per g: 50.0"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ83STANDARD": {
+   "name": "Hoco J83 Standard",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5900mAh",
+    "Output: 20W",
+    "Weight: 270g",
+    "mAh per g: 37.0"
+   ],
+   "group": "Power banks"
   }
  },
  "stopPhrases": [
