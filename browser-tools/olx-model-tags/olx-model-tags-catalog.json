@@ -4104,7 +4104,8 @@
    "name": "Hoco C36 Wellspring",
    "tags": [
     "Rated capacity: 3200mAh",
-    "Weight: 168g"
+    "Weight: 168g",
+    "Dimensions: 72×61×31mm"
    ],
    "group": "Power banks"
   },
@@ -4413,6 +4414,112 @@
     "Output: 10.5W",
     "Weight: 216g",
     "mAh per g: 46.3"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ14GRACEFULENERGY": {
+   "name": "Hoco J14 Graceful energy",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 6400mAh",
+    "Output: 5W",
+    "Weight: 238g",
+    "Dimensions: 150×73×14mm",
+    "mAh per g: 42.0",
+    "mAh per liter: 65232"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ13ADORABLEPUPPY": {
+   "name": "Hoco J13 Adorable puppy",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 6400mAh",
+    "Output: 10.5W",
+    "Weight: 228g",
+    "Dimensions: 155×74×20mm",
+    "mAh per g: 43.9",
+    "mAh per liter: 43592"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ6IRIDESCENCE": {
+   "name": "Hoco J6 Iridescence",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Output: 10.5W",
+    "Weight: 195g",
+    "Dimensions: 149×74×14mm",
+    "mAh per g: 51.3",
+    "mAh per liter: 64782"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ23NEWSTYLE": {
+   "name": "Hoco J23 New style",
+   "tags": [
+    "Capacity: 2500mAh",
+    "Rated capacity: 1600mAh",
+    "Output: 5W",
+    "Weight: 72g",
+    "mAh per g: 34.7"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ21VINTAGEWINE": {
+   "name": "Hoco J21 Vintage wine",
+   "tags": [
+    "Rated capacity: 6400mAh",
+    "Output: 10.5W",
+    "Weight: 227g",
+    "Dimensions: 119×69×25mm"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ21AHEARTWORDS": {
+   "name": "Hoco J21A Heart words",
+   "tags": [
+    "Rated capacity: 6400mAh",
+    "Output: 10.5W",
+    "Weight: 227g",
+    "Dimensions: 119×69×25mm"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ20BRILLIANTSUNSHINE": {
+   "name": "Hoco J20 Brilliant sunshine",
+   "tags": [
+    "Capacity: 8000mAh",
+    "Rated capacity: 5120mAh",
+    "Output: 10.5W",
+    "Weight: 275g",
+    "Dimensions: 128×100×23mm",
+    "mAh per g: 29.1",
+    "mAh per liter: 27174"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOB2910000DOMON": {
+   "name": "Hoco B29-10000 Domon",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Output: 10W",
+    "Weight: 173g",
+    "Dimensions: 105×65×23mm",
+    "mAh per g: 57.8",
+    "mAh per liter: 63704"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOB2715000PUSI": {
+   "name": "Hoco B27-15000 Pusi",
+   "tags": [
+    "Capacity: 15000mAh",
+    "Output: 10W",
+    "Weight: 282g",
+    "Dimensions: 153×67×23mm",
+    "mAh per g: 53.2",
+    "mAh per liter: 63621"
    ],
    "group": "Power banks"
   }
