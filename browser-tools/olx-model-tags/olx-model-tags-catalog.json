@@ -4574,6 +4574,27 @@
     "mAh per g: 62.3"
    ],
    "group": "Power banks"
+  },
+  "HOCOB33A20000CAMOUFLAGE": {
+   "name": "Hoco B33A-20000 Camouflage",
+   "tags": [
+    "Capacity: 20000mAh",
+    "Output: 10.5W",
+    "Weight: 312g",
+    "Dimensions: 163×102×14mm",
+    "mAh per g: 64.1",
+    "mAh per liter: 85924"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOB3320000FLOWERSTORY": {
+   "name": "Hoco B33-20000 Flower story",
+   "tags": [
+    "Output: 10.5W",
+    "Weight: 312g",
+    "Dimensions: 163×102×14mm"
+   ],
+   "group": "Power banks"
   }
  },
  "stopPhrases": [
