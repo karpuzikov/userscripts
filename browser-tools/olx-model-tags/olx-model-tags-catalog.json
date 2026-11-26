@@ -4165,7 +4165,11 @@
    "tags": [
     "Rated capacity: 3200mAh",
     "Weight: 168g",
-    "Dimensions: 72×61×31mm"
+    "Dimensions: 72×61×31mm",
+    "Capacity: 5000mAh",
+    "Output: 12W",
+    "mAh per g: 29.8",
+    "mAh per liter: 36724"
    ],
    "group": "Power banks"
   },
@@ -4564,7 +4568,10 @@
     "Rated capacity: 6400mAh",
     "Output: 10.5W",
     "Weight: 227g",
-    "Dimensions: 119×69×25mm"
+    "Dimensions: 119×69×25mm",
+    "Capacity: 10000mAh",
+    "mAh per g: 44.1",
+    "mAh per liter: 48715"
    ],
    "group": "Power banks"
   },
