@@ -4071,6 +4071,14 @@
     "Weight: 104g"
    ],
    "group": "Power banks"
+  },
+  "HOCOC36WELLSPRING": {
+   "name": "Hoco C36 Wellspring",
+   "tags": [
+    "Rated capacity: 3200mAh",
+    "Weight: 168g"
+   ],
+   "group": "Power banks"
   }
  },
  "stopPhrases": [
