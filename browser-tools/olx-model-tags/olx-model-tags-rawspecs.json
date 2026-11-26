@@ -1742,7 +1742,7 @@
  },
  "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j113-energy-bar-5000mah-for-lightning": {
   "model": "Hoco J113 Energy-bar",
-  "scannedAt": "2026-11-26T03:37:27.479Z",
+  "scannedAt": "2026-11-26T03:49:19.485Z",
   "specs": {
    "Capacity": "5000mAh, 18.5Wh. Rated capacity: 2800mAh (5V TYP 2A).",
    "Input": "1 × port for Lightning – 5V / 2A.",
@@ -1755,7 +1755,7 @@
  },
  "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j111d-smart-charge-pd30w-qc3-0-50000mah": {
   "model": "Hoco J111D Smart charge",
-  "scannedAt": "2026-11-26T03:37:27.480Z",
+  "scannedAt": "2026-11-26T03:49:19.485Z",
   "specs": {
    "Capacity": "50000mAh, 160Wh. Rated capacity: 25000mAh (5V TYP 3A).",
    "Input": "1 × Type-C – 5V / 3A, 9V / 3A, 12V / 2.5A, 15V / 2A, 20V / 1.5A – 30W. 1 × Micro-USB – 5V / 3A, 9V / 2A, 12V / 1.5A – 18W.",
@@ -1769,7 +1769,7 @@
  },
  "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j111c-smart-charge-pd30w-qc3-0-40000mah": {
   "model": "Hoco J111C Smart charge",
-  "scannedAt": "2026-11-26T03:37:27.480Z",
+  "scannedAt": "2026-11-26T03:49:19.486Z",
   "specs": {
    "Capacity": "40000mAh, 128Wh. Rated capacity: 20000mAh (5V TYP 3A).",
    "Input": "1 × Type-C – 5V / 3A, 9V / 3A, 12V / 2.5A, 15V / 2A, 20V / 1.5A – 30W. 1 × Micro-USB – 5V / 3A, 9V / 2A, 12V / 1.5A – 18W.",
@@ -1783,7 +1783,7 @@
  },
  "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j111b-smart-charge-30000mah": {
   "model": "Hoco J111B Smart charge",
-  "scannedAt": "2026-11-26T03:37:27.518Z",
+  "scannedAt": "2026-11-26T03:49:19.485Z",
   "specs": {
    "Capacity": "30000mAh, 96Wh. Rated capacity: 15000mAh (5V TYP 2A).",
    "Input": "1 × Type-C – 5V / 2A. 1 × Micro-USB – 5V / 2A.",
@@ -1796,7 +1796,7 @@
  },
  "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j111a-smart-charge-20000mah": {
   "model": "Hoco J111A Smart charge",
-  "scannedAt": "2026-11-26T03:37:27.479Z",
+  "scannedAt": "2026-11-26T03:49:19.485Z",
   "specs": {
    "Capacity": "20000mAh, 64Wh. Rated capacity: 10000mAh (5V TYP 2A).",
    "Input": "1 × Type-C – 5V / 2A. 1 × Micro-USB – 5V / 2A.",
