@@ -4024,7 +4024,11 @@
    "name": "Hoco J17 Clear power",
    "tags": [
     "Weight: 178g",
-    "Output: 10.5W"
+    "Output: 10.5W",
+    "Capacity: 7000mAh",
+    "Dimensions: 140×59×13mm",
+    "mAh per g: 39.3",
+    "mAh per liter: 65189"
    ],
    "group": "Power banks"
   },
@@ -4032,7 +4036,12 @@
    "name": "Hoco J17A Clear power",
    "tags": [
     "Weight: 240g",
-    "Output: 10.5W"
+    "Output: 10.5W",
+    "Capacity: 10000mAh",
+    "Rated capacity: 6400mAh",
+    "Dimensions: 151×71×12mm",
+    "mAh per g: 41.7",
+    "mAh per liter: 77729"
    ],
    "group": "Power banks"
   },
@@ -4077,6 +4086,15 @@
    "tags": [
     "Rated capacity: 3200mAh",
     "Weight: 168g"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ12AMAZINGSTAR": {
+   "name": "Hoco J12 Amazing star",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Weight: 230g",
+    "mAh per g: 43.5"
    ],
    "group": "Power banks"
   }
