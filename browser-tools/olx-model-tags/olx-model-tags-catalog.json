@@ -3103,6 +3103,67 @@
     "mAh per liter: 63776"
    ],
    "group": "Power banks"
+  },
+  "HOCOJ72AEASYTRAVEL": {
+   "name": "Hoco J72A Easy travel",
+   "tags": [
+    "Capacity: 20000mAh",
+    "Rated capacity: 11800mAh",
+    "Weight: 400g",
+    "Dimensions: 145×68×28mm",
+    "mAh per g: 50.0",
+    "mAh per liter: 72443"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ73POWERFUL": {
+   "name": "Hoco J73 Powerful",
+   "tags": [
+    "Capacity: 30000mAh",
+    "Rated capacity: 17700mAh",
+    "Weight: 667g",
+    "Dimensions: 166×81×32mm",
+    "mAh per g: 45.0",
+    "mAh per liter: 69723"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ71BOREALIS": {
+   "name": "Hoco J71 Borealis",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5900mAh",
+    "Weight: 230g",
+    "Dimensions: 140×77×16mm",
+    "mAh per g: 43.5",
+    "mAh per liter: 57978"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ72EASYTRAVEL": {
+   "name": "Hoco J72 Easy travel",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5900mAh",
+    "Weight: 225g",
+    "Dimensions: 136×68×16mm",
+    "mAh per g: 44.4",
+    "mAh per liter: 67582"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOQ3MAYFLOWER": {
+   "name": "Hoco Q3 Mayflower",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5500mAh",
+    "Output: 20W",
+    "Weight: 179g",
+    "Dimensions: 80×57×26mm",
+    "mAh per g: 55.9",
+    "mAh per liter: 84345"
+   ],
+   "group": "Power banks"
   }
  },
  "stopPhrases": [
