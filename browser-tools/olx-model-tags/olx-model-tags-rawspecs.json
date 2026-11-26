@@ -1739,5 +1739,112 @@
    "Sizes": "105 × 28 × 28mm.",
    "Weight": "107g."
   }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j113-energy-bar-5000mah-for-lightning": {
+  "model": "Hoco J113 Energy-bar",
+  "scannedAt": "2026-11-26T02:52:04.352Z",
+  "specs": {
+   "Capacity": "5000mAh, 18.5Wh. Rated capacity: 2800mAh (5V TYP 2A).",
+   "Input": "1 × port for Lightning – 5V / 2A.",
+   "Output": "1 × built-in cable for Lightning – 5V / 2A.",
+   "Material": "PC + ABS flame retardant shell + 21700 battery.",
+   "Indication": "LED indicator of power level.",
+   "Sizes": "105 × 28 × 28mm.",
+   "Weight": "107g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j111d-smart-charge-pd30w-qc3-0-50000mah": {
+  "model": "Hoco J111D Smart charge",
+  "scannedAt": "2026-11-26T02:52:04.353Z",
+  "specs": {
+   "Capacity": "50000mAh, 160Wh. Rated capacity: 25000mAh (5V TYP 3A).",
+   "Input": "1 × Type-C – 5V / 3A, 9V / 3A, 12V / 2.5A, 15V / 2A, 20V / 1.5A – 30W. 1 × Micro-USB – 5V / 3A, 9V / 2A, 12V / 1.5A – 18W.",
+   "Output": "1 × Type-C – 5V / 3A, 9V / 3A, 12V / 2.5A, 15V / 2A, 20V / 1.5A – 30W. PPS: 3.3-11V / 3A, 3.3-16V / 2A. 1 × USB-A 1 – 4.5V / 5A, 5V / 4.5A, 9V / 2A, 12V / 1.5A – 22.5W. 1 × USB-A 2 – 4.5V / 5A, 5V / 4.5A, 9V / 2A, 12V / 1.5A – 22.5W. Total output: 5V / 3A (max).",
+   "Fast charging protocol support": "for PD3.0 / PD2.0 / PD30W / QC3.0 / QC2.0 / FCP / SCP / AFC and other fast charging protocols.",
+   "Material": "ABS + PC flame retardant shell + lithium polymer battery.",
+   "Indication": "LED indicator of power level.",
+   "Sizes": "150 × 68 × 65mm.",
+   "Weight": "918g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j111c-smart-charge-pd30w-qc3-0-40000mah": {
+  "model": "Hoco J111C Smart charge",
+  "scannedAt": "2026-11-26T02:52:04.355Z",
+  "specs": {
+   "Capacity": "40000mAh, 128Wh. Rated capacity: 20000mAh (5V TYP 3A).",
+   "Input": "1 × Type-C – 5V / 3A, 9V / 3A, 12V / 2.5A, 15V / 2A, 20V / 1.5A – 30W. 1 × Micro-USB – 5V / 3A, 9V / 2A, 12V / 1.5A – 18W.",
+   "Output": "1 × Type-C – 5V / 3A, 9V / 3A, 12V / 2.5A, 15V / 2A, 20V / 1.5A – 30W. PPS: 3.3-11V / 3A, 3.3-16V / 2A. 1 × USB-A 1 – 4.5V / 5A, 5V / 4.5A, 9V / 2A, 12V / 1.5A – 22.5W. 1 × USB-A 2 – 4.5V / 5A, 5V / 4.5A, 9V / 2A, 12V / 1.5A – 22.5W. Total output: 5V / 3A (max).",
+   "Fast charging protocol support": "for PD3.0 / PD2.0 / PD30W / QC3.0 / QC2.0 / FCP / SCP / AFC and other fast charging protocols.",
+   "Material": "ABS + PC flame retardant shell + lithium polymer battery.",
+   "Indication": "LED indicator of power level.",
+   "Sizes": "150 × 68 × 52mm.",
+   "Weight": "752g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j111b-smart-charge-30000mah": {
+  "model": "Hoco J111B Smart charge",
+  "scannedAt": "2026-11-26T02:52:04.356Z",
+  "specs": {
+   "Capacity": "30000mAh, 96Wh. Rated capacity: 15000mAh (5V TYP 2A).",
+   "Input": "1 × Type-C – 5V / 2A. 1 × Micro-USB – 5V / 2A.",
+   "Output": "1 × USB-A 1 – 5V / 2A. 1 × USB-A 2 – 5V / 2A. Total output: 5V / 2A (max).",
+   "Material": "ABS + PC flame retardant shell + lithium polymer battery.",
+   "Indication": "LED indicator of power level.",
+   "Sizes": "150 × 68 × 40mm.",
+   "Weight": "555g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j111a-smart-charge-20000mah": {
+  "model": "Hoco J111A Smart charge",
+  "scannedAt": "2026-11-26T02:52:04.391Z",
+  "specs": {
+   "Capacity": "20000mAh, 64Wh. Rated capacity: 10000mAh (5V TYP 2A).",
+   "Input": "1 × Type-C – 5V / 2A. 1 × Micro-USB – 5V / 2A.",
+   "Output": "1 × USB-A 1 – 5V / 2A. 1 × USB-A 2 – 5V / 2A. Total output: 5V / 2A (max).",
+   "Material": "ABS + PC flame retardant shell + lithium polymer battery.",
+   "Indication": "LED indicator of power level.",
+   "Sizes": "150 × 68 × 28mm.",
+   "Weight": "389g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j116-cool-charging-5000mah-for-type-c": {
+  "model": "Hoco J116 Cool charging",
+  "scannedAt": "2026-11-26T02:52:05.344Z",
+  "specs": {
+   "Capacity": "5000mAh, 18.5Wh. Rated capacity: 2800mAh (5V TYP 2A).",
+   "Input": "1 × Type-C port – 5V / 2A.",
+   "Output": "1 × Type-C connector – 5V / 2A.",
+   "Material": "PC + ABS flame retardant shell + 21700 battery.",
+   "Indication": "LED digital display of power level.",
+   "Sizes": "78 × 50 × 23mm.",
+   "Weight": "97g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j118-speed-energy-10000mah": {
+  "model": "Hoco J118 Speed energy",
+  "scannedAt": "2026-11-26T02:52:05.360Z",
+  "specs": {
+   "Capacity": "10000mAh, 37Wh. Rated capacity: 5500mAh (5V TYP 2A).",
+   "Input": "1 × Type-C – 5V / 2A. 1 × Micro-USB – 5V / 2A.",
+   "Output": "1 × USB-A 1 – 5V / 2A. 1 × USB-A 2 – 5V / 2A. 1 × built-in cable for Lightning – 5V / 2A. 1 × built-in cable Type-C – 5V / 2A. Total output: 5V / 2A (max).",
+   "Material": "ABS + PC flame retardant shell + lithium polymer battery.",
+   "Indication": "LED indicator of power level.",
+   "Sizes": "149 × 69 × 20mm.",
+   "Weight": "241g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j117a-esteem-pd20w-qc3-0-wireless-charging-10000mah": {
+  "model": "Hoco J117A Esteem",
+  "scannedAt": "2026-11-26T02:52:05.362Z",
+  "specs": {
+   "Capacity": "10000mAh, 38.5Wh. Rated capacity: 5500mAh (5V TYP 2A).",
+   "Input": "1 × Type-C – 5V / 2.4A, 9V / 2A, 12V / 1.5A – 18W max.",
+   "Output": "1 × Type-C – 5V / 2.4A, 9V / 2.22A, 12V / 1.67A – 20W max. Wireless charging output – 5W / 7.5W / 10W / 15W. Total output: 5V / 2A (max).",
+   "Fast charging protocol support": "for PD3.0 / PD2.0 / PD20W / QC3.0 / QC2.0 / FCP / AFC and other fast charging protocols.",
+   "Material": "ABS + PC flame retardant shell + lithium polymer battery.",
+   "Indication": "LED indicator of power level. Red indicator of PD / QC fast charging. Green indicator of wireless charging.",
+   "Sizes": "101 × 69 × 20mm.",
+   "Weight": "193g."
+  }
  }
 }
