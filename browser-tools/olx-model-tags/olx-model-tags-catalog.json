@@ -1286,7 +1286,9 @@
     "Rated capacity: 5400mAh",
     "Output: 20W",
     "Weight: 180g",
-    "mAh per g: 55.6"
+    "Dimensions: 102×67×15mm",
+    "mAh per g: 55.6",
+    "mAh per liter: 97551"
    ],
    "group": "Power banks"
   },
@@ -1310,7 +1312,9 @@
     "Rated capacity: 2600mAh",
     "Output: 20W",
     "Weight: 100g",
-    "mAh per g: 50.0"
+    "Dimensions: 78×37×27mm",
+    "mAh per g: 50.0",
+    "mAh per liter: 64167"
    ],
    "group": "Power banks"
   },
@@ -1343,7 +1347,9 @@
     "Rated capacity: 3000mAh",
     "Output: 20W",
     "Weight: 104g",
-    "mAh per g: 48.1"
+    "Dimensions: 102×66×8.25mm",
+    "mAh per g: 48.1",
+    "mAh per liter: 90027"
    ],
    "group": "Power banks"
   },
@@ -1352,7 +1358,9 @@
    "tags": [
     "Capacity: 8000mAh",
     "Weight: 778g",
-    "mAh per g: 10.3"
+    "Dimensions: 210×110×44mm",
+    "mAh per g: 10.3",
+    "mAh per liter: 7871"
    ],
    "group": "Power banks"
   },
@@ -1368,7 +1376,9 @@
    "tags": [
     "Capacity: 10000mAh",
     "Weight: 366g",
-    "mAh per g: 27.3"
+    "Dimensions: 175×75×32mm",
+    "mAh per g: 27.3",
+    "mAh per liter: 23810"
    ],
    "group": "Power banks"
   },
@@ -1870,6 +1880,45 @@
     "Dimensions: 116×63.5×29mm",
     "mAh per g: 40.8",
     "mAh per liter: 46813"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOQ33OUTSTANDING": {
+   "name": "Hoco Q33 Outstanding",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5400mAh",
+    "Output: 20W",
+    "Weight: 195g",
+    "Dimensions: 90×61×25.5mm",
+    "mAh per g: 51.3",
+    "mAh per liter: 71431"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOQ26AJOY": {
+   "name": "Hoco Q26A Joy",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 6000mAh",
+    "Output: 20W",
+    "Weight: 171g",
+    "Dimensions: 102×67×13.5mm",
+    "mAh per g: 58.5",
+    "mAh per liter: 108391"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOQ32BIRD": {
+   "name": "Hoco Q32 Bird",
+   "tags": [
+    "Capacity: 5000mAh",
+    "Rated capacity: 2500mAh",
+    "Output: 20W",
+    "Weight: 125g",
+    "Dimensions: 100.5×65.5×11mm",
+    "mAh per g: 40.0",
+    "mAh per liter: 69051"
    ],
    "group": "Power banks"
   }
