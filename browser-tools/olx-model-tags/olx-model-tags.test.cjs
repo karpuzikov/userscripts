@@ -295,6 +295,15 @@ test('REMAX adapter reads the FP-32 spec block', () => {
   assert.equal(olxModelTags.SOURCE_VALUE_TRANSFORMS.peakWatts(read('Output')), '55W');
 });
 
+test('REMAX adapter reads the FP-99 lowercase spec block', () => {
+  const page = JSON.parse(require('fs').readFileSync(__dirname + '/olx-model-tags-sources.json', 'utf8')).sources.find((source) => source.name === 'REMAX').pages[0];
+  const text = 'Product Color: BlackBattery capacity: 30000mAhTotal battery power: 11.55V/106.26WhRated capacity: 17400mAh (5V/2A)Input voltage and current: Type-C: 5V/3AOutput voltage and current: Type-C port output: 5V/3A 9V/3A 12V/3A 15V/3A 20V/3.25A 10V/2.25A; Supported protocols: PD; Type-C cable output: 5V/3A 20V/3A 10V/2.25A;Energy conversion rate: ≥ 75%';
+  const read = (name) => text.match(new RegExp(page.properties.find((property) => property.name === name).regex))?.[1];
+  assert.equal(olxModelTags.SOURCE_VALUE_TRANSFORMS.batteryMah(read('Capacity')), '30000mAh');
+  assert.equal(olxModelTags.SOURCE_VALUE_TRANSFORMS.batteryMah(read('Rated capacity')), '17400mAh');
+  assert.equal(olxModelTags.SOURCE_VALUE_TRANSFORMS.peakWatts(read('Output')), '65W');
+});
+
 test('Hoco free-text adapter reads "Weight is only 107g" (B37)', () => {
   const page = JSON.parse(require('fs').readFileSync(__dirname + '/olx-model-tags-sources.json', 'utf8')).sources.find((source) => source.name === 'HOCO').pages.at(-1);
   const weight = (text) => text.match(new RegExp(page.properties.find((property) => property.name === 'Weight').regex))?.[1];

@@ -255,20 +255,20 @@
       {
        "name": "Capacity",
        "selector": "#ProductView div:has(> p.my-5.text-sm)",
-       "regex": "Battery Capacity:\\s*([\\d,]+\\s*mAh)",
+       "regex": "[Bb]attery [Cc]apacity:\\s*([\\d,]+\\s*mAh)",
        "transform": "batteryMah"
       },
       {
        "name": "Rated capacity",
        "optional": true,
        "selector": "#ProductView div:has(> p.my-5.text-sm)",
-       "regex": "Rated Capacity:\\s*([\\d,]+\\s*mAh)",
+       "regex": "[Rr]ated [Cc]apacity:\\s*([\\d,]+\\s*mAh)",
        "transform": "batteryMah"
       },
       {
        "name": "Output",
        "selector": "#ProductView div:has(> p.my-5.text-sm)",
-       "regex": "Output Voltage and Current:(.*)$",
+       "regex": "[Oo]utput [Vv]oltage and [Cc]urrent:(.*)$",
        "transform": "peakWatts"
       }
      ],
