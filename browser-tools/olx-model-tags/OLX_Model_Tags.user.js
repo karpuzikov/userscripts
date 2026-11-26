@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OLX - Model Tags
 // @namespace    https://www.olx.ua/
-// @version      0.15.3
+// @version      0.15.4
 // @description  Tag OLX ads by model (tags shared by every ad of that model) or per ad, mark broken ads, filter search results by tags, per-tag Hide (pixel mesh) / Highlight (outline). Shared model catalog is read from GitHub without any key; your own marks stay in this browser. Phone specs (year, DXOMARK camera, AnTuTu, sensor, display, battery, charger, NFC) are captured from the DXOMARK, Kimovil and GSMArena pages you open. OLX only gets read locally from the open page.
 // @match        https://www.olx.ua/*
 // @match        https://www.dxomark.com/smartphones/*
@@ -735,10 +735,15 @@
             button:disabled{opacity:.5;cursor:not-allowed}
             input{box-sizing:border-box;width:56px;padding:8px 12px;border-radius:6px;border:1px solid #474D57;background:#0B0E11;color:#EAECEF;font:12px 'JetBrains Mono',monospace}
             .status{color:#848E9C;font-family:'JetBrains Mono',monospace;font-size:12px;white-space:pre-wrap}
+            .problems{max-height:240px;overflow:auto;display:grid;gap:4px;font-size:12px}
+            .problems a{color:#C6F432;text-decoration:none;word-break:break-all}
+            .problems a:hover{text-decoration:underline}
+            .problems span{color:#848E9C}
         </style><div class="panel">
             <div class="row"><button class="primary" id="start">Scan specs</button><button id="stop" hidden>Stop</button></div>
             <label class="row">Tabs at once <input id="concurrency" type="number" min="1" max="10" value="3"></label>
-            <div class="status" id="status"></div></div>`;
+            <div class="status" id="status"></div>
+            <div class="problems" id="problems"></div></div>`;
         document.body.append(host);
         const element = (id) => shadow.getElementById(id);
         // The panel is rebuilt on every page of the category: show the running job's value (or the last one used), not the default.
@@ -790,8 +795,6 @@
                     if (nextPageLink) { job.page++; saveJob(job); location.href = nextPageLink.href; return; }
                     job.active = false;
                     job.finished = true;
-                    const problems = Object.entries(job.done).filter(([, result]) => result.status !== 'saved');
-                    if (problems.length) console.warn('OLX Model Tags scan: pages that were not fully saved', problems);
                 }
                 saveJob(job);
             }
@@ -802,7 +805,22 @@
                 const total = counts(job.done);
                 element('status').textContent = `${job.active ? 'Scanning' : job.finished ? 'Done' : 'Stopped'}: page ${job.page}/${pageCount}\n`
                     + `${Object.keys(job.inFlight).length} tabs open, ${job.queue.length} products not opened yet, ${Object.keys(job.awaiting || {}).length} uploading\nsaved ${total.saved}, partial ${total.partial}, failed ${total.failed}`
-                    + (!job.active && (total.partial || total.failed) ? '\n(details in the browser console)' : '');
+                    + (total.partial || total.failed ? '\nnot fully saved (click to open):' : '');
+                const problems = Object.entries(job.done).filter(([, result]) => result.status !== 'saved');
+                // Rebuild only when the list changed, so a link is not replaced under the mouse.
+                const signature = problems.map(([key, result]) => key + result.status).join('|');
+                if (element('problems').dataset.signature !== signature) {
+                    element('problems').dataset.signature = signature;
+                    element('problems').replaceChildren(...problems.map(([key, result]) => {
+                        const line = document.createElement('div');
+                        const link = document.createElement('a');
+                        link.href = key; link.target = '_blank'; link.rel = 'noopener'; link.textContent = key.split('/').pop();
+                        const note = document.createElement('span');
+                        note.textContent = ` ${result.status}: ${result.message || ''}`;
+                        line.append(link, note);
+                        return line;
+                    }));
+                }
             }
         }
         setInterval(tick, 500);
