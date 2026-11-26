@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ProductBrainz</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+:root{--primary:#C6F432;--primary-active:#A9D61C;--on-primary:#181A20;--accent:#2DBDB6;--canvas:#0B0E11;--surface-card:#1E2329;--surface-elevated:#2B3139;
+--text:#FFFFFF;--body:#EAECEF;--muted:#848E9C;--muted-strong:#929AA5;--hairline:#2B3139;--border-strong:#474D57;--negative:#F6465D;--info:#3B82F6;
+--font-sans:Inter,-apple-system,"Segoe UI",Roboto,sans-serif;--font-numeric:"JetBrains Mono",ui-monospace,Consolas,monospace;--focus-ring:0 0 0 2px rgba(59,130,246,.5)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--canvas);color:var(--body);font:400 14px/1.5 var(--font-sans)}
+a{color:var(--info);text-decoration:none}
+a:hover{text-decoration:underline}
+a:focus-visible,input:focus-visible,summary:focus-visible{outline:none;box-shadow:var(--focus-ring);border-radius:4px}
+.top-nav{position:sticky;top:0;z-index:1;display:flex;align-items:center;gap:16px;height:64px;padding:0 16px;background:var(--canvas);border-bottom:1px solid var(--hairline)}
+.top-nav-name{color:var(--text);font:600 16px/1.4 var(--font-sans)}
+.top-nav-name:hover{text-decoration:none}
+.search{position:relative;flex:1;max-width:480px}
+.search svg{position:absolute;left:12px;top:12px;width:16px;height:16px;color:var(--muted);pointer-events:none}
+.search input{width:100%;height:40px;padding:12px 12px 12px 40px;border:0;border-radius:8px;background:var(--surface-elevated);color:var(--text);font:inherit}
+.search input::placeholder{color:var(--muted)}
+.under-construction{max-width:1200px;margin:0 auto;padding:0 24px 32px;color:var(--muted);font-size:12px}
+main{max-width:1200px;margin:0 auto;padding:32px 24px 80px}
+h1{margin:0 0 8px;color:var(--text);font:600 32px/1.2 var(--font-sans)}
+h2{margin:32px 0 12px;color:var(--text);font:600 20px/1.35 var(--font-sans)}
+.meta{display:flex;flex-wrap:wrap;gap:8px;color:var(--muted-strong)}
+.table-card{background:var(--surface-card);border-radius:12px;padding:8px 24px;overflow-x:auto}
+table{width:100%;border-collapse:collapse}
+th,td{padding:12px 8px;border-bottom:1px solid var(--hairline);text-align:left;vertical-align:top}
+tr:last-child td{border-bottom:0}
+th{color:var(--muted);font:500 12px/1.4 var(--font-sans);white-space:nowrap}
+tbody tr:hover{background:var(--surface-elevated)}
+.number{font:500 14px/1.4 var(--font-numeric);font-variant-numeric:tabular-nums;white-space:nowrap}
+.spec-name{width:1%;white-space:nowrap;color:var(--muted)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
+.grid a{display:flex;justify-content:space-between;align-items:baseline;gap:8px;padding:16px;border-radius:8px;background:var(--surface-card);color:var(--text)}
+.grid a:hover{background:var(--surface-elevated);text-decoration:none}
+.grid .number{color:var(--muted)}
+details{margin-top:12px;background:var(--surface-card);border-radius:12px;padding:16px 24px}
+summary{cursor:pointer;color:var(--text);font-weight:600}
+details .table-card{padding:0}
+.empty,.error{color:var(--muted);padding:16px 0}
+.error{color:var(--negative)}
+</style>
+</head>
+<body>
+<header class="top-nav">
+  <a class="top-nav-name" href="#/">ProductBrainz</a>
+  <label class="search">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
+    <input id="search" type="search" placeholder="Search products" aria-label="Search products" autocomplete="off">
+  </label>
+</header>
+<main id="page" aria-live="polite"><p class="empty">Loading…</p></main>
+<footer class="under-construction">Under construction ⚠️ Read-only view of the OLX Model Tags catalog.</footer>
+<script>
+// ProductBrainz: read-only browser for the OLX Model Tags catalog (the userscript writes it; this page only reads the public files).
+const PRODUCT_BRAINZ_DATA_URL = 'https://raw.githubusercontent.com/karpuzikov/userscripts/main/browser-tools/olx-model-tags/';
+const productBrainzPage = document.getElementById('page');
+const productBrainzSearchInput = document.getElementById('search');
+let productBrainzData = null;
+
+function createElement(tagName, attributes = {}, ...children) {
+  const element = document.createElement(tagName);
+  for (const [name, value] of Object.entries(attributes)) element.setAttribute(name, value);
+  element.append(...children.filter((child) => child !== null && child !== undefined));
+  return element;
+}
+
+const brandNameOf = (product) => product.name.split(' ')[0];
+const brandKeyOf = (brandName) => brandName.toLowerCase();
+const productHref = (product) => `#/product/${encodeURIComponent(product.key)}`;
+const brandHref = (brandName) => `#/brand/${encodeURIComponent(brandKeyOf(brandName))}`;
+const categoryHref = (category) => `#/category/${encodeURIComponent(category)}`;
+const isNumericValue = (value) => /^[~≈]?\d/.test(value);
+
+function splitTagIntoSpec(tag) {
+  const namedTag = tag.match(/^([^\d:][^:]{0,30}):\s+(.+)$/); // same rule as the userscript
+  return namedTag ? { name: namedTag[1].trim(), value: namedTag[2].trim() } : null;
+}
+
+async function loadProductBrainzData() {
+  const fetchJson = async (fileName) => {
+    const response = await fetch(PRODUCT_BRAINZ_DATA_URL + fileName);
+    if (!response.ok) throw new Error(`${fileName}: HTTP ${response.status}`);
+    return response.json();
+  };
+  const [catalog, rawSpecs] = await Promise.all([fetchJson('olx-model-tags-catalog.json'), fetchJson('olx-model-tags-rawspecs.json')]);
+  const products = Object.entries(catalog.models).map(([key, model]) => ({
+    key, name: model.name, category: model.group || 'Uncategorized',
+    specs: model.tags.map(splitTagIntoSpec).filter(Boolean), sources: model.sources || {},
+  })).sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+  const shopPagesByProductName = {};
+  for (const [pageKey, modelName] of Object.entries(catalog.productLinks || {})) (shopPagesByProductName[modelName.toLowerCase()] ||= []).push(`https://${pageKey}/`);
+  return { products, rawSpecs, shopPagesByProductName };
+}
+
+function createSpecTable(specs) {
+  return createElement('div', { class: 'table-card' }, createElement('table', {}, createElement('tbody', {},
+    ...specs.map((spec) => createElement('tr', {}, createElement('td', { class: 'spec-name' }, spec.name), createElement('td', isNumericValue(spec.value) ? { class: 'number' } : {}, spec.value))))));
+}
+
+// Columns: the specs most products of the list have, in first-seen order.
+function createProductTable(products) {
+  if (!products.length) return createElement('p', { class: 'empty' }, 'No products.');
+  const specCounts = new Map();
+  for (const product of products) for (const spec of product.specs) specCounts.set(spec.name, (specCounts.get(spec.name) || 0) + 1);
+  const columns = [...specCounts].filter(([, count]) => count >= products.length / 3).map(([name]) => name).slice(0, 7);
+  const head = createElement('tr', {}, createElement('th', {}, 'Product'), createElement('th', {}, 'Category'), ...columns.map((column) => createElement('th', {}, column)));
+  const rows = products.map((product) => createElement('tr', {},
+    createElement('td', {}, createElement('a', { href: productHref(product) }, product.name)),
+    createElement('td', {}, createElement('a', { href: categoryHref(product.category) }, product.category)),
+    ...columns.map((column) => createElement('td', { class: 'number' }, product.specs.find((spec) => spec.name === column)?.value || ''))));
+  return createElement('div', { class: 'table-card' }, createElement('table', {}, createElement('thead', {}, head), createElement('tbody', {}, ...rows)));
+}
+
+function createCountGrid(entries) {
+  return createElement('div', { class: 'grid' }, ...entries.map(([label, href, count]) => createElement('a', { href }, createElement('span', {}, label), createElement('span', { class: 'number' }, String(count)))));
+}
+
+function countBy(products, keyOf) {
+  const counts = new Map();
+  for (const product of products) counts.set(keyOf(product), (counts.get(keyOf(product)) || 0) + 1);
+  return [...counts].sort((a, b) => b[1] - a[1]);
+}
+
+function renderHomePage() {
+  const { products } = productBrainzData;
+  return [
+    createElement('h1', {}, 'Products'),
+    createElement('div', { class: 'meta' }, `${products.length} products`),
+    createElement('h2', {}, 'Categories'),
+    createCountGrid(countBy(products, (product) => product.category).map(([category, count]) => [category, categoryHref(category), count])),
+    createElement('h2', {}, 'Brands'),
+    createCountGrid(countBy(products, brandNameOf).map(([brandName, count]) => [brandName, brandHref(brandName), count])),
+  ];
+}
+
+function renderBrandPage(brandKey) {
+  const products = productBrainzData.products.filter((product) => brandKeyOf(brandNameOf(product)) === brandKey);
+  if (!products.length) return [createElement('p', { class: 'error' }, 'Brand not found.')];
+  return [createElement('h1', {}, brandNameOf(products[0])), createElement('div', { class: 'meta' }, `${products.length} products`), createElement('h2', {}, 'Products'), createProductTable(products)];
+}
+
+function renderCategoryPage(category) {
+  const products = productBrainzData.products.filter((product) => product.category === category);
+  return [createElement('h1', {}, category), createElement('div', { class: 'meta' }, `${products.length} products`), createElement('h2', {}, 'Products'), createProductTable(products)];
+}
+
+function renderSearchPage(query) {
+  const words = query.toLowerCase().split(/\s+/).filter(Boolean);
+  const products = productBrainzData.products.filter((product) => words.every((word) => `${product.name} ${product.category}`.toLowerCase().includes(word)));
+  return [createElement('h1', {}, `Search: ${query}`), createElement('div', { class: 'meta' }, `${products.length} products`), createElement('h2', {}, 'Products'), createProductTable(products)];
+}
+
+function renderProductPage(productKey) {
+  const product = productBrainzData.products.find((candidate) => candidate.key === productKey);
+  if (!product) return [createElement('p', { class: 'error' }, 'Product not found.')];
+  const sections = [
+    createElement('h1', {}, product.name),
+    createElement('div', { class: 'meta' }, createElement('a', { href: brandHref(brandNameOf(product)) }, brandNameOf(product)), '·', createElement('a', { href: categoryHref(product.category) }, product.category)),
+    createElement('h2', {}, 'Specs'),
+    product.specs.length ? createSpecTable(product.specs) : createElement('p', { class: 'empty' }, 'No specs yet.'),
+  ];
+  const sourceEntries = Object.entries(product.sources);
+  if (sourceEntries.length) {
+    sections.push(createElement('h2', {}, 'Sources'), createElement('div', { class: 'table-card' }, createElement('table', {}, createElement('tbody', {},
+      ...sourceEntries.map(([source, url]) => createElement('tr', {}, createElement('td', { class: 'spec-name' }, source), createElement('td', {}, createElement('a', { href: url, target: '_blank', rel: 'noopener noreferrer' }, url))))))));
+  }
+  const shopPages = productBrainzData.shopPagesByProductName[product.name.toLowerCase()] || [];
+  if (shopPages.length) {
+    sections.push(createElement('h2', {}, 'Shop pages'), createElement('div', { class: 'table-card' }, createElement('table', {}, createElement('tbody', {},
+      ...shopPages.map((url) => createElement('tr', {}, createElement('td', {}, createElement('a', { href: url, target: '_blank', rel: 'noopener noreferrer' }, url))))))));
+  }
+  // Specs exactly as each source page lists them (kept raw so labels can be unified later).
+  for (const [url, page] of Object.entries(productBrainzData.rawSpecs)) {
+    if (!url.startsWith('http') || page.model?.toLowerCase() !== product.name.toLowerCase()) continue;
+    const specs = Object.entries(page.specs || {}).map(([name, value]) => ({ name, value: String(value) }));
+    sections.push(createElement('details', {}, createElement('summary', {}, `Raw specs from ${new URL(url).hostname}`), createSpecTable(specs)));
+  }
+  return sections;
+}
+
+function renderRoute() {
+  if (!productBrainzData) return;
+  const [, kind = '', rawValue = ''] = location.hash.match(/^#\/([^/]*)\/?(.*)$/) || [];
+  const value = decodeURIComponent(rawValue);
+  const pageRenderers = { product: renderProductPage, brand: renderBrandPage, category: renderCategoryPage, search: renderSearchPage };
+  productBrainzPage.replaceChildren(...(pageRenderers[kind] ? pageRenderers[kind](value) : renderHomePage()));
+  document.title = `${productBrainzPage.querySelector('h1')?.textContent || 'Products'} · ProductBrainz`;
+  if (kind !== 'search') productBrainzSearchInput.value = '';
+  window.scrollTo(0, 0);
+}
+
+let searchTimer = 0;
+productBrainzSearchInput.addEventListener('input', () => {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => { location.hash = productBrainzSearchInput.value.trim() ? `#/search/${encodeURIComponent(productBrainzSearchInput.value.trim())}` : '#/'; }, 250);
+});
+window.addEventListener('hashchange', renderRoute);
+
+loadProductBrainzData()
+  .then((data) => { productBrainzData = data; renderRoute(); })
+  .catch((error) => productBrainzPage.replaceChildren(createElement('p', { class: 'error' }, `Could not load the catalog: ${error.message}`)));
+</script>
+</body>
+</html>
