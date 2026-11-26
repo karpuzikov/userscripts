@@ -3465,7 +3465,7 @@
  },
  "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j12-amazing-star-10000-mah": {
   "model": "Hoco J12 Amazing star",
-  "scannedAt": "2026-11-26T03:52:14.514Z",
+  "scannedAt": "2026-11-26T04:25:20.657Z",
   "specs": {
    "Battery capacity": "10000mAh, rated output capacity: 6400mAh (5V TYP 1A).",
    "Input": "Type-C: DC5V / 3.0A (PD), DC9V / 2.0A (PD), DC12V / 1.5A(PD), 18W, Micro-USB: DC5V / 2.0A MAX.",
@@ -3475,7 +3475,7 @@
  },
  "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j17a-clear-power-10000mah-with-led": {
   "model": "Hoco J17A Clear power",
-  "scannedAt": "2026-11-26T03:52:14.477Z",
+  "scannedAt": "2026-11-26T04:25:20.578Z",
   "specs": {
    "Battery capacity": "10000mAh / 37Wh Rated output capacity: 6400mAh (5V TYP 1A).",
    "Input": "Micro-USB 5V/2.0A Max.",
@@ -3992,7 +3992,7 @@
  },
  "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-b33a-20000-camouflage-20000-mah-with-led-display": {
   "model": "Hoco B33A-20000 Camouflage",
-  "scannedAt": "2026-11-26T03:52:14.513Z",
+  "scannedAt": "2026-11-26T04:25:20.517Z",
   "specs": {
    "Battery capacity": "20000mAh.",
    "Input": "Micro-USB 5V / 2.0A Max, Lightning 5V / 1.5A Max.",
