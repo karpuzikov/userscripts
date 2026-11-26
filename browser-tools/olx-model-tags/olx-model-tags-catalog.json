@@ -965,7 +965,9 @@
     "Rated capacity: 2750mAh",
     "Output: 20W",
     "Weight: 115g",
-    "mAh per g: 43.5"
+    "Dimensions: 103×67.5×10.7mm",
+    "mAh per g: 43.5",
+    "mAh per liter: 67212"
    ],
    "group": "Power banks"
   },
@@ -976,7 +978,9 @@
     "Rated capacity: 11000mAh",
     "Output: 22.5W",
     "Weight: 420g",
-    "mAh per g: 47.6"
+    "Dimensions: 152×67×31mm",
+    "mAh per g: 47.6",
+    "mAh per liter: 63350"
    ],
    "group": "Power banks"
   },
@@ -1248,7 +1252,9 @@
     "Capacity: 5000mAh",
     "Rated capacity: 2600mAh",
     "Weight: 125g",
-    "mAh per g: 40.0"
+    "Dimensions: 102.5×64×14.5mm",
+    "mAh per g: 40.0",
+    "mAh per liter: 52565"
    ],
    "group": "Power banks"
   },
@@ -1815,6 +1821,32 @@
     "Dimensions: 113.5×72×24mm",
     "mAh per g: 45.5",
     "mAh per liter: 50987"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ133ATRIUMPH": {
+   "name": "Hoco J133A Triumph",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5500mAh",
+    "Output: 20W",
+    "Weight: 180g",
+    "Dimensions: 103×67.5×17mm",
+    "mAh per g: 55.6",
+    "mAh per liter: 84608"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ132SABIO": {
+   "name": "Hoco J132 Sabio",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5500mAh",
+    "Output: 22.5W",
+    "Weight: 260g",
+    "Dimensions: 152×67×19mm",
+    "mAh per g: 38.5",
+    "mAh per liter: 51681"
    ],
    "group": "Power banks"
   }
