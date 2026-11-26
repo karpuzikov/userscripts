@@ -4002,14 +4002,16 @@
   "HOCOJ17CLEARPOWER": {
    "name": "Hoco J17 Clear power",
    "tags": [
-    "Weight: 178g"
+    "Weight: 178g",
+    "Output: 10.5W"
    ],
    "group": "Power banks"
   },
   "HOCOJ17ACLEARPOWER": {
    "name": "Hoco J17A Clear power",
    "tags": [
-    "Weight: 240g"
+    "Weight: 240g",
+    "Output: 10.5W"
    ],
    "group": "Power banks"
   },
