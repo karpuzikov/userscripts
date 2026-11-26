@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OLX - Model Tags
 // @namespace    https://www.olx.ua/
-// @version      0.13.2
+// @version      0.13.3
 // @description  Tag OLX ads by model (tags shared by every ad of that model) or per ad, mark broken ads, filter search results by tags, per-tag Hide (pixel mesh) / Highlight (outline). Shared model catalog is read from GitHub without any key; your own marks stay in this browser. Phone specs (year, DXOMARK camera, AnTuTu, sensor, display, battery, charger, NFC) are captured from the DXOMARK, Kimovil and GSMArena pages you open. OLX only gets read locally from the open page.
 // @match        https://www.olx.ua/*
 // @match        https://www.dxomark.com/smartphones/*
@@ -509,9 +509,9 @@
     }
 
     function captureSpecsOfOpenPage() {
-        if (!olxModelTagsSources.length) { showSourceBadge(false, 'Not sourced: the source list could not be loaded from GitHub'); return; }
+        if (!olxModelTagsSources.length) { showSourceBadge(false, 'Not sourced: the source list could not be loaded from GitHub'); return false; }
         const match = findSourcePage(olxModelTagsSources, location.hostname, location.pathname, document);
-        if (!match) { showSourceBadge(false, 'Not sourced: no adapter in olx-model-tags-sources.json matches this page'); return; }
+        if (!match) { showSourceBadge(false, 'Not sourced: no adapter in olx-model-tags-sources.json matches this page'); return false; }
         let captures;
         try {
             captures = readCapturesOfSourcePage(match.page);
@@ -534,13 +534,14 @@
         showSourceBadge(readValueCount > 0, readValueCount > 0
             ? `Sourced (${match.source.name}): ${readModelCount} model(s), ${readValueCount} value(s), ${newValueCount} new`
             : `Not sourced: the ${match.source.name} adapter matches this page but found no values (the site layout may have changed)`);
+        return readValueCount > 0;
     }
 
     // Adapters come from the public repo (no key), cached an hour like the catalog; an unreachable file keeps the cached copy.
-    async function loadSourceAdapters() {
+    async function loadSourceAdapters(ignoreCache = false) {
         const cached = GM_getValue(STORAGE_KEY_CACHED_SOURCES, null);
         // A cached list without this site (a source added since) is refetched at once instead of waiting out the hour.
-        if (cached && Date.now() - cached.at < CATALOG_REFRESH_INTERVAL_MS && cached.sources.some((source) => source.hosts.includes(location.hostname))) return cached.sources;
+        if (!ignoreCache && cached && Date.now() - cached.at < CATALOG_REFRESH_INTERVAL_MS && cached.sources.some((source) => source.hosts.includes(location.hostname))) return cached.sources;
         try {
             const response = await requestGithub('GET', githubRawFileUrl(GITHUB_SOURCES_FILE_PATH));
             if (response.status !== 200 || !response.json?.sources) throw new Error(`HTTP ${response.status}`);
@@ -558,7 +559,11 @@
     async function startSpecsCapture() {
         olxModelTagsData = olxModelTagsData ? rebuildLocalDataFromCacheAndPendingOperations(olxModelTagsData) : createEmptyOlxModelTagsData();
         olxModelTagsSources = await loadSourceAdapters();
-        captureSpecsOfOpenPage();
+        // A page the cached adapters could not read may be covered by adapters added since: refetch once and retry.
+        if (!captureSpecsOfOpenPage()) {
+            olxModelTagsSources = await loadSourceAdapters(true);
+            captureSpecsOfOpenPage();
+        }
         let captureTimer = 0;
         new MutationObserver(() => { clearTimeout(captureTimer); captureTimer = setTimeout(captureSpecsOfOpenPage, 1000); })
             .observe(document.body, { childList: true, subtree: true });
