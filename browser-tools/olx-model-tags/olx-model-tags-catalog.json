@@ -1041,7 +1041,9 @@
     "Capacity: 30000mAh",
     "Rated capacity: 15000mAh",
     "Weight: 600g",
-    "mAh per g: 50.0"
+    "Dimensions: 150×68×41mm",
+    "mAh per g: 50.0",
+    "mAh per liter: 71736"
    ],
    "group": "Power banks"
   },
@@ -1331,7 +1333,9 @@
     "Rated capacity: 5400mAh",
     "Output: 20W",
     "Weight: 205g",
-    "mAh per g: 48.8"
+    "Dimensions: 108×70×19mm",
+    "mAh per g: 48.8",
+    "mAh per liter: 69618"
    ],
    "group": "Power banks"
   },
@@ -2043,6 +2047,31 @@
     "Dimensions: 54×28.4×116mm",
     "mAh per g: 39.7",
     "mAh per liter: 56212"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ128APOWERFUL": {
+   "name": "Hoco J128A Powerful",
+   "tags": [
+    "Capacity: 20000mAh",
+    "Rated capacity: 10000mAh",
+    "Weight: 432g",
+    "Dimensions: 150×68×28mm",
+    "mAh per g: 46.3",
+    "mAh per liter: 70028"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ126TRAVEL": {
+   "name": "Hoco J126 Travel",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5400mAh",
+    "Output: 22.5W",
+    "Weight: 230g",
+    "Dimensions: 117×58×31mm",
+    "mAh per g: 43.5",
+    "mAh per liter: 47536"
    ],
    "group": "Power banks"
   }
