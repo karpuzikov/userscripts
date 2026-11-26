@@ -274,5 +274,19 @@
    "Dimensions": "142.5 × 68 × 16mm.",
    "Weight": "220g."
   }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j150-stream-22-5w-pd20w-20000mah": {
+  "model": "Hoco J150 Stream",
+  "scannedAt": "2026-11-26T02:45:21.340Z",
+  "specs": {
+   "Capacity": "20000mAh, 74Wh. Rated capacity: 11000mAh (5V TYP 2A).",
+   "Input": "1 × Type-C port – 5V / 2A, 9V / 2A, 12V / 1.5A – 18W.",
+   "Output": "1 × Type-C port – 5V / 3A, 9V / 2.22A, 12V / 1.67A – 20W. 1 × USB-A port – 5V / 3A, 9V / 2A, 10V / 2.25 (SCP), 12V / 1.5A – 22.5W. Total output: 5V / 2A – 10W (max).",
+   "Fast charging protocol support": "for PD3.0 / PD20W / QC3.0 / QC2.0 / FCP / SCP / AFC and other fast charging protocols.",
+   "Indication": "LED digital display. Short press the power button to check remaining battery charge level. Green fast charging indicator stays on during PD/QC fast charging input/output. Long press the power button to turn the flashlight on or off. 6. Built-in dual source flashlight.",
+   "Material": "ABS + PC flame retardant casing + lithium-ion battery + electronic components.",
+   "Sizes": "53 × 53 × 125mm.",
+   "Weight": "375g."
+  }
  }
 }
