@@ -208,5 +208,71 @@
    "Dimensions": "143 × 70 × 28mm.",
    "Weight": "415g."
   }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j154-victorious-22-5w-pd20w-10000mah": {
+  "model": "Hoco J154 Victorious",
+  "scannedAt": "2026-11-26T02:45:06.370Z",
+  "specs": {
+   "Capacity": "10000mAh, 37Wh, rated capacity: 6000mAh (5V TYP 2A).",
+   "Input": "1 × Type-C port – 5V / 3A, 9V / 2A – 18W.",
+   "Output": "1 × Type-C port – 5V / 3A, 9V / 2.22A, 12V / 1.67A – 20W. 2 × USB-A ports – 5V / 3A, 9V / 2A, 10V / 2.25 (SCP), 12V / 1.5A – 22.5W. Total output: 5V / 2A – 10W (max).",
+   "Fast charge": "Supports PD3.0 / PD2.0 / PD20W / QC3.0 / QC2.0 / FCP / SCP / AFC and other charging protocols.",
+   "Indication": "LED digital display, green fast charging indicator.",
+   "Material": "ABS + PC flame retardant casing, lithium-ion polymer battery, electronic components.",
+   "Dimensions": "143 × 70 × 16mm.",
+   "Weight": "230g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j153a-stability-10w-20000mah": {
+  "model": "Hoco J153A Stability",
+  "scannedAt": "2026-11-26T02:45:06.400Z",
+  "specs": {
+   "Capacity": "20000mAh, 74Wh, rated capacity: 11000mAh (5V TYP 2A).",
+   "Input": "1 × Type-C port – 5V / 2A – 10W. 1 × Micro-USB port – 5V / 2A – 10W.",
+   "Output": "2 × USB-A ports – 5V / 2A – 10W. Total output: 5V / 2A – 10W (max).",
+   "Indication": "LED indicator of power level. Short press the power button to check remaining battery charge level.",
+   "Material": "ABS + PC flame retardant casing, lithium-ion polymer battery, electronic components.",
+   "Dimensions": "149 × 69 × 28mm.",
+   "Weight": "416g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j151a-spirit-10w-4-cables-20000mah": {
+  "model": "Hoco J151A Spirit",
+  "scannedAt": "2026-11-26T02:45:06.401Z",
+  "specs": {
+   "Capacity": "20000mAh, 74Wh. Rated capacity: 11000mAh (5V TYP 2A).",
+   "Input": "1 × Type-C port – 5V / 2A – 10W. 1 × built-in USB-A cable – 5V / 2A – 10W.",
+   "Output": "1 × USB-A port – 5V / 2A – 10W. 1 × built-in Type-C cable – 5V / 2A – 10W. 1 × built-in Micro-USB cable – 5V / 2A – 10W. 1 × built-in iP cable – 5V / 2A – 10W. Total output: 5V / 2A – 10W (max).",
+   "Indication": "LED digital display. Short press the power button to check remaining battery charge level. Short press the power button twice to turn the flashlight on or off. 5. Built-in dual-source flashlight and lanyard.",
+   "Material": "ABS + PC flame retardant casing + lithium-ion polymer battery + electronic components.",
+   "Sizes": "154 × 70 × 34mm.",
+   "Weight": "460g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j151-spirit-10w-4-cables-10000mah": {
+  "model": "Hoco J151 Spirit",
+  "scannedAt": "2026-11-26T02:45:07.313Z",
+  "specs": {
+   "Capacity": "10000mAh, 37Wh. Rated capacity: 5500mAh (5V TYP 2A).",
+   "Input": "1 × Type-C port – 5V / 2A – 10W. 1 × built-in USB-A cable – 5V / 2A – 10W.",
+   "Output": "1 × USB-A port – 5V / 2A – 10W. 1 × built-in Type-C cable – 5V / 2A – 10W. 1 × built-in Micro-USB cable – 5V / 2A – 10W. 1 × built-in iP cable – 5V / 2A – 10W. Total output: 5V / 2A – 10W (max).",
+   "Indication": "LED digital display. Short press the power button to check remaining battery charge level. Short press the power button twice to turn the flashlight on or off. 5. Built-in dual-source flashlight and lanyard.",
+   "Material": "ABS + PC flame retardant casing + lithium-ion polymer battery + electronic components.",
+   "Sizes": "112 × 66.2 × 32mm.",
+   "Weight": "265g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j153-stability-10w-10000mah": {
+  "model": "Hoco J153 Stability",
+  "scannedAt": "2026-11-26T02:45:07.318Z",
+  "specs": {
+   "Capacity": "10000mAh, 37Wh, rated capacity: 5500mAh (5V TYP 2A).",
+   "Input": "1 × Type-C port – 5V / 2A – 10W. 1 × Micro-USB port – 5V / 2A – 10W.",
+   "Output": "2 × USB-A ports – 5V / 2A – 10W. Total output: 5V / 2A – 10W (max).",
+   "Indication": "LED indicator of power level. Short press the power button to check remaining battery charge level.",
+   "Material": "ABS + PC flame retardant casing, lithium-ion polymer battery, electronic components.",
+   "Dimensions": "142.5 × 68 × 16mm.",
+   "Weight": "220g."
+  }
  }
 }
