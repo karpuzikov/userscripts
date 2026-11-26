@@ -1012,6 +1012,17 @@
     "mAh per g: 46.2"
    ],
    "group": "Power banks"
+  },
+  "HOCOQ36ASUNLIGHT": {
+   "name": "Hoco Q36A Sunlight",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 6000mAh",
+    "Output: 20W",
+    "Weight: 200g",
+    "mAh per g: 50.0"
+   ],
+   "group": "Power banks"
   }
  },
  "stopPhrases": [
