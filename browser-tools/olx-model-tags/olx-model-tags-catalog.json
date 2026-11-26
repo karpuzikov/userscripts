@@ -4103,6 +4103,14 @@
     "mAh per g: 43.5"
    ],
    "group": "Power banks"
+  },
+  "HOCOJ37WISDOM": {
+   "name": "Hoco J37 Wisdom",
+   "tags": [
+    "Rated capacity: 5900mAh",
+    "Weight: 226g"
+   ],
+   "group": "Power banks"
   }
  },
  "stopPhrases": [
