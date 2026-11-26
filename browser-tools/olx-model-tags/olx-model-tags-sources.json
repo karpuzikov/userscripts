@@ -139,6 +139,41 @@
    "pages": [
     {
      "path": "^/product/",
+     "whenSelector": ".power-bank-specs-table",
+     "model": {
+      "selector": "h1.product_title",
+      "regex": "[“\"]([^”\"]+)[”\"]",
+      "prefix": "Hoco "
+     },
+     "properties": [
+      {
+       "name": "Capacity",
+       "afterLabel": "^Capacity:$",
+       "labels": ".spec-param",
+       "regex": "^(\\d+mAh)"
+      },
+      {
+       "name": "Rated capacity",
+       "afterLabel": "^Capacity:$",
+       "labels": ".spec-param",
+       "regex": "[Rr]ated capacity:\\s*(\\d+mAh)"
+      },
+      {
+       "name": "Output",
+       "afterLabel": "^Output:$",
+       "labels": ".spec-param",
+       "transform": "maxWatts"
+      },
+      {
+       "name": "Weight",
+       "afterLabel": "^Weight:$",
+       "labels": ".spec-param",
+       "regex": "^(\\d+\\s*g)\\b"
+      }
+     ]
+    },
+    {
+     "path": "^/product/",
      "model": {
       "selector": "h1.product_title",
       "regex": "[“\"]([^”\"]+)[”\"]",

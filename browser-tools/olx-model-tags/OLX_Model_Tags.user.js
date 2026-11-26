@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OLX - Model Tags
 // @namespace    https://www.olx.ua/
-// @version      0.13.1
+// @version      0.13.2
 // @description  Tag OLX ads by model (tags shared by every ad of that model) or per ad, mark broken ads, filter search results by tags, per-tag Hide (pixel mesh) / Highlight (outline). Shared model catalog is read from GitHub without any key; your own marks stay in this browser. Phone specs (year, DXOMARK camera, AnTuTu, sensor, display, battery, charger, NFC) are captured from the DXOMARK, Kimovil and GSMArena pages you open. OLX only gets read locally from the open page.
 // @match        https://www.olx.ua/*
 // @match        https://www.dxomark.com/smartphones/*
@@ -226,10 +226,10 @@
         antutu: (text) => parseAnTuTuAnswer(text),
     };
 
-    function findSourcePage(sources, hostname, pathname) {
+    function findSourcePage(sources, hostname, pathname, pageDocument) {
         for (const source of sources) {
             if (!source.hosts.includes(hostname)) continue;
-            const page = source.pages.find((candidate) => !candidate.path || new RegExp(candidate.path).test(pathname));
+            const page = source.pages.find((candidate) => (!candidate.path || new RegExp(candidate.path).test(pathname)) && (!candidate.whenSelector || pageDocument?.querySelector(candidate.whenSelector)));
             if (page) return { source, page };
         }
         return null;
@@ -510,7 +510,7 @@
 
     function captureSpecsOfOpenPage() {
         if (!olxModelTagsSources.length) { showSourceBadge(false, 'Not sourced: the source list could not be loaded from GitHub'); return; }
-        const match = findSourcePage(olxModelTagsSources, location.hostname, location.pathname);
+        const match = findSourcePage(olxModelTagsSources, location.hostname, location.pathname, document);
         if (!match) { showSourceBadge(false, 'Not sourced: no adapter in olx-model-tags-sources.json matches this page'); return; }
         let captures;
         try {
