@@ -4365,6 +4365,56 @@
     "Dimensions: 130×74×15mm"
    ],
    "group": "Power banks"
+  },
+  "HOCOJ2BEIBORAPID": {
+   "name": "Hoco J2 Beibo Rapid",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Output: 19.5W",
+    "Weight: 251g",
+    "Dimensions: 140×68×15mm",
+    "mAh per g: 39.8",
+    "mAh per liter: 70028"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ1LINSTAR": {
+   "name": "Hoco J1 Linstar",
+   "tags": [
+    "Output: 10.5W",
+    "Weight: 236g",
+    "Dimensions: 155×74×20mm"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOB34OUTSTANDINGSERIES": {
+   "name": "Hoco B34 outstanding series",
+   "tags": [
+    "Output: 10.5W",
+    "Weight: 200g",
+    "Dimensions: 98×68×24mm"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ5WOODEN": {
+   "name": "Hoco J5 Wooden",
+   "tags": [
+    "Output: 10.5W",
+    "Weight: 195g",
+    "Dimensions: 149×74×14mm"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ10GLOWINGPATTERN": {
+   "name": "Hoco J10 Glowing pattern",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 6400mAh",
+    "Output: 10.5W",
+    "Weight: 216g",
+    "mAh per g: 46.3"
+   ],
+   "group": "Power banks"
   }
  },
  "stopPhrases": [
