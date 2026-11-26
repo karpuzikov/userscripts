@@ -1122,6 +1122,17 @@
     "mAh per g: 58.8"
    ],
    "group": "Power banks"
+  },
+  "HOCOJ160AORIGINAL": {
+   "name": "Hoco J160A Original",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5800mAh",
+    "Output: 20W",
+    "Weight: 195g",
+    "mAh per g: 51.3"
+   ],
+   "group": "Power banks"
   }
  },
  "stopPhrases": [
