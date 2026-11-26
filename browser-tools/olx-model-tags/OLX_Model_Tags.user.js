@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OLX - Model Tags
 // @namespace    https://www.olx.ua/
-// @version      0.16.1
+// @version      0.16.2
 // @description  Tag OLX ads by model (tags shared by every ad of that model) or per ad, mark broken ads, filter search results by tags, per-tag Hide (pixel mesh) / Highlight (outline). Shared model catalog is read from GitHub without any key; your own marks stay in this browser. Phone specs (year, DXOMARK camera, AnTuTu, sensor, display, battery, charger, NFC) are captured from the DXOMARK, Kimovil and GSMArena pages you open. OLX only gets read locally from the open page.
 // @match        https://www.olx.ua/*
 // @match        https://www.dxomark.com/smartphones/*
@@ -636,7 +636,7 @@
     function captureSpecsOfOpenPage() {
         if (!olxModelTagsSources.length) { setSourceCapture('notSourced', 'Not sourced: the source list could not be loaded from GitHub'); return false; }
         const match = findSourcePage(olxModelTagsSources, location.hostname, location.pathname, document);
-        if (!match) { setSourceCapture('notSourced', 'Not sourced: no adapter in olx-model-tags-sources.json matches this page'); return false; }
+        if (!match) { setSourceCapture('notSourced', `Not sourced: no adapter in olx-model-tags-sources.json matches this page (loaded sources: ${olxModelTagsSources.map((source) => source.name).join(', ')})`); return false; }
         let captures;
         try {
             captures = readCapturesOfSourcePage(match.page);
@@ -687,7 +687,7 @@
         // A cached list without this site (a source added since) is refetched at once instead of waiting out the hour.
         if (!ignoreCache && cached && Date.now() - cached.at < SOURCES_REFRESH_INTERVAL_MS && cached.sources.some((source) => source.hosts.includes(location.hostname))) return cached.sources;
         try {
-            const response = await requestGithub('GET', githubRawFileUrl(GITHUB_SOURCES_FILE_PATH));
+            const response = await requestGithub('GET', githubRawFileUrl(GITHUB_SOURCES_FILE_PATH) + (ignoreCache ? `?nocache=${Date.now()}` : '')); // a new query string skips GitHub's ~5 min CDN copy
             if (response.status !== 200 || !response.json?.sources) throw new Error(`HTTP ${response.status}`);
             GM_setValue(STORAGE_KEY_CACHED_SOURCES, { at: Date.now(), sources: response.json.sources });
             return response.json.sources;
