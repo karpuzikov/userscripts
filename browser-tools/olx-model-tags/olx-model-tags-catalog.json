@@ -1181,7 +1181,9 @@
     "Rated capacity: 12000mAh",
     "Output: 45W",
     "Weight: 365g",
-    "mAh per g: 54.8"
+    "Dimensions: 115×75×29mm",
+    "mAh per g: 54.8",
+    "mAh per liter: 79960"
    ],
    "group": "Power banks"
   },
@@ -1516,6 +1518,16 @@
     "Dimensions: 112×66.2×32mm",
     "mAh per g: 37.7",
     "mAh per liter: 42148"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOQS6CLEVER": {
+   "name": "Hoco QS6 Clever",
+   "tags": [
+    "Capacity: 8000mAh",
+    "Output: 18W",
+    "Dimensions: 190×107×53mm",
+    "mAh per liter: 7425"
    ],
    "group": "Power banks"
   }
