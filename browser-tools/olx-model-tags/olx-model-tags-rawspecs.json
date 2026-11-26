@@ -134,5 +134,20 @@
    "Dimensions": "100 × 61 × 27mm.",
    "Weight": "190g."
   }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j156a-founder-22-5w-pd20w-20000mah": {
+  "model": "Hoco J156A Founder",
+  "scannedAt": "2026-11-26T02:44:24.326Z",
+  "specs": {
+   "Capacity": "20000mAh, 74Wh, rated capacity: 11000mAh (5V TYP 2A).",
+   "Input": "1 × Type-C port – 5V / 2A, 9V / 2A, 12V / 1.5A – 18W. 1 × built-in USB-A cable – 5V / 2A, 9V / 2A, 12V / 1.5A – 18W.",
+   "Output": "1 × Type-C port – 5V / 3A, 9V / 2.22A, 12V / 1.67A – 20W. 1 × USB-A port – 5V / 3A, 9V / 2A, 10V / 2.25 (SCP), 12V / 1.5A – 22.5W. 1 × built-in Type-C cable – 5V / 3A, 9V / 2.22A, 12V / 1.67A – 20W. 1 × built-in iP cable – 5V / 2A – 10W. 1 × built-in Micro-USB cable – 5V / 2A – 10W. Total output: 5V / 2A – 10W (max).",
+   "Fast charge": "Supports PD3.0 / PD20W / QC3.0 / QC2.0 / FCP / SCP / AFC and other charging protocols.",
+   "Indication": "LED digital display, green fast charging indicator.",
+   "Features": "Built-in Type-C cable as wrist strap.",
+   "Material": "ABS + PC flame retardant casing, lithium-ion polymer battery, electronic components.",
+   "Dimensions": "149.7 × 70 × 31mm.",
+   "Weight": "450g."
+  }
  }
 }
