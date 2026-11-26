@@ -2533,7 +2533,7 @@
  },
  "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j76-bobby-wireless-charging-10000mah": {
   "model": "Hoco J76 Bobby",
-  "scannedAt": "2026-11-26T04:22:40.512Z",
+  "scannedAt": "2026-11-26T04:33:45.517Z",
   "specs": {
    "Capacity": "10000mAh, 37Wh. Rated capacity: 5800mAh.",
    "Input": "Micro-USB QC18W, Type-C PD18W.",
@@ -2545,7 +2545,7 @@
  },
  "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j78-outstanding-30000mah": {
   "model": "Hoco J78 Outstanding",
-  "scannedAt": "2026-11-26T04:22:40.511Z",
+  "scannedAt": "2026-11-26T04:33:45.517Z",
   "specs": {
    "Capacity": "30000mAh, 111Wh. Rated capacity: 17700mAh,.",
    "Input": "for Lightning / Type-C / Micro-USB – 18W (PD / QC).",
@@ -2569,7 +2569,7 @@
  },
  "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-q5-aegis-30w-10000mah": {
   "model": "Hoco Q5 Aegis",
-  "scannedAt": "2026-11-26T04:22:40.511Z",
+  "scannedAt": "2026-11-26T04:33:45.514Z",
   "specs": {
    "Capacity": "10000mAh, 37Wh. Rated capacity: 5500mAh.",
    "Input": "Type-C PD 30W.",
@@ -2581,7 +2581,7 @@
  },
  "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-q6-aegis-22-5w-wireless-charging-10000mah": {
   "model": "Hoco Q6 Aegis",
-  "scannedAt": "2026-11-26T04:22:40.511Z",
+  "scannedAt": "2026-11-26T04:33:45.517Z",
   "specs": {
    "Capacity": "10000mAh, 38Wh. Rated capacity: 5900mAh.",
    "Input": "Micro-USB QC 18W, Type-C / Lightning PD 18W.",
