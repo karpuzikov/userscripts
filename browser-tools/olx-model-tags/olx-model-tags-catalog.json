@@ -1227,6 +1227,17 @@
     "mAh per g: 55.6"
    ],
    "group": "Power banks"
+  },
+  "HOCOQ39EMINENTE": {
+   "name": "Hoco Q39 Eminente",
+   "tags": [
+    "Capacity: 20000mAh",
+    "Rated capacity: 11000mAh",
+    "Output: 22.5W",
+    "Weight: 325g",
+    "mAh per g: 61.5"
+   ],
+   "group": "Power banks"
   }
  },
  "stopPhrases": [
