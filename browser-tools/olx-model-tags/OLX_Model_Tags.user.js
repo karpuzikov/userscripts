@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OLX - Model Tags
 // @namespace    https://www.olx.ua/
-// @version      0.15.7
+// @version      0.15.8
 // @description  Tag OLX ads by model (tags shared by every ad of that model) or per ad, mark broken ads, filter search results by tags, per-tag Hide (pixel mesh) / Highlight (outline). Shared model catalog is read from GitHub without any key; your own marks stay in this browser. Phone specs (year, DXOMARK camera, AnTuTu, sensor, display, battery, charger, NFC) are captured from the DXOMARK, Kimovil and GSMArena pages you open. OLX only gets read locally from the open page.
 // @match        https://www.olx.ua/*
 // @match        https://www.dxomark.com/smartphones/*
@@ -243,7 +243,12 @@
         unknownIfEmpty: (text) => (!text || /^(unknown|-+)$/i.test(text) ? 'Unknown' : text),
         chargerPower: (text, element) => extractChargerPower(element.innerHTML.split(/<hr[^>]*>/).map((html) => html.replace(/<[^>]+>/g, ' '))),
         dimensionsMm: (text) => { const sides = text.replace(/\s+/g, '').replace(/[x*]/gi, '×'); return /^[\d.]+×[\d.]+×[\d.]+mm$/.test(sides) ? sides : ''; },
-        maxWatts: (text) => { const watts = [...text.matchAll(/(\d+(?:\.\d+)?)\s*W\b/g)].map((match) => Number(match[1])); return watts.length ? `${Math.max(...watts)}W` : ''; },
+        // Listed watts win; a line with only "5V / 2A" is read as 10W (volts x amps).
+        maxWatts: (text) => {
+            const watts = [...text.matchAll(/(\d+(?:\.\d+)?)\s*W\b/g)].map((match) => Number(match[1]));
+            if (!watts.length) watts.push(...[...text.matchAll(/(\d+(?:\.\d+)?)\s*V\s*\/\s*(\d+(?:\.\d+)?)\s*A\b/g)].map((match) => Math.round(Number(match[1]) * Number(match[2]) * 100) / 100));
+            return watts.length ? `${Math.max(...watts)}W` : '';
+        },
         antutu: (text) => parseAnTuTuAnswer(text),
     };
 
@@ -326,6 +331,7 @@
     const UPLOAD_CONFLICT_RETRIES = 8;
     const PENDING_OPERATION_KEY_PREFIX = 'olxModelTagsPendingOperation:';
     const CATALOG_REFRESH_INTERVAL_MS = 60 * 60 * 1000;
+    const SOURCES_REFRESH_INTERVAL_MS = 5 * 60 * 1000; // adapter fixes should reach open pages quickly
 
     let olxModelTagsData = GM_getValue(STORAGE_KEY_CACHED_DATA, null);
     let synchronizationStatus = { state: 'idle', message: '' };
@@ -658,7 +664,7 @@
     async function loadSourceAdapters(ignoreCache = false) {
         const cached = GM_getValue(STORAGE_KEY_CACHED_SOURCES, null);
         // A cached list without this site (a source added since) is refetched at once instead of waiting out the hour.
-        if (!ignoreCache && cached && Date.now() - cached.at < CATALOG_REFRESH_INTERVAL_MS && cached.sources.some((source) => source.hosts.includes(location.hostname))) return cached.sources;
+        if (!ignoreCache && cached && Date.now() - cached.at < SOURCES_REFRESH_INTERVAL_MS && cached.sources.some((source) => source.hosts.includes(location.hostname))) return cached.sources;
         try {
             const response = await requestGithub('GET', githubRawFileUrl(GITHUB_SOURCES_FILE_PATH));
             if (response.status !== 200 || !response.json?.sources) throw new Error(`HTTP ${response.status}`);
