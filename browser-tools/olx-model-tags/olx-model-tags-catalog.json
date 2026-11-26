@@ -1173,7 +1173,9 @@
     "Rated capacity: 5900mAh",
     "Output: 20W",
     "Weight: 270g",
-    "mAh per g: 37.0"
+    "Dimensions: 142×70×16mm",
+    "mAh per g: 37.0",
+    "mAh per liter: 62877"
    ],
    "group": "Power banks"
   },
@@ -2920,6 +2922,108 @@
     "Dimensions: 151×53×25mm",
     "mAh per g: 90.4",
     "mAh per liter: 74972"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOQ7EXQUISITE": {
+   "name": "Hoco Q7 Exquisite",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5900mAh",
+    "Output: 20W",
+    "Weight: 157g",
+    "Dimensions: 108×57×18mm",
+    "mAh per g: 63.7",
+    "mAh per liter: 90246"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ86POWERMASTER": {
+   "name": "Hoco J86 Powermaster",
+   "tags": [
+    "Capacity: 40000mAh",
+    "Rated capacity: 23600mAh",
+    "Output: 22.5W",
+    "Weight: 791g",
+    "Dimensions: 148×68×52mm",
+    "mAh per g: 50.6",
+    "mAh per liter: 76434"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ86APOWERMASTER": {
+   "name": "Hoco J86A Powermaster",
+   "tags": [
+    "Capacity: 50000mAh",
+    "Rated capacity: 29500mAh",
+    "Output: 22.5W",
+    "Weight: 974g",
+    "Dimensions: 148×68×64mm",
+    "mAh per g: 51.3",
+    "mAh per liter: 77628"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ81FASTWAY": {
+   "name": "Hoco J81 Fast Way",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5900mAh",
+    "Output: 22.5W",
+    "Weight: 238g",
+    "Dimensions: 141×68×17mm",
+    "mAh per g: 42.0",
+    "mAh per liter: 61351"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ82EASYLINK": {
+   "name": "Hoco J82 Easylink",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5900mAh",
+    "Weight: 222g",
+    "Dimensions: 140×69×15mm",
+    "mAh per g: 45.0",
+    "mAh per liter: 69013"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ85WELLSPRING": {
+   "name": "Hoco J85 Wellspring",
+   "tags": [
+    "Capacity: 20000mAh",
+    "Rated capacity: 11800mAh",
+    "Weight: 418g",
+    "Dimensions: 138×70×28mm",
+    "mAh per g: 47.8",
+    "mAh per liter: 73943"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ80PREMIUM": {
+   "name": "Hoco J80 Premium",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5900mAh",
+    "Output: 22.5W",
+    "Weight: 234g",
+    "Dimensions: 139×68×16mm",
+    "mAh per g: 42.7",
+    "mAh per liter: 66124"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ80APREMIUM": {
+   "name": "Hoco J80A Premium",
+   "tags": [
+    "Capacity: 20000mAh",
+    "Rated capacity: 11800mAh",
+    "Output: 22.5W",
+    "Weight: 447g",
+    "Dimensions: 149×70×28mm",
+    "mAh per g: 44.7",
+    "mAh per liter: 68484"
    ],
    "group": "Power banks"
   }
