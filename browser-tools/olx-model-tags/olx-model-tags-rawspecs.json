@@ -2835,5 +2835,78 @@
    "Material": "high energy efficiency A + polymer lithium battery + aluminum alloy shell.",
    "Sizes": "135*66*15mm, weight: 241g."
   }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j59a-famous-20000mah": {
+  "model": "Hoco J59A Famous",
+  "scannedAt": "2026-11-26T02:53:38.358Z",
+  "specs": {
+   "Capacity": "20000mAh, 74Wh. Rated capacity: 11800mAh (5V TYP 2A).",
+   "Input": "Micro-USB / Type-C: 5V-2A, Lightning: 5V-1.5A.",
+   "Output": "USB 1 / 2: 5V-2A. Total output: 5V-2A max. 4. LED digital display of power level (button activation). 5. ABS + PC flame retardant materials.",
+   "Sizes": "139*70*28mm. Weight: 422g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j57-excellent-nrg-10000mah": {
+  "model": "Hoco J57 Excellent NRG",
+  "scannedAt": "2026-11-26T02:53:38.392Z",
+  "specs": {
+   "Capacity": "10000mAh, 37Wh. Rated capacity: 5900mAh (5V TYP 2A).",
+   "Input": "Micro-USB / Type-C: 5V-2A.",
+   "Output": "USB 1 / 2: 5V-2A. Total output: 5V-2A max. 4. LED digital display of power level (button activation). 5. ABS + PC flame retardant material.",
+   "Sizes": "125*55*25mm. Weight: 207g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j64-tough-10000mah": {
+  "model": "Hoco J64 Tough",
+  "scannedAt": "2026-11-26T02:53:40.351Z",
+  "specs": {
+   "Capacity": "10000mAh 37Wh. Rated capacity: 5900mAh.",
+   "Input": "Micro-USB / Type-C: 5V-2A max.",
+   "Output": "USB 1 / 2: DC5V / 2A. Total output: 5V / 2A. 4. White LED power indicator (button activation): long press the button for 3s to turn on and off the LED light, the light can be used for 500 hours after full charge, the flashlight irradiation distance is 6-8 meters. 5. High energy efficiency A + polymer lithium battery. 6. ABS + PC flame retardant shell.",
+   "Sizes": "128 * 60 * 25mm. Weight: 230g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-s29-nimble-10000mah": {
+  "model": "Hoco S29 Nimble",
+  "scannedAt": "2026-11-26T02:53:40.352Z",
+  "specs": {
+   "Capacity": "10000mAh, 37Wh. Rated capacity: 5900 (5V TYP 3A).",
+   "Input": "Micro-USB / Type-C: 5V-3A.",
+   "Output": "USB 1 / 2: 5V-3A, Type-C: 5V-3A. Cable output: 5V-2.1A. Total output: DC5V-3A max. 4. Mobile phone stand function, with built-in cable output.",
+   "Size": "116 * 72 * 29mm (without cable). Weight: 236g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j66-fountain-10000mah": {
+  "model": "Hoco J66 Fountain",
+  "scannedAt": "2026-11-26T02:53:40.355Z",
+  "specs": {
+   "Capacity": "10000mAh 37Wh. Rated capacity: 5900mAh.",
+   "Input": "Micro-USB / Type-C: 5V / 2A max.",
+   "Output": "USB 1 / 2: DC5V / 2A. Total output: 5V / 2A max. 4. White LED indicator shows power level (button activation).",
+   "Material": "polymer lithium battery + ABS + PC flame retardant shell, surface spray oil process.",
+   "Sizes": "140*68*16mm, weight: 239g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j66a-fountain-20000mah": {
+  "model": "Hoco J66A Fountain",
+  "scannedAt": "2026-11-26T02:53:40.360Z",
+  "specs": {
+   "Capacity": "20000mAh, 37Wh. Rated capacity: 11800mAh.",
+   "Input": "Micro-USB / Type-C: 5V / 2A max.",
+   "Output": "USB 1 / 2 / 3 / 4: DC5V-2A. Total output: 5V / 2A max. 4. White LED indicator shows power level (button activation).",
+   "Material": "polymer lithium battery + ABS + PC flame retardant shell, surface spray oil process.",
+   "Size": "142*70*29mm, weight: 442g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j67-rill-10000mah-with-built-in-cables": {
+  "model": "Hoco J67 Rill",
+  "scannedAt": "2026-11-26T02:53:41.350Z",
+  "specs": {
+   "Capacity": "10000mAh, 37Wh. Rated capacity: 5900mAh.",
+   "Input": "Micro-USB / Type-C: 5V / 2A max.",
+   "Output": "USB 1 / 2: 5V / 2A. For Lightning / Type-C: 5V / 2A. Total output: 5V / 2A max. 4. LED indicator of power level.",
+   "Material": "ABS + PC flame retardant shell + polymer lithium battery.",
+   "Sizes": "131*60*23mm. Weight: 235g."
+  }
  }
 }
