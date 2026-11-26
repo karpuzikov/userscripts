@@ -3885,7 +3885,8 @@
    "name": "Hoco J33 Cool freedom",
    "tags": [
     "Rated capacity: 6000mAh",
-    "Weight: 212g"
+    "Weight: 212g",
+    "Output: 10W"
    ],
    "group": "Power banks"
   },
@@ -3895,6 +3896,7 @@
     "Capacity: 10000mAh",
     "Rated capacity: 5900mAh",
     "Weight: 272g",
+    "Output: 10W",
     "mAh per g: 36.8"
    ],
    "group": "Power banks"
@@ -3903,7 +3905,8 @@
    "name": "Hoco J34 Mighty source",
    "tags": [
     "Capacity: 10000mAh",
-    "Rated capacity: 5900mAh"
+    "Rated capacity: 5900mAh",
+    "Output: 10W"
    ],
    "group": "Power banks"
   },
@@ -3911,14 +3914,16 @@
    "name": "Hoco J33A Cool freedom",
    "tags": [
     "Rated capacity: 12000mAh",
-    "Weight: 389g"
+    "Weight: 389g",
+    "Output: 10W"
    ],
    "group": "Power banks"
   },
   "HOCOB35DENTOURAGE": {
    "name": "Hoco B35D Entourage",
    "tags": [
-    "Dimensions: 121×67×9.5mm"
+    "Dimensions: 121×67×9.5mm",
+    "Output: 5W"
    ],
    "group": "Power banks"
   },
@@ -3928,6 +3933,7 @@
     "Capacity: 10000mAh",
     "Rated capacity: 5900mAh",
     "Weight: 189g",
+    "Output: 10W",
     "mAh per g: 52.9"
    ],
    "group": "Power banks"
