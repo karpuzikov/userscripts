@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OLX - Model Tags
 // @namespace    https://www.olx.ua/
-// @version      0.14.0
+// @version      0.14.1
 // @description  Tag OLX ads by model (tags shared by every ad of that model) or per ad, mark broken ads, filter search results by tags, per-tag Hide (pixel mesh) / Highlight (outline). Shared model catalog is read from GitHub without any key; your own marks stay in this browser. Phone specs (year, DXOMARK camera, AnTuTu, sensor, display, battery, charger, NFC) are captured from the DXOMARK, Kimovil and GSMArena pages you open. OLX only gets read locally from the open page.
 // @match        https://www.olx.ua/*
 // @match        https://www.dxomark.com/smartphones/*
@@ -321,10 +321,13 @@
     // Every pending operation is its own stored value, so tabs opened at the same time cannot overwrite each other's
     // (one shared list lost operations when many tabs saved at once). Keys sort in the order the operations were made.
     let pendingOperationCounter = 0;
+    const ownPendingOperationKeys = new Set(); // this tab's operations: the badge is green only once these are uploaded
 
     function storePendingOperation(operation) {
         pendingOperationCounter++;
-        GM_setValue(`${PENDING_OPERATION_KEY_PREFIX}${String(Date.now()).padStart(15, '0')}-${String(pendingOperationCounter).padStart(6, '0')}-${Math.random().toString(36).slice(2, 8)}`, operation);
+        const key = `${PENDING_OPERATION_KEY_PREFIX}${String(Date.now()).padStart(15, '0')}-${String(pendingOperationCounter).padStart(6, '0')}-${Math.random().toString(36).slice(2, 8)}`;
+        ownPendingOperationKeys.add(key);
+        GM_setValue(key, operation);
     }
 
     function listPendingOperationKeys() {
@@ -542,15 +545,37 @@
         badge.shadowRoot.querySelector('svg').innerHTML = SOURCE_BADGE_ICONS[state];
     }
 
+    // What the page read gave (set by the capture) combined with whether it really reached GitHub (checked every few seconds):
+    // green only when every value this tab recorded is uploaded, so a green check can no longer mean "read but lost".
+    let lastSourceCapture = null;
+
+    function setSourceCapture(state, message) {
+        lastSourceCapture = { state, message };
+        renderSourceBadge();
+    }
+
+    function renderSourceBadge() {
+        if (!lastSourceCapture) return;
+        const { state, message } = lastSourceCapture;
+        const scriptVersion = typeof GM_info === 'object' ? ` [script v${GM_info.script.version}]` : '';
+        if (state !== 'sourced') { showSourceBadge(state, message + scriptVersion); return; }
+        const livePendingKeys = new Set(GM_listValues());
+        const unsavedCount = [...ownPendingOperationKeys].filter((key) => livePendingKeys.has(key)).length;
+        if (!hasGithubToken()) showSourceBadge('partial', `${message}. NOT saved to GitHub: no GitHub token is set in this browser, so it stays here${scriptVersion}`);
+        else if (synchronizationStatus.state === 'error') showSourceBadge('notSourced', `${message}. Upload FAILED: ${synchronizationStatus.message}; ${unsavedCount} value(s) wait in this browser${scriptVersion}`);
+        else if (unsavedCount) showSourceBadge('partial', `${message}. Uploading to GitHub: ${unsavedCount} value(s) not yet saved${scriptVersion}`);
+        else showSourceBadge('sourced', `${message}. Saved to GitHub${scriptVersion}`);
+    }
+
     function captureSpecsOfOpenPage() {
-        if (!olxModelTagsSources.length) { showSourceBadge('notSourced', 'Not sourced: the source list could not be loaded from GitHub'); return false; }
+        if (!olxModelTagsSources.length) { setSourceCapture('notSourced', 'Not sourced: the source list could not be loaded from GitHub'); return false; }
         const match = findSourcePage(olxModelTagsSources, location.hostname, location.pathname, document);
-        if (!match) { showSourceBadge('notSourced', 'Not sourced: no adapter in olx-model-tags-sources.json matches this page'); return false; }
+        if (!match) { setSourceCapture('notSourced', 'Not sourced: no adapter in olx-model-tags-sources.json matches this page'); return false; }
         let captures;
         try {
             captures = readCapturesOfSourcePage(match.page);
         } catch (error) {
-            showSourceBadge('notSourced', `Not sourced: ${error.message}`);
+            setSourceCapture('notSourced', `Not sourced: ${error.message}`);
             throw error;
         }
         let readModelCount = 0, readValueCount = 0;
@@ -572,15 +597,15 @@
         }
         const missingProperties = Object.entries(modelCountMissingProperty).map(([property, count]) => (readModelCount > 1 ? `${property} (${count} of ${readModelCount} models)` : property));
         if (!readValueCount) {
-            showSourceBadge('notSourced', `Not sourced: the ${match.source.name} adapter matches this page but found no values (the site layout may have changed)`);
+            setSourceCapture('notSourced', `Not sourced: the ${match.source.name} adapter matches this page but found no values (the site layout may have changed)`);
             return false;
         }
         const summary = `${readModelCount} model(s), ${readValueCount} value(s)`;
         if (missingProperties.length) {
-            showSourceBadge('partial', `Partly sourced (${match.source.name}): ${summary}. Not found: ${missingProperties.join(', ')}`);
+            setSourceCapture('partial', `Partly sourced (${match.source.name}): ${summary}. Not found: ${missingProperties.join(', ')}`);
             return false;
         }
-        showSourceBadge('sourced', `Sourced (${match.source.name}): ${summary}`);
+        setSourceCapture('sourced', `Sourced (${match.source.name}): ${summary}`);
         return true;
     }
 
@@ -606,6 +631,8 @@
     async function startSpecsCapture() {
         olxModelTagsData = olxModelTagsData ? rebuildLocalDataFromCacheAndPendingOperations(olxModelTagsData) : createEmptyOlxModelTagsData();
         olxModelTagsSources = await loadSourceAdapters();
+        if (hasGithubToken() && listPendingOperationKeys().length) synchronizeWithGithub(); // leftovers of earlier tabs
+        setInterval(renderSourceBadge, 3000);
         // A page the cached adapters could not read may be covered by adapters added since: refetch once and retry.
         if (!captureSpecsOfOpenPage()) {
             olxModelTagsSources = await loadSourceAdapters(true);
