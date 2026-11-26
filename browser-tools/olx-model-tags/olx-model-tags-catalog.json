@@ -1175,6 +1175,58 @@
     "mAh per g: 38.5"
    ],
    "group": "Power banks"
+  },
+  "HOCOJ146NIGHTTIDE": {
+   "name": "Hoco J146 Night tide",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5500mAh",
+    "Weight: 268g",
+    "mAh per g: 37.3"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ144HYMN": {
+   "name": "Hoco J144 Hymn",
+   "tags": [
+    "Capacity: 15000mAh",
+    "Rated capacity: 7200mAh",
+    "Weight: 350g",
+    "mAh per g: 42.9"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ134STRONG": {
+   "name": "Hoco J134 Strong",
+   "tags": [
+    "Capacity: 5000mAh",
+    "Rated capacity: 2600mAh",
+    "Weight: 125g",
+    "mAh per g: 40.0"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOQ36SUNLIGHT": {
+   "name": "Hoco Q36 Sunlight",
+   "tags": [
+    "Capacity: 5000mAh",
+    "Rated capacity: 2800mAh",
+    "Output: 20W",
+    "Weight: 128g",
+    "mAh per g: 39.1"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOQ34CLEVER": {
+   "name": "Hoco Q34 Clever",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5400mAh",
+    "Output: 20W",
+    "Weight: 180g",
+    "mAh per g: 55.6"
+   ],
+   "group": "Power banks"
   }
  },
  "stopPhrases": [
