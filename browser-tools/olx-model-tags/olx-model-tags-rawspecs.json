@@ -2422,5 +2422,113 @@
    "Material": "21700 batteries + ABS + flame-retardant PC.",
    "Sizes": "151*53*25mm. Weight: 166g. 7. Equipped with Type-C to Type-C 1m cable."
   }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-q7-exquisite-pd20wqc3-0-10000mah": {
+  "model": "Hoco Q7 Exquisite",
+  "scannedAt": "2026-11-26T02:53:02.349Z",
+  "specs": {
+   "Capacity": "10000mAh 37Wh. Rated capacity: 5900mAh.",
+   "Input": "Type-C – 18W (for PD3.0, QC3.0 / 2.0, FCP, AFC).",
+   "Output": "USB-A – 18W (for QC3.0 / 2.0, FCP, AFC). Type-C – 20W (for PD3.0, QC3.0 / 2.0, FCP, AFC). Total output: 5V / 3A.",
+   "Indicator": "LED indicator.",
+   "Material": "ABS + PC flame-retardant + lithium polymer battery cell.",
+   "Sizes": "108*57*18mm. Weight: 157g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j86-powermaster-22-5w-40000mah": {
+  "model": "Hoco J86 Powermaster",
+  "scannedAt": "2026-11-26T02:53:02.350Z",
+  "specs": {
+   "Capacity": "40000mAh, 148Wh. Rated capacity: 23600mAh.",
+   "Input": "Micro-USB – 18W (for QC3.0 / 2.0, FCP, AFC), Type-C – 18W (for PD3.0 / 2.0, QC3.0 / 2.0, FCP, AFC).",
+   "Output": "USB 1 / 2 – 22.5W (for QC3.0 / 2.0, FCP / SCP, AFC, VOOC, DASH), Type-C – 20W (PD3.0 / 2.0, QC3.0 / 2.0, FCP, AFC). Total output – 5V / 3A.",
+   "Display": "LED digital display. Desk lamp function.",
+   "Material": "ABS + PC flame-retardant shell + lithium polymer battery.",
+   "Sizes": "148*68*52mm. Weight: 791g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j86a-powermaster-22-5w-50000mah": {
+  "model": "Hoco J86A Powermaster",
+  "scannedAt": "2026-11-26T02:53:02.368Z",
+  "specs": {
+   "Capacity": "50000mAh, 185Wh. Rated capacity: 29500mAh.",
+   "Input": "Micro-USB – 18W (for QC3.0 / 2.0, FCP, AFC), Type-C – 18W (for PD3.0 / 2.0, QC3.0 / 2.0, FCP, AFC).",
+   "Output": "USB 1 / 2 – 22.5W (for QC3.0 / 2.0, FCP / SCP, AFC, VOOC, DASH), Type-C – 20W (PD3.0 / 2.0, QC3.0 / 2.0, FCP, AFC). Total output – 5V / 3A.",
+   "Display": "LED digital display. Desk lamp function.",
+   "Material": "ABS + PC flame-retardant shell + lithium polymer battery.",
+   "Sizes": "148*68*64mm. Weight: 974g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j81-fast-way-22-5w-10000mah": {
+  "model": "Hoco J81 Fast Way",
+  "scannedAt": "2026-11-26T02:53:03.347Z",
+  "specs": {
+   "Capacity": "10000mAh, 37Wh. Rated capacity: 5900mAh.",
+   "Input": "Micro-USB – 18W, Type-C – 18W.",
+   "Output": "USB 1 / 2 – 22.5W, Type-C – PD 20W. Total output: 5V / 3A. 4. Support for PD, QC, FCP / SCP, AFC, VOOC, DASH, etc. fast charging protocols.",
+   "Display": "LED digital display.",
+   "Material": "ABS + PC flame-retardant shell + lithium polymer battery.",
+   "Sizes": "141*68*17mm. Weight: 238g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j85-wellspring-20000mah": {
+  "model": "Hoco J85 Wellspring",
+  "scannedAt": "2026-11-26T02:53:03.348Z",
+  "specs": {
+   "Capacity": "20000mAh, 74Wh. Rated capacity: 11800mAh.",
+   "Input": "Micro-USB / Type-C – 5V / 2A.",
+   "Output": "USB 1 / 2 – 5V / 2A. Total output: 5V / 2A.",
+   "Display": "LED digital display.",
+   "Material": "ABS + PC flame-retardant shell + lithium polymer battery cell.",
+   "Sizes": "138*70*28mm. Weight: 418g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j82-easylink-10000mah": {
+  "model": "Hoco J82 Easylink",
+  "scannedAt": "2026-11-26T02:53:03.348Z",
+  "specs": {
+   "Capacity": "10000mAh, 37Wh. Rated capacity: 5900mAh.",
+   "Input": "Micro-USB / Type-C – 5V / 2A.",
+   "Output": "USB 1 / 2 – 5V / 2A. Total output: 5V / 2A.",
+   "Display": "LED indicator.",
+   "Material": "ABS + PC flame-retardant shell + lithium polymer battery.",
+   "Sizes": "140*69*15mm. Weight: 222g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j80-premium-22-5w-10000mah": {
+  "model": "Hoco J80 Premium",
+  "scannedAt": "2026-11-26T02:53:03.353Z",
+  "specs": {
+   "Capacity": "10000mAh, 37Wh. Rated capacity: 5900mAh.",
+   "Input": "Micro-USB – 18W, Type-C – 18W.",
+   "Output": "USB-A 1 / 2 – 22.5W, Type-C – PD 20W. Total output: 5V / 3A. 4. Support for PD, QC, FCP / SCP, AFC, VOOC, DASH, etc. fast charging protocols.",
+   "Display": "LED indicator.",
+   "Material": "ABS + PC flame-retardant shell + lithium polymer battery.",
+   "Sizes": "139*68*16mm. Weight: 234g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j80a-premium-22-5w-20000mah": {
+  "model": "Hoco J80A Premium",
+  "scannedAt": "2026-11-26T02:53:03.356Z",
+  "specs": {
+   "Capacity": "20000mAh, 74Wh. Rated capacity: 11800mAh.",
+   "Input": "Micro-USB – 18W, Type-C – 18W.",
+   "Output": "USB-A 1 / 2 – 22.5W, Type-C – PD 20W. Total output: 5V / 3A. 4. Support for PD, QC, FCP / SCP, AFC, VOOC, DASH, etc. fast charging protocols.",
+   "Display": "LED indicator.",
+   "Material": "ABS + PC flame-retardant shell + lithium polymer battery.",
+   "Sizes": "149*70*28mm. Weight: 447g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j83-standard-pd20w-qc3-0-10000mah": {
+  "model": "Hoco J83 Standard",
+  "scannedAt": "2026-11-26T02:53:03.357Z",
+  "specs": {
+   "Capacity": "10000mAh, 37Wh. Rated capacity: 5900mAh.",
+   "Input": "Micro-USB – 18W, Type-C – 18W.",
+   "Output": "USB-A – 18W, Type-C – PD 20W. Total output: 5V / 3A. 4. Support for PD 20W, QC3.0 / 2.0, FCP, AFC and other fast charging protocols.",
+   "Display": "LED indicator, fast charging indicator.",
+   "Material": "aluminum alloy shell + lithium polymer battery.",
+   "Sizes": "142*70*16mm. Weight: 270g."
+  }
  }
 }
