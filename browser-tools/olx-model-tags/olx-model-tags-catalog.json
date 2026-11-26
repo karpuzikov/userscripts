@@ -3999,7 +3999,10 @@
    "tags": [
     "Weight: 212g",
     "Output: 10W",
-    "Dimensions: 130×74×15mm"
+    "Dimensions: 130×74×15mm",
+    "Capacity: 13000mAh",
+    "mAh per g: 61.3",
+    "mAh per liter: 90090"
    ],
    "group": "Power banks"
   },
@@ -4115,7 +4118,9 @@
    "name": "Hoco B37 Persistent",
    "tags": [
     "Output: 5W",
-    "Dimensions: 128×68×10mm"
+    "Dimensions: 128×68×10mm",
+    "Capacity: 5000mAh",
+    "mAh per liter: 57445"
    ],
    "group": "Power banks"
   },
