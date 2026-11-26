@@ -4773,7 +4773,11 @@
    "tags": [
     "Capacity: 10000mAh",
     "Rated capacity: 11000mAh",
-    "Output: 55W"
+    "Output: 55W",
+    "Dimensions: 112×71.5×30mm",
+    "Weight: 343 g",
+    "mAh per g: 29.2",
+    "mAh per liter: 41625"
    ],
    "group": "Power banks"
   },
