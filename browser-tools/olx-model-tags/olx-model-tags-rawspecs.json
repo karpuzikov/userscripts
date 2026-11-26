@@ -3750,5 +3750,68 @@
    "Material": "ABS+PC flame retardant material, surface with illustration pattern and sprayed with environment friendly rubber paint.",
    "Display": "shake sense switch, LED battery indicator."
   }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j2-beibo-rapid-qc3-0-10000-mah-dual-usb-output": {
+  "model": "Hoco J2 Beibo Rapid",
+  "scannedAt": "2026-11-26T03:39:41.464Z",
+  "specs": {
+   "Capacity": "10000mAh. Rated capacity: 6400 mAh.",
+   "Battery": "Lithium polymer.",
+   "Size": "140*68*15 mm.",
+   "Weight": "251g.",
+   "Input": "3.6V-6.5V / 3A, 6.5V-9V / 2A, 9V-12V / 1.5A.",
+   "Output": "USB1: 3.6V-6.5V / 3A, 6.5V-9V / 2A, 9V-12V / 1.5A, USB2: 5V / 3A.",
+   "Material": "flame retardant ABS+PC, anodized aluminum alloy shell.",
+   "Display": "LED light display of battery status. 9. QC3.0 / QC2.0 / Huawei FCP supported."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j1-linstar-10000-mah-single-usb-with-built-in-lightning-cable": {
+  "model": "Hoco J1 Linstar",
+  "scannedAt": "2026-11-26T03:39:41.466Z",
+  "specs": {
+   "Capacity": "10000 mAh.",
+   "Battery": "Lithium polymer.",
+   "Size": "155 * 74 * 20mm.",
+   "Weight": "236g.",
+   "Input": "5V / 2.0A.",
+   "Output": "USB1 and USB2 output: 5V / 2.1A, Lightning-connecter output: 5V / 2.1A.",
+   "Material": "flame retardant ABS+PC, surface with cross pattern on environmental PU leather.",
+   "Display": "LED light display of battery status. 9. Supplied with built-in Lightning-connector cable, magnetic absorption for perfect management, easy to carry."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-b34-outstanding-series-8000-mah-dual-usb-output": {
+  "model": "Hoco B34 outstanding series",
+  "scannedAt": "2026-11-26T03:39:41.467Z",
+  "specs": {
+   "Cell capacity": "8000mAh.",
+   "Input": "Micro-USB: 5V / 2.0A Max, Type-C: 5V / 2.0A Max.",
+   "Output": "USB1/2: DC5V / 2.1A Max. USB total output: DC5V / 2.1A Max. 4. PC flame-retardant material + aluminum alloy oxidation process, anti-friction scratch-resistant, comfortable grip. 5. Touch button + LED screen digital power display, can check the charge power and the remaining power in time 6. The product uses high-performance 18650 lithium battery",
+   "Compatibility": "compatible with more than 99% mobile phones/tablets and USB input digital devices.",
+   "Size": "9.8 * 6.8 * 2.4cm. Weight: 200g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j5-wooden-8000-mah-dual-usb-output": {
+  "model": "Hoco J5 Wooden",
+  "scannedAt": "2026-11-26T03:39:41.469Z",
+  "specs": {
+   "Capacity": "8000 mAh. Rated capacity: 5120 mAh.",
+   "Battery": "Lithium polymer.",
+   "Size": "149 * 74 * 14mm. Weight: 195g.",
+   "Input": "5V / 2A.",
+   "Output": "USB1: 5V / 2.1A, USB2: 5V / 2.1A.",
+   "Material": "flame retardant ABS+PC, product surface with clear yellow stripes + matte spark pattern.",
+   "Display": "LED light to indicate the battery status."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j10-glowing-pattern-10000-mah-dual-usb-output": {
+  "model": "Hoco J10 Glowing pattern",
+  "scannedAt": "2026-11-26T03:39:41.509Z",
+  "specs": {
+   "Battery capacity": "10000mAh. Rated output capacity: 6400mAh (5V TYP 1A).",
+   "Input": "DC5V / 2.0A Max.",
+   "Output": "USB1: DC5V / 2.1A, USB2: DC5V / 2.1A. 4. PC flame retardant material. 5. Using breathing backlight design patterns, simple, surface coating of environmentally friendly rubber paint, LED power display, you can check the charging level and remaining power (LED1: 1-25%, LED2: 26% -50 %, LED3: 51% -75%, LED4: 76% -100%). 6. Products using high-performance A + grade polymer batteries.",
+   "Compatibility": "smart phones and 99% tablets.",
+   "Size": "14.7cm * 7.5cm * 1.5cm. Weight: 216g."
+  }
  }
 }
