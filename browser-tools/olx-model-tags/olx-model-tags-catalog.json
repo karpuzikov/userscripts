@@ -3350,6 +3350,7 @@
     "Rated capacity: 17700mAh",
     "Weight: 710g",
     "Dimensions: 168×83×33mm",
+    "Output: 10W",
     "mAh per g: 42.3",
     "mAh per liter: 65196"
    ],
@@ -3398,6 +3399,7 @@
     "Capacity: 10000mAh",
     "Rated capacity: 5900mAh",
     "Dimensions: 135×66×15mm",
+    "Output: 10W",
     "mAh per liter: 74822"
    ],
    "group": "Power banks"
@@ -3433,6 +3435,7 @@
     "Rated capacity: 5900mAh",
     "Weight: 230g",
     "Dimensions: 128×60×25mm",
+    "Output: 10W",
     "mAh per g: 43.5",
     "mAh per liter: 52083"
    ],
@@ -3455,6 +3458,7 @@
     "Capacity: 10000mAh",
     "Rated capacity: 5900mAh",
     "Dimensions: 140×68×16mm",
+    "Output: 10W",
     "mAh per liter: 65651"
    ],
    "group": "Power banks"
@@ -3465,6 +3469,7 @@
     "Capacity: 20000mAh",
     "Rated capacity: 11800mAh",
     "Dimensions: 142×70×29mm",
+    "Output: 10W",
     "mAh per liter: 69382"
    ],
    "group": "Power banks"
@@ -3476,6 +3481,7 @@
     "Rated capacity: 5900mAh",
     "Weight: 235g",
     "Dimensions: 131×60×23mm",
+    "Output: 10W",
     "mAh per g: 42.6",
     "mAh per liter: 55316"
    ],
