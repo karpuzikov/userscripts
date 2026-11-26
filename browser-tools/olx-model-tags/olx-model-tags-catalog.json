@@ -1153,6 +1153,28 @@
     "Output: 12W"
    ],
    "group": "Power banks"
+  },
+  "HOCOQ44AORIGEN": {
+   "name": "Hoco Q44A Origen",
+   "tags": [
+    "Capacity: 20000mAh",
+    "Rated capacity: 12000mAh",
+    "Output: 45W",
+    "Weight: 365g",
+    "mAh per g: 54.8"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ158RUNNER": {
+   "name": "Hoco J158 Runner",
+   "tags": [
+    "Capacity: 5000mAh",
+    "Rated capacity: 3000mAh",
+    "Output: 10W",
+    "Weight: 130g",
+    "mAh per g: 38.5"
+   ],
+   "group": "Power banks"
   }
  },
  "stopPhrases": [
