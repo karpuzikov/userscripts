@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OLX - Model Tags
 // @namespace    https://www.olx.ua/
-// @version      0.12.1
+// @version      0.13.0
 // @description  Tag OLX ads by model (tags shared by every ad of that model) or per ad, mark broken ads, filter search results by tags, per-tag Hide (pixel mesh) / Highlight (outline). Shared model catalog is read from GitHub without any key; your own marks stay in this browser. Phone specs (year, DXOMARK camera, AnTuTu, sensor, display, battery, charger, NFC) are captured from the DXOMARK, Kimovil and GSMArena pages you open. OLX only gets read locally from the open page.
 // @match        https://www.olx.ua/*
 // @match        https://www.dxomark.com/smartphones/*
@@ -476,17 +476,53 @@
         });
     }
 
+    // A small corner icon on every source website: green check = this page was read, red cross = it was not (so a page that
+    // should have been sourced and was not is easy to spot). Shadow DOM keeps the site's CSS away from it.
+    const SOURCE_BADGE_ICONS = {
+        sourced: '<path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="#0ECB81" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>',
+        notSourced: '<path d="M6.5 6.5l11 11M17.5 6.5l-11 11" fill="none" stroke="#F6465D" stroke-width="2.6" stroke-linecap="round"/>',
+    };
+
+    function showSourceBadge(isSourced, message) {
+        let badge = document.querySelector('olx-model-tags-source-badge');
+        if (!badge) {
+            badge = document.createElement('olx-model-tags-source-badge');
+            badge.style.cssText = 'position:fixed;right:16px;bottom:16px;z-index:2147483647';
+            badge.attachShadow({ mode: 'open' }).innerHTML = '<style>div{box-sizing:border-box;width:32px;height:32px;padding:6px;border-radius:8px;background:#1E2329;box-shadow:0 2px 8px rgba(0,0,0,.5);cursor:help}svg{display:block;width:20px;height:20px}</style><div role="img"><svg viewBox="0 0 24 24"></svg></div>';
+            document.body.append(badge);
+        }
+        const badgeBox = badge.shadowRoot.querySelector('div');
+        badgeBox.setAttribute('aria-label', message);
+        badgeBox.title = message;
+        badge.shadowRoot.querySelector('svg').innerHTML = SOURCE_BADGE_ICONS[isSourced ? 'sourced' : 'notSourced'];
+    }
+
     function captureSpecsOfOpenPage() {
+        if (!olxModelTagsSources.length) { showSourceBadge(false, 'Not sourced: the source list could not be loaded from GitHub'); return; }
         const match = findSourcePage(olxModelTagsSources, location.hostname, location.pathname);
-        if (!match) return;
-        for (const { modelName, properties } of readCapturesOfSourcePage(match.page)) {
-            if (!normalizeModelKey(modelName)) continue;
-            for (const [property, value] of properties) {
-                if (value && !isModelPropertyAlreadySet(olxModelTagsData, modelName, property, value)) {
-                    recordOperation({ type: 'setModelProperty', modelName, property, value, groupIfEmpty: match.source.group });
-                }
+        if (!match) { showSourceBadge(false, 'Not sourced: no adapter in olx-model-tags-sources.json matches this page'); return; }
+        let captures;
+        try {
+            captures = readCapturesOfSourcePage(match.page);
+        } catch (error) {
+            showSourceBadge(false, `Not sourced: ${error.message}`);
+            throw error;
+        }
+        let readModelCount = 0, readValueCount = 0, newValueCount = 0;
+        for (const { modelName, properties } of captures) {
+            const readProperties = properties.filter(([, value]) => value);
+            if (!normalizeModelKey(modelName) || !readProperties.length) continue;
+            readModelCount++;
+            for (const [property, value] of readProperties) {
+                readValueCount++;
+                if (isModelPropertyAlreadySet(olxModelTagsData, modelName, property, value)) continue;
+                newValueCount++;
+                recordOperation({ type: 'setModelProperty', modelName, property, value, groupIfEmpty: match.source.group });
             }
         }
+        showSourceBadge(readValueCount > 0, readValueCount > 0
+            ? `Sourced (${match.source.name}): ${readModelCount} model(s), ${readValueCount} value(s), ${newValueCount} new`
+            : `Not sourced: the ${match.source.name} adapter matches this page but found no values (the site layout may have changed)`);
     }
 
     // Adapters come from the public repo (no key), cached an hour like the catalog; an unreachable file keeps the cached copy.
