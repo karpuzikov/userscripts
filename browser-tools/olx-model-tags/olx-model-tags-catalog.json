@@ -4943,6 +4943,22 @@
     "Output: 45W"
    ],
    "group": "Power banks"
+  },
+  "REMAXFP77": {
+   "name": "REMAX FP-77",
+   "tags": [
+    "Capacity: 20000mAh",
+    "Rated capacity: 10800mAh",
+    "Output: 65W"
+   ],
+   "group": "Power banks"
+  },
+  "REMAXFP109": {
+   "name": "REMAX FP-109",
+   "tags": [
+    "Output: 22.5W"
+   ],
+   "group": "Power banks"
   }
  },
  "stopPhrases": [
