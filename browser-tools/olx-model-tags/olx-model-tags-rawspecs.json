@@ -4917,5 +4917,56 @@
    "10.Bare Machine Dimension": "102*71*34mm",
    "11.Product Material Process+Fireproof Level": "ABS+PC V1 Fireproof"
   }
+ },
+ "https://www.iremax.net/product/1587": {
+  "model": "REMAX CP-19",
+  "scannedAt": "2026-11-26T05:37:20.545Z",
+  "specs": {
+   "1.Product color": "sky blue grey, beige orange",
+   "2.Battery type": "polymer lithium-ion cell",
+   "3.Battery capacity": "10000mAh * 2PCS, series connection",
+   "4.Battery total power": "7.7V/77Wh",
+   "5.Rated capacity": "11000mAh (5V/3A)",
+   "6.Battery cell type/consumption": "146074*2",
+   "7.Cell Size": "14*60*74",
+   "8.Input Voltage and Current": "Mobile Power Mode Power bank mode:",
+   "Type-C input": "5V/3A 9V/3A 12V/2.25A 15V/2A 20V/1.5A",
+   "iPh input": "5V/2.4A 9V/3A 12V/2.25A 15V/2A 20V/1.5A",
+   "Adaptor mode Charger mode": "AC input input: 100-240V AC,50/60Hz 0.5A Max",
+   "9. Output voltage and current": "Mobile power mode Power bank mode:",
+   "USB output output": "5V/3A 9V/2A 10V/2.25A 12V/1.5A 22.5W(Max)",
+   "Type-C output output": "5V/3A 9V/3A 12V/2.25A 15V/2A 20V/1.5A 30W(Max)",
+   "iPH output output": "5V/3A 9V/3A 12V/2.25A 15V/2A 20V/1.5A 30W(Max)",
+   "Wireless charging output wireless charging output": "5W/7.5W/10W/15W(Max)",
+   "Adapter mode Charger mode": "USB/Type-C/iPh output output:5V/2.4A (Max)",
+   "Wireless charging output": "5W (Max)",
+   "10.Total output": "5V/3A( Max)",
+   "11.Energy conversion rate": "≥60%",
+   "12.Bare metal weight": "≈407g",
+   "13.Bare metal size": "117*68*38mm",
+   "14.Product material process+fireproof level": "ABS+PC/fireproof fireproof V-0",
+   "15.Electricity display": "188digital pipe display Current power level",
+   "16.Input port type/quantity": "AC*1, Type-C*1, iPh*1",
+   "Output port type/quantity": "Type-C*1, iPh*1, USB*1, wireless charging wireless charging*1"
+  }
+ },
+ "https://www.iremax.net/product/1236": {
+  "model": "REMAX FP-13",
+  "scannedAt": "2026-11-26T05:37:20.544Z",
+  "specs": {
+   "1.Product Color": "Titanium Gold, FOH Purple, FOH Gray",
+   "2.Battery Type": "Li-Polymer",
+   "3.Battery Capacity": "5000mAh",
+   "4.Total Battery Power": "3.85V/19.25Wh",
+   "5.Rated Capacity": "2600mAh(5V⎓2A)",
+   "6.Battery Cell Model/Usage": "754588/1",
+   "8. Input Voltage and Current": "Type-C Input: 5V⎓3A/9V⎓2A 18W(Max)",
+   "Protocol Support": "PPS/PD2.0/PD3.0/QC2.0/QC3.0/AFC/FCP/SCP/ PE2.0/PE1.1",
+   "9. Output Voltage and Current": "Type-C Output: 5V⎓3A/9V⎓2.22A/12V⎓1.67A 20W(Max)",
+   "10.Energy Conversion Rate": "≥65%",
+   "11.Product Material Process+Fire Rating": "ABS+PC+VO Fireproof",
+   "12.Bare Weight": "≈93g",
+   "13.Bare Dimensions": "113.5*52.5*9.5mm"
+  }
  }
 }
