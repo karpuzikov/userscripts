@@ -176,7 +176,7 @@ test('updateDerivedTags adds "mAh per g" to a model saved before the tag existed
 
 test('derived liter tag, dimensions transform, category lookup', () => {
   const { computeDerivedTags, SOURCE_VALUE_TRANSFORMS, findSourceCategory } = olxModelTags;
-  assert.deepEqual(computeDerivedTags(['Capacity: 75000mAh', 'Weight: 1400g', 'Dimensions: 157×116×45mm']), ['mAh per g: 53.6', 'mAh per liter: 91515']);
+  assert.deepEqual(computeDerivedTags(['Capacity: 75000mAh', 'Weight: 1400g', 'Dimensions: 157×116×45mm']), ['mAh per g: 53.6', 'mAh per Volume: 91.5']);
   assert.equal(SOURCE_VALUE_TRANSFORMS.dimensionsMm('157 * 116*45mm'), '157×116×45mm');
   assert.equal(SOURCE_VALUE_TRANSFORMS.dimensionsMm('big'), '');
   const sources = [{ hosts: ['h.com'], category: { path: '^/category/', products: 'li' } }];

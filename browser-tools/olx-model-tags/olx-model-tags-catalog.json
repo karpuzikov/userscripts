@@ -763,7 +763,7 @@
     "Weight: 1400g",
     "Dimensions: 157×116×45mm",
     "mAh per g: 53.6",
-    "mAh per liter: 91515"
+    "mAh per Volume: 91.5"
    ],
    "group": "Power banks",
    "sources": {
@@ -779,7 +779,7 @@
     "Weight: 485g",
     "Dimensions: 155×81×26.5mm",
     "mAh per g: 51.5",
-    "mAh per liter: 75141"
+    "mAh per Volume: 75.1"
    ],
    "group": "Power banks",
    "sources": {
@@ -795,7 +795,7 @@
     "Weight: 375g",
     "Dimensions: 53×53×125mm",
     "mAh per g: 53.3",
-    "mAh per liter: 56960"
+    "mAh per Volume: 57.0"
    ],
    "group": "Power banks",
    "sources": {
@@ -811,7 +811,7 @@
     "Weight: 370g",
     "Dimensions: 136×69×33mm",
     "mAh per g: 54.1",
-    "mAh per liter: 64584"
+    "mAh per Volume: 64.6"
    ],
    "group": "Power banks",
    "sources": {
@@ -827,7 +827,7 @@
     "Weight: 1380g",
     "Dimensions: 111×92×116mm",
     "mAh per g: 58.0",
-    "mAh per liter: 67534"
+    "mAh per Volume: 67.5"
    ],
    "group": "Power banks",
    "sources": {
@@ -843,7 +843,7 @@
     "Weight: 350g",
     "Dimensions: 118×72×31mm",
     "mAh per g: 57.1",
-    "mAh per liter: 75937"
+    "mAh per Volume: 75.9"
    ],
    "group": "Power banks",
    "sources": {
@@ -859,7 +859,7 @@
     "Dimensions: 79×36×27mm",
     "Output: 10W",
     "mAh per g: 34.1",
-    "mAh per liter: 39069"
+    "mAh per Volume: 39.1"
    ],
    "group": "Power banks",
    "sources": {
@@ -875,7 +875,7 @@
     "Weight: 1360g",
     "Dimensions: 139×84×81mm",
     "mAh per g: 44.1",
-    "mAh per liter: 63441"
+    "mAh per Volume: 63.4"
    ],
    "group": "Power banks",
    "sources": {
@@ -891,7 +891,7 @@
     "Weight: 195g",
     "Dimensions: 85×61.5×26mm",
     "mAh per g: 51.3",
-    "mAh per liter: 73575"
+    "mAh per Volume: 73.6"
    ],
    "group": "Power banks",
    "sources": {
@@ -907,7 +907,7 @@
     "Weight: 245g",
     "Dimensions: 149×69×17mm",
     "mAh per g: 40.8",
-    "mAh per liter: 57216"
+    "mAh per Volume: 57.2"
    ],
    "group": "Power banks",
    "sources": {
@@ -923,7 +923,7 @@
     "Dimensions: 102.5×64×26mm",
     "Output: 10W",
     "mAh per g: 46.5",
-    "mAh per liter: 58630"
+    "mAh per Volume: 58.6"
    ],
    "group": "Power banks",
    "sources": {
@@ -939,7 +939,7 @@
     "Weight: 210g",
     "Dimensions: 117×77×19.5mm",
     "mAh per g: 47.6",
-    "mAh per liter: 56923"
+    "mAh per Volume: 56.9"
    ],
    "group": "Power banks",
    "sources": {
@@ -955,7 +955,7 @@
     "Weight: 220g",
     "Dimensions: 142.5×68×16mm",
     "mAh per g: 45.5",
-    "mAh per liter: 64499"
+    "mAh per Volume: 64.5"
    ],
    "group": "Power banks",
    "sources": {
@@ -971,7 +971,7 @@
     "Weight: 125g",
     "Dimensions: 100×66×14mm",
     "mAh per g: 40.0",
-    "mAh per liter: 54113"
+    "mAh per Volume: 54.1"
    ],
    "group": "Power banks",
    "sources": {
@@ -987,7 +987,7 @@
     "Weight: 400g",
     "Dimensions: 145×69.5×28mm",
     "mAh per g: 50.0",
-    "mAh per liter: 70879"
+    "mAh per Volume: 70.9"
    ],
    "group": "Power banks",
    "sources": {
@@ -1003,7 +1003,7 @@
     "Weight: 435g",
     "Dimensions: 148×70×30.5mm",
     "mAh per g: 46.0",
-    "mAh per liter: 63295"
+    "mAh per Volume: 63.3"
    ],
    "group": "Power banks",
    "sources": {
@@ -1019,7 +1019,7 @@
     "Weight: 115g",
     "Dimensions: 103×67.5×10.7mm",
     "mAh per g: 43.5",
-    "mAh per liter: 67212"
+    "mAh per Volume: 67.2"
    ],
    "group": "Power banks",
    "sources": {
@@ -1035,7 +1035,7 @@
     "Weight: 420g",
     "Dimensions: 152×67×31mm",
     "mAh per g: 47.6",
-    "mAh per liter: 63350"
+    "mAh per Volume: 63.4"
    ],
    "group": "Power banks",
    "sources": {
@@ -1051,7 +1051,7 @@
     "Dimensions: 150×70×28mm",
     "Output: 10W",
     "mAh per g: 46.9",
-    "mAh per liter: 68027"
+    "mAh per Volume: 68.0"
    ],
    "group": "Power banks",
    "sources": {
@@ -1067,7 +1067,7 @@
     "Weight: 492g",
     "Dimensions: 153×66×30mm",
     "mAh per g: 40.7",
-    "mAh per liter: 66020"
+    "mAh per Volume: 66.0"
    ],
    "group": "Power banks",
    "sources": {
@@ -1083,7 +1083,7 @@
     "Weight: 187g",
     "Dimensions: 118×72×17mm",
     "mAh per g: 53.5",
-    "mAh per liter: 69237"
+    "mAh per Volume: 69.2"
    ],
    "group": "Power banks",
    "sources": {
@@ -1099,7 +1099,7 @@
     "Weight: 147g",
     "Dimensions: 105×67×12mm",
     "mAh per g: 34.0",
-    "mAh per liter: 59228"
+    "mAh per Volume: 59.2"
    ],
    "group": "Power banks",
    "sources": {
@@ -1115,7 +1115,7 @@
     "Dimensions: 150×68×41mm",
     "Output: 10W",
     "mAh per g: 50.0",
-    "mAh per liter: 71736"
+    "mAh per Volume: 71.7"
    ],
    "group": "Power banks",
    "sources": {
@@ -1131,7 +1131,7 @@
     "Weight: 650g",
     "Dimensions: 152×67×43mm",
     "mAh per g: 46.2",
-    "mAh per liter: 68507"
+    "mAh per Volume: 68.5"
    ],
    "group": "Power banks",
    "sources": {
@@ -1147,7 +1147,7 @@
     "Weight: 200g",
     "Dimensions: 101×65×12mm",
     "mAh per g: 50.0",
-    "mAh per liter: 126936"
+    "mAh per Volume: 126.9"
    ],
    "group": "Power banks",
    "sources": {
@@ -1163,7 +1163,7 @@
     "Weight: 205g",
     "Dimensions: 108×69×20mm",
     "mAh per g: 48.8",
-    "mAh per liter: 67096"
+    "mAh per Volume: 67.1"
    ],
    "group": "Power banks",
    "sources": {
@@ -1179,7 +1179,7 @@
     "Weight: 400g",
     "Dimensions: 140×68×28mm",
     "mAh per g: 50.0",
-    "mAh per liter: 75030"
+    "mAh per Volume: 75.0"
    ],
    "group": "Power banks",
    "sources": {
@@ -1195,7 +1195,7 @@
     "Weight: 243g",
     "Dimensions: 122×62×18mm",
     "mAh per g: 41.2",
-    "mAh per liter: 73447"
+    "mAh per Volume: 73.4"
    ],
    "group": "Power banks",
    "sources": {
@@ -1211,7 +1211,7 @@
     "Weight: 234g",
     "Dimensions: 123×57×23mm",
     "mAh per g: 42.7",
-    "mAh per liter: 62014"
+    "mAh per Volume: 62.0"
    ],
    "group": "Power banks",
    "sources": {
@@ -1227,7 +1227,7 @@
     "Weight: 1200g",
     "Dimensions: 178×83×60mm",
     "mAh per g: 50.0",
-    "mAh per liter: 67686"
+    "mAh per Volume: 67.7"
    ],
    "group": "Power banks",
    "sources": {
@@ -1243,7 +1243,7 @@
     "Weight: 243g",
     "Dimensions: 123×57×23mm",
     "mAh per g: 41.2",
-    "mAh per liter: 62014"
+    "mAh per Volume: 62.0"
    ],
    "group": "Power banks",
    "sources": {
@@ -1259,7 +1259,7 @@
     "Weight: 200g",
     "Dimensions: 95×67×21mm",
     "mAh per g: 50.0",
-    "mAh per liter: 74814"
+    "mAh per Volume: 74.8"
    ],
    "group": "Power banks",
    "sources": {
@@ -1275,7 +1275,7 @@
     "Weight: 270g",
     "Dimensions: 142×70×16mm",
     "mAh per g: 37.0",
-    "mAh per liter: 62877"
+    "mAh per Volume: 62.9"
    ],
    "group": "Power banks",
    "sources": {
@@ -1291,7 +1291,7 @@
     "Weight: 340g",
     "Dimensions: 110×70×30mm",
     "mAh per g: 58.8",
-    "mAh per liter: 86580"
+    "mAh per Volume: 86.6"
    ],
    "group": "Power banks",
    "sources": {
@@ -1307,7 +1307,7 @@
     "Weight: 195g",
     "Dimensions: 101×66×19mm",
     "mAh per g: 51.3",
-    "mAh per liter: 78955"
+    "mAh per Volume: 79.0"
    ],
    "group": "Power banks",
    "sources": {
@@ -1323,7 +1323,7 @@
     "Weight: 268g",
     "Dimensions: 149.7×70×22mm",
     "mAh per g: 37.3",
-    "mAh per liter: 43377"
+    "mAh per Volume: 43.4"
    ],
    "group": "Power banks",
    "sources": {
@@ -1338,7 +1338,7 @@
     "Dimensions: 153×87×37mm",
     "Weight: 430g",
     "mAh per g: 23.3",
-    "mAh per liter: 20304"
+    "mAh per Volume: 20.3"
    ],
    "group": "Power banks",
    "sources": {
@@ -1354,7 +1354,7 @@
     "Weight: 365g",
     "Dimensions: 115×75×29mm",
     "mAh per g: 54.8",
-    "mAh per liter: 79960"
+    "mAh per Volume: 80.0"
    ],
    "group": "Power banks",
    "sources": {
@@ -1370,7 +1370,7 @@
     "Weight: 130g",
     "Dimensions: 76×56×23mm",
     "mAh per g: 38.5",
-    "mAh per liter: 51079"
+    "mAh per Volume: 51.1"
    ],
    "group": "Power banks",
    "sources": {
@@ -1386,7 +1386,7 @@
     "Dimensions: 149.7×70×22mm",
     "Output: 10W",
     "mAh per g: 37.3",
-    "mAh per liter: 43377"
+    "mAh per Volume: 43.4"
    ],
    "group": "Power banks",
    "sources": {
@@ -1402,7 +1402,7 @@
     "Dimensions: 164×80×19mm",
     "Output: 10W",
     "mAh per g: 42.9",
-    "mAh per liter: 60173"
+    "mAh per Volume: 60.2"
    ],
    "group": "Power banks",
    "sources": {
@@ -1418,7 +1418,7 @@
     "Dimensions: 102.5×64×14.5mm",
     "Output: 10W",
     "mAh per g: 40.0",
-    "mAh per liter: 52565"
+    "mAh per Volume: 52.6"
    ],
    "group": "Power banks",
    "sources": {
@@ -1434,7 +1434,7 @@
     "Weight: 128g",
     "Dimensions: 101×65×10mm",
     "mAh per g: 39.1",
-    "mAh per liter: 76161"
+    "mAh per Volume: 76.2"
    ],
    "group": "Power banks",
    "sources": {
@@ -1450,7 +1450,7 @@
     "Weight: 180g",
     "Dimensions: 102×67×15mm",
     "mAh per g: 55.6",
-    "mAh per liter: 97551"
+    "mAh per Volume: 97.6"
    ],
    "group": "Power banks",
    "sources": {
@@ -1466,7 +1466,7 @@
     "Weight: 325g",
     "Dimensions: 104×71×29.5mm",
     "mAh per g: 61.5",
-    "mAh per liter: 91816"
+    "mAh per Volume: 91.8"
    ],
    "group": "Power banks",
    "sources": {
@@ -1482,7 +1482,7 @@
     "Weight: 100g",
     "Dimensions: 78×37×27mm",
     "mAh per g: 50.0",
-    "mAh per liter: 64167"
+    "mAh per Volume: 64.2"
    ],
    "group": "Power banks",
    "sources": {
@@ -1498,7 +1498,7 @@
     "Weight: 205g",
     "Dimensions: 108×70×19mm",
     "mAh per g: 48.8",
-    "mAh per liter: 69618"
+    "mAh per Volume: 69.6"
    ],
    "group": "Power banks",
    "sources": {
@@ -1514,7 +1514,7 @@
     "Weight: 293g",
     "Dimensions: 108×43×43mm",
     "mAh per g: 34.1",
-    "mAh per liter: 50077"
+    "mAh per Volume: 50.1"
    ],
    "group": "Power banks",
    "sources": {
@@ -1530,7 +1530,7 @@
     "Weight: 104g",
     "Dimensions: 102×66×8.3mm",
     "mAh per g: 48.1",
-    "mAh per liter: 89484"
+    "mAh per Volume: 89.5"
    ],
    "group": "Power banks",
    "sources": {
@@ -1545,7 +1545,7 @@
     "Dimensions: 210×110×44mm",
     "Output: 12W",
     "mAh per g: 10.3",
-    "mAh per liter: 7871"
+    "mAh per Volume: 7.9"
    ],
    "group": "Power banks",
    "sources": {
@@ -1561,7 +1561,7 @@
     "Weight: 191g",
     "Dimensions: 108×52×28mm",
     "mAh per g: 52.4",
-    "mAh per liter: 63594"
+    "mAh per Volume: 63.6"
    ],
    "group": "Power banks",
    "sources": {
@@ -1576,7 +1576,7 @@
     "Dimensions: 175×75×32mm",
     "Output: 12W",
     "mAh per g: 27.3",
-    "mAh per liter: 23810"
+    "mAh per Volume: 23.8"
    ],
    "group": "Power banks",
    "sources": {
@@ -1592,7 +1592,7 @@
     "Weight: 224g",
     "Dimensions: 127×70×19mm",
     "mAh per g: 44.6",
-    "mAh per liter: 59203"
+    "mAh per Volume: 59.2"
    ],
    "group": "Power banks",
    "sources": {
@@ -1608,7 +1608,7 @@
     "Weight: 224g",
     "Dimensions: 127×70×19mm",
     "mAh per g: 44.6",
-    "mAh per liter: 59203"
+    "mAh per Volume: 59.2"
    ],
    "group": "Power banks",
    "sources": {
@@ -1624,7 +1624,7 @@
     "Weight: 334g",
     "Dimensions: 118×72×30mm",
     "mAh per g: 59.9",
-    "mAh per liter: 78468"
+    "mAh per Volume: 78.5"
    ],
    "group": "Power banks",
    "sources": {
@@ -1640,7 +1640,7 @@
     "Weight: 590g",
     "Dimensions: 145×69.5×41.5mm",
     "mAh per g: 50.8",
-    "mAh per liter: 71733"
+    "mAh per Volume: 71.7"
    ],
    "group": "Power banks",
    "sources": {
@@ -1656,7 +1656,7 @@
     "Weight: 225g",
     "Dimensions: 143.5×68×16mm",
     "mAh per g: 44.4",
-    "mAh per liter: 64050"
+    "mAh per Volume: 64.1"
    ],
    "group": "Power banks",
    "sources": {
@@ -1672,7 +1672,7 @@
     "Weight: 290g",
     "Dimensions: 142×64×22.5mm",
     "mAh per g: 34.5",
-    "mAh per liter: 48905"
+    "mAh per Volume: 48.9"
    ],
    "group": "Power banks",
    "sources": {
@@ -1688,7 +1688,7 @@
     "Weight: 290g",
     "Dimensions: 142×64×23mm",
     "mAh per g: 34.5",
-    "mAh per liter: 47841"
+    "mAh per Volume: 47.8"
    ],
    "group": "Power banks",
    "sources": {
@@ -1704,7 +1704,7 @@
     "Weight: 190g",
     "Dimensions: 100×61×27mm",
     "mAh per g: 52.6",
-    "mAh per liter: 60716"
+    "mAh per Volume: 60.7"
    ],
    "group": "Power banks",
    "sources": {
@@ -1720,7 +1720,7 @@
     "Weight: 450g",
     "Dimensions: 149.7×70×31mm",
     "mAh per g: 44.4",
-    "mAh per liter: 61567"
+    "mAh per Volume: 61.6"
    ],
    "group": "Power banks",
    "sources": {
@@ -1736,7 +1736,7 @@
     "Weight: 640g",
     "Dimensions: 149.7×70×43mm",
     "mAh per g: 46.9",
-    "mAh per liter: 66578"
+    "mAh per Volume: 66.6"
    ],
    "group": "Power banks",
    "sources": {
@@ -1752,7 +1752,7 @@
     "Weight: 415g",
     "Dimensions: 143×70×28mm",
     "mAh per g: 48.2",
-    "mAh per liter: 71357"
+    "mAh per Volume: 71.4"
    ],
    "group": "Power banks",
    "sources": {
@@ -1768,7 +1768,7 @@
     "Weight: 230g",
     "Dimensions: 143×70×16mm",
     "mAh per g: 43.5",
-    "mAh per liter: 62438"
+    "mAh per Volume: 62.4"
    ],
    "group": "Power banks",
    "sources": {
@@ -1784,7 +1784,7 @@
     "Weight: 416g",
     "Dimensions: 149×69×28mm",
     "mAh per g: 48.1",
-    "mAh per liter: 69476"
+    "mAh per Volume: 69.5"
    ],
    "group": "Power banks",
    "sources": {
@@ -1800,7 +1800,7 @@
     "Weight: 460g",
     "Dimensions: 154×70×34mm",
     "mAh per g: 43.5",
-    "mAh per liter: 54567"
+    "mAh per Volume: 54.6"
    ],
    "group": "Power banks",
    "sources": {
@@ -1816,7 +1816,7 @@
     "Weight: 265g",
     "Dimensions: 112×66.2×32mm",
     "mAh per g: 37.7",
-    "mAh per liter: 42148"
+    "mAh per Volume: 42.1"
    ],
    "group": "Power banks",
    "sources": {
@@ -1831,7 +1831,7 @@
     "Dimensions: 190×107×53mm",
     "Weight: 790g",
     "mAh per g: 10.1",
-    "mAh per liter: 7425"
+    "mAh per Volume: 7.4"
    ],
    "group": "Power banks",
    "sources": {
@@ -1847,7 +1847,7 @@
     "Weight: 195g",
     "Dimensions: 78×64×26.5mm",
     "mAh per g: 51.3",
-    "mAh per liter: 75593"
+    "mAh per Volume: 75.6"
    ],
    "group": "Power banks",
    "sources": {
@@ -1863,7 +1863,7 @@
     "Weight: 300g",
     "Dimensions: 115×75×108mm",
     "mAh per g: 16.7",
-    "mAh per liter: 5368"
+    "mAh per Volume: 5.4"
    ],
    "group": "Power banks",
    "sources": {
@@ -1878,7 +1878,7 @@
     "Dimensions: 143.5×81×18mm",
     "Output: 10W",
     "mAh per g: 25.5",
-    "mAh per liter: 28678"
+    "mAh per Volume: 28.7"
    ],
    "group": "Power banks",
    "sources": {
@@ -1893,7 +1893,7 @@
     "Weight: 366g",
     "Dimensions: 175×75×32mm",
     "mAh per g: 27.3",
-    "mAh per liter: 23810"
+    "mAh per Volume: 23.8"
    ],
    "group": "Power banks",
    "sources": {
@@ -1909,7 +1909,7 @@
     "Weight: 200g",
     "Dimensions: 118×72×19mm",
     "mAh per g: 50.0",
-    "mAh per liter: 61949"
+    "mAh per Volume: 61.9"
    ],
    "group": "Power banks",
    "sources": {
@@ -1925,7 +1925,7 @@
     "Weight: 190g",
     "Dimensions: 50.5×32.5×118mm",
     "mAh per g: 26.3",
-    "mAh per liter: 25817"
+    "mAh per Volume: 25.8"
    ],
    "group": "Power banks",
    "sources": {
@@ -1940,7 +1940,7 @@
     "Dimensions: 212×99×122mm",
     "Output: 10W",
     "mAh per g: 9.3",
-    "mAh per liter: 3905"
+    "mAh per Volume: 3.9"
    ],
    "group": "Power banks",
    "sources": {
@@ -1956,7 +1956,7 @@
     "Weight: 1380g",
     "Dimensions: 111×92×116mm",
     "mAh per g: 58.0",
-    "mAh per liter: 67534"
+    "mAh per Volume: 67.5"
    ],
    "group": "Power banks",
    "sources": {
@@ -1972,7 +1972,7 @@
     "Dimensions: 149.7×70×43mm",
     "Output: 10W",
     "mAh per g: 47.2",
-    "mAh per liter: 66578"
+    "mAh per Volume: 66.6"
    ],
    "group": "Power banks",
    "sources": {
@@ -1988,7 +1988,7 @@
     "Output: 10W",
     "Dimensions: 164×80×32.6mm",
     "mAh per g: 49.0",
-    "mAh per liter: 70141"
+    "mAh per Volume: 70.1"
    ],
    "group": "Power banks",
    "sources": {
@@ -2003,7 +2003,7 @@
     "Weight: 50g",
     "Dimensions: 70×40×18.7mm",
     "mAh per g: 24.0",
-    "mAh per liter: 22918"
+    "mAh per Volume: 22.9"
    ],
    "group": "Power banks",
    "sources": {
@@ -2019,7 +2019,7 @@
     "Dimensions: 149.7×70×31mm",
     "Output: 10W",
     "mAh per g: 44.4",
-    "mAh per liter: 61567"
+    "mAh per Volume: 61.6"
    ],
    "group": "Power banks",
    "sources": {
@@ -2035,7 +2035,7 @@
     "Weight: 110g",
     "Dimensions: 102×68×10mm",
     "mAh per g: 45.5",
-    "mAh per liter: 72088"
+    "mAh per Volume: 72.1"
    ],
    "group": "Power banks",
    "sources": {
@@ -2050,7 +2050,7 @@
     "Weight: 70g",
     "Dimensions: 80×48×17mm",
     "mAh per g: 35.7",
-    "mAh per liter: 38297"
+    "mAh per Volume: 38.3"
    ],
    "group": "Power banks",
    "sources": {
@@ -2066,7 +2066,7 @@
     "Weight: 1850g",
     "Dimensions: 130×72×157mm",
     "mAh per g: 43.2",
-    "mAh per liter: 54440"
+    "mAh per Volume: 54.4"
    ],
    "group": "Power banks",
    "sources": {
@@ -2082,7 +2082,7 @@
     "Weight: 105g",
     "Dimensions: 102×68×10mm",
     "mAh per g: 47.6",
-    "mAh per liter: 72088"
+    "mAh per Volume: 72.1"
    ],
    "group": "Power banks",
    "sources": {
@@ -2098,7 +2098,7 @@
     "Weight: 2050g",
     "Dimensions: 166×102×88mm",
     "mAh per g: 48.8",
-    "mAh per liter: 67113"
+    "mAh per Volume: 67.1"
    ],
    "group": "Power banks",
    "sources": {
@@ -2114,7 +2114,7 @@
     "Weight: 190g",
     "Dimensions: 106×70×17.5mm",
     "mAh per g: 52.6",
-    "mAh per liter: 77012"
+    "mAh per Volume: 77.0"
    ],
    "group": "Power banks",
    "sources": {
@@ -2130,7 +2130,7 @@
     "Weight: 425g",
     "Dimensions: 149×69×29mm",
     "mAh per g: 47.1",
-    "mAh per liter: 67081"
+    "mAh per Volume: 67.1"
    ],
    "group": "Power banks",
    "sources": {
@@ -2146,7 +2146,7 @@
     "Weight: 608g",
     "Dimensions: 149×69×41mm",
     "mAh per g: 49.3",
-    "mAh per liter: 71171"
+    "mAh per Volume: 71.2"
    ],
    "group": "Power banks",
    "sources": {
@@ -2162,7 +2162,7 @@
     "Weight: 220g",
     "Dimensions: 113.5×72×24mm",
     "mAh per g: 45.5",
-    "mAh per liter: 50987"
+    "mAh per Volume: 51.0"
    ],
    "group": "Power banks",
    "sources": {
@@ -2178,7 +2178,7 @@
     "Weight: 180g",
     "Dimensions: 103×67.5×17mm",
     "mAh per g: 55.6",
-    "mAh per liter: 84608"
+    "mAh per Volume: 84.6"
    ],
    "group": "Power banks",
    "sources": {
@@ -2194,7 +2194,7 @@
     "Weight: 260g",
     "Dimensions: 152×67×19mm",
     "mAh per g: 38.5",
-    "mAh per liter: 51681"
+    "mAh per Volume: 51.7"
    ],
    "group": "Power banks",
    "sources": {
@@ -2210,7 +2210,7 @@
     "Weight: 245g",
     "Dimensions: 116×63.5×29mm",
     "mAh per g: 40.8",
-    "mAh per liter: 46813"
+    "mAh per Volume: 46.8"
    ],
    "group": "Power banks",
    "sources": {
@@ -2226,7 +2226,7 @@
     "Weight: 195g",
     "Dimensions: 90×61×25.5mm",
     "mAh per g: 51.3",
-    "mAh per liter: 71431"
+    "mAh per Volume: 71.4"
    ],
    "group": "Power banks",
    "sources": {
@@ -2242,7 +2242,7 @@
     "Weight: 171g",
     "Dimensions: 102×67×13.5mm",
     "mAh per g: 58.5",
-    "mAh per liter: 108391"
+    "mAh per Volume: 108.4"
    ],
    "group": "Power banks",
    "sources": {
@@ -2258,7 +2258,7 @@
     "Weight: 125g",
     "Dimensions: 100.5×65.5×11mm",
     "mAh per g: 40.0",
-    "mAh per liter: 69051"
+    "mAh per Volume: 69.1"
    ],
    "group": "Power banks",
    "sources": {
@@ -2274,7 +2274,7 @@
     "Weight: 187g",
     "Dimensions: 105×68×14mm",
     "mAh per g: 53.5",
-    "mAh per liter: 100040"
+    "mAh per Volume: 100.0"
    ],
    "group": "Power banks",
    "sources": {
@@ -2290,7 +2290,7 @@
     "Weight: 227g",
     "Dimensions: 105×67×19mm",
     "mAh per g: 44.1",
-    "mAh per liter: 74814"
+    "mAh per Volume: 74.8"
    ],
    "group": "Power banks",
    "sources": {
@@ -2306,7 +2306,7 @@
     "Weight: 241g",
     "Dimensions: 146×70×21mm",
     "mAh per g: 41.5",
-    "mAh per liter: 46594"
+    "mAh per Volume: 46.6"
    ],
    "group": "Power banks",
    "sources": {
@@ -2322,7 +2322,7 @@
     "Weight: 187g",
     "Dimensions: 109×77×22mm",
     "mAh per g: 53.5",
-    "mAh per liter: 54158"
+    "mAh per Volume: 54.2"
    ],
    "group": "Power banks",
    "sources": {
@@ -2338,7 +2338,7 @@
     "Weight: 194g",
     "Dimensions: 109×70×20mm",
     "mAh per g: 51.5",
-    "mAh per liter: 65531"
+    "mAh per Volume: 65.5"
    ],
    "group": "Power banks",
    "sources": {
@@ -2354,7 +2354,7 @@
     "Weight: 181g",
     "Dimensions: 86×60×28mm",
     "mAh per g: 55.2",
-    "mAh per liter: 69214"
+    "mAh per Volume: 69.2"
    ],
    "group": "Power banks",
    "sources": {
@@ -2370,7 +2370,7 @@
     "Weight: 178g",
     "Dimensions: 109×70×19mm",
     "mAh per g: 56.2",
-    "mAh per liter: 68980"
+    "mAh per Volume: 69.0"
    ],
    "group": "Power banks",
    "sources": {
@@ -2386,7 +2386,7 @@
     "Weight: 252g",
     "Dimensions: 54×28.4×116mm",
     "mAh per g: 39.7",
-    "mAh per liter: 56212"
+    "mAh per Volume: 56.2"
    ],
    "group": "Power banks",
    "sources": {
@@ -2402,7 +2402,7 @@
     "Dimensions: 150×68×28mm",
     "Output: 10W",
     "mAh per g: 46.3",
-    "mAh per liter: 70028"
+    "mAh per Volume: 70.0"
    ],
    "group": "Power banks",
    "sources": {
@@ -2418,7 +2418,7 @@
     "Weight: 230g",
     "Dimensions: 117×58×31mm",
     "mAh per g: 43.5",
-    "mAh per liter: 47536"
+    "mAh per Volume: 47.5"
    ],
    "group": "Power banks",
    "sources": {
@@ -2434,7 +2434,7 @@
     "Dimensions: 149×68×16mm",
     "Output: 10W",
     "mAh per g: 43.5",
-    "mAh per liter: 61686"
+    "mAh per Volume: 61.7"
    ],
    "group": "Power banks",
    "sources": {
@@ -2450,7 +2450,7 @@
     "Weight: 403g",
     "Dimensions: 145×72×30mm",
     "mAh per g: 49.6",
-    "mAh per liter: 63857"
+    "mAh per Volume: 63.9"
    ],
    "group": "Power banks",
    "sources": {
@@ -2466,7 +2466,7 @@
     "Dimensions: 143×68×16mm",
     "Output: 10W",
     "mAh per g: 44.1",
-    "mAh per liter: 64274"
+    "mAh per Volume: 64.3"
    ],
    "group": "Power banks",
    "sources": {
@@ -2482,7 +2482,7 @@
     "Weight: 415g",
     "Dimensions: 145×69×28mm",
     "mAh per g: 48.2",
-    "mAh per liter: 71393"
+    "mAh per Volume: 71.4"
    ],
    "group": "Power banks",
    "sources": {
@@ -2498,7 +2498,7 @@
     "Weight: 1795g",
     "Dimensions: 168×83×90mm",
     "mAh per g: 50.1",
-    "mAh per liter: 71715"
+    "mAh per Volume: 71.7"
    ],
    "group": "Power banks",
    "sources": {
@@ -2514,7 +2514,7 @@
     "Weight: 140g",
     "Dimensions: 107×66×13mm",
     "mAh per g: 35.7",
-    "mAh per liter: 54463"
+    "mAh per Volume: 54.5"
    ],
    "group": "Power banks",
    "sources": {
@@ -2530,7 +2530,7 @@
     "Weight: 1025g",
     "Dimensions: 168×83×62mm",
     "mAh per g: 58.5",
-    "mAh per liter: 69402"
+    "mAh per Volume: 69.4"
    ],
    "group": "Power banks",
    "sources": {
@@ -2546,7 +2546,7 @@
     "Weight: 230g",
     "Dimensions: 145×70×16mm",
     "mAh per g: 43.5",
-    "mAh per liter: 61576"
+    "mAh per Volume: 61.6"
    ],
    "group": "Power banks",
    "sources": {
@@ -2562,7 +2562,7 @@
     "Weight: 232g",
     "Dimensions: 145×69×16mm",
     "mAh per g: 43.1",
-    "mAh per liter: 62469"
+    "mAh per Volume: 62.5"
    ],
    "group": "Power banks",
    "sources": {
@@ -2578,7 +2578,7 @@
     "Dimensions: 145×70×29mm",
     "Output: 10W",
     "mAh per g: 48.7",
-    "mAh per liter: 67946"
+    "mAh per Volume: 67.9"
    ],
    "group": "Power banks",
    "sources": {
@@ -2594,7 +2594,7 @@
     "Weight: 437g",
     "Dimensions: 149×69×33mm",
     "mAh per g: 45.8",
-    "mAh per liter: 58950"
+    "mAh per Volume: 58.9"
    ],
    "group": "Power banks",
    "sources": {
@@ -2610,7 +2610,7 @@
     "Weight: 631g",
     "Dimensions: 149×69×44mm",
     "mAh per g: 47.5",
-    "mAh per liter: 66318"
+    "mAh per Volume: 66.3"
    ],
    "group": "Power banks",
    "sources": {
@@ -2626,7 +2626,7 @@
     "Dimensions: 149×69×44mm",
     "Output: 10W",
     "mAh per g: 49.0",
-    "mAh per liter: 66318"
+    "mAh per Volume: 66.3"
    ],
    "group": "Power banks",
    "sources": {
@@ -2641,7 +2641,7 @@
     "Weight: 43g",
     "Dimensions: 68×40×16mm",
     "mAh per g: 23.3",
-    "mAh per liter: 22978"
+    "mAh per Volume: 23.0"
    ],
    "group": "Power banks",
    "sources": {
@@ -2657,7 +2657,7 @@
     "Weight: 630g",
     "Dimensions: 168×83×33mm",
     "mAh per g: 47.6",
-    "mAh per liter: 65196"
+    "mAh per Volume: 65.2"
    ],
    "group": "Power banks",
    "sources": {
@@ -2673,7 +2673,7 @@
     "Weight: 241g",
     "Dimensions: 149×69×20mm",
     "mAh per g: 41.5",
-    "mAh per liter: 48633"
+    "mAh per Volume: 48.6"
    ],
    "group": "Power banks",
    "sources": {
@@ -2689,7 +2689,7 @@
     "Dimensions: 80×52×27mm",
     "Output: 10W",
     "mAh per g: 51.5",
-    "mAh per liter: 44516"
+    "mAh per Volume: 44.5"
    ],
    "group": "Power banks",
    "sources": {
@@ -2705,7 +2705,7 @@
     "Dimensions: 156×70×30mm",
     "Output: 10W",
     "mAh per g: 44.8",
-    "mAh per liter: 61050"
+    "mAh per Volume: 61.1"
    ],
    "group": "Power banks",
    "sources": {
@@ -2721,7 +2721,7 @@
     "Dimensions: 149×69×33mm",
     "Output: 10W",
     "mAh per g: 45.9",
-    "mAh per liter: 58950"
+    "mAh per Volume: 58.9"
    ],
    "group": "Power banks",
    "sources": {
@@ -2737,7 +2737,7 @@
     "Weight: 123g",
     "Dimensions: 93×66×13mm",
     "mAh per g: 40.7",
-    "mAh per liter: 62661"
+    "mAh per Volume: 62.7"
    ],
    "group": "Power banks",
    "sources": {
@@ -2753,7 +2753,7 @@
     "Dimensions: 78×50×23mm",
     "Output: 10W",
     "mAh per g: 51.5",
-    "mAh per liter: 55741"
+    "mAh per Volume: 55.7"
    ],
    "group": "Power banks",
    "sources": {
@@ -2769,7 +2769,7 @@
     "Dimensions: 150×68×16mm",
     "Output: 10W",
     "mAh per g: 45.0",
-    "mAh per liter: 61275"
+    "mAh per Volume: 61.3"
    ],
    "group": "Power banks",
    "sources": {
@@ -2785,7 +2785,7 @@
     "Dimensions: 105×28×28mm",
     "Output: 10W",
     "mAh per g: 46.7",
-    "mAh per liter: 60739"
+    "mAh per Volume: 60.7"
    ],
    "group": "Power banks",
    "sources": {
@@ -2801,7 +2801,7 @@
     "Weight: 918g",
     "Dimensions: 150×68×65mm",
     "mAh per g: 54.5",
-    "mAh per liter: 75415"
+    "mAh per Volume: 75.4"
    ],
    "group": "Power banks",
    "sources": {
@@ -2817,7 +2817,7 @@
     "Weight: 752g",
     "Dimensions: 150×68×52mm",
     "mAh per g: 53.2",
-    "mAh per liter: 75415"
+    "mAh per Volume: 75.4"
    ],
    "group": "Power banks",
    "sources": {
@@ -2833,7 +2833,7 @@
     "Dimensions: 150×68×40mm",
     "Output: 10W",
     "mAh per g: 54.1",
-    "mAh per liter: 73529"
+    "mAh per Volume: 73.5"
    ],
    "group": "Power banks",
    "sources": {
@@ -2849,7 +2849,7 @@
     "Dimensions: 150×68×28mm",
     "Output: 10W",
     "mAh per g: 51.4",
-    "mAh per liter: 70028"
+    "mAh per Volume: 70.0"
    ],
    "group": "Power banks",
    "sources": {
@@ -2865,7 +2865,7 @@
     "Dimensions: 149×69×20mm",
     "Output: 10W",
     "mAh per g: 41.5",
-    "mAh per liter: 48633"
+    "mAh per Volume: 48.6"
    ],
    "group": "Power banks",
    "sources": {
@@ -2881,7 +2881,7 @@
     "Weight: 193g",
     "Dimensions: 101×69×20mm",
     "mAh per g: 51.8",
-    "mAh per liter: 71746"
+    "mAh per Volume: 71.7"
    ],
    "group": "Power banks",
    "sources": {
@@ -2897,7 +2897,7 @@
     "Dimensions: 150×68×16mm",
     "Output: 10W",
     "mAh per g: 45.0",
-    "mAh per liter: 61275"
+    "mAh per Volume: 61.3"
    ],
    "group": "Power banks",
    "sources": {
@@ -2913,7 +2913,7 @@
     "Dimensions: 95×64×15mm",
     "Output: 10W",
     "mAh per g: 41.3",
-    "mAh per liter: 54825"
+    "mAh per Volume: 54.8"
    ],
    "group": "Power banks",
    "sources": {
@@ -2929,7 +2929,7 @@
     "Weight: 1263g",
     "Dimensions: 142×96×71mm",
     "mAh per g: 47.5",
-    "mAh per liter: 61992"
+    "mAh per Volume: 62.0"
    ],
    "group": "Power banks",
    "sources": {
@@ -2945,7 +2945,7 @@
     "Weight: 135g",
     "Dimensions: 100×65×13mm",
     "mAh per g: 37.0",
-    "mAh per liter: 59172"
+    "mAh per Volume: 59.2"
    ],
    "group": "Power banks",
    "sources": {
@@ -2961,7 +2961,7 @@
     "Weight: 1263g",
     "Dimensions: 142×96×71mm",
     "mAh per g: 47.5",
-    "mAh per liter: 61992"
+    "mAh per Volume: 62.0"
    ],
    "group": "Power banks",
    "sources": {
@@ -2977,7 +2977,7 @@
     "Weight: 1887g",
     "Dimensions: 175×90×84mm",
     "mAh per g: 47.7",
-    "mAh per liter: 68027"
+    "mAh per Volume: 68.0"
    ],
    "group": "Power banks",
    "sources": {
@@ -2993,7 +2993,7 @@
     "Weight: 225g",
     "Dimensions: 141×68×16mm",
     "mAh per g: 44.4",
-    "mAh per liter: 65186"
+    "mAh per Volume: 65.2"
    ],
    "group": "Power banks",
    "sources": {
@@ -3009,7 +3009,7 @@
     "Weight: 663g",
     "Dimensions: 161×82×33mm",
     "mAh per g: 45.2",
-    "mAh per liter: 68860"
+    "mAh per Volume: 68.9"
    ],
    "group": "Power banks",
    "sources": {
@@ -3025,7 +3025,7 @@
     "Dimensions: 78×47×28mm",
     "Output: 10W",
     "mAh per g: 52.6",
-    "mAh per liter: 48710"
+    "mAh per Volume: 48.7"
    ],
    "group": "Power banks",
    "sources": {
@@ -3041,7 +3041,7 @@
     "Weight: 406g",
     "Dimensions: 142×68×29mm",
     "mAh per g: 49.3",
-    "mAh per liter: 71422"
+    "mAh per Volume: 71.4"
    ],
    "group": "Power banks",
    "sources": {
@@ -3057,7 +3057,7 @@
     "Weight: 436g",
     "Dimensions: 146×67×29mm",
     "mAh per g: 45.9",
-    "mAh per liter: 70502"
+    "mAh per Volume: 70.5"
    ],
    "group": "Power banks",
    "sources": {
@@ -3073,7 +3073,7 @@
     "Weight: 192g",
     "Dimensions: 84×54×38mm",
     "mAh per g: 52.1",
-    "mAh per liter: 58015"
+    "mAh per Volume: 58.0"
    ],
    "group": "Power banks",
    "sources": {
@@ -3089,7 +3089,7 @@
     "Weight: 426g",
     "Dimensions: 146×67×28.5mm",
     "mAh per g: 46.9",
-    "mAh per liter: 71739"
+    "mAh per Volume: 71.7"
    ],
    "group": "Power banks",
    "sources": {
@@ -3105,7 +3105,7 @@
     "Weight: 251g",
     "Dimensions: 146×67×16.5mm",
     "mAh per g: 39.8",
-    "mAh per liter: 61957"
+    "mAh per Volume: 62.0"
    ],
    "group": "Power banks",
    "sources": {
@@ -3121,7 +3121,7 @@
     "Weight: 230g",
     "Dimensions: 149×70×17mm",
     "mAh per g: 43.5",
-    "mAh per liter: 56398"
+    "mAh per Volume: 56.4"
    ],
    "group": "Power banks",
    "sources": {
@@ -3137,7 +3137,7 @@
     "Weight: 241g",
     "Dimensions: 146×67×16.5mm",
     "mAh per g: 41.5",
-    "mAh per liter: 61957"
+    "mAh per Volume: 62.0"
    ],
    "group": "Power banks",
    "sources": {
@@ -3153,7 +3153,7 @@
     "Weight: 418g",
     "Dimensions: 149×71×28mm",
     "mAh per g: 47.8",
-    "mAh per liter: 67519"
+    "mAh per Volume: 67.5"
    ],
    "group": "Power banks",
    "sources": {
@@ -3169,7 +3169,7 @@
     "Weight: 652g",
     "Dimensions: 155×50×53mm",
     "mAh per g: 38.3",
-    "mAh per liter: 60864"
+    "mAh per Volume: 60.9"
    ],
    "group": "Power banks",
    "sources": {
@@ -3185,7 +3185,7 @@
     "Weight: 596g",
     "Dimensions: 146×68×41mm",
     "mAh per g: 50.3",
-    "mAh per liter: 73701"
+    "mAh per Volume: 73.7"
    ],
    "group": "Power banks",
    "sources": {
@@ -3201,7 +3201,7 @@
     "Weight: 230g",
     "Dimensions: 140×68×16mm",
     "mAh per g: 43.5",
-    "mAh per liter: 65651"
+    "mAh per Volume: 65.7"
    ],
    "group": "Power banks",
    "sources": {
@@ -3217,7 +3217,7 @@
     "Dimensions: 81×62×25mm",
     "Output: 10W",
     "mAh per g: 29.4",
-    "mAh per liter: 39825"
+    "mAh per Volume: 39.8"
    ],
    "group": "Power banks",
    "sources": {
@@ -3233,7 +3233,7 @@
     "Dimensions: 138×69×27mm",
     "Output: 10.5W",
     "mAh per g: 49.9",
-    "mAh per liter: 77793"
+    "mAh per Volume: 77.8"
    ],
    "group": "Power banks",
    "sources": {
@@ -3249,7 +3249,7 @@
     "Dimensions: 136×68×15mm",
     "Output: 10.5W",
     "mAh per g: 45.5",
-    "mAh per liter: 72088"
+    "mAh per Volume: 72.1"
    ],
    "group": "Power banks",
    "sources": {
@@ -3265,7 +3265,7 @@
     "Weight: 152g",
     "Dimensions: 105×66×16mm",
     "mAh per g: 32.9",
-    "mAh per liter: 45094"
+    "mAh per Volume: 45.1"
    ],
    "group": "Power banks",
    "sources": {
@@ -3281,7 +3281,7 @@
     "Weight: 225g",
     "Dimensions: 122×62×16mm",
     "mAh per g: 44.4",
-    "mAh per liter: 82628"
+    "mAh per Volume: 82.6"
    ],
    "group": "Power banks",
    "sources": {
@@ -3297,7 +3297,7 @@
     "Weight: 586g",
     "Dimensions: 137×68×40mm",
     "mAh per g: 51.2",
-    "mAh per liter: 80507"
+    "mAh per Volume: 80.5"
    ],
    "group": "Power banks",
    "sources": {
@@ -3313,7 +3313,7 @@
     "Dimensions: 116×73×16mm",
     "Output: 10.5W",
     "mAh per g: 53.5",
-    "mAh per liter: 73807"
+    "mAh per Volume: 73.8"
    ],
    "group": "Power banks",
    "sources": {
@@ -3329,7 +3329,7 @@
     "Weight: 168g",
     "Dimensions: 81×59×25mm",
     "mAh per g: 59.5",
-    "mAh per liter: 83700"
+    "mAh per Volume: 83.7"
    ],
    "group": "Power banks",
    "sources": {
@@ -3345,7 +3345,7 @@
     "Dimensions: 136×68×28mm",
     "Output: 10.5W",
     "mAh per g: 49.6",
-    "mAh per liter: 77237"
+    "mAh per Volume: 77.2"
    ],
    "group": "Power banks",
    "sources": {
@@ -3361,7 +3361,7 @@
     "Dimensions: 137×68×40mm",
     "Output: 10.5W",
     "mAh per g: 51.3",
-    "mAh per liter: 80507"
+    "mAh per Volume: 80.5"
    ],
    "group": "Power banks",
    "sources": {
@@ -3377,7 +3377,7 @@
     "Weight: 211g",
     "Dimensions: 108×69×23mm",
     "mAh per g: 47.4",
-    "mAh per liter: 58344"
+    "mAh per Volume: 58.3"
    ],
    "group": "Power banks",
    "sources": {
@@ -3393,7 +3393,7 @@
     "Weight: 225g",
     "Dimensions: 123×57×23mm",
     "mAh per g: 44.4",
-    "mAh per liter: 62014"
+    "mAh per Volume: 62.0"
    ],
    "group": "Power banks",
    "sources": {
@@ -3409,7 +3409,7 @@
     "Dimensions: 136×68×16mm",
     "Output: 10.5W",
     "mAh per g: 45.5",
-    "mAh per liter: 67582"
+    "mAh per Volume: 67.6"
    ],
    "group": "Power banks",
    "sources": {
@@ -3425,7 +3425,7 @@
     "Weight: 209g",
     "Dimensions: 110×69×20mm",
     "mAh per g: 47.8",
-    "mAh per liter: 65876"
+    "mAh per Volume: 65.9"
    ],
    "group": "Power banks",
    "sources": {
@@ -3441,7 +3441,7 @@
     "Weight: 220g",
     "Dimensions: 135×69×16mm",
     "mAh per g: 45.5",
-    "mAh per liter: 67096"
+    "mAh per Volume: 67.1"
    ],
    "group": "Power banks",
    "sources": {
@@ -3457,7 +3457,7 @@
     "Weight: 400g",
     "Dimensions: 141×69×28mm",
     "mAh per g: 50.0",
-    "mAh per liter: 73418"
+    "mAh per Volume: 73.4"
    ],
    "group": "Power banks",
    "sources": {
@@ -3473,7 +3473,7 @@
     "Weight: 166g",
     "Dimensions: 151×53×25mm",
     "mAh per g: 90.4",
-    "mAh per liter: 74972"
+    "mAh per Volume: 75.0"
    ],
    "group": "Power banks",
    "sources": {
@@ -3489,7 +3489,7 @@
     "Weight: 157g",
     "Dimensions: 108×57×18mm",
     "mAh per g: 63.7",
-    "mAh per liter: 90246"
+    "mAh per Volume: 90.2"
    ],
    "group": "Power banks",
    "sources": {
@@ -3505,7 +3505,7 @@
     "Weight: 791g",
     "Dimensions: 148×68×52mm",
     "mAh per g: 50.6",
-    "mAh per liter: 76434"
+    "mAh per Volume: 76.4"
    ],
    "group": "Power banks",
    "sources": {
@@ -3521,7 +3521,7 @@
     "Weight: 974g",
     "Dimensions: 148×68×64mm",
     "mAh per g: 51.3",
-    "mAh per liter: 77628"
+    "mAh per Volume: 77.6"
    ],
    "group": "Power banks",
    "sources": {
@@ -3537,7 +3537,7 @@
     "Weight: 238g",
     "Dimensions: 141×68×17mm",
     "mAh per g: 42.0",
-    "mAh per liter: 61351"
+    "mAh per Volume: 61.4"
    ],
    "group": "Power banks",
    "sources": {
@@ -3553,7 +3553,7 @@
     "Dimensions: 140×69×15mm",
     "Output: 10W",
     "mAh per g: 45.0",
-    "mAh per liter: 69013"
+    "mAh per Volume: 69.0"
    ],
    "group": "Power banks",
    "sources": {
@@ -3569,7 +3569,7 @@
     "Dimensions: 138×70×28mm",
     "Output: 10W",
     "mAh per g: 47.8",
-    "mAh per liter: 73943"
+    "mAh per Volume: 73.9"
    ],
    "group": "Power banks",
    "sources": {
@@ -3585,7 +3585,7 @@
     "Weight: 234g",
     "Dimensions: 139×68×16mm",
     "mAh per g: 42.7",
-    "mAh per liter: 66124"
+    "mAh per Volume: 66.1"
    ],
    "group": "Power banks",
    "sources": {
@@ -3601,7 +3601,7 @@
     "Weight: 447g",
     "Dimensions: 149×70×28mm",
     "mAh per g: 44.7",
-    "mAh per liter: 68484"
+    "mAh per Volume: 68.5"
    ],
    "group": "Power banks",
    "sources": {
@@ -3617,7 +3617,7 @@
     "Weight: 240g",
     "Dimensions: 145×69×20mm",
     "mAh per g: 41.7",
-    "mAh per liter: 49975"
+    "mAh per Volume: 50.0"
    ],
    "group": "Power banks",
    "sources": {
@@ -3633,7 +3633,7 @@
     "Weight: 667g",
     "Dimensions: 166×81×32mm",
     "mAh per g: 45.0",
-    "mAh per liter: 69723"
+    "mAh per Volume: 69.7"
    ],
    "group": "Power banks",
    "sources": {
@@ -3649,7 +3649,7 @@
     "Weight: 206g",
     "Dimensions: 112×71×18mm",
     "mAh per g: 48.5",
-    "mAh per liter: 69864"
+    "mAh per Volume: 69.9"
    ],
    "group": "Power banks",
    "sources": {
@@ -3665,7 +3665,7 @@
     "Weight: 166g",
     "Dimensions: 104×53×25mm",
     "mAh per g: 60.2",
-    "mAh per liter: 72569"
+    "mAh per Volume: 72.6"
    ],
    "group": "Power banks",
    "sources": {
@@ -3681,7 +3681,7 @@
     "Weight: 166g",
     "Dimensions: 104×53×25mm",
     "mAh per g: 60.2",
-    "mAh per liter: 72569"
+    "mAh per Volume: 72.6"
    ],
    "group": "Power banks",
    "sources": {
@@ -3697,7 +3697,7 @@
     "Dimensions: 140×70×16mm",
     "Output: 10W",
     "mAh per g: 41.8",
-    "mAh per liter: 63776"
+    "mAh per Volume: 63.8"
    ],
    "group": "Power banks",
    "sources": {
@@ -3713,7 +3713,7 @@
     "Dimensions: 145×68×28mm",
     "Output: 10W",
     "mAh per g: 50.0",
-    "mAh per liter: 72443"
+    "mAh per Volume: 72.4"
    ],
    "group": "Power banks",
    "sources": {
@@ -3729,7 +3729,7 @@
     "Dimensions: 166×81×32mm",
     "Output: 10W",
     "mAh per g: 45.0",
-    "mAh per liter: 69723"
+    "mAh per Volume: 69.7"
    ],
    "group": "Power banks",
    "sources": {
@@ -3745,7 +3745,7 @@
     "Dimensions: 140×77×16mm",
     "Output: 10W",
     "mAh per g: 43.5",
-    "mAh per liter: 57978"
+    "mAh per Volume: 58.0"
    ],
    "group": "Power banks",
    "sources": {
@@ -3761,7 +3761,7 @@
     "Dimensions: 136×68×16mm",
     "Output: 10W",
     "mAh per g: 44.4",
-    "mAh per liter: 67582"
+    "mAh per Volume: 67.6"
    ],
    "group": "Power banks",
    "sources": {
@@ -3777,7 +3777,7 @@
     "Weight: 179g",
     "Dimensions: 80×57×26mm",
     "mAh per g: 55.9",
-    "mAh per liter: 84345"
+    "mAh per Volume: 84.3"
    ],
    "group": "Power banks",
    "sources": {
@@ -3793,7 +3793,7 @@
     "Weight: 313g",
     "Dimensions: 117×63×29mm",
     "mAh per g: 63.9",
-    "mAh per liter: 93563"
+    "mAh per Volume: 93.6"
    ],
    "group": "Power banks",
    "sources": {
@@ -3809,7 +3809,7 @@
     "Weight: 243g",
     "Dimensions: 144×69×16mm",
     "mAh per g: 41.2",
-    "mAh per liter: 62903"
+    "mAh per Volume: 62.9"
    ],
    "group": "Power banks",
    "sources": {
@@ -3825,7 +3825,7 @@
     "Dimensions: 163×81×33mm",
     "Output: 10W",
     "mAh per g: 44.6",
-    "mAh per liter: 68855"
+    "mAh per Volume: 68.9"
    ],
    "group": "Power banks",
    "sources": {
@@ -3841,7 +3841,7 @@
     "Dimensions: 134×50×23mm",
     "Output: 10W",
     "mAh per g: 46.9",
-    "mAh per liter: 64893"
+    "mAh per Volume: 64.9"
    ],
    "group": "Power banks",
    "sources": {
@@ -3857,7 +3857,7 @@
     "Weight: 186g",
     "Dimensions: 114×68×17mm",
     "mAh per g: 53.8",
-    "mAh per liter: 75882"
+    "mAh per Volume: 75.9"
    ],
    "group": "Power banks",
    "sources": {
@@ -3873,7 +3873,7 @@
     "Weight: 334g",
     "Dimensions: 116×73×31mm",
     "mAh per g: 59.9",
-    "mAh per liter: 76188"
+    "mAh per Volume: 76.2"
    ],
    "group": "Power banks",
    "sources": {
@@ -3889,7 +3889,7 @@
     "Dimensions: 141×67×16mm",
     "Output: 10W",
     "mAh per g: 44.4",
-    "mAh per liter: 66159"
+    "mAh per Volume: 66.2"
    ],
    "group": "Power banks",
    "sources": {
@@ -3905,7 +3905,7 @@
     "Weight: 148g",
     "Dimensions: 95×64×17mm",
     "mAh per g: 67.6",
-    "mAh per liter: 96749"
+    "mAh per Volume: 96.7"
    ],
    "group": "Power banks",
    "sources": {
@@ -3921,7 +3921,7 @@
     "Weight: 339g",
     "Dimensions: 145×70×23mm",
     "mAh per g: 44.2",
-    "mAh per liter: 64254"
+    "mAh per Volume: 64.3"
    ],
    "group": "Power banks",
    "sources": {
@@ -3936,7 +3936,7 @@
     "Dimensions: 146×69×28mm",
     "Output: 10W",
     "mAh per g: 41.8",
-    "mAh per liter: 70904"
+    "mAh per Volume: 70.9"
    ],
    "group": "Power banks",
    "sources": {
@@ -3952,7 +3952,7 @@
     "Dimensions: 168×83×33mm",
     "Output: 10W",
     "mAh per g: 42.3",
-    "mAh per liter: 65196"
+    "mAh per Volume: 65.2"
    ],
    "group": "Power banks",
    "sources": {
@@ -3968,7 +3968,7 @@
     "Dimensions: 165×84×32mm",
     "Output: 10W",
     "mAh per g: 43.0",
-    "mAh per liter: 67641"
+    "mAh per Volume: 67.6"
    ],
    "group": "Power banks",
    "sources": {
@@ -3984,7 +3984,7 @@
     "Weight: 232g",
     "Dimensions: 150×68×17mm",
     "mAh per g: 43.1",
-    "mAh per liter: 57670"
+    "mAh per Volume: 57.7"
    ],
    "group": "Power banks",
    "sources": {
@@ -4000,7 +4000,7 @@
     "Dimensions: 145×69×30mm",
     "Output: 10W",
     "mAh per g: 47.1",
-    "mAh per liter: 66633"
+    "mAh per Volume: 66.6"
    ],
    "group": "Power banks",
    "sources": {
@@ -4016,7 +4016,7 @@
     "Output: 10W",
     "Weight: 241g",
     "mAh per g: 41.5",
-    "mAh per liter: 74822"
+    "mAh per Volume: 74.8"
    ],
    "group": "Power banks",
    "sources": {
@@ -4032,7 +4032,7 @@
     "Dimensions: 139×70×28mm",
     "Output: 10W",
     "mAh per g: 47.4",
-    "mAh per liter: 73411"
+    "mAh per Volume: 73.4"
    ],
    "group": "Power banks",
    "sources": {
@@ -4048,7 +4048,7 @@
     "Dimensions: 125×55×25mm",
     "Output: 10W",
     "mAh per g: 48.3",
-    "mAh per liter: 58182"
+    "mAh per Volume: 58.2"
    ],
    "group": "Power banks",
    "sources": {
@@ -4064,7 +4064,7 @@
     "Dimensions: 128×60×25mm",
     "Output: 10W",
     "mAh per g: 43.5",
-    "mAh per liter: 52083"
+    "mAh per Volume: 52.1"
    ],
    "group": "Power banks",
    "sources": {
@@ -4079,7 +4079,7 @@
     "Dimensions: 116×72×29mm",
     "Output: 15W",
     "mAh per g: 42.4",
-    "mAh per liter: 41287"
+    "mAh per Volume: 41.3"
    ],
    "group": "Power banks",
    "sources": {
@@ -4095,7 +4095,7 @@
     "Output: 10W",
     "Weight: 239g",
     "mAh per g: 41.8",
-    "mAh per liter: 65651"
+    "mAh per Volume: 65.7"
    ],
    "group": "Power banks",
    "sources": {
@@ -4111,7 +4111,7 @@
     "Output: 10W",
     "Weight: 442g",
     "mAh per g: 45.2",
-    "mAh per liter: 69382"
+    "mAh per Volume: 69.4"
    ],
    "group": "Power banks",
    "sources": {
@@ -4127,7 +4127,7 @@
     "Dimensions: 131×60×23mm",
     "Output: 10W",
     "mAh per g: 42.6",
-    "mAh per liter: 55316"
+    "mAh per Volume: 55.3"
    ],
    "group": "Power banks",
    "sources": {
@@ -4143,7 +4143,7 @@
     "Dimensions: 138×68×16mm",
     "Output: 10W",
     "mAh per g: 42.6",
-    "mAh per liter: 66603"
+    "mAh per Volume: 66.6"
    ],
    "group": "Power banks",
    "sources": {
@@ -4170,7 +4170,7 @@
     "Dimensions: 118×51×14mm",
     "Output: 5W",
     "mAh per g: 55.6",
-    "mAh per liter: 83084"
+    "mAh per Volume: 83.1"
    ],
    "group": "Power banks",
    "sources": {
@@ -4186,7 +4186,7 @@
     "Weight: 246g",
     "Dimensions: 139×69×20mm",
     "mAh per g: 40.7",
-    "mAh per liter: 52132"
+    "mAh per Volume: 52.1"
    ],
    "group": "Power banks",
    "sources": {
@@ -4202,7 +4202,7 @@
     "Dimensions: 139×68×16mm",
     "Output: 10W",
     "mAh per g: 45.7",
-    "mAh per liter: 66124"
+    "mAh per Volume: 66.1"
    ],
    "group": "Power banks",
    "sources": {
@@ -4218,7 +4218,7 @@
     "Dimensions: 147×71×29mm",
     "Output: 10W",
     "mAh per g: 49.9",
-    "mAh per liter: 66078"
+    "mAh per Volume: 66.1"
    ],
    "group": "Power banks",
    "sources": {
@@ -4234,7 +4234,7 @@
     "Dimensions: 145×68×26mm",
     "Output: 10W",
     "mAh per g: 50.3",
-    "mAh per liter: 78015"
+    "mAh per Volume: 78.0"
    ],
    "group": "Power banks",
    "sources": {
@@ -4250,7 +4250,7 @@
     "Dimensions: 140×68×29mm",
     "Output: 10W",
     "mAh per g: 50.9",
-    "mAh per liter: 72443"
+    "mAh per Volume: 72.4"
    ],
    "group": "Power banks",
    "sources": {
@@ -4266,7 +4266,7 @@
     "Weight: 204g",
     "Dimensions: 120×51×22mm",
     "mAh per g: 49.0",
-    "mAh per liter: 74272"
+    "mAh per Volume: 74.3"
    ],
    "group": "Power banks",
    "sources": {
@@ -4282,7 +4282,7 @@
     "Dimensions: 134×68×15mm",
     "Output: 10W",
     "mAh per g: 47.6",
-    "mAh per liter: 73164"
+    "mAh per Volume: 73.2"
    ],
    "group": "Power banks",
    "sources": {
@@ -4298,7 +4298,7 @@
     "Dimensions: 124×50×22mm",
     "Output: 10W",
     "mAh per g: 45.5",
-    "mAh per liter: 73314"
+    "mAh per Volume: 73.3"
    ],
    "group": "Power banks",
    "sources": {
@@ -4314,7 +4314,7 @@
     "Weight: 232g",
     "Dimensions: 149×69×20mm",
     "mAh per g: 43.1",
-    "mAh per liter: 48633"
+    "mAh per Volume: 48.6"
    ],
    "group": "Power banks",
    "sources": {
@@ -4330,7 +4330,7 @@
     "Dimensions: 97×66×25mm",
     "Output: 10W",
     "mAh per g: 39.1",
-    "mAh per liter: 62480"
+    "mAh per Volume: 62.5"
    ],
    "group": "Power banks",
    "sources": {
@@ -4346,7 +4346,7 @@
     "Dimensions: 135×71×16mm",
     "Weight: 236g",
     "mAh per g: 42.4",
-    "mAh per liter: 65206"
+    "mAh per Volume: 65.2"
    ],
    "group": "Power banks",
    "sources": {
@@ -4362,7 +4362,7 @@
     "Dimensions: 99×64×24mm",
     "Output: 10W",
     "mAh per g: 49.0",
-    "mAh per liter: 65762"
+    "mAh per Volume: 65.8"
    ],
    "group": "Power banks",
    "sources": {
@@ -4378,7 +4378,7 @@
     "Weight: 227g",
     "Dimensions: 143×68×16mm",
     "mAh per g: 44.1",
-    "mAh per liter: 64274"
+    "mAh per Volume: 64.3"
    ],
    "group": "Power banks",
    "sources": {
@@ -4394,7 +4394,7 @@
     "Weight: 204g",
     "Dimensions: 143×68×17mm",
     "mAh per g: 49.0",
-    "mAh per liter: 60493"
+    "mAh per Volume: 60.5"
    ],
    "group": "Power banks",
    "sources": {
@@ -4410,7 +4410,7 @@
     "Weight: 245g",
     "Dimensions: 156×74×19mm",
     "mAh per g: 40.8",
-    "mAh per liter: 45592"
+    "mAh per Volume: 45.6"
    ],
    "group": "Power banks",
    "sources": {
@@ -4426,7 +4426,7 @@
     "Dimensions: 115×52×23mm",
     "Output: 10W",
     "mAh per g: 51.0",
-    "mAh per liter: 72706"
+    "mAh per Volume: 72.7"
    ],
    "group": "Power banks",
    "sources": {
@@ -4442,7 +4442,7 @@
     "Dimensions: 119×51×24mm",
     "Output: 10W",
     "mAh per g: 49.3",
-    "mAh per liter: 68655"
+    "mAh per Volume: 68.7"
    ],
    "group": "Power banks",
    "sources": {
@@ -4457,7 +4457,7 @@
     "Dimensions: 119×51×24mm",
     "Output: 10W",
     "mAh per g: 46.5",
-    "mAh per liter: 68655"
+    "mAh per Volume: 68.7"
    ],
    "group": "Power banks",
    "sources": {
@@ -4473,7 +4473,7 @@
     "Dimensions: 119×51×24mm",
     "Weight: 233g",
     "mAh per g: 21.5",
-    "mAh per liter: 34327"
+    "mAh per Volume: 34.3"
    ],
    "group": "Power banks",
    "sources": {
@@ -4488,7 +4488,7 @@
     "Dimensions: 169×83×22mm",
     "Weight: 479g",
     "mAh per g: 62.6",
-    "mAh per liter: 97215"
+    "mAh per Volume: 97.2"
    ],
    "group": "Power banks",
    "sources": {
@@ -4504,7 +4504,7 @@
     "Weight: 192g",
     "Dimensions: 101×64×24mm",
     "mAh per g: 52.1",
-    "mAh per liter: 64460"
+    "mAh per Volume: 64.5"
    ],
    "group": "Power banks",
    "sources": {
@@ -4520,7 +4520,7 @@
     "Weight: 203g",
     "Dimensions: 140×68×16mm",
     "mAh per g: 49.3",
-    "mAh per liter: 65651"
+    "mAh per Volume: 65.7"
    ],
    "group": "Power banks",
    "sources": {
@@ -4536,7 +4536,7 @@
     "Dimensions: 140×68×19mm",
     "Output: 10W",
     "mAh per g: 41.8",
-    "mAh per liter: 55285"
+    "mAh per Volume: 55.3"
    ],
    "group": "Power banks",
    "sources": {
@@ -4552,7 +4552,7 @@
     "Dimensions: 138×68×16mm",
     "Output: 10W",
     "mAh per g: 45.9",
-    "mAh per liter: 66603"
+    "mAh per Volume: 66.6"
    ],
    "group": "Power banks",
    "sources": {
@@ -4568,7 +4568,7 @@
     "Weight: 236g",
     "Dimensions: 143×73×17.5mm",
     "mAh per g: 42.4",
-    "mAh per liter: 54740"
+    "mAh per Volume: 54.7"
    ],
    "group": "Power banks",
    "sources": {
@@ -4583,7 +4583,7 @@
     "Dimensions: 220×105×43mm",
     "Output: 10W",
     "mAh per g: 15.4",
-    "mAh per liter: 4027"
+    "mAh per Volume: 4.0"
    ],
    "group": "Power banks",
    "sources": {
@@ -4598,7 +4598,7 @@
     "Capacity: 30000mAh",
     "Output: 10W",
     "mAh per g: 132.7",
-    "mAh per liter: 389527"
+    "mAh per Volume: 389.5"
    ],
    "group": "Power banks",
    "sources": {
@@ -4614,7 +4614,7 @@
     "Dimensions: 145×73×25mm",
     "Capacity: 20000mAh",
     "mAh per g: 47.1",
-    "mAh per liter: 75579"
+    "mAh per Volume: 75.6"
    ],
    "group": "Power banks",
    "sources": {
@@ -4629,7 +4629,7 @@
     "Dimensions: 98×46×23mm",
     "Output: 5W",
     "mAh per g: 43.3",
-    "mAh per liter: 50152"
+    "mAh per Volume: 50.2"
    ],
    "group": "Power banks",
    "sources": {
@@ -4645,7 +4645,7 @@
     "Output: 10W",
     "Dimensions: 147×73×26mm",
     "mAh per g: 48.7",
-    "mAh per liter: 71683"
+    "mAh per Volume: 71.7"
    ],
    "group": "Power banks",
    "sources": {
@@ -4661,7 +4661,7 @@
     "Capacity: 10000mAh",
     "Dimensions: 142×67×16mm",
     "mAh per g: 47.2",
-    "mAh per liter: 65693"
+    "mAh per Volume: 65.7"
    ],
    "group": "Power banks",
    "sources": {
@@ -4677,7 +4677,7 @@
     "Output: 10W",
     "Dimensions: 80×62×24mm",
     "mAh per g: 36.8",
-    "mAh per liter: 84005"
+    "mAh per Volume: 84.0"
    ],
    "group": "Power banks",
    "sources": {
@@ -4693,7 +4693,7 @@
     "Weight: 258g",
     "Dimensions: 60×68×16mm",
     "mAh per g: 38.8",
-    "mAh per liter: 153186"
+    "mAh per Volume: 153.2"
    ],
    "group": "Power banks",
    "sources": {
@@ -4709,7 +4709,7 @@
     "Capacity: 20000mAh",
     "Dimensions: 145×74×26mm",
     "mAh per g: 51.4",
-    "mAh per liter: 71690"
+    "mAh per Volume: 71.7"
    ],
    "group": "Power banks",
    "sources": {
@@ -4724,7 +4724,7 @@
     "Weight: 104g",
     "Capacity: 5000mAh",
     "mAh per g: 48.1",
-    "mAh per liter: 64921"
+    "mAh per Volume: 64.9"
    ],
    "group": "Power banks",
    "sources": {
@@ -4740,7 +4740,7 @@
     "Output: 10W",
     "Dimensions: 97×63×25mm",
     "mAh per g: 52.9",
-    "mAh per liter: 65456"
+    "mAh per Volume: 65.5"
    ],
    "group": "Power banks",
    "sources": {
@@ -4755,7 +4755,7 @@
     "Dimensions: 130×74×15mm",
     "Capacity: 13000mAh",
     "mAh per g: 61.3",
-    "mAh per liter: 90090"
+    "mAh per Volume: 90.1"
    ],
    "group": "Power banks",
    "sources": {
@@ -4770,7 +4770,7 @@
     "Dimensions: 93×63×23mm",
     "Capacity: 8000mAh",
     "mAh per g: 46.0",
-    "mAh per liter: 59366"
+    "mAh per Volume: 59.4"
    ],
    "group": "Power banks",
    "sources": {
@@ -4785,7 +4785,7 @@
     "Dimensions: 142×68×16mm",
     "Capacity: 12000mAh",
     "mAh per g: 52.9",
-    "mAh per liter: 77672"
+    "mAh per Volume: 77.7"
    ],
    "group": "Power banks",
    "sources": {
@@ -4800,7 +4800,7 @@
     "Output: 10.5W",
     "Dimensions: 100×61×22mm",
     "mAh per g: 51.5",
-    "mAh per liter: 74516"
+    "mAh per Volume: 74.5"
    ],
    "group": "Power banks",
    "sources": {
@@ -4816,7 +4816,7 @@
     "Capacity: 10000mAh",
     "Dimensions: 136×78×14mm",
     "mAh per g: 50.8",
-    "mAh per liter: 67335"
+    "mAh per Volume: 67.3"
    ],
    "group": "Power banks",
    "sources": {
@@ -4832,7 +4832,7 @@
     "Capacity: 10000mAh",
     "Dimensions: 136×78×14mm",
     "mAh per g: 50.8",
-    "mAh per liter: 67335"
+    "mAh per Volume: 67.3"
    ],
    "group": "Power banks",
    "sources": {
@@ -4848,7 +4848,7 @@
     "Capacity: 10000mAh",
     "Dimensions: 136×78×14mm",
     "mAh per g: 50.8",
-    "mAh per liter: 67335"
+    "mAh per Volume: 67.3"
    ],
    "group": "Power banks",
    "sources": {
@@ -4863,7 +4863,7 @@
     "Capacity: 7000mAh",
     "Dimensions: 140×59×13mm",
     "mAh per g: 39.3",
-    "mAh per liter: 65189"
+    "mAh per Volume: 65.2"
    ],
    "group": "Power banks",
    "sources": {
@@ -4879,7 +4879,7 @@
     "Rated capacity: 6400mAh",
     "Dimensions: 151×71×12mm",
     "mAh per g: 41.7",
-    "mAh per liter: 77729"
+    "mAh per Volume: 77.7"
    ],
    "group": "Power banks",
    "sources": {
@@ -4903,7 +4903,7 @@
     "Output: 5W",
     "Dimensions: 128×68×10mm",
     "Capacity: 5000mAh",
-    "mAh per liter: 57445"
+    "mAh per Volume: 57.4"
    ],
    "group": "Power banks",
    "sources": {
@@ -4918,7 +4918,7 @@
     "Dimensions: 136×68×16mm",
     "Output: 10W",
     "mAh per g: 51.0",
-    "mAh per liter: 67582"
+    "mAh per Volume: 67.6"
    ],
    "group": "Power banks",
    "sources": {
@@ -4933,7 +4933,7 @@
     "Capacity: 10000mAh",
     "Output: 10W",
     "mAh per g: 43.9",
-    "mAh per liter: 56747"
+    "mAh per Volume: 56.7"
    ],
    "group": "Power banks",
    "sources": {
@@ -4948,7 +4948,7 @@
     "Capacity: 10000mAh",
     "Output: 10W",
     "mAh per g: 96.2",
-    "mAh per liter: 61881"
+    "mAh per Volume: 61.9"
    ],
    "group": "Power banks",
    "sources": {
@@ -4964,7 +4964,7 @@
     "Capacity: 5000mAh",
     "Output: 12W",
     "mAh per g: 29.8",
-    "mAh per liter: 36724"
+    "mAh per Volume: 36.7"
    ],
    "group": "Power banks",
    "sources": {
@@ -4979,7 +4979,7 @@
     "Dimensions: 155×74×20mm",
     "Output: 18W",
     "mAh per g: 43.5",
-    "mAh per liter: 43592"
+    "mAh per Volume: 43.6"
    ],
    "group": "Power banks",
    "sources": {
@@ -4995,7 +4995,7 @@
     "Output: 5W",
     "Dimensions: 146×72×18mm",
     "mAh per g: 44.2",
-    "mAh per liter: 52850"
+    "mAh per Volume: 52.8"
    ],
    "group": "Power banks",
    "sources": {
@@ -5011,7 +5011,7 @@
     "Weight: 173g",
     "Dimensions: 115×70×12mm",
     "mAh per g: 57.8",
-    "mAh per liter: 103520"
+    "mAh per Volume: 103.5"
    ],
    "group": "Power banks",
    "sources": {
@@ -5027,7 +5027,7 @@
     "Weight: 231g",
     "Dimensions: 139×70×16mm",
     "mAh per g: 43.3",
-    "mAh per liter: 64234"
+    "mAh per Volume: 64.2"
    ],
    "group": "Power banks",
    "sources": {
@@ -5043,7 +5043,7 @@
     "Weight: 372g",
     "Dimensions: 159×109×17mm",
     "mAh per g: 53.8",
-    "mAh per liter: 67882"
+    "mAh per Volume: 67.9"
    ],
    "group": "Power banks",
    "sources": {
@@ -5059,7 +5059,7 @@
     "Weight: 127g",
     "Dimensions: 120×69×13mm",
     "mAh per g: 39.4",
-    "mAh per liter: 46451"
+    "mAh per Volume: 46.5"
    ],
    "group": "Power banks",
    "sources": {
@@ -5075,7 +5075,7 @@
     "Weight: 209g",
     "Dimensions: 142×66×14mm",
     "mAh per g: 47.8",
-    "mAh per liter: 76215"
+    "mAh per Volume: 76.2"
    ],
    "group": "Power banks",
    "sources": {
@@ -5091,7 +5091,7 @@
     "Weight: 188g",
     "Dimensions: 130×69×16mm",
     "mAh per g: 53.2",
-    "mAh per liter: 69677"
+    "mAh per Volume: 69.7"
    ],
    "group": "Power banks",
    "sources": {
@@ -5106,7 +5106,7 @@
     "Weight: 120g",
     "Dimensions: 93×44×23mm",
     "mAh per g: 43.3",
-    "mAh per liter: 55251"
+    "mAh per Volume: 55.3"
    ],
    "group": "Power banks",
    "sources": {
@@ -5134,7 +5134,7 @@
     "Weight: 415g",
     "Dimensions: 160×82×23mm",
     "mAh per g: 72.3",
-    "mAh per liter: 99417"
+    "mAh per Volume: 99.4"
    ],
    "group": "Power banks",
    "sources": {
@@ -5150,7 +5150,7 @@
     "Weight: 236g",
     "Dimensions: 84×41.5×41.5mm",
     "mAh per g: 33.9",
-    "mAh per liter: 55299"
+    "mAh per Volume: 55.3"
    ],
    "group": "Power banks",
    "sources": {
@@ -5165,7 +5165,7 @@
     "Weight: 330g",
     "Dimensions: 145×82×23mm",
     "mAh per g: 60.6",
-    "mAh per liter: 73134"
+    "mAh per Volume: 73.1"
    ],
    "group": "Power banks",
    "sources": {
@@ -5180,7 +5180,7 @@
     "Weight: 450g",
     "Dimensions: 175×105×20mm",
     "mAh per g: 66.7",
-    "mAh per liter: 81633"
+    "mAh per Volume: 81.6"
    ],
    "group": "Power banks",
    "sources": {
@@ -5195,7 +5195,7 @@
     "Weight: 186g",
     "Dimensions: 150×72×10mm",
     "mAh per g: 53.8",
-    "mAh per liter: 92593"
+    "mAh per Volume: 92.6"
    ],
    "group": "Power banks",
    "sources": {
@@ -5210,7 +5210,7 @@
     "Weight: 400g",
     "Dimensions: 160×80×20mm",
     "mAh per g: 50.0",
-    "mAh per liter: 78125"
+    "mAh per Volume: 78.1"
    ],
    "group": "Power banks",
    "sources": {
@@ -5225,7 +5225,7 @@
     "Dimensions: 130×74×15mm",
     "Output: 10.5W",
     "mAh per g: 61.3",
-    "mAh per liter: 90090"
+    "mAh per Volume: 90.1"
    ],
    "group": "Power banks",
    "sources": {
@@ -5240,7 +5240,7 @@
     "Dimensions: 130×74×15mm",
     "Output: 10.5W",
     "mAh per g: 63.7",
-    "mAh per liter: 90090"
+    "mAh per Volume: 90.1"
    ],
    "group": "Power banks",
    "sources": {
@@ -5255,7 +5255,7 @@
     "Weight: 204g",
     "Dimensions: 100×60×14mm",
     "mAh per g: 63.7",
-    "mAh per liter: 154762"
+    "mAh per Volume: 154.8"
    ],
    "group": "Power banks",
    "sources": {
@@ -5281,7 +5281,7 @@
     "Weight: 156g",
     "Dimensions: 118×72×17mm",
     "mAh per g: 64.1",
-    "mAh per liter: 69237"
+    "mAh per Volume: 69.2"
    ],
    "group": "Power banks",
    "sources": {
@@ -5296,7 +5296,7 @@
     "Weight: 312g",
     "Dimensions: 160×70×20mm",
     "mAh per g: 48.1",
-    "mAh per liter: 66964"
+    "mAh per Volume: 67.0"
    ],
    "group": "Power banks",
    "sources": {
@@ -5311,7 +5311,7 @@
     "Dimensions: 130×74×15mm",
     "Capacity: 13000mAh",
     "mAh per g: 61.3",
-    "mAh per liter: 90090"
+    "mAh per Volume: 90.1"
    ],
    "group": "Power banks",
    "sources": {
@@ -5327,7 +5327,7 @@
     "Dimensions: 140×68×15mm",
     "Rated capacity: 6400mAh",
     "mAh per g: 39.8",
-    "mAh per liter: 70028"
+    "mAh per Volume: 70.0"
    ],
    "group": "Power banks",
    "sources": {
@@ -5342,7 +5342,7 @@
     "Dimensions: 155×74×20mm",
     "Capacity: 10000mAh",
     "mAh per g: 42.4",
-    "mAh per liter: 43592"
+    "mAh per Volume: 43.6"
    ],
    "group": "Power banks",
    "sources": {
@@ -5357,7 +5357,7 @@
     "Dimensions: 98×68×24mm",
     "Capacity: 8000mAh",
     "mAh per g: 40.0",
-    "mAh per liter: 50020"
+    "mAh per Volume: 50.0"
    ],
    "group": "Power banks",
    "sources": {
@@ -5373,7 +5373,7 @@
     "Capacity: 8000mAh",
     "Rated capacity: 5120mAh",
     "mAh per g: 41.0",
-    "mAh per liter: 51826"
+    "mAh per Volume: 51.8"
    ],
    "group": "Power banks",
    "sources": {
@@ -5389,7 +5389,7 @@
     "Weight: 216g",
     "Dimensions: 147×75×15mm",
     "mAh per g: 46.3",
-    "mAh per liter: 60469"
+    "mAh per Volume: 60.5"
    ],
    "group": "Power banks",
    "sources": {
@@ -5405,7 +5405,7 @@
     "Weight: 238g",
     "Dimensions: 150×73×14mm",
     "mAh per g: 42.0",
-    "mAh per liter: 65232"
+    "mAh per Volume: 65.2"
    ],
    "group": "Power banks",
    "sources": {
@@ -5421,7 +5421,7 @@
     "Weight: 228g",
     "Dimensions: 155×74×20mm",
     "mAh per g: 43.9",
-    "mAh per liter: 43592"
+    "mAh per Volume: 43.6"
    ],
    "group": "Power banks",
    "sources": {
@@ -5436,7 +5436,7 @@
     "Weight: 195g",
     "Dimensions: 149×74×14mm",
     "mAh per g: 51.3",
-    "mAh per liter: 64782"
+    "mAh per Volume: 64.8"
    ],
    "group": "Power banks",
    "sources": {
@@ -5466,7 +5466,7 @@
     "Dimensions: 119×69×25mm",
     "Capacity: 10000mAh",
     "mAh per g: 44.1",
-    "mAh per liter: 48715"
+    "mAh per Volume: 48.7"
    ],
    "group": "Power banks",
    "sources": {
@@ -5482,7 +5482,7 @@
     "Dimensions: 119×69×25mm",
     "Capacity: 10000mAh",
     "mAh per g: 44.1",
-    "mAh per liter: 48715"
+    "mAh per Volume: 48.7"
    ],
    "group": "Power banks",
    "sources": {
@@ -5498,7 +5498,7 @@
     "Weight: 275g",
     "Dimensions: 128×100×23mm",
     "mAh per g: 29.1",
-    "mAh per liter: 27174"
+    "mAh per Volume: 27.2"
    ],
    "group": "Power banks",
    "sources": {
@@ -5513,7 +5513,7 @@
     "Weight: 173g",
     "Dimensions: 105×65×23mm",
     "mAh per g: 57.8",
-    "mAh per liter: 63704"
+    "mAh per Volume: 63.7"
    ],
    "group": "Power banks",
    "sources": {
@@ -5528,7 +5528,7 @@
     "Weight: 282g",
     "Dimensions: 153×67×23mm",
     "mAh per g: 53.2",
-    "mAh per liter: 63621"
+    "mAh per Volume: 63.6"
    ],
    "group": "Power banks",
    "sources": {
@@ -5543,7 +5543,7 @@
     "Weight: 246g",
     "Dimensions: 147×74×15mm",
     "mAh per g: 40.7",
-    "mAh per liter: 61286"
+    "mAh per Volume: 61.3"
    ],
    "group": "Power banks",
    "sources": {
@@ -5558,7 +5558,7 @@
     "Weight: 200g",
     "Dimensions: 145×71×17mm",
     "mAh per g: 40.0",
-    "mAh per liter: 45710"
+    "mAh per Volume: 45.7"
    ],
    "group": "Power banks",
    "sources": {
@@ -5573,7 +5573,7 @@
     "Weight: 168g",
     "Dimensions: 94×65×24mm",
     "mAh per g: 59.5",
-    "mAh per liter: 68194"
+    "mAh per Volume: 68.2"
    ],
    "group": "Power banks",
    "sources": {
@@ -5588,7 +5588,7 @@
     "Weight: 115g",
     "Dimensions: 96×45×23mm",
     "mAh per g: 45.2",
-    "mAh per liter: 52335"
+    "mAh per Volume: 52.3"
    ],
    "group": "Power banks",
    "sources": {
@@ -5603,7 +5603,7 @@
     "Weight: 321g",
     "Dimensions: 160×65×24mm",
     "mAh per g: 62.3",
-    "mAh per liter: 80128"
+    "mAh per Volume: 80.1"
    ],
    "group": "Power banks",
    "sources": {
@@ -5618,7 +5618,7 @@
     "Weight: 312g",
     "Dimensions: 163×102×14mm",
     "mAh per g: 64.1",
-    "mAh per liter: 85924"
+    "mAh per Volume: 85.9"
    ],
    "group": "Power banks",
    "sources": {
@@ -5633,7 +5633,7 @@
     "Dimensions: 163×102×14mm",
     "Capacity: 20000mAh",
     "mAh per g: 64.1",
-    "mAh per liter: 85924"
+    "mAh per Volume: 85.9"
    ],
    "group": "Power banks",
    "sources": {
@@ -5732,7 +5732,7 @@
     "Dimensions: 112×71.5×30mm",
     "Weight: 343 g",
     "mAh per g: 29.2",
-    "mAh per liter: 41625"
+    "mAh per Volume: 41.6"
    ],
    "group": "Power banks",
    "sources": {
@@ -5760,7 +5760,7 @@
     "Dimensions: 160×90×40mm",
     "Weight: 373.3g",
     "mAh per g: 53.6",
-    "mAh per liter: 34722"
+    "mAh per Volume: 34.7"
    ],
    "group": "Power banks",
    "sources": {
@@ -5822,7 +5822,7 @@
     "Rated capacity: 12000mAh",
     "Output: 65W",
     "Dimensions: 99.8×63.4×34mm",
-    "mAh per liter: 23242"
+    "mAh per Volume: 23.2"
    ],
    "group": "Power banks",
    "sources": {
@@ -5864,7 +5864,7 @@
     "Dimensions: 105.9×72.5×14.6mm",
     "Weight: 221 g",
     "mAh per g: 22.6",
-    "mAh per liter: 44605"
+    "mAh per Volume: 44.6"
    ],
    "group": "Power banks",
    "sources": {
@@ -5927,7 +5927,7 @@
     "Dimensions: 90×170×37mm",
     "Weight: 203g",
     "mAh per g: 24.6",
-    "mAh per liter: 8832"
+    "mAh per Volume: 8.8"
    ],
    "group": "Power banks",
    "sources": {

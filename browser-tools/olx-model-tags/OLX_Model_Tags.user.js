@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OLX - Model Tags
 // @namespace    https://www.olx.ua/
-// @version      0.18.0
+// @version      0.18.1
 // @description  Tag OLX ads by model (tags shared by every ad of that model) or per ad, mark broken ads, filter search results by tags, per-tag Hide (pixel mesh) / Highlight (outline). Shared model catalog is read from GitHub without any key; your own marks stay in this browser. Phone specs (year, DXOMARK camera, AnTuTu, sensor, display, battery, charger, NFC) are captured from the DXOMARK, Kimovil and GSMArena pages you open. OLX only gets read locally from the open page.
 // @match        https://www.olx.ua/*
 // @match        https://hotline.ua/*
@@ -81,8 +81,9 @@
 
     // Operations are idempotent, so replaying them on fresh GitHub data (or twice from two tabs) is safe.
     // Derived tags, recomputed whenever a model's values change:
-    // "Capacity: 75000mAh" + "Weight: 1400g" -> "mAh per g: 53.6"; + "Dimensions: 157×116×45mm" -> "mAh per liter: 91518".
-    const DERIVED_TAG_PROPERTIES = ['mAh per g', 'mAh per liter'];
+    // "Capacity: 75000mAh" + "Weight: 1400g" -> "mAh per g: 53.6"; + "Dimensions: 157×116×45mm" -> "mAh per Volume: 91.5" (per cm³).
+    const DERIVED_TAG_PROPERTIES = ['mAh per g', 'mAh per Volume'];
+    const RETIRED_DERIVED_TAG_PROPERTIES = ['mah per liter']; // replaced by "mAh per Volume" (0.18.1); dropped when a model's tags are recomputed
 
     function computeDerivedTags(tags) {
         const valueOf = (property) => tags.map(splitTagIntoPropertyAndValue).find((tag) => tag.property.toLowerCase() === property)?.value;
@@ -91,13 +92,13 @@
         const sidesInMillimetres = (valueOf('dimensions') || '').match(/(\d+(?:\.\d+)?)×(\d+(?:\.\d+)?)×(\d+(?:\.\d+)?)mm/)?.slice(1).map(Number);
         const derivedTags = [];
         if (capacity > 0 && weight > 0) derivedTags.push(`${DERIVED_TAG_PROPERTIES[0]}: ${(capacity / weight).toFixed(1)}`);
-        if (capacity > 0 && sidesInMillimetres) derivedTags.push(`${DERIVED_TAG_PROPERTIES[1]}: ${Math.round(capacity / (sidesInMillimetres[0] * sidesInMillimetres[1] * sidesInMillimetres[2] / 1e6))}`);
+        if (capacity > 0 && sidesInMillimetres) derivedTags.push(`${DERIVED_TAG_PROPERTIES[1]}: ${(capacity / (sidesInMillimetres[0] * sidesInMillimetres[1] * sidesInMillimetres[2] / 1000)).toFixed(1)}`);
         return derivedTags;
     }
 
     function updateDerivedTags(modelEntry) {
         const derivedTags = computeDerivedTags(modelEntry.tags);
-        const derivedProperties = derivedTags.map((tag) => splitTagIntoPropertyAndValue(tag).property.toLowerCase());
+        const derivedProperties = [...derivedTags.map((tag) => splitTagIntoPropertyAndValue(tag).property.toLowerCase()), ...RETIRED_DERIVED_TAG_PROPERTIES];
         modelEntry.tags = [...modelEntry.tags.filter((tag) => !derivedProperties.includes(splitTagIntoPropertyAndValue(tag).property.toLowerCase())), ...derivedTags];
     }
 
