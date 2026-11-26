@@ -1249,6 +1249,17 @@
     "mAh per g: 50.0"
    ],
    "group": "Power banks"
+  },
+  "HOCOJ125APOWER": {
+   "name": "Hoco J125A Power",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5400mAh",
+    "Output: 20W",
+    "Weight: 205g",
+    "mAh per g: 48.8"
+   ],
+   "group": "Power banks"
   }
  },
  "stopPhrases": [
