@@ -2908,5 +2908,35 @@
    "Material": "ABS + PC flame retardant shell + polymer lithium battery.",
    "Sizes": "131*60*23mm. Weight: 235g."
   }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j59-famous-10000mah": {
+  "model": "Hoco J59 Famous",
+  "scannedAt": "2026-11-26T02:53:43.353Z",
+  "specs": {
+   "Capacity": "10000mAh, 37Wh. Rated capacity: 5900mAh (5V TYP 2A).",
+   "Input": "Micro-USB / Type-C: 5V-2A. Lightning: 5V-1.5A.",
+   "Output": "USB 1 / 2: 5V-2A. Total output: 5V-2A max. 4. LED digital display of power level (button activation). 5. ABS + PC flame retardant materials.",
+   "Sizes": "138*68*16mm. Weight: 235g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j61-companion-10000mah": {
+  "model": "Hoco J61 Companion",
+  "scannedAt": "2026-11-26T02:53:43.353Z",
+  "specs": {
+   "Capacity": "10000mAh, 37Wh. Rated capacity: 5900mAh.",
+   "Input": "Micro-USB: 5V-2A, 9V-2A – 18W. Type-C: 5V-2A (PD), 9V-2A (PD) – 18W.",
+   "Output": "USB 1: 5V-2A, USB 2: 4.5V / 5V-3A, 9V-2A, 12V-1.5A – 18W. Type-C: 5V-2A (PD), 9V-2A (PD), 12V-1.5A (PD) – 18W. Total output: 5V-3A. 4. LED white light indicator of power level. PD / QC green indicator. 5. Support for PD3.0, QC3.0 / 2.0, for Huawei FCP / SCP, for Samsung AFC, for VOOC, for DASH, dual-engine flash charge and other charging protocols."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-b40-universal-7000mah": {
+  "model": "Hoco B40 Universal",
+  "scannedAt": "2026-11-26T02:53:43.354Z",
+  "specs": {
+   "Capacity": "7000mAh, 25.9Wh.",
+   "Sizes": "118 * 51 * 14mm. Weight: 126g.",
+   "Input": "5V/1A. Output: 5V/1A. 4. LED light shows the power level.",
+   "Battery": "lithium polymer.",
+   "Material": "aluminum alloy."
+  }
  }
 }
