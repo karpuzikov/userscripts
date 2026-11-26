@@ -247,6 +247,8 @@
    "pages": [
     {
      "path": "^/product/\\d+",
+     "waitForSelector": "#ProductView p.my-5.text-sm",
+     "expandSelector": "#ProductView div.underline.cursor-pointer",
      "model": {
       "selector": "#ProductView .text-\\[32px\\]",
       "prefix": "REMAX "

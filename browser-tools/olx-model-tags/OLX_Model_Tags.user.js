@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OLX - Model Tags
 // @namespace    https://www.olx.ua/
-// @version      0.16.3
+// @version      0.16.4
 // @description  Tag OLX ads by model (tags shared by every ad of that model) or per ad, mark broken ads, filter search results by tags, per-tag Hide (pixel mesh) / Highlight (outline). Shared model catalog is read from GitHub without any key; your own marks stay in this browser. Phone specs (year, DXOMARK camera, AnTuTu, sensor, display, battery, charger, NFC) are captured from the DXOMARK, Kimovil and GSMArena pages you open. OLX only gets read locally from the open page.
 // @match        https://www.olx.ua/*
 // @match        https://www.dxomark.com/smartphones/*
@@ -699,6 +699,16 @@
 
     let olxModelTagsSources = [];
 
+    // App-rendered pages (REMAX, Vue) show their specs after document-idle and hide half of them behind a "More Parameters" link.
+    // A scan tab reports its first capture and closes, so it has to wait for them (15 s each, then the capture reports what it found).
+    async function waitUntilSourcePageIsRendered() {
+        const page = findSourcePage(olxModelTagsSources, location.hostname, location.pathname, document)?.page;
+        const waitUntil = async (isDone) => { for (let tries = 0; tries < 60 && !isDone(); tries++) await new Promise((resolve) => setTimeout(resolve, 250)); };
+        if (page?.waitForSelector) await waitUntil(() => document.querySelector(page.waitForSelector));
+        const expandLink = page?.expandSelector && document.querySelector(page.expandSelector);
+        if (expandLink?.offsetParent) { expandLink.click(); await waitUntil(() => !expandLink.offsetParent); }
+    }
+
     // DXOMARK builds its ranking rows after the page loads, so the capture reruns (it skips what is already saved).
     async function startSpecsCapture() {
         olxModelTagsData = olxModelTagsData ? rebuildLocalDataFromCacheAndPendingOperations(olxModelTagsData) : createEmptyOlxModelTagsData();
@@ -709,9 +719,11 @@
         if (!isScanTab && hasGithubToken() && listPendingOperationKeys().length) synchronizeWithGithub(); // leftovers of earlier tabs
         const badgeTimer = setInterval(renderSourceBadge, 3000);
         // A page the cached adapters could not read may be covered by adapters added since: refetch once and retry.
+        await waitUntilSourcePageIsRendered();
         if (!captureSpecsOfOpenPage()) {
             olxModelTagsSources = await loadSourceAdapters(true);
             if (findCategoryMatch()) { clearInterval(badgeTimer); document.querySelector('olx-model-tags-source-badge')?.remove(); startCategoryScanPanel(findCategoryMatch()); return; } // a category added since the cached adapters
+            await waitUntilSourcePageIsRendered();
             captureSpecsOfOpenPage();
         }
         let captureTimer = 0;
