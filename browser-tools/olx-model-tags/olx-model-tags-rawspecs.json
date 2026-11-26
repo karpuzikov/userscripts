@@ -3362,5 +3362,45 @@
    "Output": "DC5V / 2A Max.",
    "Material": "ABS+ flame retardant PC. 5. Multiple circuit protection. 6. Length * width * height: 97 * 63 * 25mm. Weight: 189g."
   }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-b36-battery-13000mah": {
+  "model": "Hoco B36 Wooden",
+  "scannedAt": "2026-11-26T02:54:58.362Z",
+  "specs": {
+   "Input": "DC5V / 2A Max.",
+   "Output": "USB 1 / USB 2: DC5V / 2A Max.",
+   "Material": "ABS+PC.",
+   "Display": "LED power display, shake switch design.",
+   "Size": "13cm * 7.4cm * 1.5cm. Weight: 212g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-b35b-entourage-8000mah-dual-usb-output": {
+  "model": "Hoco B35B Entourage",
+  "scannedAt": "2026-11-26T02:54:59.357Z",
+  "specs": {
+   "Power bank capacity": "8000mAh, 29.6Wh.",
+   "Input": "Micro-USB DC5V / 2.0A.",
+   "Output": "USB 1 / 2 DC5V / 2.1A Max. Total output: DC5V / 2.1A Max. 4. Digital display of power level in real time. 5. Flame retardant PC material. 6. The product uses 18650 lithium battery, intelligent multiple protection. 7. Length * width * height: 9.3 * 6.3 * 2.3cm. Weight: 174g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-b37-5000mah-dual-usb": {
+  "model": "Hoco B37 Persistent",
+  "scannedAt": "2026-11-26T02:54:59.357Z",
+  "specs": {
+   "Input": "Micro-USB 5V / 1A Max.",
+   "Output": "USB 1 / 2: DC5V / 1A Max. Total output: DC5V / 1A Max. Double USB output for your gadgets, therefore you can charge two compatible devices.",
+   "Display": "LED power level display real-timely shows the remaining capacity, button activation. 5. Materials ABS + PC, an ultimate combination of superior materials and high-precision design, that ensures you always have a power buck-up on the go. 6. Finally, its portable size, lightweight design and excellent capacity make it ideal to bring along during vacations or business trips. Length * width * height: 128 * 68 * 10mm. Weight is only 107g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-b35c-entourage-12000mah-dual-usb-output": {
+  "model": "Hoco B35C Entourage",
+  "scannedAt": "2026-11-26T02:55:01.356Z",
+  "specs": {
+   "Power bank capacity": "12000mAh 44.4Wh.",
+   "Input": "Micro-USB: 5V / 2A Max.",
+   "Output": "USB 1 / 2: DC5V / 2.1A Max. Total output: DC5V / 2.1A Max.",
+   "Display": "LED power level display.",
+   "Material": "ABS+PC. 6. Length * width * height: 14.2 * 6.8 * 1.6cm. Weight: 227g."
+  }
  }
 }
