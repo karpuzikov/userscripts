@@ -913,7 +913,9 @@
     "Rated capacity: 12000mAh",
     "Output: 22.5W",
     "Weight: 400g",
-    "mAh per g: 50.0"
+    "Dimensions: 145×69.5×28mm",
+    "mAh per g: 50.0",
+    "mAh per liter: 70879"
    ],
    "group": "Power banks"
   },
@@ -1131,7 +1133,9 @@
     "Rated capacity: 5800mAh",
     "Output: 20W",
     "Weight: 195g",
-    "mAh per g: 51.3"
+    "Dimensions: 101×66×19mm",
+    "mAh per g: 51.3",
+    "mAh per liter: 78955"
    ],
    "group": "Power banks"
   },
@@ -1338,6 +1342,19 @@
     "Output: 22.5W",
     "Weight: 334g",
     "mAh per g: 59.9"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ159BESSENCE": {
+   "name": "Hoco J159B Essence",
+   "tags": [
+    "Capacity: 30000mAh",
+    "Rated capacity: 18000mAh",
+    "Output: 22.5W",
+    "Weight: 590g",
+    "Dimensions: 145×69.5×41.5mm",
+    "mAh per g: 50.8",
+    "mAh per liter: 71733"
    ],
    "group": "Power banks"
   }
