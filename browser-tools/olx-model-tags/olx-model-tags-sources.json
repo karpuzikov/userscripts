@@ -196,7 +196,7 @@
       {
        "name": "Capacity",
        "selector": ".elementor-widget-woocommerce-product-content p",
-       "regex": "\\b(?:Battery capacity|Capacity):\\s*(\\d+mAh)"
+       "regex": "\\b(?:Power bank capacity|Battery capacity|Capacity):\\s*(\\d+mAh)"
       },
       {
        "name": "Rated capacity",
@@ -207,7 +207,7 @@
       {
        "name": "Output",
        "selector": ".elementor-widget-woocommerce-product-content p",
-       "regex": "Output:\\s*(.*?)(?=\\s\\d\\.\\s[A-Z]|$)",
+       "regex": "(?:\\d USB ports? output|Battery output|Output):\\s*(.*?)(?=\\s\\d+\\.\\s[A-Z]|$)",
        "transform": "maxWatts"
       },
       {

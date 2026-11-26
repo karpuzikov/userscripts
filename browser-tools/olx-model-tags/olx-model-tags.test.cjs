@@ -214,3 +214,14 @@ test('Hoco free-text adapter reads the S10 and J30 wordings', () => {
   assert.deepEqual([read('Dimensions', s10), read('Weight', s10)], ['143*73*17.5mm', '236g']);
   assert.deepEqual([read('Dimensions', j30), read('Weight', j30)], ['115*70*12mm', '173g']);
 });
+
+test('Hoco free-text adapter reads the J42A and B35E output and capacity wordings', () => {
+  const page = JSON.parse(require('fs').readFileSync(__dirname + '/olx-model-tags-sources.json', 'utf8')).sources.find((source) => source.name === 'HOCO').pages.at(-1);
+  const read = (name, text) => text.match(new RegExp(page.properties.find((property) => property.name === name).regex))?.[1];
+  const { maxWatts } = olxModelTags.SOURCE_VALUE_TRANSFORMS;
+  const j42a = '1. Capacity: 20000mAh, 74Wh. 3. 4 USB port output: USB 1 / 2 / 3 / 4: DC5V / 2A max. Total output: DC5V / 2A max. 4. LED digital display.';
+  const b35e = '1. Power bank capacity: 30000mAh 37W, so it is convenient. 3. Battery output: USB 1 / 2 / 3: DC5V / 2A Max. Total output DC5V / 2A Max. 4. LED display.';
+  assert.equal(maxWatts(read('Output', j42a)), '10W');
+  assert.equal(maxWatts(read('Output', b35e)), '10W');
+  assert.equal(read('Capacity', b35e), '30000mAh');
+});
