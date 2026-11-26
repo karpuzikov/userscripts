@@ -304,6 +304,15 @@ test('REMAX adapter reads the FP-99 lowercase spec block', () => {
   assert.equal(olxModelTags.SOURCE_VALUE_TRANSFORMS.peakWatts(read('Output')), '65W');
 });
 
+test('REMAX adapter reads FP-12 "5V=2A" output, finished size and weight', () => {
+  const page = JSON.parse(require('fs').readFileSync(__dirname + '/olx-model-tags-sources.json', 'utf8')).sources.find((source) => source.name === 'REMAX').pages[0];
+  const text = 'Output voltage and current: Type-C port output: 5V=2A, 9V=2.22A, 10V=2.25A, 12=1.67A 22.5W Max (PD, SCP); Wireless output: 5W, 15W; Multi port total output: 15WEnergy conversion rate:>65%Bare weight: 137gBare machine size: 72 * 72 * 28mmFinished product size: 90 * 170 * 37mmFinished product weight: 203g';
+  const read = (name) => text.match(new RegExp(page.properties.find((property) => property.name === name).regex))?.[1];
+  assert.equal(olxModelTags.SOURCE_VALUE_TRANSFORMS.peakWatts(read('Output')), '22.5W');
+  assert.equal(olxModelTags.SOURCE_VALUE_TRANSFORMS.dimensionsMm(read('Dimensions')), '90×170×37mm');
+  assert.equal(read('Weight'), '203g');
+});
+
 test('Hoco free-text adapter reads "Weight is only 107g" (B37)', () => {
   const page = JSON.parse(require('fs').readFileSync(__dirname + '/olx-model-tags-sources.json', 'utf8')).sources.find((source) => source.name === 'HOCO').pages.at(-1);
   const weight = (text) => text.match(new RegExp(page.properties.find((property) => property.name === 'Weight').regex))?.[1];

@@ -270,6 +270,19 @@
        "selector": "#ProductView div:has(> p.my-5.text-sm)",
        "regex": "[Oo]utput [Vv]oltage and [Cc]urrent:(.*)$",
        "transform": "peakWatts"
+      },
+      {
+       "name": "Dimensions",
+       "optional": true,
+       "selector": "#ProductView div:has(> p.my-5.text-sm)",
+       "regex": "Finished product size:\\s*([^A-Za-z]*mm)",
+       "transform": "dimensionsMm"
+      },
+      {
+       "name": "Weight",
+       "optional": true,
+       "selector": "#ProductView div:has(> p.my-5.text-sm)",
+       "regex": "Finished product weight:\\s*(\\d+(?:\\.\\d+)?\\s*g)\\b"
       }
      ],
      "rawSpecs": {

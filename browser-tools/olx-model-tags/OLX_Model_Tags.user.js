@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OLX - Model Tags
 // @namespace    https://www.olx.ua/
-// @version      0.16.2
+// @version      0.16.3
 // @description  Tag OLX ads by model (tags shared by every ad of that model) or per ad, mark broken ads, filter search results by tags, per-tag Hide (pixel mesh) / Highlight (outline). Shared model catalog is read from GitHub without any key; your own marks stay in this browser. Phone specs (year, DXOMARK camera, AnTuTu, sensor, display, battery, charger, NFC) are captured from the DXOMARK, Kimovil and GSMArena pages you open. OLX only gets read locally from the open page.
 // @match        https://www.olx.ua/*
 // @match        https://www.dxomark.com/smartphones/*
@@ -262,7 +262,7 @@
         // Highest of the listed watts and every volts x amps pair ("20V 2.75A" -> 55W): for sites that list per-voltage steps.
         peakWatts: (text) => {
             const watts = [...text.matchAll(/(\d+(?:\.\d+)?)\s*W\b/g)].map((match) => Number(match[1]));
-            watts.push(...[...text.matchAll(/(\d+(?:\.\d+)?)\s*V\s*[\/\-–]?\s*(\d+(?:\.\d+)?)\s*A(?![a-z])/g)].map((match) => Math.round(Number(match[1]) * Number(match[2]) * 100) / 100));
+            watts.push(...[...text.matchAll(/(\d+(?:\.\d+)?)\s*V\s*[\/\-–=]?\s*(\d+(?:\.\d+)?)\s*A(?![a-z])/g)].map((match) => Math.round(Number(match[1]) * Number(match[2]) * 100) / 100));
             return watts.length ? `${Math.max(...watts)}W` : '';
         },
         antutu: (text) => parseAnTuTuAnswer(text),
