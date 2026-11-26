@@ -256,35 +256,41 @@
      "properties": [
       {
        "name": "Capacity",
-       "selector": "#ProductView div:has(> p.my-5.text-sm)",
-       "regex": "[Bb]attery [Cc]apacity:\\s*([\\d,]+\\s*mAh)",
+       "selector": "#ProductView div:has(> p.my-5.text-sm) > p",
+       "joinAll": true,
+       "regex": "(?:[Tt]ypical [Ee]nergy|(?:[Bb]attery|[Pp]roduct|[Aa]ctual|[Cc]ell) [Cc]apacity):\\s*(?:[Tt]ypical [Ee]nergy:\\s*)?([\\d,]+\\s*mAh)",
        "transform": "batteryMah"
       },
       {
        "name": "Rated capacity",
        "optional": true,
-       "selector": "#ProductView div:has(> p.my-5.text-sm)",
-       "regex": "[Rr]ated [Cc]apacity:\\s*([\\d,]+\\s*mAh)",
+       "selector": "#ProductView div:has(> p.my-5.text-sm) > p",
+       "joinAll": true,
+       "regex": "^(?:[\\s\\S]*?[Rr]ated [Cc]apacity|(?![\\s\\S]*[Rr]ated [Cc]apacity)[\\s\\S]*?[Rr]ated (?:[Oo]utput|[Ee]nergy)):\\s*≥?\\s*([\\d,]+\\s*mAh)(?!\\s*\\/)",
        "transform": "batteryMah"
       },
       {
        "name": "Output",
-       "selector": "#ProductView div:has(> p.my-5.text-sm)",
-       "regex": "[Oo]utput [Vv]oltage and [Cc]urrent:(.*)$",
+       "selector": "#ProductView div:has(> p.my-5.text-sm) > p",
+       "joinAll": true,
+       "regex": "(?:[Oo]utput (?:[Vv]oltage|[Ss]pecifications|[Pp]ower)[^:：|]*|[Oo]utput)[:：]([\\s\\S]*)$",
        "transform": "peakWatts"
       },
       {
        "name": "Dimensions",
        "optional": true,
-       "selector": "#ProductView div:has(> p.my-5.text-sm)",
-       "regex": "(?:Finished product size|Dimensions \\(unit only\\)):\\s*([^A-Za-z]*mm)",
+       "selector": "#ProductView div:has(> p.my-5.text-sm) > p",
+       "joinAll": true,
+       "regex": "(?:(?:[Bb]are(?:[- ]?(?:[Mm]achine|[Mm]etal|[Uu]nit|[Bb]ones|bone))?|[Uu]nit|[Pp]roduct|[Ff]inished(?: [Pp]roduct)?|[Nn]et) (?:[Ss]izes?|[Dd]imensions?)|[Dd]imensions of [Bb]are [Uu]nit|[Dd]imensions \\([Uu]nit [Oo]nly\\)|[Ss]ize [Ss]pecifications)[^:：|\\d]*[:：]\\s*((?:\\d+(?:\\.\\d+)?\\s*(?:mm)?\\s*[*×xX]\\s*){2}\\d+(?:\\.\\d+)?\\s*(?:mm|MM|cm)?)",
        "transform": "dimensionsMm"
       },
       {
        "name": "Weight",
        "optional": true,
-       "selector": "#ProductView div:has(> p.my-5.text-sm)",
-       "regex": "(?:Finished product weight|Weight \\(unit only\\)):\\s*[~≈]?\\s*(\\d+(?:\\.\\d+)?\\s*g)(?![a-z])"
+       "selector": "#ProductView div:has(> p.my-5.text-sm) > p",
+       "joinAll": true,
+       "regex": "(?:(?:[Bb]are(?:[- ]?(?:[Mm]achine|[Mm]etal|[Uu]nit|[Bb]ones|bone))?|[Uu]nit|[Pp]roduct|[Ff]inished(?: [Pp]roduct)?|[Nn]et) [Ww]eight|[Ww]eight of [Bb]are [Uu]nit|[Ww]eight \\([Uu]nit [Oo]nly\\)|(?:^|\\| |\\d[.,]\\s*)[Ww]eight)[^:：|\\d]*[:：][^|\\d]{0,40}?(\\d+(?:\\.\\d+)?\\s*(?:kg|g)?)(?![\\d.])",
+       "transform": "grams"
       }
      ],
      "rawSpecs": {

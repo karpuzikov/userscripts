@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OLX - Model Tags
 // @namespace    https://www.olx.ua/
-// @version      0.16.4
+// @version      0.16.5
 // @description  Tag OLX ads by model (tags shared by every ad of that model) or per ad, mark broken ads, filter search results by tags, per-tag Hide (pixel mesh) / Highlight (outline). Shared model catalog is read from GitHub without any key; your own marks stay in this browser. Phone specs (year, DXOMARK camera, AnTuTu, sensor, display, battery, charger, NFC) are captured from the DXOMARK, Kimovil and GSMArena pages you open. OLX only gets read locally from the open page.
 // @match        https://www.olx.ua/*
 // @match        https://www.dxomark.com/smartphones/*
@@ -246,9 +246,10 @@
         unknownIfEmpty: (text) => (!text || /^(unknown|-+)$/i.test(text) ? 'Unknown' : text),
         chargerPower: (text, element) => extractChargerPower(element.innerHTML.split(/<hr[^>]*>/).map((html) => html.replace(/<[^>]+>/g, ' '))),
         // "15.1*7.1*1.2cm" is converted to "151×71×12mm" so the volume math always works in mm.
+        grams: (text) => { const weight = text.match(/(\d+(?:\.\d+)?)\s*(kg)?/i); return weight ? `${Math.round(Number(weight[1]) * (weight[2] ? 1000 : 1) * 10) / 10}g` : ''; }, // "≈175", "approx. 336 g", "1.2kg"
         dimensionsMm: (text) => {
-            const sides = text.replace(/\s+/g, '').replace(/(^|[×x*])[LWH](?=\d)/g, '$1').replace(/[x*]/gi, '×').replace(/(mm|cm)(?=×)/g, ''); // "10cm*6cm*1.4cm" has a unit on every number
-            const match = sides.match(/^([\d.]+)×([\d.]+)×([\d.]+)(mm|cm)$/);
+            const sides = text.replace(/\s+/g, '').replace(/(^|[×x*])[LWH](?=\d)/g, '$1').toLowerCase().replace(/[x*]/gi, '×').replace(/(mm|cm)(?=×)/g, ''); // "10cm*6cm*1.4cm" has a unit on every number
+            const match = sides.match(/^([\d.]+)×([\d.]+)×([\d.]+)(mm|cm)?$/); // no unit: millimetres (REMAX "72.7 × 56 × 32.1")
             if (!match) return '';
             const factor = match[4] === 'cm' ? 10 : 1;
             return `${match.slice(1, 4).map((side) => Math.round(Number(side) * factor * 10) / 10).join('×')}mm`;
@@ -262,7 +263,7 @@
         // Highest of the listed watts and every volts x amps pair ("20V 2.75A" -> 55W): for sites that list per-voltage steps.
         peakWatts: (text) => {
             const watts = [...text.matchAll(/(\d+(?:\.\d+)?)\s*W\b/g)].map((match) => Number(match[1]));
-            watts.push(...[...text.matchAll(/(\d+(?:\.\d+)?)\s*V\s*[\/\-–=]?\s*(\d+(?:\.\d+)?)\s*A(?![a-z])/g)].map((match) => Math.round(Number(match[1]) * Number(match[2]) * 100) / 100));
+            watts.push(...[...text.matchAll(/(\d+(?:\.\d+)?)\s*V\s*[\/\-–=⎓]?\s*(\d+(?:\.\d+)?)\s*A(?![a-z])/g)].map((match) => Math.round(Number(match[1]) * Number(match[2]) * 100) / 100));
             return watts.length ? `${Math.max(...watts)}W` : '';
         },
         antutu: (text) => parseAnTuTuAnswer(text),
@@ -537,6 +538,7 @@
             element = root.querySelector(valueSpec.selector);
         }
         let text = valueSpec.fromTitle ? (document.title.match(new RegExp(valueSpec.fromTitle))?.[1] || '') : readTextOf(element);
+        if (valueSpec.joinAll && valueSpec.selector) text = [...root.querySelectorAll(valueSpec.selector)].map(readTextOf).join(' | '); // one spec per element (REMAX): the separator keeps "≈175" apart from the next "12.Bare size"
         if (valueSpec.attribute && element) text = (element.getAttribute(valueSpec.attribute) || '').trim();
         if (valueSpec.regex) text = text.match(new RegExp(valueSpec.regex))?.[1] || '';
         if (text && valueSpec.prefix) text = valueSpec.prefix + text;
