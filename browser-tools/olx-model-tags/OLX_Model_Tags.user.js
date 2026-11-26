@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OLX - Model Tags
 // @namespace    https://www.olx.ua/
-// @version      0.15.6
+// @version      0.15.7
 // @description  Tag OLX ads by model (tags shared by every ad of that model) or per ad, mark broken ads, filter search results by tags, per-tag Hide (pixel mesh) / Highlight (outline). Shared model catalog is read from GitHub without any key; your own marks stay in this browser. Phone specs (year, DXOMARK camera, AnTuTu, sensor, display, battery, charger, NFC) are captured from the DXOMARK, Kimovil and GSMArena pages you open. OLX only gets read locally from the open page.
 // @match        https://www.olx.ua/*
 // @match        https://www.dxomark.com/smartphones/*
@@ -741,7 +741,7 @@
             .problems a:hover{text-decoration:underline}
             .problems span{color:#848E9C}
         </style><div class="panel">
-            <div class="row"><button class="primary" id="start">Scan specs</button><button id="stop" hidden>Stop</button></div>
+            <div class="row"><button class="primary" id="start">Scan specs</button><button id="stop" hidden>Stop</button><button id="clear" hidden>Clear</button></div>
             <label class="row">Tabs at once <input id="concurrency" type="number" min="1" max="10" value="3"></label>
             <div class="status" id="status"></div>
             <div class="problems" id="problems"></div></div>`;
@@ -758,6 +758,7 @@
             if (!hasGithubToken()) { element('status').textContent = 'Set the GitHub token first (Tampermonkey menu); a scan has to save to GitHub.'; return; }
             saveJob({ active: true, concurrency: Math.min(10, Math.max(1, parseInt(element('concurrency').value, 10) || 3)), page: 1, pageKey: null, queue: [], inFlight: {}, awaiting: {}, done: {} });
         });
+        element('clear').addEventListener('click', () => GM_deleteValue(STORAGE_KEY_SCAN_JOB)); // forget the last scan's results
         element('stop').addEventListener('click', () => { const job = readJob(); if (job) saveJob({ ...job, active: false }); });
 
         let isNavigatingToNextPage = false;
@@ -803,6 +804,8 @@
             }
             element('start').disabled = Boolean(job?.active);
             element('stop').hidden = !job?.active;
+            element('clear').hidden = !job || job.active;
+            if (!job) { element('status').textContent = ''; element('problems').replaceChildren(); element('problems').dataset.signature = ''; }
             element('concurrency').disabled = Boolean(job?.active);
             if (job) {
                 const total = counts(job.done);
