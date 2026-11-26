@@ -3142,5 +3142,80 @@
    "Material": "ABS plastic + silicone.",
    "Size": "119*51*24mm, weight 233g. 8. Set with Type-C charging cable 1.2m. 9. Night light & wireless charging function. Can be used as mobile phone holder."
   }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-b39-pd-30000mah": {
+  "model": "Hoco B39 Magic Stone",
+  "scannedAt": "2026-11-26T02:54:27.357Z",
+  "specs": {
+   "Capacity": "30000mAh 99Wh (3.3V). 2. Support fast charging PD / QC3.0 / QC2.0, Huawei fast charge FCP, Samsung fast charge AFC and others.",
+   "Input": "Micro-USB: 3.6V-6.5V/3A, 6.6V-9V/2A, 9.1V-12V/1.5A. Type-C: 5V/2A (PD), 9V/2A (PD), 12V/1.5A (PD), 15V/1.2A (PD) 18W.",
+   "Output": "USB 1 / 2: 3.6V-6.5V/3A, 6.6V-9V/2A, 9.1V-12V/1.5A. USB 1 / 2 total output: 5V3A. Type-C: 5V/3A (PD) 9V/2A (PD) 12V/1.5A (PD) 18W. 5. LED white light indicator shows the power level (button activation), when the PD mode on, the blue light is always on. 6. High performance A+ grade lithium polymer battery.",
+   "Material": "aluminum alloy + ABS + PC flame retardant material.",
+   "Size": "169 * 83 * 22mm, weight: 479g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j44-10000mah-usb-qc3-0-type-c-pd-output": {
+  "model": "Hoco J44",
+  "scannedAt": "2026-11-26T02:54:28.438Z",
+  "specs": {
+   "Capacity": "10000mAh, 37Wh. Rated capacity: 5900mAh (5V TYP 2A).",
+   "Input": "Micro-USB: 5V / 2.4A, 9V / 2A. Type-C: 5V / 2.4A (PD), 9V / 2A (PD), 12V / 1.5A (PD), 18W.",
+   "Output": "USB: 3.6V-6.5V / 3A, 6.6V-9V / 2A, 9.1V-12V / 1.5A. Type-C: 5V / 2.4A (PD), 9V / 2A (PD), 12V / 1.5A (PD), 18W. Total output: 5V / 3A. 4. LED digital display display power (button activation). 5. Support PD / QC3.0 / QC2.0, FCP, AFC and other fast charging solutions. 6. High performance A+ grade lithium polymer battery.",
+   "Material": "ABS+PC flame retardant material.",
+   "Sizes": "101*64*24mm. Weight: 192g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j39-quick-energy-pd-qc3-0-10000mah": {
+  "model": "Hoco J39 Quick energy",
+  "scannedAt": "2026-11-26T02:54:29.359Z",
+  "specs": {
+   "Capacity": "10000mAh 37Wh. Rated capacity: 5900mAh (5V TYP 2A).",
+   "Input": "Micro-USB: 3.6V-6.5V / 3A, 6.6V-9V / 2A, 9.1V-12V/1.5A. Type-C: 5V / 2A (PD), 9V / 2A (PD), 12V / 1.5A (PD), 18W.",
+   "Output": "USB: 3.6V-6.5V / 3A, 6.6V-9V / 2A, 9.1V-12V / 1.5A. Type-C: 5V / 2A (PD), 9V / 2A (PD), 12V / 1.5A (PD) 18W. Total output: 5V 3A. 4. Support fast charging QC3.0 / QC2.0, FCP, AFC and other fast charging protocols. 5. High performance A+ grade lithium polymer battery.",
+   "Material": "ABS + PC flame retardant material.",
+   "Size": "140*68*16mm. Weight: 203g. 8. LED white light shows the power level (button activation)."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j48-nimble-10000mah-dual-usb-output": {
+  "model": "Hoco J48 Nimble",
+  "scannedAt": "2026-11-26T02:54:29.362Z",
+  "specs": {
+   "Capacity": "10000mAh, 37Wh. Rated capacity: 5900mAh.",
+   "Input": "Micro-USB / Type-C: 5V / 2A max.",
+   "Output": "USB 1 / 2: DC5V / 2A. Total output: DC5V / 2A max. 4. LED light display the power level (button activation). 5. A+ polymer lithium battery. 6. ABS+PC flame retardant material.",
+   "Size": "138*68*16mm. Weight: 218g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j42-high-power-10000mah-dual-usb-output": {
+  "model": "Hoco J42 High power",
+  "scannedAt": "2026-11-26T02:54:29.362Z",
+  "specs": {
+   "Capacity": "10000mAh, 37Wh. Rated capacity: 5900mAh, (5V TYP 2A).",
+   "Input": "Micro-USB / Type-C: 5V / 2A Max.",
+   "Output": "USB 1/2: DC5V / 2A Max. Total output: DC5V / 2A Max. 4. LED digital display of power level (button activation). 5. Energy-efficient A+ polymer lithium battery.",
+   "Material": "ABS+PC flame retardant material. 7. Multiple circuit protection.",
+   "Sizes": "140*68*19mm. Weight: 239g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-s10-10000mah-wireless-charging": {
+  "model": "Hoco S10",
+  "scannedAt": "2026-11-26T02:54:29.363Z",
+  "specs": {
+   "Capacity": "10000mAh, 37Wh. Rated capacity: 5900mAh.",
+   "Input USB": "QC/FCP (18W), Type-C: PD/QC (18W).",
+   "Output": "USB: QC/FCP (18W), Type-C: PD/QC (18W), Lightning: 5V-2A, wireless charging output: 5W. Total output: DC5V / 3A max. 4. LED indicator shows the power level (button activation). 5. Energy-efficient A+ polymer lithium battery.",
+   "Material": "PC flame retardant material. 7. Size 143*73*17.5mm, weight 236g."
+  }
+ },
+ "https://hocotech.com/product/home-office/vents/portable-fan-f11-and-power-bank-4000mah": {
+  "model": "Hoco F11",
+  "scannedAt": "2026-11-26T02:54:29.396Z",
+  "specs": {
+   "Capacity": "4000mAh / 7.4Wh, 3.7V. 2. Built-in 18650 battery*2pcs.",
+   "Power": "14.4W. Input: DC 5V/2A. Output: 5V/2A.",
+   "Size": "220*105*43mm. Weight: 260g.",
+   "Working hours": "1st gear – 15h, 2nd gear – 6.5h, 3rd gear – 4.5h. 6. The power supply part and the fan can be separated, use as power bank.",
+   "Working temperature": "0 °C ~ 40 °C."
+  }
  }
 }
