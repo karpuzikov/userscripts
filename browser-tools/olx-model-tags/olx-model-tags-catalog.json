@@ -3459,6 +3459,43 @@
     "mAh per liter: 83084"
    ],
    "group": "Power banks"
+  },
+  "HOCOJ50SURF": {
+   "name": "Hoco J50 Surf",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5900mAh",
+    "Output: 5W",
+    "Weight: 246g",
+    "Dimensions: 139×69×20mm",
+    "mAh per g: 40.7",
+    "mAh per liter: 52132"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ52NEWJOY": {
+   "name": "Hoco J52 New joy",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5900mAh",
+    "Weight: 219g",
+    "Dimensions: 139×68×16mm",
+    "mAh per g: 45.7",
+    "mAh per liter: 66124"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ53AEXCEPTIONAL": {
+   "name": "Hoco J53A Exceptional",
+   "tags": [
+    "Capacity: 20000mAh",
+    "Rated capacity: 11800mAh",
+    "Weight: 401g",
+    "Dimensions: 147×71×29mm",
+    "mAh per g: 49.9",
+    "mAh per liter: 66078"
+   ],
+   "group": "Power banks"
   }
  },
  "stopPhrases": [
