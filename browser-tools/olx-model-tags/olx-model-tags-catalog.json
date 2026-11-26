@@ -1216,7 +1216,9 @@
     "Capacity: 10000mAh",
     "Rated capacity: 5500mAh",
     "Weight: 268g",
-    "mAh per g: 37.3"
+    "Dimensions: 149.7×70×22mm",
+    "mAh per g: 37.3",
+    "mAh per liter: 43377"
    ],
    "group": "Power banks"
   },
@@ -1639,6 +1641,42 @@
     "Dimensions: 111×92×116mm",
     "mAh per g: 58.0",
     "mAh per liter: 67534"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ146BNIGHTTIDE": {
+   "name": "Hoco J146B Night tide",
+   "tags": [
+    "Capacity: 30000mAh",
+    "Rated capacity: 16500mAh",
+    "Weight: 635g",
+    "Dimensions: 149.7×70×43mm",
+    "mAh per g: 47.2",
+    "mAh per liter: 66578"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ144AHYMN": {
+   "name": "Hoco J144A Hymn",
+   "tags": [
+    "Capacity: 30000mAh",
+    "Rated capacity: 15000mAh",
+    "Weight: 612g",
+    "Dimensions: 164×80×32.59mm",
+    "mAh per g: 49.0",
+    "mAh per liter: 70162"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ145WHALE": {
+   "name": "Hoco J145 Whale",
+   "tags": [
+    "Capacity: 1200mAh",
+    "Output: 2.5W",
+    "Weight: 50g",
+    "Dimensions: 70×40×18.7mm",
+    "mAh per g: 24.0",
+    "mAh per liter: 22918"
    ],
    "group": "Power banks"
   }
