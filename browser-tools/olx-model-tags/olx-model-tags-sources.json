@@ -282,7 +282,7 @@
        "name": "Weight",
        "optional": true,
        "selector": "#ProductView div:has(> p.my-5.text-sm)",
-       "regex": "Finished product weight:\\s*(\\d+(?:\\.\\d+)?\\s*g)\\b"
+       "regex": "Finished product weight:\\s*(\\d+(?:\\.\\d+)?\\s*g)(?![a-z])"
       }
      ],
      "rawSpecs": {
