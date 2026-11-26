@@ -1374,6 +1374,32 @@
     "mAh per liter: 64050"
    ],
    "group": "Power banks"
+  },
+  "HOCOJ158PRORUNNER": {
+   "name": "Hoco J158 Pro Runner",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 6000mAh",
+    "Output: 22.5W",
+    "Weight: 290g",
+    "Dimensions: 142×64×22.5mm",
+    "mAh per g: 34.5",
+    "mAh per liter: 48905"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ158ARUNNER": {
+   "name": "Hoco J158A Runner",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 6000mAh",
+    "Output: 10W",
+    "Weight: 290g",
+    "Dimensions: 142×64×23mm",
+    "mAh per g: 34.5",
+    "mAh per liter: 47841"
+   ],
+   "group": "Power banks"
   }
  },
  "stopPhrases": [
