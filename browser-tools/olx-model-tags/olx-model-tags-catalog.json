@@ -4908,6 +4908,15 @@
     "Output: 22.5W"
    ],
    "group": "Power banks"
+  },
+  "REMAXFP92": {
+   "name": "REMAX FP-92",
+   "tags": [
+    "Capacity: 20000mAh",
+    "Rated capacity: 11600mAh",
+    "Output: 45W"
+   ],
+   "group": "Power banks"
   }
  },
  "stopPhrases": [
