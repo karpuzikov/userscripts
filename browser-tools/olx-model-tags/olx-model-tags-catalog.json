@@ -3904,7 +3904,10 @@
    "name": "Hoco J28A Shock power",
    "tags": [
     "Rated capacity: 11800mAh",
-    "Weight: 411g"
+    "Weight: 411g",
+    "Capacity: 20000mAh",
+    "Output: 10W",
+    "mAh per g: 48.7"
    ],
    "group": "Power banks"
   },
@@ -3913,7 +3916,9 @@
    "tags": [
     "Rated capacity: 6000mAh",
     "Weight: 212g",
-    "Output: 10W"
+    "Output: 10W",
+    "Capacity: 10000mAh",
+    "mAh per g: 47.2"
    ],
    "group": "Power banks"
   },
@@ -3944,7 +3949,9 @@
    "tags": [
     "Rated capacity: 12000mAh",
     "Weight: 389g",
-    "Output: 10W"
+    "Output: 10W",
+    "Capacity: 20000mAh",
+    "mAh per g: 51.4"
    ],
    "group": "Power banks"
   },
@@ -3953,7 +3960,10 @@
    "tags": [
     "Dimensions: 121×67×9.5mm",
     "Output: 5W",
-    "Weight: 104g"
+    "Weight: 104g",
+    "Capacity: 5000mAh",
+    "mAh per g: 48.1",
+    "mAh per liter: 64921"
    ],
    "group": "Power banks"
   },
@@ -4089,7 +4099,9 @@
   "HOCOJ28SHOCKPOWER": {
    "name": "Hoco J28 Shock power",
    "tags": [
-    "Weight: 196g"
+    "Weight: 196g",
+    "Capacity: 10000mAh",
+    "mAh per g: 51.0"
    ],
    "group": "Power banks"
   },
@@ -4097,7 +4109,10 @@
    "name": "Hoco J36 Ample energy",
    "tags": [
     "Weight: 228g",
-    "Dimensions: 142×73×17mm"
+    "Dimensions: 142×73×17mm",
+    "Capacity: 10000mAh",
+    "mAh per g: 43.9",
+    "mAh per liter: 56747"
    ],
    "group": "Power banks"
   },
@@ -4105,7 +4120,10 @@
    "name": "Hoco B38 Extreme",
    "tags": [
     "Weight: 104g",
-    "Dimensions: 101×64×25mm"
+    "Dimensions: 101×64×25mm",
+    "Capacity: 10000mAh",
+    "mAh per g: 96.2",
+    "mAh per liter: 61881"
    ],
    "group": "Power banks"
   },
