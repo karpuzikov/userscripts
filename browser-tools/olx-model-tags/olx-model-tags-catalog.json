@@ -4202,6 +4202,65 @@
     "mAh per liter: 69677"
    ],
    "group": "Power banks"
+  },
+  "HOCOB35AENTOURAGE": {
+   "name": "Hoco B35A Entourage",
+   "tags": [
+    "Capacity: 5200mAh",
+    "Output: 5W",
+    "Weight: 120g",
+    "Dimensions: 93×44×23mm",
+    "mAh per g: 43.3",
+    "mAh per liter: 55251"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOB35ENTOURAGE": {
+   "name": "Hoco B35 Entourage",
+   "tags": [
+    "Capacity: 2600mAh",
+    "Output: 5W",
+    "Weight: 62g",
+    "mAh per g: 41.9"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOB31AREGE": {
+   "name": "Hoco B31A Rege",
+   "tags": [
+    "Capacity: 30000mAh",
+    "Output: 10.5W",
+    "Weight: 415g",
+    "Dimensions: 160×82×23mm",
+    "mAh per g: 72.3",
+    "mAh per liter: 99417"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ24COOLENERGY": {
+   "name": "Hoco J24 Cool energy",
+   "tags": [
+    "Capacity: 8000mAh",
+    "Rated capacity: 5120mAh",
+    "Output: 10.5W",
+    "Weight: 236g",
+    "Dimensions: 84×41.5×41.5mm",
+    "mAh per g: 33.9",
+    "mAh per liter: 55299"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOB31REGE": {
+   "name": "Hoco B31 Rege",
+   "tags": [
+    "Capacity: 20000mAh",
+    "Output: 10.5W",
+    "Weight: 330g",
+    "Dimensions: 145×82×23mm",
+    "mAh per g: 60.6",
+    "mAh per liter: 73134"
+   ],
+   "group": "Power banks"
   }
  },
  "stopPhrases": [
