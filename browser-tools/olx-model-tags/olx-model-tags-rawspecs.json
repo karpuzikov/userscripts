@@ -356,5 +356,19 @@
    "Sizes": "136 × 69 × 33mm.",
    "Weight": "370g."
   }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-q40-leader-pd65w-25000mah": {
+  "model": "Hoco Q40 Leader",
+  "scannedAt": "2026-11-26T02:45:59.311Z",
+  "specs": {
+   "Capacity": "25000mAh, 92.5Wh. Rated capacity: 14000mAh (5V TYP 3A).",
+   "Input": "1 × Type-C1 port – 5V / 3A, 9V / 3A, 12V / 3A, 15V / 3A, 20V / 3A – 60W. 1 × Type-C2 port – 5V / 3A, 9V / 3A, 12V / 3A, 15V / 3A, 20V / 3A – 60W.",
+   "Output": "1 × Type-C1 port – 5V / 3A, 9V / 3A, 12V / 3A, 15V / 3A, 20V / 3.25A – 65W. 1 × Type-C2 port – 5V / 3A, 9V / 3A, 12V / 3A, 15V / 3A, 20V / 3.25A – 65W. 1 × USB-A port – 5V / 3A, 9V / 2A, 10V / 2.25 (SCP), 12V / 1.5A – 22.5W. Total output: 5V / 3A (max).",
+   "Fast charging protocol support": "for PD3.0 / PD65W / QC3.0 / QC2.0 / FCP / SCP / AFC and other fast charging protocols.",
+   "Material": "ABS + PC flame retardant casing + lithium ion polymer battery.",
+   "Indication": "LED digital display of power level, as well as input / output voltage and current. Green indicator of PD / QC fast charging.",
+   "Sizes": "155 × 81 × 26.5mm.",
+   "Weight": "485g."
+  }
  }
 }
