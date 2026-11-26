@@ -763,6 +763,28 @@
     "Weight: 1400g"
    ],
    "group": "Power banks"
+  },
+  "HOCOQ40LEADER": {
+   "name": "Hoco Q40 Leader",
+   "tags": [
+    "Capacity: 25000mAh",
+    "Rated capacity: 14000mAh",
+    "Output: 65W",
+    "Weight: 485g",
+    "mAh per g: 51.5"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ150STREAM": {
+   "name": "Hoco J150 Stream",
+   "tags": [
+    "Capacity: 20000mAh",
+    "Rated capacity: 11000mAh",
+    "Output: 22.5W",
+    "Weight: 375g",
+    "mAh per g: 53.3"
+   ],
+   "group": "Power banks"
   }
  },
  "stopPhrases": [
