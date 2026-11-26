@@ -2564,6 +2564,58 @@
     "mAh per liter: 71422"
    ],
    "group": "Power banks"
+  },
+  "HOCOJ104ADISCOVERYEDITION": {
+   "name": "Hoco J104A Discovery edition",
+   "tags": [
+    "Capacity: 20000mAh",
+    "Rated capacity: 11000mAh",
+    "Output: 22.5W",
+    "Weight: 436g",
+    "Dimensions: 146×67×29mm",
+    "mAh per g: 45.9",
+    "mAh per liter: 70502"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ105DISCOVERYEDITION": {
+   "name": "Hoco J105 Discovery edition",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5400mAh",
+    "Output: 22.5W",
+    "Weight: 192g",
+    "Dimensions: 84×54×38mm",
+    "mAh per g: 52.1",
+    "mAh per liter: 58015"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ103ADISCOVERYEDITION": {
+   "name": "Hoco J103A Discovery edition",
+   "tags": [
+    "Capacity: 20000mAh",
+    "Rated capacity: 11000mAh",
+    "Output: 22.5W",
+    "Weight: 426g",
+    "Dimensions: 146×67×28.5mm",
+    "mAh per g: 46.9",
+    "mAh per liter: 71739"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ104DISCOVERYEDITION": {
+   "name": "Hoco J104 Discovery edition",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5500mAh",
+    "Output: 22.5W",
+    "Weight: 251g",
+    "Dimensions: 146×67×16.5mm",
+    "mAh per g: 39.8",
+    "mAh per liter: 61957"
+   ],
+   "group": "Power banks"
   }
  },
  "stopPhrases": [
