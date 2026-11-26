@@ -1,0 +1,43 @@
+{
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j159b-essence-22-5w-pd20w-30000mah": {
+  "model": "Hoco J159B Essence",
+  "scannedAt": "2026-11-26T02:43:29.315Z",
+  "specs": {
+   "Capacity": "30000mAh, 111Wh, rated capacity: 18000mAh (5V TYP 2A).",
+   "Input": "1 × Type-C port – 5V / 3A, 9V / 2A, 12V / 1.5A – 18W. 1 × Micro-USB port – 5V / 2A, 9V / 2A, 12V / 1.5A – 18W.",
+   "Output": "1 × Type-C port – 5V / 3A, 9V / 2.22A, 12V / 1.67A – 20W. 2 × USB-A ports – 5V / 3A, 9V / 2A, 10V / 2.25 (SCP), 12V / 1.5A – 22.5W each. Total output: 5V / 2A – 10W (max).",
+   "Fast charge": "Supports PD3.0 / PD20W / QC3.0 / QC2.0 / FCP / SCP / AFC and other charging protocols.",
+   "Indication": "LED indicator of power level, green fast charging indicator.The charge level is indicated by four LEDs: ● ○ ○ ○ > 1 – 25%, ● ● ○ ○ > 26 – 50%, ● ● ● ○ > 51 – 75%, ● ● ● ● > 76 – 100%.",
+   "Material": "ABS + PC flame retardant casing, lithium-ion polymer battery, electronic components.",
+   "Dimensions": "145 × 69.5 × 41.5mm.",
+   "Weight": "590g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j159a-essence-22-5w-pd20w-20000mah": {
+  "model": "Hoco J159A Essence",
+  "scannedAt": "2026-11-26T02:43:29.318Z",
+  "specs": {
+   "Capacity": "20000mAh, 74Wh, rated capacity: 12000mAh (5V TYP 2A).",
+   "Input": "1 × Type-C port – 5V / 3A, 9V / 2A, 12V / 1.5A – 18W. 1 × Micro-USB port – 5V / 2A, 9V / 2A, 12V / 1.5A – 18W.",
+   "Output": "1 × Type-C port – 5V / 3A, 9V / 2.22A, 12V / 1.67A – 20W. 2 × USB-A ports – 5V / 3A, 9V / 2A, 10V / 2.25 (SCP), 12V / 1.5A – 22.5W each. Total output: 5V / 2A – 10W (max).",
+   "Fast charge": "Supports PD3.0 / PD20W / QC3.0 / QC2.0 / FCP / SCP / AFC and other charging protocols.",
+   "Indication": "LED indicator of power level, green fast charging indicator. The charge level is indicated by four LEDs: ● ○ ○ ○ > 1 – 25%, ● ● ○ ○ > 26 – 50%, ● ● ● ○ > 51 – 75%, ● ● ● ● > 76 – 100%.",
+   "Material": "ABS + PC flame retardant casing, lithium-ion polymer battery, electronic components.",
+   "Dimensions": "145 × 69.5 × 28mm.",
+   "Weight": "400g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j160a-original-pd20w-wireless-charging-10000mah": {
+  "model": "Hoco J160A Original",
+  "scannedAt": "2026-11-26T02:43:29.318Z",
+  "specs": {
+   "Capacity": "10000mAh, 38.5Wh, rated capacity: 5800mAh (5V TYP 2A).",
+   "Input": "1 × Type-C port – 5V / 3A, 9V / 2A, 12V / 1.5A – 18W max. 1 × iP port – 5V / 2.4A, 9V / 2A – 18W max.",
+   "Output": "1 × Type-C port – 5V / 3A, 9V / 2.22A, 12V / 1.67A – 20W max. Magnetic wireless charging output – 5W / 7.5W / 10W / 15W max. Total output: 5V / 2A – 10W max.",
+   "Indication": "LED power level indicator, the charge level is indicated by four LEDs: ● ○ ○ ○ > 1 – 25%, ● ● ○ ○ > 26 – 50%, ● ● ● ○ > 51 – 75%, ● ● ● ● > 76 – 100%. Red indicator for wireless charging. Green indicator for PD/QC fast charging.",
+   "Material": "PC flame retardant casing, lithium-ion polymer battery, electronic components.",
+   "Dimensions": "101 × 66 × 19mm.",
+   "Weight": "195g."
+  }
+ }
+}
