@@ -937,6 +937,27 @@
     "mAh per g: 43.5"
    ],
    "group": "Power banks"
+  },
+  "HOCOJ132ASABIO": {
+   "name": "Hoco J132A Sabio",
+   "tags": [
+    "Capacity: 20000mAh",
+    "Rated capacity: 11000mAh",
+    "Output: 22.5W",
+    "Weight: 420g",
+    "mAh per g: 47.6"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ129ANATURE": {
+   "name": "Hoco J129A Nature",
+   "tags": [
+    "Capacity: 20000mAh",
+    "Rated capacity: 11000mAh",
+    "Weight: 426g",
+    "mAh per g: 46.9"
+   ],
+   "group": "Power banks"
   }
  },
  "stopPhrases": [
