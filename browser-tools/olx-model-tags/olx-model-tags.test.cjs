@@ -294,3 +294,11 @@ test('REMAX adapter reads the FP-32 spec block', () => {
   assert.equal(olxModelTags.SOURCE_VALUE_TRANSFORMS.batteryMah(read('Rated capacity')), '11000mAh');
   assert.equal(olxModelTags.SOURCE_VALUE_TRANSFORMS.peakWatts(read('Output')), '55W');
 });
+
+test('Hoco free-text adapter reads "Weight is only 107g" (B37)', () => {
+  const page = JSON.parse(require('fs').readFileSync(__dirname + '/olx-model-tags-sources.json', 'utf8')).sources.find((source) => source.name === 'HOCO').pages.at(-1);
+  const weight = (text) => text.match(new RegExp(page.properties.find((property) => property.name === 'Weight').regex))?.[1];
+  assert.equal(weight('128 * 68 * 10mm. Weight is only 107g.'), '107g');
+  assert.equal(weight('11. Weight: main unit – 430g, clamps – 190g.'), '430g');
+  assert.equal(weight('Sizes: 135*66*15mm, weight: 241g.'), '241g');
+});

@@ -215,7 +215,7 @@
       {
        "name": "Weight",
        "selector": ".elementor-widget-woocommerce-product-content p",
-       "regex": "[Ww]eight:?\\s*(?:main unit\\s*[–-]\\s*)?(\\d+\\s*g)\\b"
+       "regex": "[Ww]eight(?:\\s+is(?:\\s+only)?)?:?\\s*(?:main unit\\s*[–-]\\s*)?(\\d+\\s*g)\\b"
       },
       {
        "name": "Dimensions",
