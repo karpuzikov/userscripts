@@ -4730,7 +4730,8 @@
    "name": "REMAX T201ALP",
    "tags": [
     "Capacity: 10000mAh",
-    "Rated capacity: 5800mAh"
+    "Rated capacity: 5800mAh",
+    "Output: 35W"
    ],
    "group": "Power banks"
   },
@@ -4873,14 +4874,19 @@
    "tags": [
     "Capacity: 5000mAh",
     "Rated capacity: 3000mAh",
-    "Output: 20.04W"
+    "Output: 20.04W",
+    "Dimensions: 105.9×72.5×14.6mm",
+    "Weight: 221 g",
+    "mAh per g: 22.6",
+    "mAh per liter: 44605"
    ],
    "group": "Power banks"
   },
   "REMAXFP151": {
    "name": "REMAX FP-151",
    "tags": [
-    "Rated capacity: 10000mAh"
+    "Rated capacity: 10000mAh",
+    "Output: 100W"
    ],
    "group": "Power banks"
   },
