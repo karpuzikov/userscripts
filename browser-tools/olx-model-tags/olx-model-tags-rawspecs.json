@@ -119,5 +119,20 @@
    "Dimensions": "76 × 56 × 23mm.",
    "Weight": "130g."
   }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j157-leader-22-5w-pd20w-10000mah": {
+  "model": "Hoco J157 Leader",
+  "scannedAt": "2026-11-26T02:44:11.313Z",
+  "specs": {
+   "Capacity": "10000mAh, 37Wh, rated capacity: 5400mAh (5V TYP 2A).",
+   "Input": "1 × Type-C port – 5V / 3A, 9V / 2A, 12V / 1.5A – 18W.",
+   "Output": "1 × Type-C port – 5V / 3A, 9V / 2.22A, 12V / 1.67A – 20W. 1 × USB-A port – 5V / 3A, 9V / 2A, 10V / 2.25 (SCP), 12V / 1.5A – 22.5W. 1 × built-in Type-C cable – 5V / 3A, 9V / 2.22A, 12V / 1.67A – 20W. Total output: 5V / 2A – 10W (max).",
+   "Fast charge": "Supports PD3.0 / PD20W / QC3.0 / QC2.0 / FCP / SCP / AFC and other charging protocols.",
+   "Indication": "LED display on top (covered by a transparent dome).",
+   "Features": "Built-in Type-C cable as wrist strap.",
+   "Material": "ABS + PC flame retardant casing, lithium-ion polymer battery, electronic components.",
+   "Dimensions": "100 × 61 × 27mm.",
+   "Weight": "190g."
+  }
  }
 }
