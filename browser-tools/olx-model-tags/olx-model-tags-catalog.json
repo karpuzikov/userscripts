@@ -1361,6 +1361,19 @@
     "mAh per liter: 71733"
    ],
    "group": "Power banks"
+  },
+  "HOCOJ159ESSENCE": {
+   "name": "Hoco J159 Essence",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 6000mAh",
+    "Output: 22.5W",
+    "Weight: 225g",
+    "Dimensions: 143.5×68×16mm",
+    "mAh per g: 44.4",
+    "mAh per liter: 64050"
+   ],
+   "group": "Power banks"
   }
  },
  "stopPhrases": [
