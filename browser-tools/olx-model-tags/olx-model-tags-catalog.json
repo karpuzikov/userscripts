@@ -3776,6 +3776,8 @@
     "Capacity: 30000mAh",
     "Output: 18W",
     "Dimensions: 169×83×22mm",
+    "Weight: 479g",
+    "mAh per g: 62.6",
     "mAh per liter: 97215"
    ],
    "group": "Power banks"
@@ -3856,7 +3858,8 @@
   "HOCOB35EENTOURAGE": {
    "name": "Hoco B35E Entourage",
    "tags": [
-    "Dimensions: 121×67×9.5mm"
+    "Dimensions: 121×67×9.5mm",
+    "Weight: 226g"
    ],
    "group": "Power banks"
   },
@@ -3865,7 +3868,8 @@
    "tags": [
     "Rated capacity: 11800mAh",
     "Weight: 425g",
-    "Output: 10W"
+    "Output: 10W",
+    "Dimensions: 145×73×25mm"
    ],
    "group": "Power banks"
   },
