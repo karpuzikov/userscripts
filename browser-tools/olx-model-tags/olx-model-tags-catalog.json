@@ -4709,6 +4709,71 @@
     "mAh per liter: 85924"
    ],
    "group": "Power banks"
+  },
+  "REMAXFP28": {
+   "name": "REMAX FP-28",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5800mAh"
+   ],
+   "group": "Power banks"
+  },
+  "REMAXMH158BMH159B": {
+   "name": "REMAX MH158-B/MH159-B",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5300mAh"
+   ],
+   "group": "Power banks"
+  },
+  "REMAXT201ALP": {
+   "name": "REMAX T201ALP",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5800mAh"
+   ],
+   "group": "Power banks"
+  },
+  "REMAXFP16": {
+   "name": "REMAX FP-16",
+   "tags": [
+    "Capacity: 5000mAh",
+    "Output: 20.04W"
+   ],
+   "group": "Power banks"
+  },
+  "REMAXFP11": {
+   "name": "REMAX FP-11",
+   "tags": [
+    "Capacity: 5000mAh",
+    "Rated capacity: 5500mAh"
+   ],
+   "group": "Power banks"
+  },
+  "REMAX02PD": {
+   "name": "REMAX 02PD",
+   "tags": [
+    "Output: 45W"
+   ],
+   "group": "Power banks"
+  },
+  "REMAXFP128": {
+   "name": "REMAX FP-128",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 11000mAh",
+    "Output: 15W"
+   ],
+   "group": "Power banks"
+  },
+  "REMAXFP32": {
+   "name": "REMAX FP-32",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 11000mAh",
+    "Output: 55W"
+   ],
+   "group": "Power banks"
   }
  },
  "stopPhrases": [
