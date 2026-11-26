@@ -4004,7 +4004,9 @@
     "Weight: 197g",
     "Output: 10.5W",
     "Capacity: 10000mAh",
-    "mAh per g: 50.8"
+    "Dimensions: 136×78×14mm",
+    "mAh per g: 50.8",
+    "mAh per liter: 67335"
    ],
    "group": "Power banks"
   },
@@ -4015,7 +4017,9 @@
     "Weight: 197g",
     "Output: 10.5W",
     "Capacity: 10000mAh",
-    "mAh per g: 50.8"
+    "Dimensions: 136×78×14mm",
+    "mAh per g: 50.8",
+    "mAh per liter: 67335"
    ],
    "group": "Power banks"
   },
@@ -4026,7 +4030,9 @@
     "Weight: 197g",
     "Output: 10.5W",
     "Capacity: 10000mAh",
-    "mAh per g: 50.8"
+    "Dimensions: 136×78×14mm",
+    "mAh per g: 50.8",
+    "mAh per liter: 67335"
    ],
    "group": "Power banks"
   },
@@ -4116,6 +4122,84 @@
    "tags": [
     "Rated capacity: 5900mAh",
     "Weight: 226g"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ30COOLPAINT": {
+   "name": "Hoco J30 Cool paint",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 6400mAh",
+    "Output: 10.5W",
+    "Weight: 173g",
+    "Dimensions: 115×70×12mm",
+    "mAh per g: 57.8",
+    "mAh per liter: 103520"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ26SIMPLEENERGY": {
+   "name": "Hoco J26 Simple energy",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 6000mAh",
+    "Output: 10.5W",
+    "Weight: 231g",
+    "Dimensions: 139×70×16mm",
+    "mAh per g: 43.3",
+    "mAh per liter: 64234"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ29BCOOLSQUARE": {
+   "name": "Hoco J29B Cool square",
+   "tags": [
+    "Capacity: 20000mAh",
+    "Rated capacity: 12000mAh",
+    "Output: 10.5W",
+    "Weight: 372g",
+    "Dimensions: 159×109×17mm",
+    "mAh per g: 53.8",
+    "mAh per liter: 67882"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ29COOLSQUARE": {
+   "name": "Hoco J29 Cool square",
+   "tags": [
+    "Capacity: 5000mAh",
+    "Rated capacity: 3200mAh",
+    "Output: 5W",
+    "Weight: 127g",
+    "Dimensions: 120×69×13mm",
+    "mAh per g: 39.4",
+    "mAh per liter: 46451"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ27POWERTREASURE": {
+   "name": "Hoco J27 Power treasure",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 6000mAh",
+    "Output: 10.5W",
+    "Weight: 209g",
+    "Dimensions: 142×66×14mm",
+    "mAh per g: 47.8",
+    "mAh per liter: 76215"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ29ACOOLSQUARE": {
+   "name": "Hoco J29A Cool square",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 6000mAh",
+    "Output: 10.5W",
+    "Weight: 188g",
+    "Dimensions: 130×69×16mm",
+    "mAh per g: 53.2",
+    "mAh per liter: 69677"
    ],
    "group": "Power banks"
   }
