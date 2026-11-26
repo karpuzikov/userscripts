@@ -3918,7 +3918,9 @@
    "tags": [
     "Capacity: 10000mAh",
     "Rated capacity: 5900mAh",
-    "Output: 10W"
+    "Output: 10W",
+    "Weight: 258g",
+    "mAh per g: 38.8"
    ],
    "group": "Power banks"
   },
@@ -3935,7 +3937,8 @@
    "name": "Hoco B35D Entourage",
    "tags": [
     "Dimensions: 121×67×9.5mm",
-    "Output: 5W"
+    "Output: 5W",
+    "Weight: 104g"
    ],
    "group": "Power banks"
   },
@@ -4039,6 +4042,27 @@
    "name": "Hoco B37 Persistent",
    "tags": [
     "Output: 5W"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ28SHOCKPOWER": {
+   "name": "Hoco J28 Shock power",
+   "tags": [
+    "Weight: 196g"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ36AMPLEENERGY": {
+   "name": "Hoco J36 Ample energy",
+   "tags": [
+    "Weight: 228g"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOB38EXTREME": {
+   "name": "Hoco B38 Extreme",
+   "tags": [
+    "Weight: 104g"
    ],
    "group": "Power banks"
   }
