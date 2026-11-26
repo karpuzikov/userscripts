@@ -4117,7 +4117,7 @@
  },
  "https://www.iremax.net/product/6159": {
   "model": "REMAX FP-32",
-  "scannedAt": "2026-11-26T05:15:09.535Z",
+  "scannedAt": "2026-11-26T05:35:35.538Z",
   "specs": {
    "Product Colors": "Dark Blue, Orange, Silver-Gray",
    "Battery Type": "Lithium-Polymer",
@@ -4125,7 +4125,11 @@
    "Battery Voltage/Total Power": "3.7 V/37 Wh",
    "Rated Capacity": "11,000 mAh",
    "Input Voltage and Current": "Type-C 1/C2 Input: 5V 3A, 9V 3A, 12V 3A, 15V 3A, 20V 2.25A, 45W; Protocols: PD 3.0, QC 3.0, PPS, AFC, FCP",
-   "Output Voltage and Current": "Type-C 1/C2 Output: 5V 3A, 9V 3A, 15V 3A, 20V 2.25A, Protocols: PD 3.0, QC 3.0, Apple 2.4A, BC 1.2, DCP, PPS Priority: 5–11V/4.5A, 5–16V/3A, 5–20V/2.75A; USB-A1: 5V3A, 9V2A, 12V1.5A, 10V2.25A, 22.5W; Protocols: QC, AFC, FCP, SCP, UFCS, Samsung 2A, Apple 2.4A, DCP 1.5A, BC 1.2"
+   "Output Voltage and Current": "Type-C 1/C2 Output: 5V 3A, 9V 3A, 15V 3A, 20V 2.25A, Protocols: PD 3.0, QC 3.0, Apple 2.4A, BC 1.2, DCP, PPS Priority: 5–11V/4.5A, 5–16V/3A, 5–20V/2.75A; USB-A1: 5V3A, 9V2A, 12V1.5A, 10V2.25A, 22.5W; Protocols: QC, AFC, FCP, SCP, UFCS, Samsung 2A, Apple 2.4A, DCP 1.5A, BC 1.2",
+   "Total Output Across Multiple Ports": "Shared 5V 3A",
+   "Energy Conversion Efficiency": "78% (5V 3A discharge)",
+   "Weight (unit only)": "~343 g",
+   "Dimensions (unit only)": "112 × 71.5 × 30 mm"
   }
  },
  "https://www.iremax.net/product/6147": {
@@ -4169,7 +4173,7 @@
  },
  "https://www.iremax.net/product/5775": {
   "model": "REMAX FP-65",
-  "scannedAt": "2026-11-26T05:15:13.572Z",
+  "scannedAt": "2026-11-26T05:35:39.542Z",
   "specs": {
    "Colors": "Starry Orange/Deep Blue/Starlight Silver",
    "Battery Capacity": "5000mAh",
@@ -4177,12 +4181,15 @@
    "Rated Capacity": "6,000 mAh 5V-2A",
    "Input Voltage and Current": "Type-C/Type-C Cable Input: 5V/3A, 9V/3A, 12V/2.5A, 15V/2A, 20V/1.5A",
    "Output Voltage and Current": "Type-C/Type-C Cable Output: 5V/3A, 9V/3A, 12V/2.8A, 15V/2.3A, 20V/1.75A",
-   "Total Output Across All Ports": "15W"
+   "Total Output Across All Ports": "15W",
+   "Energy Conversion Efficiency": "65%",
+   "Unit Weight": "200 g",
+   "Unit Dimensions": "102.3 × 65.4 × 15.6 mm"
   }
  },
  "https://www.iremax.net/product/5769": {
   "model": "REMAX FP-62",
-  "scannedAt": "2026-11-26T05:15:14.531Z",
+  "scannedAt": "2026-11-26T05:35:39.548Z",
   "specs": {
    "Colors": "Orange, Silver, Blue",
    "Battery Capacity": "5000mAh",
@@ -4190,7 +4197,10 @@
    "Rated Capacity": "3000mAh 5V-2A",
    "Input Voltage and Current": "Type-C/Type-C Cable Input: 5V/3A, 9V/2A,",
    "Output Voltage and Current": "Type-C/Type-C Cable Output: 5V/3A, 9V/2.22A, 10V/2.25A, 12V/1.67A",
-   "Total Output Power (All Ports)": "15W"
+   "Total Output Power (All Ports)": "15W",
+   "Energy Conversion Efficiency": "65%",
+   "Unit Weight": "110g",
+   "Unit Dimensions": "102 × 65 × 8.5 mm"
   }
  },
  "https://www.iremax.net/product/5751": {
@@ -4317,14 +4327,21 @@
  },
  "https://www.iremax.net/product/5847": {
   "model": "REMAX FP-92",
-  "scannedAt": "2026-11-26T05:15:13.548Z",
+  "scannedAt": "2026-11-26T05:35:38.549Z",
   "specs": {
    "Product Colors": "Dark Blue, Starlight Silver",
    "Battery Capacity": "20,000 mAh",
    "Total Battery Power": "7.7 V/77 Wh",
    "Rated Capacity": "11,600 mAh (5V/2A)",
    "Input Voltage and Current": "Type-C Port/Type-C Cable Input: 5V/3A, 9V/3A, 12V/3A, 15V/3A, 20V/2.25A",
-   "Output Voltage and Current": "Type-C Port / Type-C Cable Output: 5V/3A 9V/3A 12V/3A 15V/3A 20V/2.25A 10V/2.25A"
+   "Output Voltage and Current": "Type-C Port / Type-C Cable Output: 5V/3A 9V/3A 12V/3A 15V/3A 20V/2.25A 10V/2.25A",
+   "Supports": "PD 2.0 / PD 3.0 / PPS / UFCS / QC 2.0 / QC 3.0 / AFC / FCP / SCP protocols",
+   "Total Output": "5V⎓3A",
+   "Energy Conversion Efficiency": "≥70%",
+   "Unit Weight": "≈329g",
+   "Unit Dimensions": "106mm × 71mm × 33mm",
+   "Packaged Dimensions": "90 × 160 × 38mm",
+   "Packaged Weight": "388g"
   }
  }
 }
