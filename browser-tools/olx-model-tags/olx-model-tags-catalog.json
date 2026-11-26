@@ -3812,6 +3812,49 @@
     "Weight: 212g"
    ],
    "group": "Power banks"
+  },
+  "HOCOJ35SUNSHINE": {
+   "name": "Hoco J35 Sunshine",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5900mAh",
+    "Weight: 272g",
+    "mAh per g: 36.8"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ34MIGHTYSOURCE": {
+   "name": "Hoco J34 Mighty source",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5900mAh"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ33ACOOLFREEDOM": {
+   "name": "Hoco J33A Cool freedom",
+   "tags": [
+    "Rated capacity: 12000mAh",
+    "Weight: 389g"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOB35DENTOURAGE": {
+   "name": "Hoco B35D Entourage",
+   "tags": [
+    "Dimensions: 121×67×9.5mm"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ38COMPREHENSIVE": {
+   "name": "Hoco J38 Comprehensive",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5900mAh",
+    "Weight: 189g",
+    "mAh per g: 52.9"
+   ],
+   "group": "Power banks"
   }
  },
  "stopPhrases": [
