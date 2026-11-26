@@ -958,6 +958,49 @@
     "mAh per g: 46.9"
    ],
    "group": "Power banks"
+  },
+  "HOCOQ17BELECTRIC": {
+   "name": "Hoco Q17B Electric",
+   "tags": [
+    "Capacity: 20000mAh",
+    "Rated capacity: 10800mAh",
+    "Output: 130W",
+    "Weight: 492g",
+    "mAh per g: 40.7"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOQ21GREAT": {
+   "name": "Hoco Q21 Great",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5500mAh",
+    "Output: 22.5W",
+    "Weight: 187g",
+    "mAh per g: 53.5"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOQ14ICECRYSTAL": {
+   "name": "Hoco Q14 Ice Crystal",
+   "tags": [
+    "Capacity: 5000mAh",
+    "Rated capacity: 3000mAh",
+    "Output: 20W",
+    "Weight: 147g",
+    "mAh per g: 34.0"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ128BPOWERFUL": {
+   "name": "Hoco J128B Powerful",
+   "tags": [
+    "Capacity: 30000mAh",
+    "Rated capacity: 15000mAh",
+    "Weight: 600g",
+    "mAh per g: 50.0"
+   ],
+   "group": "Power banks"
   }
  },
  "stopPhrases": [
