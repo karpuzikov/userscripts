@@ -3796,6 +3796,22 @@
     "mAh per liter: 50152"
    ],
    "group": "Power banks"
+  },
+  "HOCOJ28ASHOCKPOWER": {
+   "name": "Hoco J28A Shock power",
+   "tags": [
+    "Rated capacity: 11800mAh",
+    "Weight: 411g"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ33COOLFREEDOM": {
+   "name": "Hoco J33 Cool freedom",
+   "tags": [
+    "Rated capacity: 6000mAh",
+    "Weight: 212g"
+   ],
+   "group": "Power banks"
   }
  },
  "stopPhrases": [
