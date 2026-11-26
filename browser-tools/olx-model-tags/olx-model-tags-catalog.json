@@ -3885,6 +3885,30 @@
     "mAh per g: 51.5"
    ],
    "group": "Power banks"
+  },
+  "HOCOJ25BNEWPOWER": {
+   "name": "Hoco J25B New power",
+   "tags": [
+    "Rated capacity: 6000mAh",
+    "Weight: 197g"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ25ANEWPOWER": {
+   "name": "Hoco J25A New power",
+   "tags": [
+    "Rated capacity: 6000mAh",
+    "Weight: 197g"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ25NEWPOWER": {
+   "name": "Hoco J25 New power",
+   "tags": [
+    "Rated capacity: 6000mAh",
+    "Weight: 197g"
+   ],
+   "group": "Power banks"
   }
  },
  "stopPhrases": [
