@@ -3690,6 +3690,86 @@
     "mAh per liter: 34327"
    ],
    "group": "Power banks"
+  },
+  "HOCOB39MAGICSTONE": {
+   "name": "Hoco B39 Magic Stone",
+   "tags": [
+    "Capacity: 30000mAh",
+    "Output: 18W",
+    "Dimensions: 169×83×22mm",
+    "mAh per liter: 97215"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ44": {
+   "name": "Hoco J44",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5900mAh",
+    "Output: 18W",
+    "Weight: 192g",
+    "Dimensions: 101×64×24mm",
+    "mAh per g: 52.1",
+    "mAh per liter: 64460"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ39QUICKENERGY": {
+   "name": "Hoco J39 Quick energy",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5900mAh",
+    "Output: 18W",
+    "Weight: 203g",
+    "Dimensions: 140×68×16mm",
+    "mAh per g: 49.3",
+    "mAh per liter: 65651"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ42HIGHPOWER": {
+   "name": "Hoco J42 High power",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5900mAh",
+    "Weight: 239g",
+    "Dimensions: 140×68×19mm",
+    "mAh per g: 41.8",
+    "mAh per liter: 55285"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ48NIMBLE": {
+   "name": "Hoco J48 Nimble",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5900mAh",
+    "Weight: 218g",
+    "Dimensions: 138×68×16mm",
+    "mAh per g: 45.9",
+    "mAh per liter: 66603"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOS10": {
+   "name": "Hoco S10",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5900mAh",
+    "Output: 18W"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOF11": {
+   "name": "Hoco F11",
+   "tags": [
+    "Capacity: 4000mAh",
+    "Weight: 260g",
+    "Dimensions: 220×105×43mm",
+    "mAh per g: 15.4",
+    "mAh per liter: 4027"
+   ],
+   "group": "Power banks"
   }
  },
  "stopPhrases": [
