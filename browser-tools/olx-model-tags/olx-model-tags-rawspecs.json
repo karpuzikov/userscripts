@@ -442,7 +442,7 @@
  },
  "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-qs3-victory-jump-starter-10000mah": {
   "model": "Hoco QS3 Victory",
-  "scannedAt": "2026-11-26T02:47:28.330Z",
+  "scannedAt": "2026-11-26T02:50:19.414Z",
   "specs": {
    "Capacity": "10000mAh, 37Wh.",
    "Input": "1 × Type-C port – 5V / 2A, 9V / 2A – 18W.",
@@ -523,7 +523,7 @@
  },
  "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j147-prospero-3000mah-type-c-ver": {
   "model": "Hoco J147 Prospero",
-  "scannedAt": "2026-11-26T02:47:28.338Z",
+  "scannedAt": "2026-11-26T02:50:19.410Z",
   "specs": {
    "Capacity": "3000mAh, 11.1Wh. Rated capacity: 1800mAh (5V TYP 2A).",
    "Input": "1 × Type-C port – 5V / 2A.",
@@ -546,6 +546,58 @@
    "Indication": "LED digital display. Short press the power button to check remaining battery charge level at any time. Green fast charging indicator stays on during PD/QC fast charging input/output. Long press the power button to turn on the lamp, short press again for high brightness mode, short press again for flashing mode, short press again for SOS mode, and short press again to turn off the lamp. 7. With LED lamp. With handle.",
    "Sizes": "111 × 92 × 116mm.",
    "Weight": "1380g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j146b-night-tide-4-cables-30000mah": {
+  "model": "Hoco J146B Night tide",
+  "scannedAt": "2026-11-26T02:50:20.376Z",
+  "specs": {
+   "Capacity": "30000mAh, 111Wh. Rated capacity: 16500mAh (5V TYP 2A).",
+   "Input": "1 × Type-C port – 5V / 2A. 1 × built-in USB-A cable – 5V / 2A.",
+   "Output": "1 × built-in Type-C cable – 5V / 2A. 1 × built-in Micro-USB cable – 5V / 2A. 1 × built-in iP cable – 5V / 2A. 1 × USB-A port – 5V / 2A. Total output: 5V / 2A (max).",
+   "Material": "ABS + PC flame retardant shell + lithium ion polymer battery.",
+   "Indication": "LED indicator of power level. 6. Built-in USB-A, iP, Type-C and Micro-USB cables.",
+   "Sizes": "149.7 × 70 × 43mm.",
+   "Weight": "635g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j144a-hymn-30000mah": {
+  "model": "Hoco J144A Hymn",
+  "scannedAt": "2026-11-26T02:50:21.344Z",
+  "specs": {
+   "Capacity": "30000mAh, 96Wh. Rated capacity: 15000mAh (5V TYP 2A).",
+   "Input": "1 × Type-C port – 5V / 2A. 1 × Micro-USB port – 5V / 2A.",
+   "Output": "1 × USB-A1 port – 5V / 2A. 1 × USB-A2 port – 5V / 2A. Total output: 5V / 2A (max).",
+   "Material": "PC + ABS flame-retardant shell + lithium ion battery.",
+   "Indication": "LED digital display of power level.",
+   "Sizes": "164 × 80 × 32.59mm.",
+   "Weight": "612g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j145-whale-wireless-charging-1200mah": {
+  "model": "Hoco J145 Whale",
+  "scannedAt": "2026-11-26T02:50:21.344Z",
+  "specs": {
+   "Capacity": "1200mAh, 4.44Wh.",
+   "Input": "1 × built-in Type-C cable – 5V / 0.6A.",
+   "Output": "1 × built-in Type-C cable – 5V / 0.6A. Wireless charging output – 2.5W.",
+   "Material": "PC flame retardant shell + lithium polymer battery.",
+   "Indication": "LED indicator of power level. 6. For phone and for iWatch 1-10, SE / SE2, Ultra / Ultra2.",
+   "Sizes": "70 × 40 × 18.7mm.",
+   "Weight": "50g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j146-night-tide-4-cables-10000mah": {
+  "model": "Hoco J146 Night tide",
+  "scannedAt": "2026-11-26T02:50:21.349Z",
+  "specs": {
+   "Capacity": "10000mAh, 37Wh. Rated capacity: 5500mAh (5V TYP 2A).",
+   "Input": "1 × Type-C port – 5V / 2A. 1 × built-in USB-A cable – 5V / 2A.",
+   "Output": "1 × built-in Type-C cable – 5V / 2A. 1 × built-in Micro-USB cable – 5V / 2A. 1 × built-in iP cable – 5V / 2A. 1 × USB-A port – 5V / 2A. Total output: 5V / 2A (max).",
+   "Material": "ABS + PC flame retardant shell + lithium ion polymer battery.",
+   "Indication": "LED indicator of power level. 6. Built-in USB-A, iP, Type-C and Micro-USB cables.",
+   "Sizes": "149.7 × 70 × 22mm.",
+   "Weight": "268g."
   }
  }
 }
