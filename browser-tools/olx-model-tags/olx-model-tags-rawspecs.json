@@ -3442,5 +3442,25 @@
    "Output": "total output: DC5V / 2.1A Max, USB: DC5V / 2.1A Max, Lightning: DC5V / 2.1A Max. 4. LED light shows the power level (shake and activate).",
    "Material": "ABS+PC flame retardant material, surface plush paint process. 6. Multiple circuit protection, with built-in Lightning charging cable (length – 12cm). 7. Length * width * height: 136 * 78 * 14mm. Weight: 197g."
   }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/wall-charger-c36-wellspring-dual-usb-built-in-power-bank-5000-mah": {
+  "model": "Hoco C36 Wellspring",
+  "scannedAt": "2026-11-26T02:55:55.368Z",
+  "specs": {
+   "Input": "AC100-240V, 50/60Hz 0.3A, Micro-USB: DC5V/2A.",
+   "Charger output": "single port maximum DC5V / 2.2A, total output DC5V / 2.2A. Mobile power bank output: single port maximum DC5V/2.4A total output DC5V/2.4A.",
+   "Cell capacity": "5000mAh 18.5Wh. Rated output capacity: 3200mAh (5V TYP 1A). 4. National standard folding plug, CCC. 5. Flame-retardant PC material, durable, surface matte grain design, anti-friction scratch-resistant, foldable plug, easy to carry. 6. LED power display, can check the charge power and the remaining power in time LED1:1-25% LED2:26%-50% LED3:51%-75% LED4:76%-100%). 7. AC input (100-240VAC) / Micro-USB (DC5V2A) input to charge the battery, the LED light is blinking, when detecting the USB output current is greater than 700mA, the LED light is in the marquee mode, at this time the USB charge is provided by the charger, and the battery is disconnected until the USB output current becomes less than 500mA, restore the battery charge, LED lights in flashing mode, this stage is discharge through charging mode. 8. Products using high-performance 26650 batteries. 9. Multiple circuit protection, compatible with more than 99% mobile devices such as mobile phones / tablets. 10. Length * width * height: 7.2 * 6.1 * 3.1cm (excluding plug leakage part), weight: 168g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j17-clear-power-7000mah-with-led": {
+  "model": "Hoco J17 Clear power",
+  "scannedAt": "2026-11-26T02:56:07.363Z",
+  "specs": {
+   "Battery capacity": "7000mAh / 25.9Wh, rated output capacity: 4480mAh (5V TYP 1A).",
+   "Input": "Micro-USB 5V / 2.0A Max, Type-C 5V / 2.0A Max.",
+   "Output": "DC5V / 2.1A Max. 4. PC flame retardant material + aluminum oxidation process, anti-scratch, comfort grip. 5. LED power display, you can check the charging power and remaining battery power ( LED1: 1-25%, LED2: 26% -50%, LED3: 51% -75%, LED4: 76% -100%). 6. High performance A + grade polymer batteries.",
+   "Compatibility": "compatible with more than 99% of mobile phones / tablets and USB input digital devices.",
+   "Size": "14.0 * 5.9 * 1.3cm. Weight: 178g."
+  }
  }
 }
