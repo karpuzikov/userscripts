@@ -4261,6 +4261,110 @@
     "mAh per liter: 73134"
    ],
    "group": "Power banks"
+  },
+  "HOCOB24PAWKER": {
+   "name": "Hoco B24 Pawker",
+   "tags": [
+    "Capacity: 30000mAh",
+    "Output: 10W",
+    "Weight: 450g",
+    "Dimensions: 175×105×20mm",
+    "mAh per g: 66.7",
+    "mAh per liter: 81633"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOB25HANBECK": {
+   "name": "Hoco B25 Hanbeck",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Output: 10.5W",
+    "Weight: 186g",
+    "Dimensions: 150×72×10mm",
+    "mAh per g: 53.8",
+    "mAh per liter: 92593"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOB23BFLOWED": {
+   "name": "Hoco B23B Flowed",
+   "tags": [
+    "Capacity: 20000mAh",
+    "Output: 10W",
+    "Weight: 400g",
+    "Dimensions: 160×80×20mm",
+    "mAh per g: 50.0",
+    "mAh per liter: 78125"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOB12BWOODGRAINPATTERN": {
+   "name": "Hoco B12B Wood grain pattern",
+   "tags": [
+    "Capacity: 13000mAh",
+    "Weight: 212g",
+    "mAh per g: 61.3"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOB12CCAMOUFLAGEPATTERN": {
+   "name": "Hoco B12C Camouflage pattern",
+   "tags": [
+    "Capacity: 13000mAh",
+    "Weight: 204g",
+    "mAh per g: 63.7"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOB12ACARBONFIBERPATTERN": {
+   "name": "Hoco B12A Carbon fiber pattern",
+   "tags": [
+    "Capacity: 13000mAh",
+    "Output: 10.5W",
+    "Weight: 204g",
+    "mAh per g: 63.7"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOB16METAL": {
+   "name": "Hoco B16 Metal",
+   "tags": [
+    "Capacity: 10000mAh"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOB23FLOWED": {
+   "name": "Hoco B23 Flowed",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Output: 10W",
+    "Weight: 156g",
+    "Dimensions: 118×72×17mm",
+    "mAh per g: 64.1",
+    "mAh per liter: 69237"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOB23AFLOWED": {
+   "name": "Hoco B23A Flowed",
+   "tags": [
+    "Capacity: 15000mAh",
+    "Output: 10W",
+    "Weight: 312g",
+    "Dimensions: 160×70×20mm",
+    "mAh per g: 48.1",
+    "mAh per liter: 66964"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOB12DOCEANPATTERN": {
+   "name": "Hoco B12D Ocean pattern",
+   "tags": [
+    "Output: 10.5W",
+    "Weight: 212g",
+    "Dimensions: 130×74×15mm"
+   ],
+   "group": "Power banks"
   }
  },
  "stopPhrases": [
