@@ -2838,7 +2838,7 @@
  },
  "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j59a-famous-20000mah": {
   "model": "Hoco J59A Famous",
-  "scannedAt": "2026-11-26T03:11:41.414Z",
+  "scannedAt": "2026-11-26T03:19:48.426Z",
   "specs": {
    "Capacity": "20000mAh, 74Wh. Rated capacity: 11800mAh (5V TYP 2A).",
    "Input": "Micro-USB / Type-C: 5V-2A, Lightning: 5V-1.5A.",
@@ -2848,7 +2848,7 @@
  },
  "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j57-excellent-nrg-10000mah": {
   "model": "Hoco J57 Excellent NRG",
-  "scannedAt": "2026-11-26T03:11:41.414Z",
+  "scannedAt": "2026-11-26T03:19:48.426Z",
   "specs": {
    "Capacity": "10000mAh, 37Wh. Rated capacity: 5900mAh (5V TYP 2A).",
    "Input": "Micro-USB / Type-C: 5V-2A.",
@@ -2911,7 +2911,7 @@
  },
  "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j59-famous-10000mah": {
   "model": "Hoco J59 Famous",
-  "scannedAt": "2026-11-26T03:11:41.414Z",
+  "scannedAt": "2026-11-26T03:19:48.429Z",
   "specs": {
    "Capacity": "10000mAh, 37Wh. Rated capacity: 5900mAh (5V TYP 2A).",
    "Input": "Micro-USB / Type-C: 5V-2A. Lightning: 5V-1.5A.",
@@ -2921,7 +2921,7 @@
  },
  "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j61-companion-10000mah": {
   "model": "Hoco J61 Companion",
-  "scannedAt": "2026-11-26T03:11:40.406Z",
+  "scannedAt": "2026-11-26T03:19:48.427Z",
   "specs": {
    "Capacity": "10000mAh, 37Wh. Rated capacity: 5900mAh.",
    "Input": "Micro-USB: 5V-2A, 9V-2A – 18W. Type-C: 5V-2A (PD), 9V-2A (PD) – 18W.",
@@ -2930,7 +2930,7 @@
  },
  "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-b40-universal-7000mah": {
   "model": "Hoco B40 Universal",
-  "scannedAt": "2026-11-26T03:11:41.414Z",
+  "scannedAt": "2026-11-26T03:19:48.429Z",
   "specs": {
    "Capacity": "7000mAh, 25.9Wh.",
    "Sizes": "118 * 51 * 14mm. Weight: 126g.",
