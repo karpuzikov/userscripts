@@ -761,7 +761,9 @@
     "Rated capacity: 44000mAh",
     "Output: 22.5W",
     "Weight: 1400g",
-    "mAh per g: 53.6"
+    "Dimensions: 157×116×45mm",
+    "mAh per g: 53.6",
+    "mAh per liter: 91515"
    ],
    "group": "Power banks"
   },
@@ -1106,7 +1108,9 @@
     "Rated capacity: 5900mAh",
     "Output: 22.5W",
     "Weight: 243g",
-    "mAh per g: 41.2"
+    "Dimensions: 122×62×18mm",
+    "mAh per g: 41.2",
+    "mAh per liter: 73447"
    ],
    "group": "Power banks"
   },
@@ -2730,6 +2734,45 @@
     "Dimensions: 136×68×15mm",
     "mAh per g: 45.5",
     "mAh per liter: 72088"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOQ10": {
+   "name": "Hoco Q10",
+   "tags": [
+    "Capacity: 5000mAh",
+    "Rated capacity: 3000mAh",
+    "Output: 20W",
+    "Weight: 152g",
+    "Dimensions: 105×66×16mm",
+    "mAh per g: 32.9",
+    "mAh per liter: 45094"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOQ9SHELL": {
+   "name": "Hoco Q9 Shell",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5900mAh",
+    "Output: 20W",
+    "Weight: 225g",
+    "Dimensions: 122×62×16mm",
+    "mAh per g: 44.4",
+    "mAh per liter: 82628"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ87BTACKER": {
+   "name": "Hoco J87B Tacker",
+   "tags": [
+    "Capacity: 30000mAh",
+    "Rated capacity: 17700mAh",
+    "Output: 20W",
+    "Weight: 586g",
+    "Dimensions: 137×68×40mm",
+    "mAh per g: 51.2",
+    "mAh per liter: 80507"
    ],
    "group": "Power banks"
   }
