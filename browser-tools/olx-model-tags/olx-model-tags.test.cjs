@@ -263,3 +263,13 @@ test('Hoco free-text adapter finds the Output line under any "N. <words> output:
   assert.equal(output('3. 4 USB port output: USB 1 / 2 / 3 / 4: DC5V / 2A max. Total output: DC5V / 2A max. 4. LED'), '10W');
   assert.equal(output('3. Output: USB: QC/FCP (18W), Type-C: PD/QC (18W). Total output: DC5V / 3A max. 4. LED'), '18W');
 });
+
+test('Hoco free-text adapter finds Capacity under any "N. <words> capacity:" label but not Rated capacity', () => {
+  const page = JSON.parse(require('fs').readFileSync(__dirname + '/olx-model-tags-sources.json', 'utf8')).sources.find((source) => source.name === 'HOCO').pages.at(-1);
+  const capacity = (text) => text.match(new RegExp(page.properties.find((property) => property.name === 'Capacity').regex))?.[1];
+  assert.equal(capacity('1. Cell capacity: 10000mAh. Rated output capacity: 6400mAh.'), '10000mAh');
+  assert.equal(capacity('1. Capacity: 13000 mAh. 2. Battery: x'), '13000 mAh');
+  assert.equal(capacity('1. Power bank capacity is 13000mAh 48.1Wh.'), '13000mAh');
+  assert.equal(capacity('1. Battery capacity: 10000mAh / 37Wh Rated output capacity: 6400mAh (5V TYP 1A).'), '10000mAh');
+  assert.equal(capacity('2. Rated output capacity: 6400mAh.'), undefined);
+});

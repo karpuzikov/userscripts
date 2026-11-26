@@ -196,7 +196,7 @@
       {
        "name": "Capacity",
        "selector": ".elementor-widget-woocommerce-product-content p",
-       "regex": "\\b(?:Power bank capacity|Battery capacity|Capacity)\\s*(?:is|:)\\s*(\\d+\\s*mAh)",
+       "regex": "(?:\\d+\\.\\s+(?!Rated)[A-Za-z0-9 ]*?|\\b(?<!Rated )(?<!output ))[Cc]apacity\\s*(?:is|:)\\s*(\\d+\\s*mAh)",
        "transform": "batteryMah"
       },
       {
