@@ -811,7 +811,9 @@
     "Rated capacity: 44000mAh",
     "Output: 65W",
     "Weight: 1380g",
-    "mAh per g: 58.0"
+    "Dimensions: 111×92×116mm",
+    "mAh per g: 58.0",
+    "mAh per liter: 67534"
    ],
    "group": "Power banks"
   },
@@ -834,7 +836,9 @@
     "Capacity: 3000mAh",
     "Rated capacity: 1800mAh",
     "Weight: 88g",
-    "mAh per g: 34.1"
+    "Dimensions: 79×36×27mm",
+    "mAh per g: 34.1",
+    "mAh per liter: 39069"
    ],
    "group": "Power banks"
   },
@@ -1549,6 +1553,92 @@
     "Dimensions: 78×64×26.5mm",
     "mAh per g: 51.3",
     "mAh per liter: 75593"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ149VICTORY": {
+   "name": "Hoco J149 Victory",
+   "tags": [
+    "Capacity: 5000mAh",
+    "Rated capacity: 2500mAh",
+    "Output: 20W",
+    "Weight: 300g",
+    "Dimensions: 115×75×108mm",
+    "mAh per g: 16.7",
+    "mAh per liter: 5368"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOQS5REFINED": {
+   "name": "Hoco QS5 Refined",
+   "tags": [
+    "Capacity: 6000mAh",
+    "Weight: 235g",
+    "Dimensions: 143.5×81×18mm",
+    "mAh per g: 25.5",
+    "mAh per liter: 28678"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOQS3VICTORY": {
+   "name": "Hoco QS3 Victory",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Output: 18W",
+    "Weight: 366g",
+    "Dimensions: 175×75×32mm",
+    "mAh per g: 27.3",
+    "mAh per liter: 23810"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOQ37GRACEFUL": {
+   "name": "Hoco Q37 Graceful",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5500mAh",
+    "Output: 22.5W",
+    "Weight: 200g",
+    "Dimensions: 118×72×19mm",
+    "mAh per g: 50.0",
+    "mAh per liter: 61949"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ148HANDY": {
+   "name": "Hoco J148 Handy",
+   "tags": [
+    "Capacity: 5000mAh",
+    "Rated capacity: 2600mAh",
+    "Output: 20W",
+    "Weight: 190g",
+    "Dimensions: 50.5×32.5×118mm",
+    "mAh per g: 26.3",
+    "mAh per liter: 25817"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOQS4INTELLIGENT": {
+   "name": "Hoco QS4 Intelligent",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Weight: 1080g",
+    "Dimensions: 212×99×122mm",
+    "mAh per g: 9.3",
+    "mAh per liter: 3905"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ152TOUGH": {
+   "name": "Hoco J152 Tough",
+   "tags": [
+    "Capacity: 80000mAh",
+    "Rated capacity: 44000mAh",
+    "Output: 22.5W",
+    "Weight: 1380g",
+    "Dimensions: 111×92×116mm",
+    "mAh per g: 58.0",
+    "mAh per liter: 67534"
    ],
    "group": "Power banks"
   }
