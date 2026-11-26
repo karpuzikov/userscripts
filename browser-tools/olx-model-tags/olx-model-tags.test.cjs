@@ -313,6 +313,14 @@ test('REMAX adapter reads FP-12 "5V=2A" output, finished size and weight', () =>
   assert.equal(read('Weight'), '203g');
 });
 
+test('REMAX adapter reads FP-32 "(unit only)" size and weight', () => {
+  const page = JSON.parse(require('fs').readFileSync(__dirname + '/olx-model-tags-sources.json', 'utf8')).sources.find((source) => source.name === 'REMAX').pages[0];
+  const text = 'Energy Conversion Efficiency: 78% (5V 3A discharge)Weight (unit only): ~343 gDimensions (unit only): 112 × 71.5 × 30 mm';
+  const read = (name) => text.match(new RegExp(page.properties.find((property) => property.name === name).regex))?.[1];
+  assert.equal(olxModelTags.SOURCE_VALUE_TRANSFORMS.dimensionsMm(read('Dimensions')), '112×71.5×30mm');
+  assert.equal(read('Weight'), '343 g');
+});
+
 test('Hoco free-text adapter reads "Weight is only 107g" (B37)', () => {
   const page = JSON.parse(require('fs').readFileSync(__dirname + '/olx-model-tags-sources.json', 'utf8')).sources.find((source) => source.name === 'HOCO').pages.at(-1);
   const weight = (text) => text.match(new RegExp(page.properties.find((property) => property.name === 'Weight').regex))?.[1];
