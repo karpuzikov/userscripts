@@ -3876,6 +3876,15 @@
     "Weight: 227g"
    ],
    "group": "Power banks"
+  },
+  "HOCOJ31POWERPRIDE": {
+   "name": "Hoco J31 Power pride",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Weight: 194g",
+    "mAh per g: 51.5"
+   ],
+   "group": "Power banks"
   }
  },
  "stopPhrases": [
