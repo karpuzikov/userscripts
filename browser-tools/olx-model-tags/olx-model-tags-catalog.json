@@ -891,7 +891,9 @@
     "Rated capacity: 5500mAh",
     "Output: 10W",
     "Weight: 220g",
-    "mAh per g: 45.5"
+    "Dimensions: 142.5×68×16mm",
+    "mAh per g: 45.5",
+    "mAh per liter: 64499"
    ],
    "group": "Power banks"
   },
@@ -1456,6 +1458,58 @@
     "Dimensions: 143×70×28mm",
     "mAh per g: 48.2",
     "mAh per liter: 71357"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ154VICTORIOUS": {
+   "name": "Hoco J154 Victorious",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 6000mAh",
+    "Output: 22.5W",
+    "Weight: 230g",
+    "Dimensions: 143×70×16mm",
+    "mAh per g: 43.5",
+    "mAh per liter: 62438"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ153ASTABILITY": {
+   "name": "Hoco J153A Stability",
+   "tags": [
+    "Capacity: 20000mAh",
+    "Rated capacity: 11000mAh",
+    "Output: 10W",
+    "Weight: 416g",
+    "Dimensions: 149×69×28mm",
+    "mAh per g: 48.1",
+    "mAh per liter: 69476"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ151ASPIRIT": {
+   "name": "Hoco J151A Spirit",
+   "tags": [
+    "Capacity: 20000mAh",
+    "Rated capacity: 11000mAh",
+    "Output: 10W",
+    "Weight: 460g",
+    "Dimensions: 154×70×34mm",
+    "mAh per g: 43.5",
+    "mAh per liter: 54567"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ151SPIRIT": {
+   "name": "Hoco J151 Spirit",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5500mAh",
+    "Output: 10W",
+    "Weight: 265g",
+    "Dimensions: 112×66.2×32mm",
+    "mAh per g: 37.7",
+    "mAh per liter: 42148"
    ],
    "group": "Power banks"
   }
