@@ -3098,5 +3098,49 @@
    "Output": "USB: 5V / 3A, 9V / 2A, 12V / 1.5A, 18W. Type-C: 5V / 2.4A (PD), 9V / 2A (PD), 12V / 1.5A (PD), 18W. Wireless charging output: 10W / 7.5W / 5W. Total output: DC5V / 3A max. 5. LED indicator shows power level (button activation). 6. Wireless charging function. Mobile phone holder function. 7. Energy-efficient A+ polymer lithium battery.",
    "Material": "PC flame retardant material."
   }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j45-elegant-shell-10000mah": {
+  "model": "Hoco J45 Elegant shell",
+  "scannedAt": "2026-11-26T02:54:24.377Z",
+  "specs": {
+   "Capacity": "10000mAh, 37Wh. Rated capacity: 5900mAh (5V TYP 2A).",
+   "Input": "Micro-USB / Type-C: 5V / 2A max.",
+   "Output": "USB 1 / 2: DC5V / 2A max. Total output: DC5V / 2A max. 4. LED digital power level display (button activation). 5. Energy-efficient A+ polymer lithium battery.",
+   "Material": "ABS + flame retardant PC.",
+   "Size": "115*52*23mm. Weight: 196g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j41-treasure-10000mah": {
+  "model": "Hoco J41 Treasure",
+  "scannedAt": "2026-11-26T02:54:24.379Z",
+  "specs": {
+   "Capacity": "10000mAh, 37Wh. Rated capacity: 5900mAh (5V TYP 2A).",
+   "Input": "Micro-USB / Type-C: 5V/2A max., Lightning: 5V / 1.5A max.",
+   "Output": "USB 1 / 2: DC5V / 2A max, total output: DC5V/2A max. 5. Energy-efficient A+ polymer lithium battery.",
+   "Material": "ABS + flame retardant PC, with leather lanyard.",
+   "Size": "119*51*24mm Weight: 203g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j46-star-ocean-power-bank-10000mah-dual-usb-output": {
+  "model": "Hoco J46 Star ocean",
+  "scannedAt": "2026-11-26T02:54:24.413Z",
+  "specs": {
+   "Capacity": "10000mAh 37Wh. Rated capacity: 5900 (5V TYP 2A).",
+   "Input": "Micro-USB / Type-C: 5V/2A max. Lightning: 5V / 1.5A max.",
+   "Output": "USB 1 / 2: DC5V / 2A max. Total output: DC5V / 2A max. 4. LED digital display for power level (button activation). 5. Class A+ polymer lithium battery.",
+   "Material": "aluminum alloy casing",
+   "Size": "119*51*24mm Weight: 215g"
+  }
+ },
+ "https://hocotech.com/product/home-office/lamps/power-bank-s9-lucky-5000mah-wireless-charger": {
+  "model": "Hoco S9 Lucky",
+  "scannedAt": "2026-11-26T02:54:24.428Z",
+  "specs": {
+   "Capacity": "5000mAh. Rated capacity: 3200mAh.",
+   "Input": "Type-C 5V / 2A max.",
+   "Output": "USB DC5V / 2A max. Wireless charging output: 5W. Total output: DC5V / 2A max. 4. LED light displays the power level (button activation). 5. A+ polymer lithium battery.",
+   "Material": "ABS plastic + silicone.",
+   "Size": "119*51*24mm, weight 233g. 8. Set with Type-C charging cable 1.2m. 9. Night light & wireless charging function. Can be used as mobile phone holder."
+  }
  }
 }
