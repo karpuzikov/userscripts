@@ -1442,5 +1442,128 @@
    "Sizes": "149 × 68 × 16mm.",
    "Weight": "230g."
   }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j123-element-10000mah": {
+  "model": "Hoco J123 Element",
+  "scannedAt": "2026-11-26T02:51:47.345Z",
+  "specs": {
+   "Capacity": "10000mAh, 37Wh. Rated capacity: 5500mAh (5V TYP 2A).",
+   "Input": "1 × Type-C – 5V / 2A. 1 × Micro-USB – 5V / 2A.",
+   "Output": "1 × USB-A 1 – 5V / 2A. 1 × USB-A 2 – 5V / 2A. Total output: 5V / 2A (max).",
+   "Material": "ABS + PC flame retardant shell + lithium polymer battery.",
+   "Indication": "LED indicator of power level.",
+   "Sizes": "143 × 68 × 16mm.",
+   "Weight": "227g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j122a-respect-22-5w-20000mah": {
+  "model": "Hoco J122A Respect",
+  "scannedAt": "2026-11-26T02:51:47.346Z",
+  "specs": {
+   "Capacity": "20000mAh, 74Wh. Rated capacity: 11000mAh (5V TYP 3A).",
+   "Input": "1 × Type-C – 5V / 3A, 9V / 2A, 12V / 1.5A – 18W max. 1 × Micro-USB – 5V / 3A, 9V / 2A, 12V / 1.5A – 18W max.",
+   "Output": "1 × USB-A 1 – 4.5V / 5A, 5V / 4.5A, 9V / 2A, 12V / 1.5A – 22.5W. 1 × USB-A 2 – 4.5V / 5A, 5V / 4.5A, 9V / 2A, 12V / 1.5A – 22.5W. 1 × Type-C – 5V / 3A, 9V / 2.22, 12V / 1.67A – 20W. Total output: 5V / 3A (max).",
+   "Fast charging protocol support": "for PD3.0 / PD20W / QC3.0 / QC2.0 / FCP / SCP / AFC and other fast charging protocols.",
+   "Material": "ABS + PC flame retardant shell + lithium polymer battery.",
+   "Indication": "LED indicator of power level. Green indicator of PD / QC fast charging.",
+   "Sizes": "145 × 72 × 30mm.",
+   "Weight": "403g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j121a-fast-22-5w-20000mah": {
+  "model": "Hoco J121A Fast",
+  "scannedAt": "2026-11-26T02:51:47.347Z",
+  "specs": {
+   "Capacity": "20000mAh, 74Wh. Rated capacity: 11000mAh (5V TYP 3A).",
+   "Input": "1 × Type-C – 5V / 2.4A, 9V / 2A, 12V / 1.5A – 18W max. 1 × Micro-USB – 5V / 2.4A, 9V / 2A, 12V / 1.5A – 18W max.",
+   "Output": "1 × USB-A 1 – 4.5V / 5A, 5V / 4.5A, 9V / 2A, 12V / 1.5A – 22.5W. 1 × USB-A 2 – 4.5V / 5A, 5V / 4.5A, 9V / 2A, 12V / 1.5A – 22.5W. 1 × Type-C – 5V / 2.4A, 9V / 2.22, 12V / 1.67A – 20W. Total output: 5V / 3A (max).",
+   "Fast charging protocol support": "for PD3.0 / PD20W / QC3.0 / QC2.0 / FCP / SCP / AFC and other fast charging protocols.",
+   "Material": "ABS + PC flame retardant shell + lithium polymer battery.",
+   "Indication": "LED digital display of power level. Green indicator of PD / QC fast charging.",
+   "Sizes": "145 × 69 × 28mm.",
+   "Weight": "415g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j123d-element-22-5w-90000mah": {
+  "model": "Hoco J123D Element",
+  "scannedAt": "2026-11-26T02:51:47.349Z",
+  "specs": {
+   "Capacity": "90000mAh, 333Wh. Rated capacity: 49500mAh (5V TYP 3A).",
+   "Input": "1 × Type-C – 5V / 3A, 9V / 2A, 12V / 1.5A – 18W max. 1 × Micro-USB – 5V / 3A, 9V / 2A, 12V / 1.5A – 18W max. 1 × for Lightning – 5V / 3A, 9V / 2A, 12V / 1.5A – 18W max.",
+   "Output": "1 × USB-A 1 – 4.5V / 5A, 5V / 4.5A, 9V / 2A, 12V / 1.5A – 22.5W. 1 × USB-A 2 – 5V / 2A. 1 × USB-A 3 – 5V / 2A. 1 × Type-C – 5V / 3A, 9V / 2.22, 12V / 1.67A – 20W. Total output: 5V / 3A (max).",
+   "Fast charging protocol support": "for PD3.0 / PD20W / QC3.0 / QC2.0 / FCP / AFC and other fast charging protocols.",
+   "Material": "ABS + PC flame retardant shell + lithium polymer battery.",
+   "Indication": "LED digital display of power level. Green indicator of PD / QC fast charging.",
+   "Sizes": "168 × 83 × 90mm.",
+   "Weight": "1795g. 9. With lamp and lanyard. Press and hold the button for 3s to turn on / off the light."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j125-power-pd20w-wireless-charging-5000mah": {
+  "model": "Hoco J125 Power",
+  "scannedAt": "2026-11-26T02:51:47.349Z",
+  "specs": {
+   "Capacity": "5000mAh, 19.25Wh. Rated capacity: 2800mAh (5V TYP 2A).",
+   "Input": "1 × Type-C – 5V / 2.4A, 9V / 2A, 12V / 1.5A – 18W.",
+   "Output": "1 × Type-C – 5V / 2.4A, 9V / 2.22, 12V / 1.67A – 20W. Magnetic wireless charging output – 5W / 7.5W / 10W / 15W. Total output: 5V / 2A (max).",
+   "Fast charging protocol support": "for PD3.0 / PD2.0 / PD20W / QC3.0 / QC2.0 / FCP / AFC and other fast charging protocols.",
+   "Material": "ABS + PC flame retardant shell + lithium polymer battery.",
+   "Indication": "LED indicator of power level. Red indicator of PD / QC fast charging. Green indicator of wireless charging.",
+   "Sizes": "107 × 66 × 13mm.",
+   "Weight": "140g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j123c-element-22-5w-60000mah": {
+  "model": "Hoco J123C Element",
+  "scannedAt": "2026-11-26T02:51:47.351Z",
+  "specs": {
+   "Input": "1 × Type-C – 5V / 3A, 9V / 2A, 12V / 1.5A – 18W max. 1 × Micro-USB – 5V / 3A, 9V / 2A, 12V / 1.5A – 18W max. 1 × for Lightning – 5V / 3A, 9V / 2A, 12V / 1.5A – 18W max.",
+   "Output": "1 × USB-A 1 – 4.5V / 5A, 5V / 4.5A, 9V / 2A, 12V / 1.5A – 22.5W. 1 × USB-A 2 – 5V / 2A. 1 × USB-A 3 – 5V / 2A. 1 × Type-C – 5V / 3A, 9V / 2.22, 12V / 1.67A – 20W. Total output: 5V / 3A (max).",
+   "Fast charging protocol support": "for PD3.0 / PD20W / QC3.0 / QC2.0 / FCP / AFC and other fast charging protocols.",
+   "Material": "ABS + PC flame retardant shell + lithium polymer battery.",
+   "Indication": "LED digital display of power level. Green indicator of PD / QC fast charging.",
+   "Sizes": "168 × 83 × 62mm.",
+   "Weight": "1025g. 9. With lamp and lanyard. Press and hold the button for 3s to turn on / off the light."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j122-respect-22-5w-10000mah": {
+  "model": "Hoco J122 Respect",
+  "scannedAt": "2026-11-26T02:51:47.389Z",
+  "specs": {
+   "Capacity": "10000mAh, 37Wh. Rated capacity: 5500mAh (5V TYP 3A).",
+   "Input": "1 × Type-C – 5V / 3A, 9V / 2A, 12V / 1.5A – 18W max.",
+   "Output": "1 × USB-A 1 – 4.5V / 5A, 5V / 4.5A, 9V / 2A, 12V / 1.5A – 22.5W. 1 × Type-C – 5V / 3A, 9V / 2.22, 12V / 1.67A – 20W. Total output: 5V / 3A (max).",
+   "Fast charging protocol support": "for PD3.0 / PD20W / QC3.0 / QC2.0 / FCP / SCP / AFC and other fast charging protocols.",
+   "Material": "ABS + PC flame retardant shell + lithium polymer battery.",
+   "Indication": "LED indicator of power level. Green indicator of PD / QC fast charging.",
+   "Sizes": "145 × 70 × 16mm.",
+   "Weight": "230g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j121-fast-22-5w-10000mah": {
+  "model": "Hoco J121 Fast",
+  "scannedAt": "2026-11-26T02:51:47.394Z",
+  "specs": {
+   "Capacity": "10000mAh, 37Wh. Rated capacity: 5500mAh (5V TYP 3A).",
+   "Input": "1 × Type-C – 5V / 2.4A, 9V / 2A, 12V / 1.5A – 18W max.",
+   "Output": "1 × USB-A 1 – 4.5V / 5A, 5V / 4.5A, 9V / 2A, 12V / 1.5A – 22.5W. 1 × USB-A 2 – 4.5V / 5A, 5V / 4.5A, 9V / 2A, 12V / 1.5A – 22.5W. 1 × Type-C – 5V / 2.4A, 9V / 2.22, 12V / 1.67A – 20W. Total output: 5V / 3A (max).",
+   "Fast charging protocol support": "for PD3.0 / PD20W / QC3.0 / QC2.0 / FCP / SCP / AFC and other fast charging protocols.",
+   "Material": "ABS + PC flame retardant shell + lithium polymer battery.",
+   "Indication": "LED digital display of power level. Green indicator of PD / QC fast charging.",
+   "Sizes": "145 × 69 × 16mm.",
+   "Weight": "232g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j123a-element-20000mah": {
+  "model": "Hoco J123A Element",
+  "scannedAt": "2026-11-26T02:51:47.413Z",
+  "specs": {
+   "Capacity": "20000mAh, 74Wh. Rated capacity: 11000mAh (5V TYP 2A).",
+   "Input": "1 × Type-C – 5V / 2A. 1 × Micro-USB – 5V / 2A.",
+   "Output": "1 × USB-A 1 – 5V / 2A. 1 × USB-A 2 – 5V / 2A. Total output: 5V / 2A (max).",
+   "Material": "ABS + PC flame retardant shell + lithium polymer battery.",
+   "Indication": "LED indicator of power level.",
+   "Sizes": "145 × 70 × 29mm.",
+   "Weight": "411g."
+  }
  }
 }
