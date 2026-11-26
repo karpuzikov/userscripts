@@ -2969,5 +2969,100 @@
    "Output": "USB 1 / 2 5V/2A. Total output: 5V/2A max. 5. High energy efficiency A+ polymer lithium battery, ABS+PC flame retardant material.",
    "Sizes": "147*71*29mm. Weight: 401g."
   }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j55a-neoteric-20000mah": {
+  "model": "Hoco J55A Neoteric",
+  "scannedAt": "2026-11-26T02:54:07.364Z",
+  "specs": {
+   "Capacity": "20000mAh, 74Wh. Rated capacity: 11800mAh (5V TYP 2A).",
+   "Input": "Micro-USB / Type-C: 5V / 2A max.",
+   "Output": "USB 1 / 2 5V-2A. Total output: 5V / 2A max. 4. LED white light display of power level (button activation). 5. ABS + PC flame retardant material.",
+   "Sizes": "145*68*26mm. Weight: 398g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j52a-new-joy-20000mah": {
+  "model": "Hoco J52A New joy",
+  "scannedAt": "2026-11-26T02:54:08.352Z",
+  "specs": {
+   "Capacity": "20000mAh, 74Wh. Rated capacity: 11800mAh.",
+   "Input": "Micro-USB 5V/2A max.",
+   "Output": "USB 1 / 2 5V/2A. Total output: 5V/2A max. 4. LED light white display of power level (button activation).",
+   "Material": "high energy efficiency A + polymer lithium battery, ABS + PC flame retardant material.",
+   "Sizes": "140 * 68 * 29mm. Weight: 393g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j51-cool-power-10000mah": {
+  "model": "Hoco J51 Cool power",
+  "scannedAt": "2026-11-26T02:54:08.351Z",
+  "specs": {
+   "Capacity": "10000mAh, 37Wh. Rated capacity: 5900mAh (5V TYP 2A).",
+   "Input": "Micro-USB 5V/2A, 9V/2A, 12V-1.5A, 18W. Type-C: 5V/2A (PD), 9V/2A (PD), 12V/1.5A (PD), 18W.",
+   "Output": "USB-1 5V/2A, USB-2 4.5V/5V-3A, 9V-2A, 12V-1.5A, 18W. Type-C: 5V-2A (PD), 9V-2A (PD), 12V-1.5A (PD), 18W. Total output: 5V/3A. 4. Fast charging mode – green light. Aluminum alloy metal casing. 5. Support PD3.0, QC3.0/2.0, Huawei FCP/SCP, Samsung AFC, VOOC, DASH and other charging protocols.",
+   "Sizes": "120*51*22mm. Weight: 204g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j56-sea-power-10000mah-wireless-charging": {
+  "model": "Hoco J56 Sea power",
+  "scannedAt": "2026-11-26T02:54:08.354Z",
+  "specs": {
+   "Capacity": "10000mAh, 37Wh. Rated capacity: 5900mAh (5V TYP 2A).",
+   "Input": "Micro-USB: 5V-2A, 9V-2A. Type-C: 5V/2.4A (PD), 9V/2A (PD).",
+   "Output": "USB: 3.6V-6.5V/3A, 6.6V-9V/2A, 9.1V-12V/1.5A, 18W. Type-C: 5V/2.4A (PD), 9V/2A (PD), 12V/1.5A (PD), 18W. Wireless charging: 10W / 7.5W / 5W. Total output: 5V / 3A.",
+   "Indicator light of status": "green (PD/QC), blue (wireless charge). 5. ABS + PC flame retardant material.",
+   "Sizes": "149*69*20mm. Weight: 232g"
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j55-neoteric-10000mah": {
+  "model": "Hoco J55 Neoteric",
+  "scannedAt": "2026-11-26T02:54:08.354Z",
+  "specs": {
+   "Capacity": "10000mAh, 37Wh. Rated capacity: 5900mAh (5V TYP 2A).",
+   "Input": "Micro-USB / Type-C: 5V/2A max.",
+   "Output": "USB 1 / 2: 5V/2A. Total output: 5V/2A max. 4. LED white light display of power level (button activation). 5. ABS + PC flame retardant material.",
+   "Sizes": "134*68*15mm. Weight: 210g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j54-spirit-power-10000mah": {
+  "model": "Hoco J54 Spirit power",
+  "scannedAt": "2026-11-26T02:54:08.355Z",
+  "specs": {
+   "Capacity": "10000mAh, 37Wh. Rated capacity: 5900mAh (5V TYP 2A).",
+   "Input": "Micro-USB / Type-C: 5V/2A max.",
+   "Output": "USB 1 / 2 DC5V-2A. Total output: 5V/2A.",
+   "Sizes": "124*50*22mm. Weight: 220g.",
+   "Material": "high energy efficiency A + polymer lithium battery, aluminum alloy shell. 6. With LED flashlight."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j53-exceptional-10000mah": {
+  "model": "Hoco J53 Exceptional",
+  "scannedAt": "2026-11-26T02:54:08.356Z",
+  "specs": {
+   "Capacity": "10000mAh, 37Wh. Rated capacity: 5900mAh (5V TYP 2A).",
+   "Input": "Micro-USB / Type-C: 5V/2A max.",
+   "Output": "USB 5V/2A max.",
+   "Sizes": "97*66*25mm. Weight: 256g. 5. ABS + PC flame retardant material."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j49-jewel-pd-qc3-0-10000mah": {
+  "model": "Hoco J49 Jewel",
+  "scannedAt": "2026-11-26T02:54:09.354Z",
+  "specs": {
+   "Capacity": "10000mAh 37Wh. Rated capacity: 5900mAh.",
+   "Sizes": "135*71*16mm, weight: 236g.",
+   "Input": "Micro-USB: 5V-2A, 9V-2A. Type-C: 5V / 2.4A (PD), 9V/2A (PD), 12V/1.5A (PD), 18W.",
+   "Output": "USB 1 / 2: 3.6V – 6.5V / 3A, 6.6V – 9V / 2A, 9.1V – 12V / 1.5A, 18W. Type-C: 5V / 2.4A (PD), 9V / 2A (PD), 12V / 1.5A (PD), 18W. Total output: 5V/3A. 5. LED digital display shows the power level. 6. High energy efficiency A+ polymer lithium battery.",
+   "Material": "PC flame retardant material."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j40-powerful-10000mah-with-built-in-cable": {
+  "model": "Hoco J40 Powerful",
+  "scannedAt": "2026-11-26T02:54:11.360Z",
+  "specs": {
+   "Capacity": "10000mAh 37Wh. Rated capacity: 5900mAh.",
+   "Size": "99*64*24mm (excluding cable). Weight: 204g.",
+   "Material": "ABS + PC flame retardant material.",
+   "Input": "Micro-USB / Type-C: 5V / 2A max.",
+   "Output": "USB DC5V / 2A. 6. LED digital display shows the power level (button activation). 7. Energy-efficient A+ polymer lithium battery. 8. With built-in Lightning, Micro-USB or Type-C charging cable, more convenient to use."
+  }
  }
 }
