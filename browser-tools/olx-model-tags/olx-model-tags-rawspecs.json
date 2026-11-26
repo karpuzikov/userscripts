@@ -2746,5 +2746,41 @@
    "Material": "ABS + PC flame-retardant shell + lithium polymer battery.",
    "Sizes": "141*67*16mm. Weight: 225g. 7. No charging cable for power bank charging."
   }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-q1-kraft-pd3-0-qc3-0-10000mah": {
+  "model": "Hoco Q1 Kraft",
+  "scannedAt": "2026-11-26T02:53:24.359Z",
+  "specs": {
+   "Capacity": "10000mAh, 38.5Wh. Rated capacity: 5900mAh.",
+   "Input": "Type-C 20W (PD).",
+   "Output": "USB-A 22.5W, Type-C 20W (PD). Total output: 5V / 3A. 4. Support for PD3.0, for QC3.0/2.0, for FCP/SCP, for AFC, for VOOC, for DASH and other charging protocols.",
+   "Display": "LED, shows power level. PD/QC fast charge indicator.",
+   "Material": "PC flame retardant + lithium polymer battery.",
+   "Sizes": "95*64*17mm. Weight: 148g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j69a-speed-flash-pd-qc3-0-15000mah": {
+  "model": "Hoco J69A Speed flash",
+  "scannedAt": "2026-11-26T02:53:24.388Z",
+  "specs": {
+   "Capacity": "15000mAh, 55.5Wh. Rated capacity: 8850mAh.",
+   "Input": "Micro-USB / Type-C: 18W.",
+   "Output": "USB 1 / 2: 18W. Type-C: 18W. Total output: 5V / 3A. 4. Support for PD3.0, for QC3.0 / QC2.0, for FCP, for AFC and other fast charging protocols.",
+   "Display": "LED display of power level. The fast charging indicator is always on during PD/QC fast charging.",
+   "Material": "ABS + PC flame retardant shell + polymer lithium battery.",
+   "Sizes": "145*70*23mm. Weight: 339g. 8. Dual input and triple output for fast charging."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j46a-star-ocean-20000mah": {
+  "model": "Hoco J46A Star ocean",
+  "scannedAt": "2026-11-26T02:53:25.349Z",
+  "specs": {
+   "Capacity": "20000mAh.",
+   "Sizes": "146*69*28mm. Weight: 479g.",
+   "Input": "Micro-USB / Type-C 5V / 2A, Lightning 1.5A.",
+   "Output": "USB 1 / 2 / 3 / 4 – 5V / 2A max. Total output: 5V / 2A max.",
+   "Material": "aluminum alloy shell.",
+   "Display": "LED digital display of power level. 7. 4 USB ports output + 3 ports input."
+  }
  }
 }
