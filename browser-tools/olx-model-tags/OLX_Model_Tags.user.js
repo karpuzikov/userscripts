@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OLX - Model Tags
 // @namespace    https://www.olx.ua/
-// @version      0.15.4
+// @version      0.15.5
 // @description  Tag OLX ads by model (tags shared by every ad of that model) or per ad, mark broken ads, filter search results by tags, per-tag Hide (pixel mesh) / Highlight (outline). Shared model catalog is read from GitHub without any key; your own marks stay in this browser. Phone specs (year, DXOMARK camera, AnTuTu, sensor, display, battery, charger, NFC) are captured from the DXOMARK, Kimovil and GSMArena pages you open. OLX only gets read locally from the open page.
 // @match        https://www.olx.ua/*
 // @match        https://www.dxomark.com/smartphones/*
@@ -759,7 +759,9 @@
         });
         element('stop').addEventListener('click', () => { const job = readJob(); if (job) saveJob({ ...job, active: false }); });
 
+        let isNavigatingToNextPage = false;
         function tick() {
+            if (isNavigatingToNextPage) return; // ticks keep firing until the page unloads; each one used to add +1 to the page counter
             let job = readJob();
             const counts = (done) => Object.values(done).reduce((sum, result) => ({ ...sum, [result.status]: (sum[result.status] || 0) + 1 }), { saved: 0, partial: 0, failed: 0 });
             if (job?.active) {
@@ -792,7 +794,7 @@
                 }
                 if (!job.queue.length && !Object.keys(job.inFlight).length && !Object.keys(job.awaiting).length) {
                     const nextPageLink = document.querySelector(category.next);
-                    if (nextPageLink) { job.page++; saveJob(job); location.href = nextPageLink.href; return; }
+                    if (nextPageLink) { isNavigatingToNextPage = true; job.page++; saveJob(job); location.href = nextPageLink.href; return; }
                     job.active = false;
                     job.finished = true;
                 }
