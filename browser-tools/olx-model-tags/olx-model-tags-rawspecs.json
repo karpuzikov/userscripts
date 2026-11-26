@@ -315,5 +315,32 @@
    "Sizes": "117 × 77 × 19.5mm.",
    "Weight": "210g."
   }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-qs6-clever-jump-starter-air-pump-8000mah": {
+  "model": "Hoco QS6 Clever",
+  "scannedAt": "2026-11-26T02:45:30.317Z",
+  "specs": {
+   "Capacity": "8000mAh, 29.6Wh.",
+   "Input": "1 × Type-C port – 5V / 2A, 9V / 2A – 18W.",
+   "Output": "1 × USB-A port – 5V / 2.4A, 9V / 2A, 12V / 1.5A – 18W. Simultaneous use of inflation and USB-A output port, reduces USB-A maximum output to 5V / 2.4 A. Car emergency starter output – 12V, current – 400A, peak current – 800A. 4. Jump starter is suitable for gasoline cars below 4.0L and diesel cars below 2.0L.",
+   "Inflation pressure range": "0 – 10 bar (0 – 145PSI). Fills a 235 / 55 tire (0 – 2.5bar) in ～10 minutes. Four inflatable modes (car tire, motorcycle tire, bicycle tire, basketball ball). 6. Flashlight with SOS mode.",
+   "Operating temperature": "-20 ～ 60°C.",
+   "Indication": "LED digital display of power level and tire pressure level.",
+   "Material": "ABS + PC flame retardant shell + lithium ion polymer battery + electronic components. 10. Accessories: 1 × smart battery clamps, 1 × push-connect hose, 1 × ball needle, 1 × long air nozzle, 1 × short air nozzle, 1 × air nozzle adapter, 1 × USB-A to Type-C cable. 11. Sizes: 190 × 107 × 53mm. 12. Weight: main unit – 790g, clamps – 190g, hose + other accessories – 50g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-q44a-origen-pd45w-wireless-charging-20000mah": {
+  "model": "Hoco Q44A Origen",
+  "scannedAt": "2026-11-26T02:45:31.324Z",
+  "specs": {
+   "Capacity": "20000mAh, 77Wh. Rated capacity: 12000mAh (5V TYP 2A).",
+   "Input": "1 × Type-C cable – 5V / 3A, 9V / 3A, 12V / 2.5A, 15V / 2A, 20V / 1.5A – 30W. 1 × Type-C port – 5V / 3A, 9V / 3A, 12V / 2.5A, 15V / 2A, 20V / 1.5A – 30W.",
+   "Output": "1 × Type-C cable – 5V / 3A, 9V / 3A, 10V / 2.25A (SCP), 12V / 3A, 15V / 3A, 20V / 2.25A – 45W max. 1 × Type-C port – 5V / 3A, 9V / 3A, 10V / 2.25A (SCP), 12V / 3A, 15V / 3A, 20V / 2.25A – 45W max. Magnetic wireless charging output – 5W / 7.5W / 10W / 15W. Total output: 5V / 2A (max).",
+   "Fast charging protocol support": "for PD3.0 / PD45W / QC3.0 / QC2.0 / FCP / SCP / AFC and other fast charging protocols.",
+   "Material": "aluminum alloy + ABS + PC flame retardant shell + A+ lithium ion polymer battery + electronic components.",
+   "Indication": "LED indicator of power level. Green indicator of PD / QC fast charging and wireless charging mode.",
+   "Sizes": "115 × 75 × 29mm.",
+   "Weight": "365g."
+  }
  }
 }
