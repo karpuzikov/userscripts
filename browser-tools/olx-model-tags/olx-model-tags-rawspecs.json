@@ -4011,5 +4011,121 @@
    "Compatibility": "compatible with more than 99% mobile phones / tablet computers and USB input digital devices.",
    "Size": "16.3*10.2*1.4cm. Weight: 312g."
   }
+ },
+ "https://www.iremax.net/product/5547": {
+  "model": "REMAX 01PD",
+  "scannedAt": "2026-11-26T05:04:58.542Z",
+  "specs": {
+   "Product Colors": "Phantom Black, Mousse White",
+   "Battery type": "Polymer cell",
+   "Battery capacity": "5000mAh × 2pcs (Typical); 4950mAh × 2pcs (Rated)",
+   "Battery voltage": "5000mAh*2pcs (Typical); 7.4V/37Wh; 4950mAh*2pcs (Rated); 7.4V/36.63Wh",
+   "Rated capacity": "5500mAh (5V3A)",
+   "Input voltage and current": "Type-C port input: 5V⎓3A 9V⎓2.22A 20W (Max); protocols: PD3.0/PD2.0; Type-C cable input: 5V⎓3A 9V⎓2.22A 20W (Max); protocols: PD3.0/PD2.0",
+   "Output voltage and current": "Type-C port output: 5V⎓3A, 9V⎓3A, 12V⎓2A, 15V⎓2.67A, 20V⎓2A, 40W (Max). Protocols: PD3.0/PPS/AVS/QC2.0/QC3.0/AFC/FCP/SCP/Apple2.4A/DCP-1.5A/Samsung-5V2A. Type-C cable output: 5V⎓3A, 9V⎓3A, 12V⎓2A, 15V⎓2.67A, 20V⎓2A, 40W (Max). Protocols: PD3.0/PPS/AVS/QC2.0/QC3.0/AFC/FCP/SCP/Apple2.4A/DCP-1.5A/Samsung-5V2A"
+  }
+ },
+ "https://www.iremax.net/product/5469": {
+  "model": "REMAX FP-28",
+  "scannedAt": "2026-11-26T05:04:58.545Z",
+  "specs": {
+   "1. Product Color": "White",
+   "2. Battery Type": "Lithium-polymer",
+   "3. Battery Capacity": "10,000 mAh",
+   "4. Total Battery Power": "10,000 mAh / 3.85 V / 38.5 Wh",
+   "5. Rated Capacity": "5,800 mAh (5V-2A)",
+   "6. Input Voltage and Current": "Adapter Mode: AC 100V–240V, 50/60 Hz, 0.3A (18W)",
+   "Power Bank Mode": "Type-C Input: 5V=3A, 9V=2A, 12V=1.5A, 18W Max; Protocols: PD2.0/PD3.0/QC2.0/QC3.0/AFC/FCP"
+  }
+ },
+ "https://www.iremax.net/product/5481": {
+  "model": "REMAX MH158-B/MH159-B",
+  "scannedAt": "2026-11-26T05:04:59.565Z",
+  "specs": {
+   "1. Product Colors": "Purple/Silver/Rhenium",
+   "2. Battery Type": "Lithium-polymer battery cell",
+   "3. Battery Capacity": "10,000 mAh",
+   "4. Total Battery Power": "37 Wh",
+   "5. Rated Capacity": "5,300 mAh (5V/3A)",
+   "6. Input Voltage and Current": "Type-C Input: 5V/3A, 9V/2.22A, 12V/1.67A"
+  }
+ },
+ "https://www.iremax.net/product/5409": {
+  "model": "REMAX T201ALP",
+  "scannedAt": "2026-11-26T05:05:00.586Z",
+  "specs": {
+   "1. Product Colors": "Starlight Silver, Modern Gray",
+   "2. Battery Type": "Lithium-polymer",
+   "3. Battery Capacity": "10,000 mAh",
+   "4. Total Battery Power": "38.5 Wh (7.7 VDC) (2 cells in series)",
+   "5. Rated Capacity": "5,800 mAh (5V⎓3A)",
+   "6. Input Voltage and Current": "USB-C/USB-C Cable Input: 5V⎓3A, 9V⎓2.22A, 12V⎓1.67A, 20W Max",
+   "Protocols": "PD 2.0/PD 3.0/QC 2.0/QC 3.0/AFC/FCP"
+  }
+ },
+ "https://www.iremax.net/product/5091": {
+  "model": "REMAX FP-16",
+  "scannedAt": "2026-11-26T05:05:01.566Z",
+  "specs": {
+   "1. Product Colors": "Stone-Ground Black, Starry Orange, Starlight Silver",
+   "2. Battery Capacity": "5000mAh",
+   "3. Total Battery Power": "5000mAh/3.6V/18Wh",
+   "4. Rated Output": "2600mAh (5V-2A)",
+   "5. Input Voltage and Current": "Type-C Input: 5V-3A/9V-2A/12V-1.5A 18W (Max)",
+   "Protocol Support": "PPS/PD 2.0/PD 3.0/QC 2.0/QC 3.0/AFC/FCP/SCP/PE 2.0/PE 1.1",
+   "6. Output Voltage and Current": "Type-C: 5V-3A/9V-2.22A/12V-1.67A 20W (Max)"
+  }
+ },
+ "https://www.iremax.net/product/5265": {
+  "model": "REMAX FP-11",
+  "scannedAt": "2026-11-26T05:05:01.570Z",
+  "specs": {
+   "1. Product Color": "Starlight Silver",
+   "2. Battery Type": "Lithium-ion",
+   "3. Battery Capacity": "7.7V/5000mAh (2 pcs), 38.5Wh",
+   "4. Total Battery Capacity": "5000mAh × 2 pcs (typical); 7.7V/38.5Wh, 4900mAh × 2 (rated); 7.7V/37.73Wh",
+   "5. Rated Capacity": "5500mAh (5V2A)",
+   "6. Input Voltage and Current": "Charger Mode: 100V–240V, 50Hz/60Hz, 0.6A (Max) Protocol: No protocol",
+   "Power Bank Mode": "Type-C/Type-C Cable Input: 5V⎓3A, 9V⎓3A, 12V⎓2.5A, 30W (Max) Protocol: PD3.0/PD2.0"
+  }
+ },
+ "https://www.iremax.net/product/5139": {
+  "model": "REMAX 02PD",
+  "scannedAt": "2026-11-26T05:05:01.592Z",
+  "specs": {
+   "1. Battery capacity": "10,000 mAh × 2 (typical), 9,800 mAh × 2 (rated); 2. Total battery capacity: 10,000 mAh × 2 (typical); 7.7V/77Wh, 9800mAh × 2 (rated); 7.7V/75.46Wh",
+   "3. Rated capacity": "11,000mAh (5V/2A)",
+   "4. Input voltage and current": "Type-C port input: 5V⎓3A, 9V⎓3A, 12V⎓2.5A, 15V⎓2A, 20V⎓1.5A, 30W (Max) Protocols: PD 3.0/PD 2.0",
+   "Type-C Cable Input": "5V⎓3A, 9V⎓3A, 12V⎓2.5A, 15V⎓2A, 20V⎓1.5A, 30W (Max) Protocols: PD 3.0/PD 2.0",
+   "5. Output Voltage and Current": "Type-C Port Output: 5V⎓3A, 9V⎓3A, 12V⎓3A, 15V⎓3A, 20V⎓2.25A, 45W (Max)",
+   "Protocols": "PD 3.0/PPS/AVS/QC 2.0/QC 3.0/AFC/FCP/SCP/ Apple 2.4A/DCP 1.5A/Samsung 5V 2A.",
+   "Type-C Output": "5V⎓3A, 9V⎓3A, 12V⎓3A, 15V⎓3A, 20V⎓2.25A 45W (Max)"
+  }
+ },
+ "https://www.iremax.net/product/6153": {
+  "model": "REMAX FP-128",
+  "scannedAt": "2026-11-26T05:12:28.542Z",
+  "specs": {
+   "Product Color": "Graphite Black",
+   "Battery Type": "Lithium-polymer cells",
+   "Battery Capacity": "10,000 mAh × 2",
+   "Battery Voltage/ Total Power": "3.85V/38.5Wh",
+   "Rated Capacity": "11,000mAh",
+   "Input Voltage and Current": "Type-C Input: 5V⎓3A, 9V⎓2A, 12V⎓1.5A; Type-C Cable Input: 5V⎓3A, 9V⎓2A, 12V⎓1.5A; Both the Type-C port and Type-C cable support QC/PD/SCP/FCP/AFC input and output",
+   "Output Voltage and Current": "Type-C Port Output: 5V⎓3A, 9V⎓2.22A, 12V⎓1.67A; Type-C Cable Output: 5V⎓3A, 9V⎓2.22A, 10V⎓2.25A, 12V⎓1.67A; Output supports multiple fast-charging protocols, including PPS, PD, SCP, FCP, QC, AFC, PE, and BC1.2; Total output across multiple ports: 5V/3A; Energy conversion efficiency: 70%; Unit weight: approx. 347g; Unit dimensions: 98 × 59 × 39 mm"
+  }
+ },
+ "https://www.iremax.net/product/6159": {
+  "model": "REMAX FP-32",
+  "scannedAt": "2026-11-26T05:12:29.528Z",
+  "specs": {
+   "Product Colors": "Dark Blue, Orange, Silver-Gray",
+   "Battery Type": "Lithium-Polymer",
+   "Battery Capacity": "10,000 mAh",
+   "Battery Voltage/Total Power": "3.7 V/37 Wh",
+   "Rated Capacity": "11,000 mAh",
+   "Input Voltage and Current": "Type-C 1/C2 Input: 5V 3A, 9V 3A, 12V 3A, 15V 3A, 20V 2.25A, 45W; Protocols: PD 3.0, QC 3.0, PPS, AFC, FCP",
+   "Output Voltage and Current": "Type-C 1/C2 Output: 5V 3A, 9V 3A, 15V 3A, 20V 2.25A, Protocols: PD 3.0, QC 3.0, Apple 2.4A, BC 1.2, DCP, PPS Priority: 5–11V/4.5A, 5–16V/3A, 5–20V/2.75A; USB-A1: 5V3A, 9V2A, 12V1.5A, 10V2.25A, 22.5W; Protocols: QC, AFC, FCP, SCP, UFCS, Samsung 2A, Apple 2.4A, DCP 1.5A, BC 1.2"
+  }
  }
 }
