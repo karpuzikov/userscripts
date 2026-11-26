@@ -3605,6 +3605,45 @@
     "mAh per liter: 65762"
    ],
    "group": "Power banks"
+  },
+  "HOCOJ58COSMO": {
+   "name": "Hoco J58 Cosmo",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5900mAh",
+    "Output: 18W",
+    "Weight: 227g",
+    "Dimensions: 143×68×16mm",
+    "mAh per g: 44.1",
+    "mAh per liter: 64274"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ47ELEMENT": {
+   "name": "Hoco J47 Element",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5900mAh",
+    "Output: 18W",
+    "Weight: 204g",
+    "Dimensions: 143×68×17mm",
+    "mAh per g: 49.0",
+    "mAh per liter: 60493"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOS16ENERGYLAKE": {
+   "name": "Hoco S16 Energy lake",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 6000mAh",
+    "Output: 18W",
+    "Weight: 245g",
+    "Dimensions: 156×74×19mm",
+    "mAh per g: 40.8",
+    "mAh per liter: 45592"
+   ],
+   "group": "Power banks"
   }
  },
  "stopPhrases": [
