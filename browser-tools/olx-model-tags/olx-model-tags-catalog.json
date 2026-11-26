@@ -4569,7 +4569,10 @@
     "Rated capacity: 6400mAh",
     "Output: 10.5W",
     "Weight: 227g",
-    "Dimensions: 119×69×25mm"
+    "Dimensions: 119×69×25mm",
+    "Capacity: 10000mAh",
+    "mAh per g: 44.1",
+    "mAh per liter: 48715"
    ],
    "group": "Power banks"
   },
