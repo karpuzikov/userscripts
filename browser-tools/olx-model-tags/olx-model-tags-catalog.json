@@ -4359,7 +4359,9 @@
    "tags": [
     "Capacity: 13000mAh",
     "Weight: 212g",
-    "mAh per g: 61.3"
+    "Dimensions: 130×74×15mm",
+    "mAh per g: 61.3",
+    "mAh per liter: 90090"
    ],
    "group": "Power banks"
   },
@@ -4368,7 +4370,9 @@
    "tags": [
     "Capacity: 13000mAh",
     "Weight: 204g",
-    "mAh per g: 63.7"
+    "Dimensions: 130×74×15mm",
+    "mAh per g: 63.7",
+    "mAh per liter: 90090"
    ],
    "group": "Power banks"
   },
@@ -4378,7 +4382,9 @@
     "Capacity: 13000mAh",
     "Output: 10.5W",
     "Weight: 204g",
-    "mAh per g: 63.7"
+    "Dimensions: 100×60×14mm",
+    "mAh per g: 63.7",
+    "mAh per liter: 154762"
    ],
    "group": "Power banks"
   },
