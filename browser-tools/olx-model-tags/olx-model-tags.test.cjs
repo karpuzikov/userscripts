@@ -188,3 +188,18 @@ test('unifyRawSpecs maps labels and splits a merged last line', () => {
   assert.deepEqual(unified['https://x/1'].specs, { Dimensions: '157*116*45mm.', Weight: '1400g.', Output: '20W', 'UNMAPPED: Odd': 'v' });
   assert.equal(labelCounts.odd.mapped, false);
 });
+
+test('dimensionsMm converts centimetres to millimetres', () => {
+  const { dimensionsMm } = olxModelTags.SOURCE_VALUE_TRANSFORMS;
+  assert.equal(dimensionsMm('15.1*7.1*1.2cm'), '151×71×12mm');
+  assert.equal(dimensionsMm('135*66*15mm'), '135×66×15mm');
+});
+
+test('Hoco free-text adapter reads the J68 and J17A wordings', () => {
+  const page = JSON.parse(require('fs').readFileSync(__dirname + '/olx-model-tags-sources.json', 'utf8')).sources.find((source) => source.name === 'HOCO').pages.at(-1);
+  const read = (name, text) => text.match(new RegExp(page.properties.find((property) => property.name === name).regex))?.[1];
+  const j68 = '1. Capacity: 10000mAh, 37Wh. Rated capacity: 5900mAh. 6. Sizes: 135*66*15mm, weight: 241g.';
+  const j17a = '1. Battery capacity: 10000mAh / 37Wh Rated output capacity: 6400mAh (5V TYP 1A). 8. Size : 15.1*7.1*1.2cm. Weight: 240g.';
+  assert.deepEqual(['Capacity', 'Rated capacity', 'Weight', 'Dimensions'].map((name) => read(name, j68)), ['10000mAh', '5900mAh', '241g', '135*66*15mm']);
+  assert.deepEqual(['Capacity', 'Rated capacity', 'Weight', 'Dimensions'].map((name) => read(name, j17a)), ['10000mAh', '6400mAh', '240g', '15.1*7.1*1.2cm']);
+});

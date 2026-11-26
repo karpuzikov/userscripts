@@ -196,13 +196,13 @@
       {
        "name": "Capacity",
        "selector": ".elementor-widget-woocommerce-product-content p",
-       "regex": "\\bCapacity:\\s*(\\d+mAh)"
+       "regex": "\\b(?:Battery capacity|Capacity):\\s*(\\d+mAh)"
       },
       {
        "name": "Rated capacity",
        "optional": true,
        "selector": ".elementor-widget-woocommerce-product-content p",
-       "regex": "Rated capacity:\\s*(\\d+mAh)"
+       "regex": "Rated (?:output )?capacity:\\s*(\\d+mAh)"
       },
       {
        "name": "Output",
@@ -213,12 +213,12 @@
       {
        "name": "Weight",
        "selector": ".elementor-widget-woocommerce-product-content p",
-       "regex": "Weight:\\s*(?:main unit\\s*[–-]\\s*)?(\\d+\\s*g)\\b"
+       "regex": "[Ww]eight:\\s*(?:main unit\\s*[–-]\\s*)?(\\d+\\s*g)\\b"
       },
       {
        "name": "Dimensions",
        "selector": ".elementor-widget-woocommerce-product-content p",
-       "regex": "(?:Sizes?|Dimensions):\\s*(\\d+(?:\\.\\d+)?\\s*[×x*]\\s*\\d+(?:\\.\\d+)?\\s*[×x*]\\s*\\d+(?:\\.\\d+)?\\s*mm)",
+       "regex": "(?:Sizes?|Dimensions)\\s*:\\s*(\\d+(?:\\.\\d+)?\\s*[×x*]\\s*\\d+(?:\\.\\d+)?\\s*[×x*]\\s*\\d+(?:\\.\\d+)?\\s*(?:mm|cm))",
        "transform": "dimensionsMm"
       }
      ],

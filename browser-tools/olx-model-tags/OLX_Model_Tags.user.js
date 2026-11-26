@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OLX - Model Tags
 // @namespace    https://www.olx.ua/
-// @version      0.15.8
+// @version      0.15.9
 // @description  Tag OLX ads by model (tags shared by every ad of that model) or per ad, mark broken ads, filter search results by tags, per-tag Hide (pixel mesh) / Highlight (outline). Shared model catalog is read from GitHub without any key; your own marks stay in this browser. Phone specs (year, DXOMARK camera, AnTuTu, sensor, display, battery, charger, NFC) are captured from the DXOMARK, Kimovil and GSMArena pages you open. OLX only gets read locally from the open page.
 // @match        https://www.olx.ua/*
 // @match        https://www.dxomark.com/smartphones/*
@@ -242,7 +242,14 @@
         yesNo: (text) => extractNfcSupport(text),
         unknownIfEmpty: (text) => (!text || /^(unknown|-+)$/i.test(text) ? 'Unknown' : text),
         chargerPower: (text, element) => extractChargerPower(element.innerHTML.split(/<hr[^>]*>/).map((html) => html.replace(/<[^>]+>/g, ' '))),
-        dimensionsMm: (text) => { const sides = text.replace(/\s+/g, '').replace(/[x*]/gi, '×'); return /^[\d.]+×[\d.]+×[\d.]+mm$/.test(sides) ? sides : ''; },
+        // "15.1*7.1*1.2cm" is converted to "151×71×12mm" so the volume math always works in mm.
+        dimensionsMm: (text) => {
+            const sides = text.replace(/\s+/g, '').replace(/[x*]/gi, '×');
+            const match = sides.match(/^([\d.]+)×([\d.]+)×([\d.]+)(mm|cm)$/);
+            if (!match) return '';
+            const factor = match[4] === 'cm' ? 10 : 1;
+            return `${match.slice(1, 4).map((side) => Math.round(Number(side) * factor * 10) / 10).join('×')}mm`;
+        },
         // Listed watts win; a line with only "5V / 2A" is read as 10W (volts x amps).
         maxWatts: (text) => {
             const watts = [...text.matchAll(/(\d+(?:\.\d+)?)\s*W\b/g)].map((match) => Number(match[1]));
