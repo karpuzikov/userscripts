@@ -1263,7 +1263,9 @@
     "Rated capacity: 11000mAh",
     "Output: 22.5W",
     "Weight: 325g",
-    "mAh per g: 61.5"
+    "Dimensions: 104×71×29.5mm",
+    "mAh per g: 61.5",
+    "mAh per liter: 91816"
    ],
    "group": "Power banks"
   },
@@ -1532,6 +1534,19 @@
     "Output: 18W",
     "Dimensions: 190×107×53mm",
     "mAh per liter: 7425"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOQ38EXCELLENT": {
+   "name": "Hoco Q38 Excellent",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5400mAh",
+    "Output: 20W",
+    "Weight: 195g",
+    "Dimensions: 78×64×26.5mm",
+    "mAh per g: 51.3",
+    "mAh per liter: 75593"
    ],
    "group": "Power banks"
   }
