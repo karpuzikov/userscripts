@@ -5090,6 +5090,67 @@
     "Output: 40.05W"
    ],
    "group": "Power banks"
+  },
+  "REMAXFP5": {
+   "name": "REMAX FP-5",
+   "tags": [
+    "Capacity: 60000mAh",
+    "Rated capacity: 31200mAh",
+    "Output: 27W"
+   ],
+   "group": "Power banks"
+  },
+  "REMAXCX09": {
+   "name": "REMAX CX09",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5800mAh"
+   ],
+   "group": "Power banks"
+  },
+  "REMAXCX08": {
+   "name": "REMAX CX08",
+   "tags": [
+    "Capacity: 5000mAh",
+    "Rated capacity: 2800mAh",
+    "Output: 10W"
+   ],
+   "group": "Power banks"
+  },
+  "REMAXFP60": {
+   "name": "REMAX FP-60",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5200mAh",
+    "Output: 22.5W"
+   ],
+   "group": "Power banks"
+  },
+  "REMAXFP38": {
+   "name": "REMAX FP-38",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5300mAh",
+    "Output: 22.5W"
+   ],
+   "group": "Power banks"
+  },
+  "REMAXCP18": {
+   "name": "REMAX CP-18",
+   "tags": [
+    "Capacity: 5000mAh",
+    "Rated capacity: 5300mAh",
+    "Output: 30W"
+   ],
+   "group": "Power banks"
+  },
+  "REMAXFC02": {
+   "name": "REMAX FC-02",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Output: 45W"
+   ],
+   "group": "Power banks"
   }
  },
  "stopPhrases": [
