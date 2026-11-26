@@ -4104,7 +4104,7 @@
  },
  "https://www.iremax.net/product/6153": {
   "model": "REMAX FP-128",
-  "scannedAt": "2026-11-26T05:17:25.587Z",
+  "scannedAt": "2026-11-26T05:35:33.537Z",
   "specs": {
    "Product Color": "Graphite Black",
    "Battery Type": "Lithium-polymer cells",
@@ -4298,7 +4298,7 @@
  },
  "https://www.iremax.net/product/6165": {
   "model": "REMAX FP-12",
-  "scannedAt": "2026-11-26T05:17:25.572Z",
+  "scannedAt": "2026-11-26T05:35:33.559Z",
   "specs": {
    "Product Colors": "Rose Purple, Alpha",
    "Battery type": "Semi solid state battery",
@@ -4306,7 +4306,13 @@
    "Battery voltage/total power": "3.85V/19.25Wh",
    "Rated capacity": "2900mAh (5V/2A)",
    "Input voltage and current": "Type-C cable/C port input: 5V=3A, 9V=2A (PD)",
-   "Output voltage and current": "Type-C cable/C port output: 5V=2A, 9V=2.22A, 10V=2.25A, 12=1.67A 22.5W Max (PD, SCP); Wireless output: 5W, 7.5W, 10W, 15W; Wireless output supports phone charging. Wires charging output supports phone charging"
+   "Output voltage and current": "Type-C cable/C port output: 5V=2A, 9V=2.22A, 10V=2.25A, 12=1.67A 22.5W Max (PD, SCP); Wireless output: 5W, 7.5W, 10W, 15W; Wireless output supports phone charging. Wires charging output supports phone charging",
+   "Multi port total output": "15W",
+   "Energy conversion rate": ">65%",
+   "Bare weight": "137g",
+   "Bare machine size": "72 * 72 * 28mm",
+   "Finished product size": "90 * 170 * 37mm",
+   "Finished product weight": "203g"
   }
  },
  "https://www.iremax.net/product/5847": {
