@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OLX - Model Tags
 // @namespace    https://www.olx.ua/
-// @version      0.12.0
+// @version      0.12.1
 // @description  Tag OLX ads by model (tags shared by every ad of that model) or per ad, mark broken ads, filter search results by tags, per-tag Hide (pixel mesh) / Highlight (outline). Shared model catalog is read from GitHub without any key; your own marks stay in this browser. Phone specs (year, DXOMARK camera, AnTuTu, sensor, display, battery, charger, NFC) are captured from the DXOMARK, Kimovil and GSMArena pages you open. OLX only gets read locally from the open page.
 // @match        https://www.olx.ua/*
 // @match        https://www.dxomark.com/smartphones/*
@@ -492,7 +492,8 @@
     // Adapters come from the public repo (no key), cached an hour like the catalog; an unreachable file keeps the cached copy.
     async function loadSourceAdapters() {
         const cached = GM_getValue(STORAGE_KEY_CACHED_SOURCES, null);
-        if (cached && Date.now() - cached.at < CATALOG_REFRESH_INTERVAL_MS) return cached.sources;
+        // A cached list without this site (a source added since) is refetched at once instead of waiting out the hour.
+        if (cached && Date.now() - cached.at < CATALOG_REFRESH_INTERVAL_MS && cached.sources.some((source) => source.hosts.includes(location.hostname))) return cached.sources;
         try {
             const response = await requestGithub('GET', githubRawFileUrl(GITHUB_SOURCES_FILE_PATH));
             if (response.status !== 200 || !response.json?.sources) throw new Error(`HTTP ${response.status}`);
