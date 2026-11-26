@@ -3993,7 +3993,10 @@
    "tags": [
     "Weight: 174g",
     "Output: 10.5W",
-    "Dimensions: 93×63×23mm"
+    "Dimensions: 93×63×23mm",
+    "Capacity: 8000mAh",
+    "mAh per g: 46.0",
+    "mAh per liter: 59366"
    ],
    "group": "Power banks"
   },
@@ -4002,7 +4005,10 @@
    "tags": [
     "Weight: 227g",
     "Output: 10.5W",
-    "Dimensions: 142×68×16mm"
+    "Dimensions: 142×68×16mm",
+    "Capacity: 12000mAh",
+    "mAh per g: 52.9",
+    "mAh per liter: 77672"
    ],
    "group": "Power banks"
   },
