@@ -3909,6 +3909,13 @@
     "Weight: 197g"
    ],
    "group": "Power banks"
+  },
+  "HOCOJ17CLEARPOWER": {
+   "name": "Hoco J17 Clear power",
+   "tags": [
+    "Weight: 178g"
+   ],
+   "group": "Power banks"
   }
  },
  "stopPhrases": [
