@@ -4440,5 +4440,42 @@
    "Packaged Dimensions": "90 × 160 × 38mm",
    "Packaged Weight": "388g"
   }
+ },
+ "https://www.iremax.net/product/4911": {
+  "model": "REMAX FP-77",
+  "scannedAt": "2026-11-26T05:36:45.543Z",
+  "specs": {
+   "1.Product Color": "FOH",
+   "2.Battery Type": "Li-Ion Battery",
+   "3.Battery Capacity": "20000mAh(72Wh)",
+   "4.Rated Capacity": "10800mAh(5V3A)",
+   "5.Input Voltage and Current": "Type-C/Type-C Cable Input:5V-3A, 9V-3A, 12V-2.5A, 15V-2A,20V-1.5A",
+   "Support protocols": "Apple2.4A,Samsung5V/2A,QC2.0, QC3.0,QC4+,AFC,FCP,SCP,PD3.0 PPS",
+   "6.Output Voltage and Current": "Type-C Output:5V-3A,9V-3A,12V-3A,15V-3A,20V-3.25A",
+   "Type-C cable Output": "5V=3A,9V-3A,12V-3A,15V-3A,20V-3A",
+   "Support protocol": "Apple2.4A,PD3.0 USB-A+Type-C+ Type-C cable + Lightning cable total output: 5V-3A",
+   "USB-A output": "5V-3A,9-2A,10V-2.25A ,12V-1.5A",
+   "Lightning cable output": "5V-2.4A,9V=2.22A",
+   "7. Energy conversion rate": "average efficiency of charging ≥ 60%, average efficiency of discharging ≥ 60%",
+   "8. Bare metal weight": "355g",
+   "9. Bare metal size": "102 * 48 * 48mm"
+  }
+ },
+ "https://www.iremax.net/product/4413": {
+  "model": "REMAX FP-109",
+  "scannedAt": "2026-11-26T05:36:46.531Z",
+  "specs": {
+   "1.Product Color": "Starlight Silver",
+   "2.Battery Type": "Li-Polymer",
+   "3.Battery Capacity": "Typical Energy: 10000mAh/3.85V/38.5Wh, Rated Energy: 9300mAh/3.85V/35.81Wh",
+   "4.Input Voltage and Current": "Type-C: 5V/3A 9V/2A 18W(Max)",
+   "5.Output Voltage and Current": "Type-C: 5V/3A 9V/2.22A 12V/1.67A 20W(Max)",
+   "Type-C cable": "5V/3A 9V/2.22A 10V/2.25A 12V/1.67A 22.5W(Max)",
+   "Wireless charging": "2.5W/5W/7.5W/10W/15W , the watch protocol supports IPH",
+   "6.Multi-port total output Multi-port total output": "5V/3A(Max)",
+   "7.Energy conversion rate": "≥65%",
+   "8.Bare metal weight": "≈202g",
+   "9.Bare metal size": "102.7*67*21mm"
+  }
  }
 }
