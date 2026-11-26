@@ -3145,7 +3145,7 @@
  },
  "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-b39-pd-30000mah": {
   "model": "Hoco B39 Magic Stone",
-  "scannedAt": "2026-11-26T04:46:27.542Z",
+  "scannedAt": "2026-11-26T04:56:24.569Z",
   "specs": {
    "Capacity": "30000mAh 99Wh (3.3V). 2. Support fast charging PD / QC3.0 / QC2.0, Huawei fast charge FCP, Samsung fast charge AFC and others.",
    "Input": "Micro-USB: 3.6V-6.5V/3A, 6.6V-9V/2A, 9.1V-12V/1.5A. Type-C: 5V/2A (PD), 9V/2A (PD), 12V/1.5A (PD), 15V/1.2A (PD) 18W.",
@@ -3220,7 +3220,7 @@
  },
  "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-b35e-30000mah-3usb-output": {
   "model": "Hoco B35E Entourage",
-  "scannedAt": "2026-11-26T04:46:28.531Z",
+  "scannedAt": "2026-11-26T04:56:25.538Z",
   "specs": {
    "Power bank capacity": "30000mAh 37W, so it is convenient to charge your devices while travelling.",
    "Input": "Micro / Type-C: 5V 2A Max.",
@@ -3231,7 +3231,7 @@
  },
  "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j27a-20000mah-dual-usb": {
   "model": "Hoco J27A Wide energy",
-  "scannedAt": "2026-11-26T04:46:28.532Z",
+  "scannedAt": "2026-11-26T04:56:25.538Z",
   "specs": {
    "Power bank capacity": "20000mAh 74Wh. Rated capacity: 11800mAh (5V TYP 2A).",
    "Input": "Micro-USB / Type-C 5V / 2A Max.",
@@ -3242,7 +3242,7 @@
  },
  "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-b31c-sharp-5200mah-dual-usb-output": {
   "model": "Hoco B31C Sharp",
-  "scannedAt": "2026-11-26T04:46:26.529Z",
+  "scannedAt": "2026-11-26T04:56:25.538Z",
   "specs": {
    "Capacity": "5200mAh 19.24Wh.",
    "Input": "Micro-USB DC5V/1.0A.",
@@ -3498,7 +3498,7 @@
  },
  "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j37-10000-mah-dual-usb": {
   "model": "Hoco J37 Wisdom",
-  "scannedAt": "2026-11-26T04:46:28.531Z",
+  "scannedAt": "2026-11-26T04:56:24.605Z",
   "specs": {
    "Power bank capacity": "10000mAh 37W. Rated capacity: 5900mAh (5V TYP 2A).",
    "Battery input": "Micro-USB / Type-C: 5V / 2A max.",
