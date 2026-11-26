@@ -3427,6 +3427,38 @@
     "mAh per liter: 55316"
    ],
    "group": "Power banks"
+  },
+  "HOCOJ59FAMOUS": {
+   "name": "Hoco J59 Famous",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5900mAh",
+    "Weight: 235g",
+    "Dimensions: 138×68×16mm",
+    "mAh per g: 42.6",
+    "mAh per liter: 66603"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ61COMPANION": {
+   "name": "Hoco J61 Companion",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5900mAh",
+    "Output: 18W"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOB40UNIVERSAL": {
+   "name": "Hoco B40 Universal",
+   "tags": [
+    "Capacity: 7000mAh",
+    "Weight: 126g",
+    "Dimensions: 118×51×14mm",
+    "mAh per g: 55.6",
+    "mAh per liter: 83084"
+   ],
+   "group": "Power banks"
   }
  },
  "stopPhrases": [
