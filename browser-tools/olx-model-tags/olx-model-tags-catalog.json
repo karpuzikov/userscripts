@@ -4405,7 +4405,8 @@
   "HOCOB16METAL": {
    "name": "Hoco B16 Metal",
    "tags": [
-    "Capacity: 10000mAh"
+    "Capacity: 10000mAh",
+    "Output: 10.5W"
    ],
    "group": "Power banks"
   },
