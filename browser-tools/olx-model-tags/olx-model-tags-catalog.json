@@ -2362,6 +2362,81 @@
     "mAh per liter: 60739"
    ],
    "group": "Power banks"
+  },
+  "HOCOJ111DSMARTCHARGE": {
+   "name": "Hoco J111D Smart charge",
+   "tags": [
+    "Capacity: 50000mAh",
+    "Rated capacity: 25000mAh",
+    "Output: 30W",
+    "Weight: 918g",
+    "Dimensions: 150×68×65mm",
+    "mAh per g: 54.5",
+    "mAh per liter: 75415"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ111CSMARTCHARGE": {
+   "name": "Hoco J111C Smart charge",
+   "tags": [
+    "Capacity: 40000mAh",
+    "Rated capacity: 20000mAh",
+    "Output: 30W",
+    "Weight: 752g",
+    "Dimensions: 150×68×52mm",
+    "mAh per g: 53.2",
+    "mAh per liter: 75415"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ111BSMARTCHARGE": {
+   "name": "Hoco J111B Smart charge",
+   "tags": [
+    "Capacity: 30000mAh",
+    "Rated capacity: 15000mAh",
+    "Weight: 555g",
+    "Dimensions: 150×68×40mm",
+    "mAh per g: 54.1",
+    "mAh per liter: 73529"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ111ASMARTCHARGE": {
+   "name": "Hoco J111A Smart charge",
+   "tags": [
+    "Capacity: 20000mAh",
+    "Rated capacity: 10000mAh",
+    "Weight: 389g",
+    "Dimensions: 150×68×28mm",
+    "mAh per g: 51.4",
+    "mAh per liter: 70028"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ118SPEEDENERGY": {
+   "name": "Hoco J118 Speed energy",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5500mAh",
+    "Weight: 241g",
+    "Dimensions: 149×69×20mm",
+    "mAh per g: 41.5",
+    "mAh per liter: 48633"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ117AESTEEM": {
+   "name": "Hoco J117A Esteem",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5500mAh",
+    "Output: 20W",
+    "Weight: 193g",
+    "Dimensions: 101×69×20mm",
+    "mAh per g: 51.8",
+    "mAh per liter: 71746"
+   ],
+   "group": "Power banks"
   }
  },
  "stopPhrases": [
