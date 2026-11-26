@@ -4164,7 +4164,9 @@
    "tags": [
     "Capacity: 10000mAh",
     "Weight: 230g",
-    "mAh per g: 43.5"
+    "Dimensions: 155×74×20mm",
+    "mAh per g: 43.5",
+    "mAh per liter: 43592"
    ],
    "group": "Power banks"
   },
