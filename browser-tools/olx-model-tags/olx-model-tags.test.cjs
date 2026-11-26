@@ -244,3 +244,13 @@ test('Hoco free-text adapter reads J28 "L136 * W68 * H16mm, weight: 196g"', () =
   assert.equal(read('Dimensions', text), 'L136 * W68 * H16mm');
   assert.equal(read('Weight', text), '196g');
 });
+
+test('Hoco free-text adapter reads B12D, B36 and J28 / B38 wordings', () => {
+  const page = JSON.parse(require('fs').readFileSync(__dirname + '/olx-model-tags-sources.json', 'utf8')).sources.find((source) => source.name === 'HOCO').pages.at(-1);
+  const read = (name, text) => text.match(new RegExp(page.properties.find((property) => property.name === name).regex))?.[1];
+  const { batteryMah, maxWatts } = olxModelTags.SOURCE_VALUE_TRANSFORMS;
+  assert.equal(batteryMah(read('Capacity', '1. Capacity: 13000 mAh. 2. Battery: Lithium polymer.')), '13000mAh');
+  assert.equal(batteryMah(read('Capacity', '1. Power bank capacity is 13000mAh 48.1Wh. 2. Input:')), '13000mAh');
+  assert.equal(maxWatts(read('Output', '2. Power bank input: 5V / 2A. 3. Power bank output: USB 1 / 2: DC5V / 2A Max. 4. LED')), '10W');
+  assert.equal(read('Dimensions', '6. Size: 13cm * 7.4cm * 1.5cm. Weight: 212g.'), '13cm * 7.4cm * 1.5cm');
+});
