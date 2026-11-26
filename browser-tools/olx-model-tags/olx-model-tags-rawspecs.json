@@ -3627,5 +3627,128 @@
    "Material": "private mold products, flame retardant ABS+PC, product surface with clear yellow stripes + matte spark pattern.",
    "Display": "LED light to indicate the battery status."
   }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-b24-pawker-30000-mah-triple-usb-output": {
+  "model": "Hoco B24 Pawker",
+  "scannedAt": "2026-11-26T03:39:38.464Z",
+  "specs": {
+   "Capacity": "30000mAh.",
+   "Battery": "Lithium polymer.",
+   "Size": "175*105*20mm.",
+   "Weight": "450g.",
+   "Input": "DC5V / 2A.",
+   "Output": "USB1: DC5V / 1A, USB2: DC5V / 2A, USB3: DC5V / 2A.",
+   "Material": "ABS+PC flame retardant material, surface with matte grains.",
+   "Display": "digital display of battery status."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-b25-hanbeck-10000-mah-single-usb-output": {
+  "model": "Hoco B25 Hanbeck",
+  "scannedAt": "2026-11-26T03:39:38.470Z",
+  "specs": {
+   "Capacity": "10000mAh.",
+   "Battery": "Lithium polymer.",
+   "Size": "150*72*10mm.",
+   "Weight": "186g.",
+   "Input": "DC5V / 2A.",
+   "Output": "DC5V / 2.1A.",
+   "Material": "ABS+PC flame retardant material, surface: anodized aluminum alloy.",
+   "Display": "blue LED digital display of battery status."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-b23b-flowed-20000-mah-triple-usb-output": {
+  "model": "Hoco B23B Flowed",
+  "scannedAt": "2026-11-26T03:39:38.472Z",
+  "specs": {
+   "Capacity": "20000mAh.",
+   "Battery": "18650 lithium battery.",
+   "Size": "160*80*20mm.",
+   "Weight": "400g.",
+   "Input": "DC5V / 2A.",
+   "Output": "USB1: DC5V / 2.0A, USB2: DC5V / 2.0A, USB3: DC5V / 1A.",
+   "Material": "ABS+PC flame retardant material, surface with matte grains.",
+   "Display": "digital display of battery status. 9. With LED lighting function."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-b12b-wood-grain-pattern-13000-mah-dual-usb-output": {
+  "model": "Hoco B12B Wood grain pattern",
+  "scannedAt": "2026-11-26T03:39:38.477Z",
+  "specs": {
+   "Capacity": "13000mAh.",
+   "Input": "DC5V 2.0A MAX.",
+   "Output": "USB1: DC5V 2.1A, USB2: DC5V 2.1A. 4. ABS+PC flame retardant material, wood grain water sticker with plaid pattern, simple appearance design, surface sprayed with environmental friendly rubber paint, not leading to fatigue or drop if long-time holding. The built-in LED battery indicator is designed with remote sensing switch: shaking the power bank by hand to timely check the charging level and remaining power level. 5. High energy efficiency A+ class polymer cell.",
+   "Compatibility": "smart phone and 99% tablets. 7. 13cm*7.4cm*1.5cm (L×W×H). Weight: 212g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-b12a-carbon-fiber-pattern-13000-mah-dual-usb-output": {
+  "model": "Hoco B12A Carbon fiber pattern",
+  "scannedAt": "2026-11-26T03:39:38.478Z",
+  "specs": {
+   "Capacity": "13000mAh.",
+   "Input": "DC5V / 2.0A MAX.",
+   "Output": "USB1: DC5V / 2.1A USB2: DC5V / 2.1A. 4. ABS+PC flame retardant material, designed with wood texture water transfer printing, natural combination of aesthetic arc and water transfer printing wood-like process. Carbon fiber water sticker with plaid pattern, simple appearance design, surface sprayed with environmental friendly rubber paint, not leading to fatigue or drop if long-time holding. The built-in LED battery indicator is designed with remote sensing switch: shaking the power bank by hand to timely check the charging level and remaining power level. 5. High energy efficiency A+ class polymer cell.",
+   "Compatibility": "smart phone and 99% tablets. 7. 10cm*6cm*1.4cm (L×W×H) weight: 204g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-b12c-camouflage-pattern-13000-mah-dual-usb-output": {
+  "model": "Hoco B12C Camouflage pattern",
+  "scannedAt": "2026-11-26T03:39:38.478Z",
+  "specs": {
+   "Capacity": "13000mAh.",
+   "Input": "DC5V 2.0A Max.",
+   "Output": "USB1: DC5V 2.1A, USB2: DC5V 2.1A. 4. ABS+PC flame retardant material, camouflage water sticker with plaid pattern, simple appearance design, surface sprayed with environmental friendly rubber paint, not leading to fatigue or drop if long-time holding. The built-in LED battery indicator is designed with remote sensing switch: shaking the power bank by hand to timely check the charging level and remaining power level. 5. High energy efficiency A+ class polymer cell.",
+   "Compatibility": "smart phone and 99% tablets. 7. 13cm*7.4cm*1.5cm (L×W×H). Weight: 204g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-b16-metal-10000-mah-single-usb-output": {
+  "model": "Hoco B16 Metal",
+  "scannedAt": "2026-11-26T03:39:38.480Z",
+  "specs": {
+   "Capacity": "10000mAh.",
+   "Input": "DC5V / 2.0A Max, output: USB: DC5V / 2.1A. 3. ABS+PC fire-resistant material,aluminum alloy shell with sandblasting and anodizing treatment, LED power indicator allows to view charge level and remaining power level. 4. High energy efficiency A+ class polymer cell.",
+   "Compatibility": "smart phone and 99% tablets."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-b23-flowed-10000-mah-dual-usb-output": {
+  "model": "Hoco B23 Flowed",
+  "scannedAt": "2026-11-26T03:39:38.489Z",
+  "specs": {
+   "Capacity": "10000mAh.",
+   "Battery": "Lithium polymer battery.",
+   "Size": "118*72*17mm.",
+   "Weight": "156g.",
+   "Input": "DC5V / 2A.",
+   "Output": "USB1: DC5V / 2.0A, USB2: DC5V / 1A.",
+   "Material": "ABS+PC flame retardant material, surface with matte grains.",
+   "Display": "digital display of battery status."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-b23a-flowed-15000-mah-dual-usb-output": {
+  "model": "Hoco B23A Flowed",
+  "scannedAt": "2026-11-26T03:39:38.493Z",
+  "specs": {
+   "Capacity": "15000mAh.",
+   "Battery": "18650 lithium battery.",
+   "Size": "160*70*20mm.",
+   "Weight": "312g.",
+   "Input": "DC5V / 2A.",
+   "Output": "USB1: DC5V / 2.0A, USB2: DC5V / 1A.",
+   "Material": "ABS+PC flame retardant material, surface with matte grains.",
+   "Display": "digital display of battery status. 9. With LED lighting function."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-b12d-ocean-pattern-13000-mah-dual-usb-output": {
+  "model": "Hoco B12D Ocean pattern",
+  "scannedAt": "2026-11-26T03:39:38.619Z",
+  "specs": {
+   "Capacity": "13000 mAh.",
+   "Battery": "Lithium polymer.",
+   "Size": "130*74*15 mm.",
+   "Weight": "212g.",
+   "Input": "5V / 2A.",
+   "Output": "dual USB 5V / 2.1A.",
+   "Material": "ABS+PC flame retardant material, surface with illustration pattern and sprayed with environment friendly rubber paint.",
+   "Display": "shake sense switch, LED battery indicator."
+  }
  }
 }
