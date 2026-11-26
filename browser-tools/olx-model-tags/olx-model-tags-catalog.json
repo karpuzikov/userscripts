@@ -760,7 +760,8 @@
     "Capacity: 75000mAh",
     "Rated capacity: 44000mAh",
     "Output: 22.5W",
-    "Weight: 1400g"
+    "Weight: 1400g",
+    "mAh per g: 53.6"
    ],
    "group": "Power banks"
   },

@@ -162,3 +162,10 @@ test('setModelProperty derives "mAh per g" from Capacity and Weight', () => {
   set('Weight', '1400g');
   assert.deepEqual(data.models.HOCOJ94OVERLORD.tags.filter((tag) => tag.startsWith('mAh per g')), ['mAh per g: 53.6']);
 });
+
+test('updateDerivedTags adds "mAh per g" to a model saved before the tag existed', () => {
+  const data = olxModelTags.createEmptyOlxModelTagsData();
+  data.models.HOCOJ94OVERLORD = { name: 'Hoco J94 Overlord', tags: ['Capacity: 75000mAh', 'Weight: 1400g'], group: 'Power banks' };
+  olxModelTags.applyOlxModelTagsOperation(data, { type: 'updateDerivedTags', modelName: 'Hoco J94 Overlord' });
+  assert.deepEqual(data.models.HOCOJ94OVERLORD.tags.slice(-1), ['mAh per g: 53.6']);
+});

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OLX - Model Tags
 // @namespace    https://www.olx.ua/
-// @version      0.13.3
+// @version      0.14.0
 // @description  Tag OLX ads by model (tags shared by every ad of that model) or per ad, mark broken ads, filter search results by tags, per-tag Hide (pixel mesh) / Highlight (outline). Shared model catalog is read from GitHub without any key; your own marks stay in this browser. Phone specs (year, DXOMARK camera, AnTuTu, sensor, display, battery, charger, NFC) are captured from the DXOMARK, Kimovil and GSMArena pages you open. OLX only gets read locally from the open page.
 // @match        https://www.olx.ua/*
 // @match        https://www.dxomark.com/smartphones/*
@@ -13,6 +13,8 @@
 // @run-at       document-idle
 // @grant        GM_getValue
 // @grant        GM_setValue
+// @grant        GM_deleteValue
+// @grant        GM_listValues
 // @grant        GM_xmlhttpRequest
 // @grant        GM_addStyle
 // @grant        GM_registerMenuCommand
@@ -73,13 +75,20 @@
 
     // Operations are idempotent, so replaying them on fresh GitHub data (or twice from two tabs) is safe.
     // "Capacity: 75000mAh" + "Weight: 1400g" -> "mAh per g: 53.6" (recomputed whenever either value is set).
-    function updateCapacityPerGramTag(modelEntry) {
-        const valueOf = (property) => modelEntry.tags.map(splitTagIntoPropertyAndValue).find((tag) => tag.property.toLowerCase() === property)?.value;
+    const CAPACITY_PER_GRAM_PROPERTY = 'mAh per g';
+
+    function computeCapacityPerGramTag(tags) {
+        const valueOf = (property) => tags.map(splitTagIntoPropertyAndValue).find((tag) => tag.property.toLowerCase() === property)?.value;
         const capacity = parseFloat(valueOf('capacity'));
         const weight = parseFloat(valueOf('weight'));
-        if (!(capacity > 0 && weight > 0)) return;
-        modelEntry.tags = modelEntry.tags.filter((tag) => splitTagIntoPropertyAndValue(tag).property.toLowerCase() !== 'mah per g');
-        modelEntry.tags.push(`mAh per g: ${(capacity / weight).toFixed(1)}`);
+        return capacity > 0 && weight > 0 ? `${CAPACITY_PER_GRAM_PROPERTY}: ${(capacity / weight).toFixed(1)}` : null;
+    }
+
+    function updateCapacityPerGramTag(modelEntry) {
+        const derivedTag = computeCapacityPerGramTag(modelEntry.tags);
+        if (!derivedTag) return;
+        modelEntry.tags = modelEntry.tags.filter((tag) => splitTagIntoPropertyAndValue(tag).property.toLowerCase() !== CAPACITY_PER_GRAM_PROPERTY.toLowerCase());
+        modelEntry.tags.push(derivedTag);
     }
 
     function applyOlxModelTagsOperation(data, operation) {
@@ -95,6 +104,10 @@
             // The user's own grouping ("Monitors", "square-ish objects"); set on the model when the ad has one, else on the ad.
             const groupOwner = operation.scope === 'model' ? ensureModelEntry(data, operation.modelName) : (data.ads[operation.adId] ||= { model: '', tags: [] });
             groupOwner.group = operation.group.trim();
+            return;
+        }
+        if (operation.type === 'updateDerivedTags') {
+            updateCapacityPerGramTag(ensureModelEntry(data, operation.modelName));
             return;
         }
         if (operation.type === 'setModelProperty') {
@@ -293,7 +306,8 @@
     const STORAGE_KEY_SHOW_DISLIKED_BRAND_ADS = 'olxModelTagsShowDislikedBrandAds';
     const STORAGE_KEY_AUTO_BROKEN_AD_IDS = 'olxModelTagsAutoBrokenAdIds';
     const UPLOAD_DEBOUNCE_MS = 2000;
-    const UPLOAD_CONFLICT_RETRIES = 3;
+    const UPLOAD_CONFLICT_RETRIES = 8;
+    const PENDING_OPERATION_KEY_PREFIX = 'olxModelTagsPendingOperation:';
     const CATALOG_REFRESH_INTERVAL_MS = 60 * 60 * 1000;
 
     let olxModelTagsData = GM_getValue(STORAGE_KEY_CACHED_DATA, null);
@@ -304,9 +318,24 @@
 
     const hasGithubToken = () => Boolean(GM_getValue(STORAGE_KEY_GITHUB_TOKEN, ''));
 
+    // Every pending operation is its own stored value, so tabs opened at the same time cannot overwrite each other's
+    // (one shared list lost operations when many tabs saved at once). Keys sort in the order the operations were made.
+    let pendingOperationCounter = 0;
+
+    function storePendingOperation(operation) {
+        pendingOperationCounter++;
+        GM_setValue(`${PENDING_OPERATION_KEY_PREFIX}${String(Date.now()).padStart(15, '0')}-${String(pendingOperationCounter).padStart(6, '0')}-${Math.random().toString(36).slice(2, 8)}`, operation);
+    }
+
+    function listPendingOperationKeys() {
+        const oldSharedList = GM_getValue(STORAGE_KEY_PENDING_OPERATIONS, []);
+        if (oldSharedList.length) { oldSharedList.forEach(storePendingOperation); GM_setValue(STORAGE_KEY_PENDING_OPERATIONS, []); }
+        return GM_listValues().filter((key) => key.startsWith(PENDING_OPERATION_KEY_PREFIX)).sort();
+    }
+
     function rebuildLocalDataFromCacheAndPendingOperations(baseData) {
         const data = structuredClone(baseData);
-        for (const operation of GM_getValue(STORAGE_KEY_PENDING_OPERATIONS, [])) applyOlxModelTagsOperation(data, operation);
+        for (const key of listPendingOperationKeys()) applyOlxModelTagsOperation(data, GM_getValue(key));
         return data;
     }
 
@@ -328,7 +357,7 @@
 
     // shortcut: without a token the pending list only grows (idempotent ops, a few KB per hundred ads); compact it if storage ever bites.
     function recordOperation(operation) {
-        GM_setValue(STORAGE_KEY_PENDING_OPERATIONS, [...GM_getValue(STORAGE_KEY_PENDING_OPERATIONS, []), operation]);
+        storePendingOperation(operation);
         applyOlxModelTagsOperation(olxModelTagsData, operation);
         renderEverything();
         if (!hasGithubToken()) return;
@@ -393,7 +422,8 @@
         setSynchronizationStatus('working', 'Syncing…');
         try {
             const canUpload = hasGithubToken();
-            const pendingOperations = GM_getValue(STORAGE_KEY_PENDING_OPERATIONS, []);
+            const pendingKeys = listPendingOperationKeys();
+            const pendingOperations = pendingKeys.map((key) => GM_getValue(key));
             let remoteData;
             for (let attempt = 1; ; attempt++) {
                 const catalogFile = await downloadJsonFileFromGithub(GITHUB_CATALOG_FILE_PATH);
@@ -409,16 +439,18 @@
                     if (await uploadJsonFileToGithub(filePath, content, file.sha) === 'conflict') { hasConflict = true; break; }
                 }
                 if (!hasConflict) { remoteData = updatedData; break; }
-                if (attempt >= UPLOAD_CONFLICT_RETRIES) throw new Error('GitHub data file kept changing during upload; retry');
+                if (attempt >= UPLOAD_CONFLICT_RETRIES) throw Object.assign(new Error('GitHub data file kept changing during upload; retrying later'), { retryLater: true });
+                await new Promise((resolve) => setTimeout(resolve, 300 + Math.random() * 1500)); // other tabs upload too; random waits stop them colliding again
             }
             // Operations added while uploading stay pending and are applied on top of the fresh data.
-            if (canUpload) GM_setValue(STORAGE_KEY_PENDING_OPERATIONS, GM_getValue(STORAGE_KEY_PENDING_OPERATIONS, []).slice(pendingOperations.length));
+            if (canUpload) pendingKeys.forEach((key) => GM_deleteValue(key));
             GM_setValue(STORAGE_KEY_CACHED_DATA, remoteData);
             GM_setValue(STORAGE_KEY_CACHED_AT, Date.now());
             olxModelTagsData = rebuildLocalDataFromCacheAndPendingOperations(remoteData);
             setSynchronizationStatus('synced', canUpload ? 'Synced' : 'Catalog synced; your edits stay in this browser');
         } catch (error) {
             setSynchronizationStatus('error', error.message);
+            if (error.retryLater) setTimeout(synchronizeWithGithub, 20000 + Math.random() * 20000);
         } finally {
             synchronizationInProgress = false;
             renderEverything();
@@ -476,12 +508,13 @@
             const properties = [];
             for (const propertySpec of page.properties) {
                 const { element, text } = readAdapterValue(propertySpec, root, columnIndexByName, page);
-                if (!element) continue;
+                const propertyName = propertySpec.name || propertySpec.transform;
+                if (!element) { properties.push([propertyName, '']); continue; }
                 const transform = SOURCE_VALUE_TRANSFORMS[propertySpec.transform || 'text'];
                 if (!transform) throw new Error(`Unknown transform "${propertySpec.transform}" in olx-model-tags-sources.json`);
                 const converted = transform(text, element);
                 if (converted && typeof converted === 'object') properties.push([converted.property, converted.value]);
-                else properties.push([propertySpec.name, converted]);
+                else properties.push([propertyName, converted || '']);
             }
             return { modelName, properties };
         });
@@ -491,10 +524,11 @@
     // should have been sourced and was not is easy to spot). Shadow DOM keeps the site's CSS away from it.
     const SOURCE_BADGE_ICONS = {
         sourced: '<path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="#0ECB81" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>',
+        partial: '<path d="M12 6v7.5" fill="none" stroke="#F0B90B" stroke-width="2.6" stroke-linecap="round"/><circle cx="12" cy="18" r="1.6" fill="#F0B90B"/>',
         notSourced: '<path d="M6.5 6.5l11 11M17.5 6.5l-11 11" fill="none" stroke="#F6465D" stroke-width="2.6" stroke-linecap="round"/>',
     };
 
-    function showSourceBadge(isSourced, message) {
+    function showSourceBadge(state, message) {
         let badge = document.querySelector('olx-model-tags-source-badge');
         if (!badge) {
             badge = document.createElement('olx-model-tags-source-badge');
@@ -505,36 +539,49 @@
         const badgeBox = badge.shadowRoot.querySelector('div');
         badgeBox.setAttribute('aria-label', message);
         badgeBox.title = message;
-        badge.shadowRoot.querySelector('svg').innerHTML = SOURCE_BADGE_ICONS[isSourced ? 'sourced' : 'notSourced'];
+        badge.shadowRoot.querySelector('svg').innerHTML = SOURCE_BADGE_ICONS[state];
     }
 
     function captureSpecsOfOpenPage() {
-        if (!olxModelTagsSources.length) { showSourceBadge(false, 'Not sourced: the source list could not be loaded from GitHub'); return false; }
+        if (!olxModelTagsSources.length) { showSourceBadge('notSourced', 'Not sourced: the source list could not be loaded from GitHub'); return false; }
         const match = findSourcePage(olxModelTagsSources, location.hostname, location.pathname, document);
-        if (!match) { showSourceBadge(false, 'Not sourced: no adapter in olx-model-tags-sources.json matches this page'); return false; }
+        if (!match) { showSourceBadge('notSourced', 'Not sourced: no adapter in olx-model-tags-sources.json matches this page'); return false; }
         let captures;
         try {
             captures = readCapturesOfSourcePage(match.page);
         } catch (error) {
-            showSourceBadge(false, `Not sourced: ${error.message}`);
+            showSourceBadge('notSourced', `Not sourced: ${error.message}`);
             throw error;
         }
-        let readModelCount = 0, readValueCount = 0, newValueCount = 0;
+        let readModelCount = 0, readValueCount = 0;
+        const modelCountMissingProperty = {};
         for (const { modelName, properties } of captures) {
             const readProperties = properties.filter(([, value]) => value);
             if (!normalizeModelKey(modelName) || !readProperties.length) continue;
             readModelCount++;
+            for (const [property, value] of properties) if (!value) modelCountMissingProperty[property] = (modelCountMissingProperty[property] || 0) + 1;
             for (const [property, value] of readProperties) {
                 readValueCount++;
                 if (isModelPropertyAlreadySet(olxModelTagsData, modelName, property, value)) continue;
-                newValueCount++;
                 recordOperation({ type: 'setModelProperty', modelName, property, value, groupIfEmpty: match.source.group });
             }
+            const modelEntry = olxModelTagsData.models[normalizeModelKey(modelName)];
+            if (modelEntry && computeCapacityPerGramTag(modelEntry.tags) !== (modelEntry.tags.find((tag) => tag.startsWith(CAPACITY_PER_GRAM_PROPERTY + ':')) || null)) {
+                recordOperation({ type: 'updateDerivedTags', modelName });
+            }
         }
-        showSourceBadge(readValueCount > 0, readValueCount > 0
-            ? `Sourced (${match.source.name}): ${readModelCount} model(s), ${readValueCount} value(s), ${newValueCount} new`
-            : `Not sourced: the ${match.source.name} adapter matches this page but found no values (the site layout may have changed)`);
-        return readValueCount > 0;
+        const missingProperties = Object.entries(modelCountMissingProperty).map(([property, count]) => (readModelCount > 1 ? `${property} (${count} of ${readModelCount} models)` : property));
+        if (!readValueCount) {
+            showSourceBadge('notSourced', `Not sourced: the ${match.source.name} adapter matches this page but found no values (the site layout may have changed)`);
+            return false;
+        }
+        const summary = `${readModelCount} model(s), ${readValueCount} value(s)`;
+        if (missingProperties.length) {
+            showSourceBadge('partial', `Partly sourced (${match.source.name}): ${summary}. Not found: ${missingProperties.join(', ')}`);
+            return false;
+        }
+        showSourceBadge('sourced', `Sourced (${match.source.name}): ${summary}`);
+        return true;
     }
 
     // Adapters come from the public repo (no key), cached an hour like the catalog; an unreachable file keeps the cached copy.
@@ -1087,7 +1134,7 @@
         const cachedAt = GM_getValue(STORAGE_KEY_CACHED_AT, 0);
         synchronizationStatus = { state: 'synced', message: cachedAt ? `Cached ${new Date(cachedAt).toLocaleString('uk-UA', { dateStyle: 'short', timeStyle: 'short' })}` : 'Cached' };
         renderEverything();
-        if (Date.now() - cachedAt > CATALOG_REFRESH_INTERVAL_MS || (hasGithubToken() && GM_getValue(STORAGE_KEY_PENDING_OPERATIONS, []).length)) synchronizeWithGithub();
+        if (Date.now() - cachedAt > CATALOG_REFRESH_INTERVAL_MS || (hasGithubToken() && listPendingOperationKeys().length)) synchronizeWithGithub();
     } else {
         olxModelTagsData = createEmptyOlxModelTagsData();
         synchronizeWithGithub();
