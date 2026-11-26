@@ -2602,5 +2602,65 @@
    "Material": "ABS + PC flame-retardant shell + lithium polymer battery cell.",
    "Sizes": "140*70*16mm. Weight: 239g."
   }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j72a-easy-travel-20000mah": {
+  "model": "Hoco J72A Easy travel",
+  "scannedAt": "2026-11-26T02:53:17.359Z",
+  "specs": {
+   "Capacity": "20000mAh 74Wh. Rated capacity: 11800mAh.",
+   "Input": "Micro-USB / Type-C, 5V/2A max.",
+   "Output": "USB 1/2 – 5V / 2A max. Total output: 5V / 2A max.",
+   "Display": "LED indicator of power level.",
+   "Material": "ABS + PC flame-retardant shell + lithium polymer battery.",
+   "Sizes": "145*68*28mm. Weight: 400g."
+  }
+ },
+ "https://hocotech.com/product/home-office/lamps/power-bank-j73-powerful-30000mah-with-table-lamp": {
+  "model": "Hoco J73 Powerful",
+  "scannedAt": "2026-11-26T02:53:17.360Z",
+  "specs": {
+   "Capacity": "30000mAh 111Wh. Rated capacity: 17700mAh.",
+   "Input": "Micro-USB / Type-C / Lightning: 5V / 2A.",
+   "Output": "total output 5V / 2A, single port 5V / 2A.",
+   "Display": "LED digital display of power level.",
+   "Material": "ABS + PC flame-retardant material + lithium polymer battery.",
+   "Sizes": "166*81*32mm. Weight: 667g. 7. With lanyard, dual output, three inputs, with lamp."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j71-borealis-10000mah-with-cable": {
+  "model": "Hoco J71 Borealis",
+  "scannedAt": "2026-11-26T02:53:17.361Z",
+  "specs": {
+   "Capacity": "10000mAh, 37Wh. Rated capacity: 5900mAh.",
+   "Input": "Micro-USB / Type-C – 5V / 2A.",
+   "Output": "total output 5V / 2A, single port: 5V / 2A.",
+   "Display": "LED digital display of power level.",
+   "Material": "ABS + PC flame-retardant shell + lithium polymer battery.",
+   "Sizes": "140*77*16mm. Cable length: 32cm. Weight: 230g. 7. The built-in cable for Lightning / Type-C is detachable, more convenient to use. 8. No charging cable for power bank charging."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-q3-mayflower-pd20w-qc3-0-10000mah": {
+  "model": "Hoco Q3 Mayflower",
+  "scannedAt": "2026-11-26T02:53:17.363Z",
+  "specs": {
+   "Capacity": "10000mAh, 37Wh. Rated capacity: 5500mAh.",
+   "Input": "Type-C 18W (PD).",
+   "Output": "USB-A 18W (QC), Type-C 9V / 2.22A (PD) 20W. Total output: 5V / 3A.",
+   "Display": "LED display of power level, fast charging indicator.",
+   "Material": "ABS + PC flame-retardant shell + 21700 battery. 6. Support for PD20W, for QC3.0/QC2.0, for FCP, for AFC and other fast charging protocols.",
+   "Sizes": "80*57*26mm. Weight: 179g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j72-easy-travel-10000mah": {
+  "model": "Hoco J72 Easy travel",
+  "scannedAt": "2026-11-26T02:53:17.363Z",
+  "specs": {
+   "Capacity": "10000mAh 37Wh. Rated capacity: 5900mAh.",
+   "Input": "Micro-USB / Type-C, 5V / 2A max.",
+   "Output": "USB 1/2 – 5V / 2A max. Total output: 5V / 2A max.",
+   "Display": "LED indicator of power level.",
+   "Material": "ABS + PC flame-retardant shell + lithium polymer battery.",
+   "Sizes": "136*68*16mm. Weight: 225g."
+  }
  }
 }
