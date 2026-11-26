@@ -3273,5 +3273,94 @@
    "Material": "ABS+PC flame retardant material. 6. Cable X25 (Lightning+Micro-USB), cable length: 10cm.",
    "Power bank size": "length * width * height: 14.2 * 6.7 * 1.6cm. Weight: 212g."
   }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j28-shock-power-10000mah": {
+  "model": "Hoco J28 Shock power",
+  "scannedAt": "2026-11-26T02:54:54.355Z",
+  "specs": {
+   "Power bank capacity": "10000mAh 37Wh. Rated capacity: 5900 (5V TYP 2A).",
+   "Power bank input": "Micro-USB / Type-C: 5V / 2A Max.",
+   "Power bank output": "USB 1 / 2: DC5V / 2A Max. 4. LED digital display for power level (button activation).",
+   "Battery": "energy-efficient A+ polymer battery.",
+   "Power bank material": "ABS+PC flame retardant. 7. Multiple circuit protection.",
+   "Power bank size": "L136 * W68 * H16mm, weight: 196g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j35-sunshine-10000mah-dual-usb-output": {
+  "model": "Hoco J35 Sunshine",
+  "scannedAt": "2026-11-26T02:54:56.353Z",
+  "specs": {
+   "Capacity": "10000mAh 37Wh. Rated capacity: 5900mAh (5V TYP 2A).",
+   "Input": "DC5V / 2A MAX.",
+   "Output": "DC5V / 2A MAX.",
+   "Battery": "A+ grade polymer battery.",
+   "Material": "flame retardant PC. 7. Multiple circuit protection. 8. Length * width * height: 8cm * 6.2cm * 2.4cm; Weight: 272g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j36-10000mah-single-usb": {
+  "model": "Hoco J36 Ample energy",
+  "scannedAt": "2026-11-26T02:54:56.362Z",
+  "specs": {
+   "Power bank capacity": "10000mAh 37Wh. Rated capacity: 5900 (5V TYP 2A).",
+   "Input": "USB / Type-C: 5V / 2A Max.",
+   "Power bank total output": "DC5V/2A Max. 4. LED digital display for power level (button activation).",
+   "Battery": "Energy-efficient A+ polymer battery.",
+   "Power bank material": "ABS+PC flame retardant. 7. Multiple circuit protection. 8. Power bank comes with USB input connector and Lightning output connector. 9. Length * width * height: 142 * 73 * 17mm (excluding line length), weight: 228g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-b38-10000mah": {
+  "model": "Hoco B38 Extreme",
+  "scannedAt": "2026-11-26T02:54:56.365Z",
+  "specs": {
+   "Power bank capacity": "10000mAh 37Wh.",
+   "Power bank input": "Micro-USB: 5V / 2A Max.",
+   "Power bank output": "USB: DC5V / 2A Max. Lightning: DC5V / 1A Max. 4. LED digital display for power level.",
+   "Battery": "energy-efficient A+ polymer battery.",
+   "Power bank material": "ABS+PC flame retardant. 7. Multiple circuit protection. 8. Length * width * height: 101 * 64 * 25mm, weight: 104g. 9. Power bank comes with Lightning output connector."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-b35d-5000mah-dual-usb": {
+  "model": "Hoco B35D Entourage",
+  "scannedAt": "2026-11-26T02:54:56.365Z",
+  "specs": {
+   "Power bank capacity": "5000mAh 18.5Wh, so it is convenient to charge your devices while travelling.",
+   "Input": "Micro-USB: 5V / 1A Max.",
+   "Output": "USB 1 / 2: DC5V / 1A Max. 4. LED digital display for power level (with button activation), therefore you can check remaining power level anytime.",
+   "Battery": "energy-efficient A+ polymer battery.",
+   "Power bank material": "ABS+PC flame retardant, hence battery is durable. 7. Multiple circuit protection provide safety charging, so forget about worries.",
+   "Size": "121 * 67 * 9.5mm, weight: 104g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j34-mighty-source-10000mah-dual-usb-output": {
+  "model": "Hoco J34 Mighty source",
+  "scannedAt": "2026-11-26T02:54:56.365Z",
+  "specs": {
+   "Capacity": "10000mAh 37Wh. Rated capacity: 5900mAh (5V TYP 2A).",
+   "Input": "DC5V / 2A Max.",
+   "Output": "DC5V / 2A Max.",
+   "Battery": "A+ grade polymer battery.",
+   "Material": "flame retardant PC. 6. Multiple circuit protection. 7. Length * width * height: 6cm * 6.8cm * 1.6cm; weight: 258g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j33a-20000mah-dual-usb": {
+  "model": "Hoco J33A Cool freedom",
+  "scannedAt": "2026-11-26T02:54:56.366Z",
+  "specs": {
+   "Power bank capacity": "20000mAh 74Wh. Rated capacity: 12000mAh (5V TYP 2A).",
+   "Input": "Micro-USB / Type-C 5V / 2A Max.",
+   "Output": "USB 1 / USB 2: DC5V / 2A Max. Total output: DC5V / 2A Max. 4. LED lights shows the battery power level (button activation).",
+   "Material": "ABS+PC flame retardant material 6. Cable X25 (Lightning + Micro-USB), cable length: 10cm.",
+   "Power bank size": "length * width * height: 14.5 * 7.4 * 2.6cm. Weight: 389g."
+  }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j38-comprehensive-10000mah-dual-usb-output": {
+  "model": "Hoco J38 Comprehensive",
+  "scannedAt": "2026-11-26T02:54:56.367Z",
+  "specs": {
+   "Capacity": "10000mAh 37Wh. Rated capacity: 5900mAh (5V TYP 2A).",
+   "Input": "Micro-USB / Type-C: DC5V/2A Max.",
+   "Output": "DC5V / 2A Max.",
+   "Material": "ABS+ flame retardant PC. 5. Multiple circuit protection. 6. Length * width * height: 97 * 63 * 25mm. Weight: 189g."
+  }
  }
 }
