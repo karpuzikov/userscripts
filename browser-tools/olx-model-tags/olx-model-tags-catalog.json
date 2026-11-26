@@ -4753,7 +4753,9 @@
   "REMAX02PD": {
    "name": "REMAX 02PD",
    "tags": [
-    "Output: 45W"
+    "Output: 45W",
+    "Capacity: 10000mAh",
+    "Rated capacity: 11000mAh"
    ],
    "group": "Power banks"
   },
@@ -4862,6 +4864,39 @@
     "Capacity: 5000mAh",
     "Rated capacity: 3000mAh",
     "Output: 20.04W"
+   ],
+   "group": "Power banks"
+  },
+  "REMAXFP151": {
+   "name": "REMAX FP-151",
+   "tags": [
+    "Rated capacity: 10000mAh"
+   ],
+   "group": "Power banks"
+  },
+  "REMAXJP368": {
+   "name": "REMAX JP368",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5100mAh",
+    "Output: 45W"
+   ],
+   "group": "Power banks"
+  },
+  "REMAXT202ALP": {
+   "name": "REMAX T202ALP",
+   "tags": [
+    "Capacity: 20000mAh",
+    "Rated capacity: 11600mAh",
+    "Output: 45W"
+   ],
+   "group": "Power banks"
+  },
+  "REMAXFP17": {
+   "name": "REMAX FP-17",
+   "tags": [
+    "Capacity: 5000mAh",
+    "Rated capacity: 5500mAh"
    ],
    "group": "Power banks"
   }
