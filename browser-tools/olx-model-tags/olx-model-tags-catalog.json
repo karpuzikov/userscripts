@@ -2493,6 +2493,7 @@
     "Rated capacity: 5500mAh",
     "Weight: 222g",
     "Dimensions: 150×68×16mm",
+    "Output: 10W",
     "mAh per g: 45.0",
     "mAh per liter: 61275"
    ],
@@ -2505,6 +2506,7 @@
     "Rated capacity: 2800mAh",
     "Weight: 121g",
     "Dimensions: 95×64×15mm",
+    "Output: 10W",
     "mAh per g: 41.3",
     "mAh per liter: 54825"
    ],
@@ -2595,6 +2597,7 @@
     "Rated capacity: 2900mAh",
     "Weight: 95g",
     "Dimensions: 78×47×28mm",
+    "Output: 10W",
     "mAh per g: 52.6",
     "mAh per liter: 48710"
    ],
