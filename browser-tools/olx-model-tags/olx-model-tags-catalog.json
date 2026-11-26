@@ -753,6 +753,16 @@
     "DXOMARK: 118"
    ],
    "group": "Smartphones"
+  },
+  "HOCOJ94OVERLORD": {
+   "name": "Hoco J94 Overlord",
+   "tags": [
+    "Capacity: 75000mAh",
+    "Rated capacity: 44000mAh",
+    "Output: 22.5W",
+    "Weight: 1400g"
+   ],
+   "group": "Power banks"
   }
  },
  "stopPhrases": [
