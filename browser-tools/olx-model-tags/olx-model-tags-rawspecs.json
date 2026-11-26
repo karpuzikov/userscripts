@@ -3572,7 +3572,7 @@
  },
  "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-b35a-entourage-5200-mah-single-usb-output": {
   "model": "Hoco B35A Entourage",
-  "scannedAt": "2026-11-26T03:39:26.460Z",
+  "scannedAt": "2026-11-26T03:51:30.480Z",
   "specs": {
    "Capacity": "5200mAh / 19.24Wh.",
    "Input": "Micro-USB DC5V / 1.0A.",
@@ -3583,7 +3583,7 @@
  },
  "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-b35-entourage-2600-mah-single-usb-output": {
   "model": "Hoco B35 Entourage",
-  "scannedAt": "2026-11-26T03:39:26.460Z",
+  "scannedAt": "2026-11-26T03:51:30.499Z",
   "specs": {
    "Capacity": "2600mAh.",
    "Size": "93*24mm. Weight: 62g.",
@@ -3594,7 +3594,7 @@
  },
  "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j24-cool-energy-8000-mah-dual-usb-output": {
   "model": "Hoco J24 Cool energy",
-  "scannedAt": "2026-11-26T03:39:26.461Z",
+  "scannedAt": "2026-11-26T03:51:29.492Z",
   "specs": {
    "Capacity": "8000mAh. Rated capacity: 5120mAh.",
    "Size": "84*41.5*41.5mm. Weight: 236g.",
@@ -3604,7 +3604,7 @@
  },
  "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-b31-rege-20000-mah-dual-usb-output": {
   "model": "Hoco B31 Rege",
-  "scannedAt": "2026-11-26T03:39:26.462Z",
+  "scannedAt": "2026-11-26T03:51:30.497Z",
   "specs": {
    "Capacity": "20000mAh.",
    "Battery": "18650.",
@@ -3617,7 +3617,7 @@
  },
  "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-b31a-rege-30000-mah-dual-usb-output": {
   "model": "Hoco B31A Rege",
-  "scannedAt": "2026-11-26T03:39:26.462Z",
+  "scannedAt": "2026-11-26T03:51:30.501Z",
   "specs": {
    "Capacity": "30000mAh.",
    "Battery": "18650.",
