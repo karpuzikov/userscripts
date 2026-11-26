@@ -2366,7 +2366,7 @@
  },
  "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j87a-tacker-pd20wqc3-0-20000mah": {
   "model": "Hoco J87A Tacker",
-  "scannedAt": "2026-11-26T02:52:50.361Z",
+  "scannedAt": "2026-11-26T03:11:05.409Z",
   "specs": {
    "Capacity": "20000mAh 74Wh. Rated capacity: 11800mAh. 2. Input Micro-USB – 18W (for QC3.0, FCP, AFC). Type-C – 18W (for PD3.0, QC3.0, FCP, AFC).",
    "Output": "USB-A – 18W (for QC3.0, FCP, AFC). Type-C – 20W (for PD3.0, QC3.0, FCP, AFC). Total output: 5V / 3A.",
@@ -2377,7 +2377,7 @@
  },
  "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-q11-expressar-pd20w-10000mah": {
   "model": "Hoco Q11 Expressar",
-  "scannedAt": "2026-11-26T02:52:50.361Z",
+  "scannedAt": "2026-11-26T03:11:05.407Z",
   "specs": {
    "Capacity": "10000mAh 38.5Wh. Rated capacity: 5700mAh.",
    "Input": "Type-C – 18W (for QC, for FCP, for AFC).",
@@ -2389,7 +2389,7 @@
  },
  "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j87-tacker-pd20wqc3-0-10000mah": {
   "model": "Hoco J87 Tacker",
-  "scannedAt": "2026-11-26T02:52:50.361Z",
+  "scannedAt": "2026-11-26T03:11:05.412Z",
   "specs": {
    "Capacity": "10000mAh 37Wh. Rated capacity: 5900mAh.",
    "Input": "Micro-USB – 18W (for QC3.0, FCP, AFC). Type-C – 18W (for PD3.0, QC3.0, FCP, AFC).",
@@ -2401,7 +2401,7 @@
  },
  "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-j86b-electric-22-5w-60000mah": {
   "model": "Hoco J86B Electric",
-  "scannedAt": "2026-11-26T02:52:50.361Z",
+  "scannedAt": "2026-11-26T03:11:06.413Z",
   "specs": {
    "Capacity": "60000mAh 222Wh. Rated capacity: 35400mAh.",
    "Input": "for Lightning – 18W (for PD, for QC, for FCP, for AFC). Micro-USB / Type-C – 18W (for QC, for FCP, for AFC).",
@@ -2413,7 +2413,7 @@
  },
  "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-q8-cool-energy-45w-15000mah": {
   "model": "Hoco Q8 Cool energy",
-  "scannedAt": "2026-11-26T02:52:50.362Z",
+  "scannedAt": "2026-11-26T03:11:05.410Z",
   "specs": {
    "Capacity": "15000mAh 55.5Wh. Rated capacity: 8100mAh.",
    "Input": "Type-C – 45W (for PD3.0, PPS, QC3.0, FCP/SCP, AFC).",
