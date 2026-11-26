@@ -4592,7 +4592,9 @@
     "Capacity: 10000mAh",
     "Output: 5W",
     "Weight: 246g",
-    "mAh per g: 40.7"
+    "Dimensions: 147×74×15mm",
+    "mAh per g: 40.7",
+    "mAh per liter: 61286"
    ],
    "group": "Power banks"
   },
@@ -4614,7 +4616,9 @@
     "Capacity: 10000mAh",
     "Output: 10.5W",
     "Weight: 168g",
-    "mAh per g: 59.5"
+    "Dimensions: 94×65×24mm",
+    "mAh per g: 59.5",
+    "mAh per liter: 68194"
    ],
    "group": "Power banks"
   },
@@ -4624,7 +4628,9 @@
     "Capacity: 5200mAh",
     "Output: 5W",
     "Weight: 115g",
-    "mAh per g: 45.2"
+    "Dimensions: 96×45×23mm",
+    "mAh per g: 45.2",
+    "mAh per liter: 52335"
    ],
    "group": "Power banks"
   },
@@ -4634,7 +4640,9 @@
     "Capacity: 20000mAh",
     "Output: 10.5W",
     "Weight: 321g",
-    "mAh per g: 62.3"
+    "Dimensions: 160×65×24mm",
+    "mAh per g: 62.3",
+    "mAh per liter: 80128"
    ],
    "group": "Power banks"
   },
