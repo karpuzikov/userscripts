@@ -342,5 +342,19 @@
    "Sizes": "115 × 75 × 29mm.",
    "Weight": "365g."
   }
+ },
+ "https://hocotech.com/product/power/portable-chargers/power-banks/power-bank-q41-bright-22-5w-pd20w-20000mah": {
+  "model": "Hoco Q41 Bright",
+  "scannedAt": "2026-11-26T02:45:35.319Z",
+  "specs": {
+   "Capacity": "20000mAh, 77Wh. Rated capacity: 11000mAh (5V TYP 2A).",
+   "Input": "1 × Type-C port – 5V / 3A, 9V / 2A, 12V / 1.5A – 18W. 1 × built-in Type-C cable – 5V / 3A, 9V / 2A, 12V / 1.5A – 18W.",
+   "Output": "1 × Type-C port – 5V / 2A, 9V / 2.22A, 12V / 1.67A – 20W. 1 × USB-A port – 5V / 3A, 9V / 2A, 10V / 2.25 (SCP), 12V / 1.5A – 22.5W. 1 × built-in cable Type-C – 5V / 2A, 9V / 2.22A, 12V / 1.67A – 20W. Total output: 5V / 2A (max).",
+   "Fast charging protocol support": "for PD3.0 / PD20W / QC3.0 / QC2.0 / FCP / SCP / AFC and other fast charging protocols.",
+   "Material": "ABS + PC flame retardant casing + lithium ion polymer battery.",
+   "Indication": "TFT digital display of power level. Green indicator of PD / QC fast charging. 7. Retractable Type-C cable, 60cm.",
+   "Sizes": "136 × 69 × 33mm.",
+   "Weight": "370g."
+  }
  }
 }
