@@ -2277,6 +2277,91 @@
     "mAh per liter: 48633"
    ],
    "group": "Power banks"
+  },
+  "HOCOJ116PROPOCKET": {
+   "name": "Hoco J116 Pro Pocket",
+   "tags": [
+    "Capacity: 5000mAh",
+    "Rated capacity: 2800mAh",
+    "Weight: 97g",
+    "Dimensions: 80×52×27mm",
+    "mAh per g: 51.5",
+    "mAh per liter: 44516"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ114ACHARGER": {
+   "name": "Hoco J114A Charger",
+   "tags": [
+    "Capacity: 20000mAh",
+    "Rated capacity: 11000mAh",
+    "Weight: 446g",
+    "Dimensions: 156×70×30mm",
+    "mAh per g: 44.8",
+    "mAh per liter: 61050"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ118ASPEEDENERGY": {
+   "name": "Hoco J118A Speed energy",
+   "tags": [
+    "Capacity: 20000mAh",
+    "Rated capacity: 11000mAh",
+    "Weight: 436g",
+    "Dimensions: 149×69×33mm",
+    "mAh per g: 45.9",
+    "mAh per liter: 58950"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ117ESTEEM": {
+   "name": "Hoco J117 Esteem",
+   "tags": [
+    "Capacity: 5000mAh",
+    "Rated capacity: 2800mAh",
+    "Output: 20W",
+    "Weight: 123g",
+    "Dimensions: 93×66×13mm",
+    "mAh per g: 40.7",
+    "mAh per liter: 62661"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ116COOLCHARGING": {
+   "name": "Hoco J116 Cool charging",
+   "tags": [
+    "Capacity: 5000mAh",
+    "Rated capacity: 2800mAh",
+    "Weight: 97g",
+    "Dimensions: 78×50×23mm",
+    "mAh per g: 51.5",
+    "mAh per liter: 55741"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ114CHARGER": {
+   "name": "Hoco J114 Charger",
+   "tags": [
+    "Capacity: 10000mAh",
+    "Rated capacity: 5500mAh",
+    "Weight: 222g",
+    "Dimensions: 150×68×16mm",
+    "mAh per g: 45.0",
+    "mAh per liter: 61275"
+   ],
+   "group": "Power banks"
+  },
+  "HOCOJ113ENERGYBAR": {
+   "name": "Hoco J113 Energy-bar",
+   "tags": [
+    "Capacity: 5000mAh",
+    "Rated capacity: 2800mAh",
+    "Weight: 107g",
+    "Dimensions: 105×28×28mm",
+    "mAh per g: 46.7",
+    "mAh per liter: 60739"
+   ],
+   "group": "Power banks"
   }
  },
  "stopPhrases": [
