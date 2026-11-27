@@ -1,14 +1,22 @@
 # Corrupt Image Verifier - Continuity
 
 ## Current version, status, links
-- **Version:** 2.3.0
-- **Status:** **2.3.0 - Under construction ⚠️**
+- **Version:** 2.3.1
+- **Status:** **2.3.1 - Under construction ⚠️**
 - **Branch:** main of karpuzikov/userscripts
-- **Source / download:** image-tools/corrupt-image-verifier/Corrupt Image Verifier v2.03.00.bat
-- **Link (user wants github.com blob links only, never raw):** https://github.com/karpuzikov/userscripts/blob/main/image-tools/corrupt-image-verifier/Corrupt%20Image%20Verifier%20v2.03.00.bat
+- **Source / download:** image-tools/corrupt-image-verifier/Corrupt Image Verifier v2.03.01.bat
+- **Link (user wants github.com blob links only, never raw):** https://github.com/karpuzikov/userscripts/blob/main/image-tools/corrupt-image-verifier/Corrupt%20Image%20Verifier%20v2.03.01.bat
 - All Python versions (v1.0.2 - v1.1.7) are in version-history/ and are superseded.
 
-## v2.3.0 - "Fix extensions" step (2026-11-27, current)
+## v2.3.1 - drive-root crash fix (2026-11-27, current)
+
+User picked drive `T:\` -> scan crashed: `Invalid URI: A Dos path must be rooted` in Format-PathLink. Root cause: every picked folder was `.TrimEnd("\")`, turning `T:\` into `T:` = "current folder on drive T", so unreadable folders came back as unrooted paths like `T:System Volume Information`.
+- New `ConvertTo-FolderPath`: full path, trailing slash removed except for a drive root. Used by the folder picker, typed paths, dropped folders and Get-QuarantineRoot (drive root -> `T:\_CORRUPTED`).
+- Format-PathLink falls back to plain text if a path cannot become a link (display only).
+- Folder walk skips folders that are both Hidden and System (`System Volume Information`, `$RECYCLE.BIN`) instead of listing them as ERROR.
+- NOT RUN on Windows; Linux check of the helper only.
+
+## v2.3.0 - "Fix extensions" step (2026-11-27)
 
 Third Windows run (v2.2.0, `august`, 498 files, 62 s): GOOD 350, CORRUPT 2, WARNING 146, UNSUPPORTED 0. Hypothesis confirmed: ~20 JPEG named .HEIC, 5 HEIC named .JPG, ~115 .HEIC files are QuickTime videos (ftyp `qt`, iPhone Live Photo parts), 6 .JPG are MP4 (mp42). The 2 CORRUPT (IMG_6954.JPG, IMG_7044.JPG) start `00 00 00 08 77 69 64 65` = classic QuickTime `wide` atom -> videos, not corrupt.
 
