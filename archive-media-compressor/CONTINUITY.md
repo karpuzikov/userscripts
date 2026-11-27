@@ -2,7 +2,7 @@
 
 ## Purpose and current baseline
 - Product: Archive Media Compressor, under `karpuzikov/userscripts/archive-media-compressor/`.
-- Current working build: `ArchiveMedia v6.00.16.bat` (semantic version 6.0.16), **Under construction ⚠️**, published on default `main`. Previous build: `version-history/ArchiveMedia v6.00.15.bat`.
+- Current working build: `ArchiveMedia v6.00.17.bat` (semantic version 6.0.17), **Under construction ⚠️**, published on default `main`. Previous build: `version-history/ArchiveMedia v6.00.16.bat`.
 - Default branch: `main`. No alternate active branch is established.
 - A single versioned Windows .bat embeds a Base64 ZIP containing `ArchiveMedia.ps1`; the BAT bootstraps WinGet, PowerShell 7, FFmpeg/FFprobe, and ImageMagick; extracts payload into a temporary folder; then runs PowerShell. The BAT contains temporary source-repair/worker-tuning transformations in 6.0.13.
 - Project README: `archive-media-compressor/README.md`; repository-wide download/version table: root `README.md`.
@@ -61,3 +61,10 @@
 2. Test Replace mode only on expendable duplicate fixtures: oversized candidate => source hash unchanged; genuinely smaller candidate => new output retained and original removed only after success. Test collisions, reruns, interrupted FFmpeg/cancel, snapshots and errors.
 3. Check actual PowerShell syntax validation and startup, user prompt/progress status, copy/replace summaries, source timestamps, Unicode names, and Windows UI interaction. Validate that `[SKIP]` omits all size text while actual conversion results still show saved bytes. Record genuine Windows PASS/FAIL for these tests. Do not mark stable without those results.
 4. Consider replacing the accumulated runtime source string patches with a clean, separately testable embedded PowerShell source in a later version after parity validation. Do not revive broken parser or label-based BAT control flow.
+
+## Payload integrity fix - ArchiveMedia v6.0.17 (2026-11-27)
+- Embedded ZIP in v6.0.10-v6.0.16 had a CRC32 mismatch on `ArchiveMedia.ps1`: two `in ` sequences were corrupted to `h (` (palette `foreach` at ~line 601, a comment at ~line 643). Windows PowerShell 5.1 Expand-Archive ignored the CRC; the BAT's runtime string repair fixed only the code occurrence.
+- v6.0.17 re-embeds a clean ZIP (CRC verified for all entries) and removes the runtime `foreach ($entry h (` repair.
+- Worker tuning: `Unknown`/`Unspecified` storage again uses the HDD limit (4-8 analysis workers) instead of 8-24; SSD keeps 24-48.
+- Analysis speed: per-file `ForEach-Object -Parallel -AsJob` stalled on 114,549 files (SSD, 48 workers, idle CPU/disk) from per-item runspace/job overhead. Files are now sent in batches (size = clamp(ceil(files / (workers*8)), 1, 64)); progress shows batches.
+- Static checks: ZIP CRC OK; all prelaunch patch markers match exactly once; longest BAT line 7,273 chars (< 8,191). Windows runtime: **NOT RUN**.
