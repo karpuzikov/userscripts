@@ -1,20 +1,34 @@
 # Corrupt Image Verifier - Continuity
 
 ## Current version, status, links
-- **Version:** 2.0.0
-- **Status:** **2.0.0 - Under construction ⚠️** (Windows run NOT yet done)
+- **Version:** 2.1.0
+- **Status:** **2.1.0 - Under construction ⚠️**
 - **Branch:** main of karpuzikov/userscripts
-- **Source / download:** image-tools/corrupt-image-verifier/Corrupt Image Verifier v2.00.00.bat
-- **Raw:** https://raw.githubusercontent.com/karpuzikov/userscripts/main/image-tools/corrupt-image-verifier/Corrupt%20Image%20Verifier%20v2.00.00.bat
+- **Source / download:** image-tools/corrupt-image-verifier/Corrupt Image Verifier v2.01.00.bat
+- **Link (user wants github.com blob links only, never raw):** https://github.com/karpuzikov/userscripts/blob/main/image-tools/corrupt-image-verifier/Corrupt%20Image%20Verifier%20v2.01.00.bat
 - All Python versions (v1.0.2 - v1.1.7) are in version-history/ and are superseded.
 
-## v2.0.0 - BAT rewrite (2026-11-27, current)
+## v2.1.0 - HEIC via FFmpeg, wrong-extension fix (2026-11-27, current)
+
+First Windows run of v2.0.0 (user, folder `D:\Pictures\Liberman-laptop\Pictures\august`, 498 images, 45 s, 10.9 files/s): weekly dependency check ran (first run), folder picker OK, 285 GOOD, **205 HEIC UNSUPPORTED** ("image type not supported": the ImageMagick Windows build lists HEIC but has no HEVC decoder), **8 JPGs falsely CORRUPT** ("Invalid JPEG signature") - almost certainly valid images (likely HEIC) with a .JPG extension. User did not move them.
+
+Fixes:
+- HEIC/HEIF content (by magic bytes, or .heic/.heif extension with unknown bytes) is decoded with FFmpeg: `ffmpeg -v error -nostdin -i FILE -map 0:v -f null -` (decodes every tile of iPhone grid images). Any stderr text or non-zero exit -> WARNING with the first FFmpeg message (`[hevc @ 0x..]` prefixes stripped). Dependency `Gyan.FFmpeg` added to the .bat (same as ArchiveMedia); a missing ffmpeg forces the weekly check.
+- `DetectContentFormat` (JPEG/PNG/GIF/BMP/TIFF/WebP/HEIC/AVIF/JPEG 2000/other ISO media). A signature mismatch is CORRUPT only when the bytes match **no** known format. Valid content with the wrong extension -> WARNING "Wrong extension: content is HEIC, named .JPG" (or "... - decoder failed: ...").
+- Removed the "ImageMagick cannot read HEIC" NOTE (FFmpeg now handles HEIC).
+- Weekly dependency check (user asked again 2026-11-27): already in place since 2.0.0; the first run always checks because no stamp exists yet.
+- Linux test (PowerShell 7.4.6, FFmpeg 9.0.2, ImageMagick 6.9): pillow-heif HEICs GOOD, truncated HEIC WARNING "Invalid NAL unit size", HEIC renamed .JPG WARNING wrong extension, fake PNG still CORRUPT.
+- **NOT RUN:** real iPhone grid HEICs and the 8 user JPGs on Windows.
+
+Next: user re-runs v2.1.0 on the same folder; expect 0 UNSUPPORTED and the 8 JPGs as WARNING wrong extension (or GOOD/real damage). Ask for one JPG's first bytes if they are still CORRUPT.
+
+## v2.0.0 - BAT rewrite (2026-11-27)
 
 User request: "re make this whole app into a bat script, check ArchiveMedia v6.00.21.bat and make this one in the same way, throw away all that python". The Python/Tkinter app, the unpublished PySide6 v1.3.0 draft and the unpublished Go v1.2.x prototypes are all abandoned. **Do not go back to Python or a GUI toolkit.**
 
 ### Architecture (same pattern as ArchiveMedia)
 - One file: `Corrupt Image Verifier vX.XX.XX.bat`. The top is a batch bootstrap; the PowerShell 7 app is stored **as plain text** after the last `::CORRUPT_IMAGE_VERIFIER_PAYLOAD` line (ArchiveMedia uses a base64 zip; plain text was chosen so the code is readable/diffable on GitHub). Keep the payload ASCII-only. Batch never reads past `exit /b`. No CALL/GOTO labels (LF-safe). File is committed with CRLF.
-- Bootstrap: finds/installs WinGet (same block as ArchiveMedia), installs/updates `Microsoft.PowerShell` and `ImageMagick.ImageMagick` **at most once a week** (stamp `%LOCALAPPDATA%\Karpuzikov Tools\Corrupt Image Verifier\last-dependency-check.txt`, same rule as ArchiveMedia v6.0.22; a missing pwsh/magick forces the check). Extracts the payload to `%TEMP%\CorruptImageVerifier_*`, parse-checks it, runs it with `pwsh -STA -File ... %*`, deletes the temp folder.
+- Bootstrap: finds/installs WinGet (same block as ArchiveMedia), installs/updates `Microsoft.PowerShell`, `Gyan.FFmpeg` (since 2.1.0) and `ImageMagick.ImageMagick` **at most once a week** (stamp `%LOCALAPPDATA%\Karpuzikov Tools\Corrupt Image Verifier\last-dependency-check.txt`, same rule as ArchiveMedia v6.0.22; a missing pwsh/magick forces the check). Extracts the payload to `%TEMP%\CorruptImageVerifier_*`, parse-checks it, runs it with `pwsh -STA -File ... %*`, deletes the temp folder.
 - Decoder: ImageMagick `magick.exe` (covers JPEG/PNG/GIF/WebP/BMP/TIFF/ICO/JPEG 2000/HEIC/HEIF/AVIF/PCX/TGA/PNM/DDS). The app prints a NOTE if the installed ImageMagick cannot read HEIC.
 - Engine: C# class `CorruptImageVerifierEngine` compiled with Add-Type inside the payload (classification, folder walk, visual detector, byte compare). Scan runs `ForEach-Object -Parallel`; each worker calls the engine; child `magick` processes get `MAGICK_THREAD_LIMIT=1`.
 - Workers: any HDD/Unknown source drive -> min(8, max(4, CPU)); otherwise max(4, CPU). `shortcut: one pool for all drives, per-drive pools only if multi-drive scans are slow.`
