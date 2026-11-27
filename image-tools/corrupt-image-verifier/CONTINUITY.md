@@ -1,14 +1,25 @@
 # Corrupt Image Verifier - Continuity
 
 ## Current version, status, links
-- **Version:** 2.2.0
-- **Status:** **2.2.0 - Under construction ⚠️**
+- **Version:** 2.3.0
+- **Status:** **2.3.0 - Under construction ⚠️**
 - **Branch:** main of karpuzikov/userscripts
-- **Source / download:** image-tools/corrupt-image-verifier/Corrupt Image Verifier v2.02.00.bat
-- **Link (user wants github.com blob links only, never raw):** https://github.com/karpuzikov/userscripts/blob/main/image-tools/corrupt-image-verifier/Corrupt%20Image%20Verifier%20v2.02.00.bat
+- **Source / download:** image-tools/corrupt-image-verifier/Corrupt Image Verifier v2.03.00.bat
+- **Link (user wants github.com blob links only, never raw):** https://github.com/karpuzikov/userscripts/blob/main/image-tools/corrupt-image-verifier/Corrupt%20Image%20Verifier%20v2.03.00.bat
 - All Python versions (v1.0.2 - v1.1.7) are in version-history/ and are superseded.
 
-## v2.2.0 - decode by real content (2026-11-27, current)
+## v2.3.0 - "Fix extensions" step (2026-11-27, current)
+
+Third Windows run (v2.2.0, `august`, 498 files, 62 s): GOOD 350, CORRUPT 2, WARNING 146, UNSUPPORTED 0. Hypothesis confirmed: ~20 JPEG named .HEIC, 5 HEIC named .JPG, ~115 .HEIC files are QuickTime videos (ftyp `qt`, iPhone Live Photo parts), 6 .JPG are MP4 (mp42). The 2 CORRUPT (IMG_6954.JPG, IMG_7044.JPG) start `00 00 00 08 77 69 64 65` = classic QuickTime `wide` atom -> videos, not corrupt.
+
+User asked to fix "Not an image" and "Wrong extension" files. Added:
+- `DetectContentFormat`: ftyp `qt` -> "Video (QuickTime MOV)"; other ftyp brands -> "Video (MP4, brand X)"; classic QuickTime first atoms (`wide`, `mdat`, `moov`, `free`, `skip`, `pnot`) -> QuickTime MOV.
+- `CorruptImageVerifierResult.RealExtension` (.jpg/.png/.gif/.bmp/.tif/.webp/.heic/.avif/.jp2/.mov/.mp4) for wrong-extension and not-an-image results.
+- New prompt after the result: "Fix extensions" lists counts per `old -> new`, then `Rename N file(s) to their real type [F] / Leave them [Enter]`. Rename in the same folder, same base name, keeps upper case if the old extension was upper case (`.HEIC` -> `.MOV`), never overwrites (`IMG_7300 (1).MOV` when `IMG_7300.MOV` exists - typical for Live Photo pairs), checks size+mtime first, recorded in the same undo manifest as moves (one run id per run, so one Undo reverts renames and moves together). Undo prompt text: "Last run moved or renamed N file(s)".
+- Linux test PASS: mp42 .JPG -> .MP4, `wide` .JPG -> .MOV, qt .HEIC -> `IMG_7300 (1).MOV` (existing .MOV untouched), JPEG .HEIC -> .JPG; undo restored all 4 names.
+- NOT RUN on Windows. Expected next run on `august`: ~146 renames offered, 0 CORRUPT; after renaming, a rescan should show only real problems.
+
+## v2.2.0 - decode by real content (2026-11-27)
 
 Second Windows run (v2.1.0, same `august` folder, 498 images, 46 s): GOOD 362, CORRUPT 2, WARNING 16, UNSUPPORTED 118.
 - 118 .HEIC files still "image type not supported" via ImageMagick: they did not take the FFmpeg path, so their bytes are a known non-HEIC format (most likely JPEG named .HEIC); ImageMagick then picked its HEIC coder from the extension. Fix: compare real content with the format the extension promises (`ExtensionFormats`), force the ImageMagick coder from content (`jpeg:FILE`, `png:FILE`...), report "Wrong extension: content is JPEG, named .HEIC". **Hypothesis not yet confirmed on the real files.**
