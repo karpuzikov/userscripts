@@ -1,13 +1,63 @@
 # Corrupt Image Verifier - Continuity
 
 ## Current version, status, links
-- **Development version:** 1.1.7
-- **Internal build:** 1.1.7-NATIVE-TEST
-- **Status:** **1.1.7 - Under construction ⚠️**
+- **Version:** 2.0.0
+- **Status:** **2.0.0 - Under construction ⚠️** (Windows run NOT yet done)
 - **Branch:** main of karpuzikov/userscripts
-- **Source:** image-tools/corrupt-image-verifier/Corrupt Image Verifier v1.01.07 NATIVE TEST.pyw
-- **Download:** https://raw.githubusercontent.com/karpuzikov/userscripts/main/image-tools/corrupt-image-verifier/Corrupt%20Image%20Verifier%20v1.01.07%20NATIVE%20TEST.pyw
-- v1.1.4 and v1.0.2 remain as historical sources. Keep README linked to the current versioned source.
+- **Source / download:** image-tools/corrupt-image-verifier/Corrupt Image Verifier v2.00.00.bat
+- **Raw:** https://raw.githubusercontent.com/karpuzikov/userscripts/main/image-tools/corrupt-image-verifier/Corrupt%20Image%20Verifier%20v2.00.00.bat
+- All Python versions (v1.0.2 - v1.1.7) are in version-history/ and are superseded.
+
+## v2.0.0 - BAT rewrite (2026-11-27, current)
+
+User request: "re make this whole app into a bat script, check ArchiveMedia v6.00.21.bat and make this one in the same way, throw away all that python". The Python/Tkinter app, the unpublished PySide6 v1.3.0 draft and the unpublished Go v1.2.x prototypes are all abandoned. **Do not go back to Python or a GUI toolkit.**
+
+### Architecture (same pattern as ArchiveMedia)
+- One file: `Corrupt Image Verifier vX.XX.XX.bat`. The top is a batch bootstrap; the PowerShell 7 app is stored **as plain text** after the last `::CORRUPT_IMAGE_VERIFIER_PAYLOAD` line (ArchiveMedia uses a base64 zip; plain text was chosen so the code is readable/diffable on GitHub). Keep the payload ASCII-only. Batch never reads past `exit /b`. No CALL/GOTO labels (LF-safe). File is committed with CRLF.
+- Bootstrap: finds/installs WinGet (same block as ArchiveMedia), installs/updates `Microsoft.PowerShell` and `ImageMagick.ImageMagick` **at most once a week** (stamp `%LOCALAPPDATA%\Karpuzikov Tools\Corrupt Image Verifier\last-dependency-check.txt`, same rule as ArchiveMedia v6.0.22; a missing pwsh/magick forces the check). Extracts the payload to `%TEMP%\CorruptImageVerifier_*`, parse-checks it, runs it with `pwsh -STA -File ... %*`, deletes the temp folder.
+- Decoder: ImageMagick `magick.exe` (covers JPEG/PNG/GIF/WebP/BMP/TIFF/ICO/JPEG 2000/HEIC/HEIF/AVIF/PCX/TGA/PNM/DDS). The app prints a NOTE if the installed ImageMagick cannot read HEIC.
+- Engine: C# class `CorruptImageVerifierEngine` compiled with Add-Type inside the payload (classification, folder walk, visual detector, byte compare). Scan runs `ForEach-Object -Parallel`; each worker calls the engine; child `magick` processes get `MAGICK_THREAD_LIMIT=1`.
+- Workers: any HDD/Unknown source drive -> min(8, max(4, CPU)); otherwise max(4, CPU). `shortcut: one pool for all drives, per-drive pools only if multi-drive scans are slow.`
+
+### Console workflow
+1. Double-click: if an undo list exists -> `Undo it [U] / New scan [Enter]`. Then folder picker (remembers last folder in `settings.json`) and `Add another folder [A] / Start scan [Enter]`.
+2. Drop folders on the .bat -> scanned directly, no prompts. Drop files -> single-file check, always prints the result incl. GOOD, never moves.
+3. Scan is read-only. Only non-GOOD files are printed: `[CORRUPT]` red, `[WARNING]` yellow, `[UNSUPPORTED]` gray, `[ERROR]` magenta, each with a reason line. Paths are OSC-8 links (Ctrl+click opens the file in Windows Terminal; plain text in old conhost). Progress via Write-Progress (throttled to 4/s). Summary table + files/s.
+4. Visual suspects: `Review them now [R] / Skip [Enter]`; each image opens in the default viewer, `Damaged - allow moving it [D] / Not damaged [Enter]`.
+5. `Move N corrupt file(s) ... [M] / Leave them [Enter]`, showing each `<folder>_CORRUPTED` target first.
+6. Every run writes a new log: `Documents\Karpuzikov Tools\Corrupt Image Verifier\logs\{scan|check|undo}-YYYY-MM-DD-HH-MM-SS-xxxxxx.log`; the path is printed at the end.
+
+### Classification contract (unchanged safety rules)
+- CORRUPT: zero-byte file, or decoder failure **and** magic bytes that do not match the extension. HEIC/HEIF/AVIF/TGA/DIB are never CORRUPT by signature.
+- WARNING: decoder failed with a valid signature; decoded with a damage-type warning (premature end, corrupt, truncated, CRC, huffman, invalid...); JPEG missing FF D9; visual-damage heuristic; decoder timeout (10 min). Benign decoder warnings (e.g. unknown TIFF tags) stay GOOD.
+- UNSUPPORTED: decoder says no delegate / not supported.
+- ERROR: missing file, symlink, permission/read failure, unreadable folder (reported, not silently skipped).
+- Visual heuristic: same algorithm and thresholds as v1.1.7 (seam >= 30, saturation shift >= 0.40, max >= 0.65, rows 18%-82%) on a Box-resized sRGB raster, width min(160,W), height clamp 96-384. JPEG-family only, >=128 px.
+
+### Move / undo contract (unchanged)
+- Move re-checks size + mtime and re-classifies; manual visual confirmations must still be visual WARNINGs.
+- Destination `<source parent>\<source name>_CORRUPTED\<relative path>` (drive root -> `D:\_CORRUPTED`). Copy to a private `.stage-<guid>`, byte compare, no-overwrite rename, undo record written, then original deleted. A failure after the copy removes the copy and the undo record if the original still exists.
+- Undo manifest `undo\last_run.json` keeps the Python format (`version, run_id, created_at, sources, moves[original, moved_to]`), so undo lists from v1.x still work. Previous manifests go to `undo\history`. Undo never overwrites; failures stay in the list; empty quarantine folders are removed.
+
+### Tests run (Linux, PowerShell 7.4.6 + ImageMagick 6.9 via a `magick` shim) - 2026-11-27
+- PASS: scan of 37 fixtures: 30 good JPEGs + bracket name `IMG [1] copy.jpg` GOOD; zero-byte PNG and fake PNG CORRUPT; truncated JPEG WARNING (missing FF D9); glitched JPEG WARNING VISUAL DAMAGE SUSPECTED (seam 158 at 60%); bogus TIFF WARNING.
+- PASS: visual review [R]/[D] -> move [M] -> 3 files in `photos_CORRUPTED` with relative paths; undo [U] restored all 3 and removed the empty quarantine folders.
+- PASS: existing quarantine file -> `[LEFT IN PLACE] Destination already exists`, existing file untouched, other file moved; undo restored it.
+- PASS: drop-files check prints GOOD and WARNING; payload extraction one-liner reproduces the script and it runs.
+- HEIC was UNSUPPORTED only because the Linux ImageMagick lacks the codec; **HEIC on Windows ImageMagick is NOT RUN**.
+- **NOT RUN on Windows:** the .bat bootstrap (winget install/weekly stamp, PATH discovery of magick.exe), FolderBrowserDialog, Windows Terminal links, real photo libraries (HEIC from iPhone, CMYK TIFF banners, nannerl_lee JPEGs), Get-PhysicalDisk worker sizing, speed on 100k files.
+
+### Known limits
+- `shortcut: paths containing & or ^ dropped on the .bat can be mangled by cmd's %*; double-click + folder picker handles them.`
+- Ctrl+C stops a scan safely (read-only). Ctrl+C during a move can leave a `.stage-*` file next to a quarantine target; the original stays intact.
+- Progress shows counts, not per-drive detail.
+
+### Exact next action
+1. User runs the .bat on Windows: first on a folder with the HEIC files from the v1.1.7 screenshot (`D:\Pictures\Liberman-laptop\Pictures\august`); confirm HEIC decodes as GOOD, then send the console output.
+2. Check the v1.1.6/v1.1.7 regression fixtures listed below with the new engine.
+3. Keep `Under construction ⚠️` until the user confirms.
+
+## History before v2.0.0 (Python and Go versions - superseded, kept for context)
 
 ## Purpose and architecture
 Single-file Python/Tkinter desktop verifier with a compact dark UI inspired by ReNamer 7.10, background per-physical-disk thread pools, queue-based GUI results, multiple folder sources, persistent Undo and heuristically flagged visual anomalies. Group multiple source folders on one physical drive under one worker allocation; different physical drives can scan concurrently. The canonical rules are repository-root SOFTWARE_RULES.md. No project-specific RULES.md was present during this update.
