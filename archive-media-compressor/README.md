@@ -1,10 +1,10 @@
 # Archive Media Compressor
 
-Download and double-click `ArchiveMedia v6.00.21.bat`.
+Download and double-click `ArchiveMedia v6.00.22.bat`.
 
 ## Single-file design
 
-`ArchiveMedia v6.00.21.bat` is self-contained. It embeds the compressor PowerShell payload and extracts it only to a temporary folder while running. Temporary payload files are removed when the run finishes.
+`ArchiveMedia v6.00.22.bat` is self-contained. It embeds the compressor PowerShell payload and extracts it only to a temporary folder while running. Temporary payload files are removed when the run finishes.
 
 On startup it:
 
@@ -14,6 +14,8 @@ On startup it:
 - installs or updates ImageMagick;
 - extracts the embedded compressor payload to `%TEMP%`;
 - runs the compressor and cleans up the temporary payload.
+
+The WinGet install/update check runs at most once every 7 days (stamp: `%LOCALAPPDATA%\Karpuzikov Tools\ArchiveMedia\last-dependency-check.txt`). It runs immediately if PowerShell 7, FFmpeg/FFprobe or ImageMagick is missing; delete the stamp to force it.
 
 ## What it does
 
@@ -37,13 +39,13 @@ On startup it:
 
 ## Download
 
-[Download ArchiveMedia v6.00.21.bat](https://raw.githubusercontent.com/karpuzikov/userscripts/main/archive-media-compressor/ArchiveMedia%20v6.00.21.bat)
+[Download ArchiveMedia v6.00.22.bat](https://raw.githubusercontent.com/karpuzikov/userscripts/main/archive-media-compressor/ArchiveMedia%20v6.00.22.bat)
 
 ## Important
 
 JPEG conversion/resizing is not mathematically lossless. Existing JPEG files already within the configured size limit are copied unchanged.
 
-**v6.0.21 - Under construction ⚠️:** the no-growth guard is implemented but has not yet passed real Windows runtime testing. The new version does not remove oversized MP4s left by older runs. Manually inspect prior outputs before cleanup.
+**v6.0.22 - Under construction ⚠️:** the no-growth guard is implemented but has not yet passed real Windows runtime testing. The new version does not remove oversized MP4s left by older runs. Manually inspect prior outputs before cleanup.
 
 **Safety:** v6.0.13 could delete differently named source files in Replace mode after accepting a larger remux. If that occurred, recover originals from an independent backup where available.
 

@@ -89,7 +89,7 @@ Picard can then check for and install future updates from its Plugins interface.
 
 | Project | Description | Version | Download |
 | --- | --- | ---: | --- |
-| **Archive Media Compressor** | Compresses and resizes media archives while preserving their folder structure. | 6.0.21 - Under construction ⚠️ | [![Download](https://img.shields.io/badge/Download-.bat-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/main/archive-media-compressor/ArchiveMedia%20v6.00.21.bat) |
+| **Archive Media Compressor** | Compresses and resizes media archives while preserving their folder structure. | 6.0.22 - Under construction ⚠️ | [![Download](https://img.shields.io/badge/Download-.bat-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/karpuzikov/userscripts/main/archive-media-compressor/ArchiveMedia%20v6.00.22.bat) |
 
 ## Windows Tools
 

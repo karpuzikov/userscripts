@@ -2,7 +2,7 @@
 
 ## Purpose and current baseline
 - Product: Archive Media Compressor, under `karpuzikov/userscripts/archive-media-compressor/`.
-- Current working build: `ArchiveMedia v6.00.21.bat` (semantic version 6.0.21), **Under construction ⚠️**, published on default `main`. Previous build: `version-history/ArchiveMedia v6.00.20.bat`.
+- Current working build: `ArchiveMedia v6.00.22.bat` (semantic version 6.0.22), **Under construction ⚠️**, published on default `main`. Previous build: `version-history/ArchiveMedia v6.00.21.bat`.
 - Default branch: `main`. No alternate active branch is established.
 - A single versioned Windows .bat embeds a Base64 ZIP containing `ArchiveMedia.ps1`; the BAT bootstraps WinGet, PowerShell 7, FFmpeg/FFprobe, and ImageMagick; extracts payload into a temporary folder; then runs PowerShell. The BAT contains temporary source-repair/worker-tuning transformations in 6.0.13.
 - Project README: `archive-media-compressor/README.md`; repository-wide download/version table: root `README.md`.
@@ -89,3 +89,7 @@
 
 ## Fix - ArchiveMedia v6.0.21 (2026-11-27)
 - v6.0.20 multi-source Replace runs stopped every source: the child-run "source and destination must differ" check also fired in Replace mode (where they are equal by design). Check now applies to Copy only. Windows runtime of v6.0.20 confirmed picker/A-Enter flow and child launches work.
+
+## Weekly dependency check - ArchiveMedia v6.0.22 (2026-11-27)
+- WinGet bootstrap/source update/install/upgrade now runs only when `%LOCALAPPDATA%\Karpuzikov Tools\ArchiveMedia\last-dependency-check.txt` is missing or 7+ days old (`forfiles /d -7`), or when pwsh/ffmpeg/ffprobe/magick cannot be found. Stamp is written only after the install/upgrade loop completes without an install failure. Payload unchanged.
+- Windows runtime: **NOT RUN**.
