@@ -2,7 +2,7 @@
 
 ## Purpose and current baseline
 - Product: Archive Media Compressor, under `karpuzikov/userscripts/archive-media-compressor/`.
-- Current working build: `ArchiveMedia v6.00.18.bat` (semantic version 6.0.18), **Under construction ⚠️**, published on default `main`. Previous build: `version-history/ArchiveMedia v6.00.17.bat`.
+- Current working build: `ArchiveMedia v6.00.19.bat` (semantic version 6.0.19), **Under construction ⚠️**, published on default `main`. Previous build: `version-history/ArchiveMedia v6.00.18.bat`.
 - Default branch: `main`. No alternate active branch is established.
 - A single versioned Windows .bat embeds a Base64 ZIP containing `ArchiveMedia.ps1`; the BAT bootstraps WinGet, PowerShell 7, FFmpeg/FFprobe, and ImageMagick; extracts payload into a temporary folder; then runs PowerShell. The BAT contains temporary source-repair/worker-tuning transformations in 6.0.13.
 - Project README: `archive-media-compressor/README.md`; repository-wide download/version table: root `README.md`.
@@ -74,3 +74,9 @@
 - Per-file Copy-Item/Move-Item/New-Item replaced with literal .NET IO (`[IO.File]::Copy/Move`, `[IO.Directory]::CreateDirectory`) so `[`/`]` in paths cannot be treated as wildcards. ImageMagick/FFmpeg verified to accept bracket paths (Linux check).
 - Each FAILED line now prints its error inline and appends to `ArchiveMedia_errors.txt` immediately (stale log removed at start; final full log still written).
 - Windows runtime: **NOT RUN**. Next: rerun on a `[met-art]` folder plus a folder from the 104 others (e.g. `МакSим`) and read the error log.
+
+## Photo re-encode size - ArchiveMedia v6.0.19 (2026-11-27)
+- User run (v6.0.18, Replace on T:): `[met-art]` bracket folders now process (no FAILED); many downscaled JPEGs were KEPT ORIGINAL because the candidate grew (e.g. 1.06 -> 1.42 MiB). Same run: 80 FAILED were all T: out of disk space (drive already full at start; no file succeeded before failures).
+- ConvertPhoto now uses `-sampling-factor 4:2:0` (was 4:4:4) and quality = min($JpegQuality, source JPEG quality from `magick identify -ping -format %Q`); non-JPEG sources keep $JpegQuality. Local IM6 check: 2000x3000 q72 JPEG halved -> old settings 529 KB (> 491 KB source), new 127 KB.
+- Offered, not implemented: Replace mode on a completely full drive (temp files on another drive).
+- Windows runtime: **NOT RUN**.
