@@ -1,14 +1,23 @@
 # Corrupt Image Verifier - Continuity
 
 ## Current version, status, links
-- **Version:** 2.3.1
-- **Status:** **2.3.1 - Under construction ⚠️**
+- **Version:** 2.4.0
+- **Status:** **2.4.0 - Under construction ⚠️**
 - **Branch:** main of karpuzikov/userscripts
-- **Source / download:** image-tools/corrupt-image-verifier/Corrupt Image Verifier v2.03.01.bat
-- **Link (user wants github.com blob links only, never raw):** https://github.com/karpuzikov/userscripts/blob/main/image-tools/corrupt-image-verifier/Corrupt%20Image%20Verifier%20v2.03.01.bat
+- **Source / download:** image-tools/corrupt-image-verifier/Corrupt Image Verifier v2.04.00.bat
+- **Link (user wants github.com blob links only, never raw):** https://github.com/karpuzikov/userscripts/blob/main/image-tools/corrupt-image-verifier/Corrupt%20Image%20Verifier%20v2.04.00.bat
 - All Python versions (v1.0.2 - v1.1.7) are in version-history/ and are superseded.
 
-## v2.3.1 - drive-root crash fix (2026-11-27, current)
+## v2.4.0 - visual heuristic and review step removed (2026-11-27, current)
+
+User (drive scan): 150+ files were offered for visual review; the samples are healthy, bold-colored art (mirror sculpture, neon portrait, red 3D renders) that open fine everywhere. User: "the whole point of this program is to save my time so I will not review" and "refine your corruption detection".
+- **Deleted** the "VISUAL DAMAGE SUSPECTED" heuristic (CheckVisualDamage/DetectVisualAnomaly), the `Visual review [R]/[D]` step and manual-confirmation moves. Detection now relies only on hard evidence: zero bytes, bytes that match no format, decoder errors/damage warnings, missing JPEG end marker, wrong extension/video. **Do not re-add any pixel-guessing check or any per-file review prompt.**
+- Trade-off: JPEGs that decode without any decoder complaint but look visually broken are no longer flagged (the old glitch fixture is now GOOD).
+- Reason texts no longer say "manual review": "JPEG cut short (missing FF D9; ...)".
+- Linux test: the 4 user art samples GOOD; truncated JPEG/HEIC still WARNING; fake/empty PNG CORRUPT.
+- Note: one of the user's attachments was sexual content depicting child characters; it was not used or stored. Never use it as a fixture.
+
+## v2.3.1 - drive-root crash fix (2026-11-27)
 
 User picked drive `T:\` -> scan crashed: `Invalid URI: A Dos path must be rooted` in Format-PathLink. Root cause: every picked folder was `.TrimEnd("\")`, turning `T:\` into `T:` = "current folder on drive T", so unreadable folders came back as unrooted paths like `T:System Volume Information`.
 - New `ConvertTo-FolderPath`: full path, trailing slash removed except for a drive root. Used by the folder picker, typed paths, dropped folders and Get-QuarantineRoot (drive root -> `T:\_CORRUPTED`).
