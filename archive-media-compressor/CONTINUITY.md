@@ -2,7 +2,7 @@
 
 ## Purpose and current baseline
 - Product: Archive Media Compressor, under `karpuzikov/userscripts/archive-media-compressor/`.
-- Current working build: `ArchiveMedia v6.00.20.bat` (semantic version 6.0.20), **Under construction ⚠️**, published on default `main`. Previous build: `version-history/ArchiveMedia v6.00.19.bat`.
+- Current working build: `ArchiveMedia v6.00.21.bat` (semantic version 6.0.21), **Under construction ⚠️**, published on default `main`. Previous build: `version-history/ArchiveMedia v6.00.20.bat`.
 - Default branch: `main`. No alternate active branch is established.
 - A single versioned Windows .bat embeds a Base64 ZIP containing `ArchiveMedia.ps1`; the BAT bootstraps WinGet, PowerShell 7, FFmpeg/FFprobe, and ImageMagick; extracts payload into a temporary folder; then runs PowerShell. The BAT contains temporary source-repair/worker-tuning transformations in 6.0.13.
 - Project README: `archive-media-compressor/README.md`; repository-wide download/version table: root `README.md`.
@@ -86,3 +86,6 @@
 - One source: unchanged behavior. Several: the script re-launches itself once per source (`-ArchiveMediaMode/-ArchiveMediaSource/-ArchiveMediaDestination`, no prompts, no final pause), sequentially, then prints [DONE]/[STOPPED] per source. Copy mode output = `<destination>\<source folder name>`; duplicate folder names are rejected before anything runs.
 - The v6.0.16 UI bat patch (remembered-folder picker + mode block) is now baked into the payload; that bat patch block was removed.
 - Windows runtime: **NOT RUN**.
+
+## Fix - ArchiveMedia v6.0.21 (2026-11-27)
+- v6.0.20 multi-source Replace runs stopped every source: the child-run "source and destination must differ" check also fired in Replace mode (where they are equal by design). Check now applies to Copy only. Windows runtime of v6.0.20 confirmed picker/A-Enter flow and child launches work.
