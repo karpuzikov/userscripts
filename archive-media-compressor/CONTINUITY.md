@@ -2,7 +2,7 @@
 
 ## Purpose and current baseline
 - Product: Archive Media Compressor, under `karpuzikov/userscripts/archive-media-compressor/`.
-- Current working build: `ArchiveMedia v6.00.17.bat` (semantic version 6.0.17), **Under construction ⚠️**, published on default `main`. Previous build: `version-history/ArchiveMedia v6.00.16.bat`.
+- Current working build: `ArchiveMedia v6.00.18.bat` (semantic version 6.0.18), **Under construction ⚠️**, published on default `main`. Previous build: `version-history/ArchiveMedia v6.00.17.bat`.
 - Default branch: `main`. No alternate active branch is established.
 - A single versioned Windows .bat embeds a Base64 ZIP containing `ArchiveMedia.ps1`; the BAT bootstraps WinGet, PowerShell 7, FFmpeg/FFprobe, and ImageMagick; extracts payload into a temporary folder; then runs PowerShell. The BAT contains temporary source-repair/worker-tuning transformations in 6.0.13.
 - Project README: `archive-media-compressor/README.md`; repository-wide download/version table: root `README.md`.
@@ -68,3 +68,9 @@
 - Worker tuning: `Unknown`/`Unspecified` storage again uses the HDD limit (4-8 analysis workers) instead of 8-24; SSD keeps 24-48.
 - Analysis speed: per-file `ForEach-Object -Parallel -AsJob` stalled on 114,549 files (SSD, 48 workers, idle CPU/disk) from per-item runspace/job overhead. Files are now sent in batches (size = clamp(ceil(files / (workers*8)), 1, 64)); progress shows batches.
 - Static checks: ZIP CRC OK; all prelaunch patch markers match exactly once; longest BAT line 7,273 chars (< 8,191). Windows runtime: **NOT RUN**.
+
+## Bracket paths and live error log - ArchiveMedia v6.0.18 (2026-11-27)
+- User run (v6.0.17): 425 FAILED; 321 were under `[met-art] ...` folders (every non-skipped file there failed), 104 elsewhere with unknown cause. Console was closed, so ArchiveMedia_errors.txt (written only at the end) was never created.
+- Per-file Copy-Item/Move-Item/New-Item replaced with literal .NET IO (`[IO.File]::Copy/Move`, `[IO.Directory]::CreateDirectory`) so `[`/`]` in paths cannot be treated as wildcards. ImageMagick/FFmpeg verified to accept bracket paths (Linux check).
+- Each FAILED line now prints its error inline and appends to `ArchiveMedia_errors.txt` immediately (stale log removed at start; final full log still written).
+- Windows runtime: **NOT RUN**. Next: rerun on a `[met-art]` folder plus a folder from the 104 others (e.g. `МакSим`) and read the error log.
