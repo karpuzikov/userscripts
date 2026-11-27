@@ -1,6 +1,6 @@
 # YouTube - Channel Liked Videos
 
-Version: 1.0.0 - Under construction ⚠️
+Version: 1.0.1 - Under construction ⚠️
 Branch: main. Canonical source: `YouTube_Channel_Liked_Videos.user.js` in this directory.
 
 ## Purpose and behavior

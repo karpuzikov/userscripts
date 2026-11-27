@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         YouTube - Channel Liked Videos
 // @namespace    youtube-channel-liked
-// @version      1.0.0
+// @version      1.0.1
 // @description  Adds a Liked tab to YouTube channels and shows your liked videos from that channel.
 // @match        https://www.youtube.com/*
 // @run-at       document-idle
@@ -293,25 +293,26 @@
     }
     const style = element('style');
     style.textContent = `
-        .ycl-tab { appearance:none; border:0; background:none; cursor:pointer; position:relative; display:flex; align-items:center; flex:none; padding:0 16px; color:var(--yt-spec-text-secondary); font:500 1.6rem Roboto,Arial,sans-serif; white-space:nowrap; }
-        .ycl-tab:hover,.ycl-tab[aria-selected=true] {color:var(--yt-spec-text-primary)}
+        :root {--ycl-text:var(--yt-sys-color-baseline--text-primary,var(--yt-spec-text-primary,#f1f1f1)); --ycl-text-secondary:var(--yt-sys-color-baseline--text-secondary,var(--yt-spec-text-secondary,#aaa)); --ycl-chip:var(--yt-spec-badge-chip-background,#ffffff1a)}
+        .ycl-tab { appearance:none; border:0; background:none; cursor:pointer; position:relative; display:flex; align-items:center; flex:none; padding:0 16px; color:var(--ycl-text-secondary); font:500 1.6rem Roboto,Arial,sans-serif; white-space:nowrap; }
+        .ycl-tab:hover,.ycl-tab[aria-selected=true] {color:var(--ycl-text)}
         .ycl-tab::after {content:''; position:absolute; bottom:0; left:16px; right:16px; height:2px; border-radius:2px; background:transparent}
-        .ycl-tab[aria-selected=true]::after {background:var(--yt-spec-text-primary)}
-        .ycl-tab:focus-visible {outline:2px solid var(--yt-spec-text-primary);outline-offset:-2px}
-        .ycl-active .ytTabShapeTabSelected {color:var(--yt-spec-text-secondary)!important}
+        .ycl-tab[aria-selected=true]::after {background:var(--ycl-text)}
+        .ycl-tab:focus-visible {outline:2px solid var(--ycl-text);outline-offset:-2px}
+        .ycl-active .ytTabShapeTabSelected {color:var(--ycl-text-secondary)!important}
         .ycl-active .ytTabShapeTabBarSelected {visibility:hidden!important}
         yt-tab-group-shape:has(.ycl-active) .tabGroupShapeSlider {visibility:hidden!important}
         .ycl-hidden {display:none!important}
-        #ycl-liked-panel {box-sizing:border-box;width:100%;max-width:2300px;margin:0 auto;padding:24px 24px 36px;color:var(--yt-spec-text-primary);font-family:Roboto,Arial,sans-serif}
-        .ycl-status {font-size:1.4rem;color:var(--yt-spec-text-secondary);margin-bottom:18px}
+        #ycl-liked-panel {box-sizing:border-box;width:100%;max-width:2300px;margin:0 auto;padding:24px 24px 36px;color:var(--ycl-text);font-family:Roboto,Arial,sans-serif}
+        .ycl-status {font-size:1.4rem;color:var(--ycl-text-secondary);margin-bottom:18px}
         .ycl-grid {display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,280px),1fr));gap:32px 16px}
         .ycl-card {display:block;min-width:0;color:inherit;text-decoration:none!important}
-        .ycl-thumb {position:relative;aspect-ratio:16/9;background:var(--yt-spec-badge-chip-background);border-radius:12px;overflow:hidden}
+        .ycl-thumb {position:relative;aspect-ratio:16/9;background:var(--ycl-chip);border-radius:12px;overflow:hidden}
         .ycl-thumb img {width:100%;height:100%;object-fit:cover;display:block}
         .ycl-duration {position:absolute;bottom:5px;right:5px;padding:3px 4px;border-radius:4px;background:#000c;color:#fff;font-size:1.2rem;font-weight:500}
         .ycl-title {font-size:1.6rem;font-weight:500;line-height:2.2rem;margin-top:10px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-        .ycl-info {font-size:1.4rem;line-height:2rem;color:var(--yt-spec-text-secondary);margin-top:3px}
-        .ycl-retry {border:0;border-radius:18px;padding:6px 14px;cursor:pointer;background:var(--yt-spec-badge-chip-background);color:var(--yt-spec-text-primary)}
+        .ycl-info {font-size:1.4rem;line-height:2rem;color:var(--ycl-text-secondary);margin-top:3px}
+        .ycl-retry {border:0;border-radius:18px;padding:6px 14px;cursor:pointer;background:var(--ycl-chip);color:var(--ycl-text)}
     `;
     document.head.append(style);
     document.addEventListener('click', e => {
