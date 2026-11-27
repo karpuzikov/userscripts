@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         YouTube - Channel Liked Videos
 // @namespace    youtube-channel-liked
-// @version      1.0.1
+// @version      1.0.2
 // @description  Adds a Liked tab to YouTube channels and shows your liked videos from that channel.
 // @match        https://www.youtube.com/*
 // @run-at       document-idle
@@ -161,6 +161,7 @@
             id = watch?.videoId || reel?.videoId || l.contentId;
             const metadata = l.metadata?.lockupMetadataViewModel;
             title = text(metadata?.title) || text(l.overlayMetadata?.primaryText);
+            info = (metadata?.metadata?.contentMetadataViewModel?.metadataRows || []).slice(1).flatMap(row => row.metadataParts || []).map(part => text(part.text)).filter(Boolean).join(' · ');
             author = identity(metadata?.metadata || l.overlayMetadata);
             const image = l.contentImage?.thumbnailViewModel || l.contentImage;
             thumb = image?.image?.sources?.at(-1)?.url || first(image, 'sources')?.at(-1)?.url;
@@ -172,7 +173,7 @@
     function continuationToken(items) {
         for (const item of items) {
             const renderer = item.continuationItemRenderer || item.continuationItemViewModel;
-            const token = first(renderer, 'continuationCommand')?.token;
+            const token = [...nodes(renderer, 'continuationCommand')].find(c => c.token)?.token;
             if (token) return token;
         }
         return '';
@@ -264,7 +265,7 @@
     function open(page, group, tab) {
         if (active) return;
         const path = channelPath(location.pathname);
-        const content = page.querySelector(':scope > ytd-two-column-browse-results-renderer') || page.querySelector('ytd-two-column-browse-results-renderer');
+        const content = page.querySelector('ytd-two-column-browse-results-renderer > #primary');
         if (!path || !content) return;
         const panel = element('section'); panel.id = PANEL; panel.setAttribute('role','tabpanel'); panel.setAttribute('aria-labelledby',TAB);
         const status = element('div','ycl-status','Loading liked videos…'); status.setAttribute('role','status');
@@ -281,14 +282,15 @@
         if (active && (!page || page !== active.page || group !== active.group || path !== active.path || account() !== active.account || !active.panel.isConnected || !active.content.isConnected || !active.tab.isConnected)) close();
         if (!group) return;
         const old = group.querySelector(`#${TAB}`);
-        if (old) return;
+        const search = group.querySelector('yt-tab-shape:not([tab-title])');
+        // YouTube re-renders the tab list on navigation and can move the Liked tab to the front.
+        if (old) { if (old.nextElementSibling !== search) group.insertBefore(old, search || null); return; }
         const sample = group.querySelector('yt-tab-shape[tab-title]');
         if (!sample) return;
         const tab = element('button','ycl-tab'); tab.id = TAB; tab.type = 'button';
         tab.setAttribute('role','tab'); tab.setAttribute('aria-selected','false'); tab.setAttribute('aria-controls',PANEL);
         tab.append(element('span','ycl-label','Liked'));
         tab.addEventListener('click', event => { event.stopPropagation(); open(page,group,tab); });
-        const search = group.querySelector('yt-tab-shape:not([tab-title])');
         group.insertBefore(tab, search || null);
     }
     const style = element('style');
@@ -303,9 +305,9 @@
         .ycl-active .ytTabShapeTabBarSelected {visibility:hidden!important}
         yt-tab-group-shape:has(.ycl-active) .tabGroupShapeSlider {visibility:hidden!important}
         .ycl-hidden {display:none!important}
-        #ycl-liked-panel {box-sizing:border-box;width:100%;max-width:2300px;margin:0 auto;padding:24px 24px 36px;color:var(--ycl-text);font-family:Roboto,Arial,sans-serif}
+        #ycl-liked-panel {box-sizing:border-box;width:100%;padding:16px 0 36px;color:var(--ycl-text);font-family:Roboto,Arial,sans-serif}
         .ycl-status {font-size:1.4rem;color:var(--ycl-text-secondary);margin-bottom:18px}
-        .ycl-grid {display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,280px),1fr));gap:32px 16px}
+        .ycl-grid {display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,320px),1fr));gap:32px 16px}
         .ycl-card {display:block;min-width:0;color:inherit;text-decoration:none!important}
         .ycl-thumb {position:relative;aspect-ratio:16/9;background:var(--ycl-chip);border-radius:12px;overflow:hidden}
         .ycl-thumb img {width:100%;height:100%;object-fit:cover;display:block}
