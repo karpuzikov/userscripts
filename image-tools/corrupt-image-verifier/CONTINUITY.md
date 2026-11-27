@@ -1,14 +1,25 @@
 # Corrupt Image Verifier - Continuity
 
 ## Current version, status, links
-- **Version:** 2.1.0
-- **Status:** **2.1.0 - Under construction ⚠️**
+- **Version:** 2.2.0
+- **Status:** **2.2.0 - Under construction ⚠️**
 - **Branch:** main of karpuzikov/userscripts
-- **Source / download:** image-tools/corrupt-image-verifier/Corrupt Image Verifier v2.01.00.bat
-- **Link (user wants github.com blob links only, never raw):** https://github.com/karpuzikov/userscripts/blob/main/image-tools/corrupt-image-verifier/Corrupt%20Image%20Verifier%20v2.01.00.bat
+- **Source / download:** image-tools/corrupt-image-verifier/Corrupt Image Verifier v2.02.00.bat
+- **Link (user wants github.com blob links only, never raw):** https://github.com/karpuzikov/userscripts/blob/main/image-tools/corrupt-image-verifier/Corrupt%20Image%20Verifier%20v2.02.00.bat
 - All Python versions (v1.0.2 - v1.1.7) are in version-history/ and are superseded.
 
-## v2.1.0 - HEIC via FFmpeg, wrong-extension fix (2026-11-27, current)
+## v2.2.0 - decode by real content (2026-11-27, current)
+
+Second Windows run (v2.1.0, same `august` folder, 498 images, 46 s): GOOD 362, CORRUPT 2, WARNING 16, UNSUPPORTED 118.
+- 118 .HEIC files still "image type not supported" via ImageMagick: they did not take the FFmpeg path, so their bytes are a known non-HEIC format (most likely JPEG named .HEIC); ImageMagick then picked its HEIC coder from the extension. Fix: compare real content with the format the extension promises (`ExtensionFormats`), force the ImageMagick coder from content (`jpeg:FILE`, `png:FILE`...), report "Wrong extension: content is JPEG, named .HEIC". **Hypothesis not yet confirmed on the real files.**
+- 5 HEICs: "Application provided invalid, non monotonically increasing dts to muxer" - FFmpeg null-muxer noise for tiles/thumbnails with equal timestamps, not damage. Those stderr lines are now ignored (could not reproduce locally; filter untested on real files).
+- 6 .JPG files are MP4 videos (ftyp mp42, e.g. LQWE4370.JPG): now WARNING "Not an image: Video/ISO media (brand mp42), named .JPG" without a decode attempt.
+- IMG_6954.JPG, IMG_7044.JPG: CORRUPT, bytes match no known format. CORRUPT reasons now include the first 12 bytes in hex so the next run shows what they are.
+- Missing-EOI and visual checks now follow real JPEG content, not the extension.
+- Linux test PASS: JPEG named .HEIC -> wrong extension; mp42 named .JPG -> not an image; zero-filled .JPG -> CORRUPT with "00 00 ..."; HEIC with 2 thumbnails -> GOOD.
+- Open question for the user: wrong-extension files are WARNING (listed); if ~120 of them clutter the list, consider GOOD + a one-line count.
+
+## v2.1.0 - HEIC via FFmpeg, wrong-extension fix (2026-11-27)
 
 First Windows run of v2.0.0 (user, folder `D:\Pictures\Liberman-laptop\Pictures\august`, 498 images, 45 s, 10.9 files/s): weekly dependency check ran (first run), folder picker OK, 285 GOOD, **205 HEIC UNSUPPORTED** ("image type not supported": the ImageMagick Windows build lists HEIC but has no HEVC decoder), **8 JPGs falsely CORRUPT** ("Invalid JPEG signature") - almost certainly valid images (likely HEIC) with a .JPG extension. User did not move them.
 
