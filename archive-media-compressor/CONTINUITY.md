@@ -2,7 +2,7 @@
 
 ## Purpose and current baseline
 - Product: Archive Media Compressor, under `karpuzikov/userscripts/archive-media-compressor/`.
-- Current working build: `ArchiveMedia v6.00.19.bat` (semantic version 6.0.19), **Under construction ⚠️**, published on default `main`. Previous build: `version-history/ArchiveMedia v6.00.18.bat`.
+- Current working build: `ArchiveMedia v6.00.20.bat` (semantic version 6.0.20), **Under construction ⚠️**, published on default `main`. Previous build: `version-history/ArchiveMedia v6.00.19.bat`.
 - Default branch: `main`. No alternate active branch is established.
 - A single versioned Windows .bat embeds a Base64 ZIP containing `ArchiveMedia.ps1`; the BAT bootstraps WinGet, PowerShell 7, FFmpeg/FFprobe, and ImageMagick; extracts payload into a temporary folder; then runs PowerShell. The BAT contains temporary source-repair/worker-tuning transformations in 6.0.13.
 - Project README: `archive-media-compressor/README.md`; repository-wide download/version table: root `README.md`.
@@ -79,4 +79,10 @@
 - User run (v6.0.18, Replace on T:): `[met-art]` bracket folders now process (no FAILED); many downscaled JPEGs were KEPT ORIGINAL because the candidate grew (e.g. 1.06 -> 1.42 MiB). Same run: 80 FAILED were all T: out of disk space (drive already full at start; no file succeeded before failures).
 - ConvertPhoto now uses `-sampling-factor 4:2:0` (was 4:4:4) and quality = min($JpegQuality, source JPEG quality from `magick identify -ping -format %Q`); non-JPEG sources keep $JpegQuality. Local IM6 check: 2000x3000 q72 JPEG halved -> old settings 529 KB (> 491 KB source), new 127 KB.
 - Offered, not implemented: Replace mode on a completely full drive (temp files on another drive).
+- Windows runtime: **NOT RUN**.
+
+## Multiple sources - ArchiveMedia v6.0.20 (2026-11-27)
+- After each source picker: `Add another source [A] / Start [Enter]`. Missing or overlapping (same/nested) sources are rejected with a message and not added.
+- One source: unchanged behavior. Several: the script re-launches itself once per source (`-ArchiveMediaMode/-ArchiveMediaSource/-ArchiveMediaDestination`, no prompts, no final pause), sequentially, then prints [DONE]/[STOPPED] per source. Copy mode output = `<destination>\<source folder name>`; duplicate folder names are rejected before anything runs.
+- The v6.0.16 UI bat patch (remembered-folder picker + mode block) is now baked into the payload; that bat patch block was removed.
 - Windows runtime: **NOT RUN**.
