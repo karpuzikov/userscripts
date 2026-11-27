@@ -2,7 +2,7 @@
 
 ## Purpose and current baseline
 - Product: Archive Media Compressor, under `karpuzikov/userscripts/archive-media-compressor/`.
-- Current working build: `ArchiveMedia v6.00.22.bat` (semantic version 6.0.22), **Under construction ⚠️**, published on default `main`. Previous build: `version-history/ArchiveMedia v6.00.21.bat`.
+- Current working build: `ArchiveMedia v6.00.23.bat` (semantic version 6.0.23), **Under construction ⚠️**, published on default `main`. Previous build: `version-history/ArchiveMedia v6.00.22.bat`.
 - Default branch: `main`. No alternate active branch is established.
 - A single versioned Windows .bat embeds a Base64 ZIP containing `ArchiveMedia.ps1`; the BAT bootstraps WinGet, PowerShell 7, FFmpeg/FFprobe, and ImageMagick; extracts payload into a temporary folder; then runs PowerShell. The BAT contains temporary source-repair/worker-tuning transformations in 6.0.13.
 - Project README: `archive-media-compressor/README.md`; repository-wide download/version table: root `README.md`.
@@ -92,4 +92,11 @@
 
 ## Weekly dependency check - ArchiveMedia v6.0.22 (2026-11-27)
 - WinGet bootstrap/source update/install/upgrade now runs only when `%LOCALAPPDATA%\Karpuzikov Tools\ArchiveMedia\last-dependency-check.txt` is missing or 7+ days old (`forfiles /d -7`), or when pwsh/ffmpeg/ffprobe/magick cannot be found. Stamp is written only after the install/upgrade loop completes without an install failure. Payload unchanged.
+- Windows runtime: **NOT RUN**.
+
+## Retry inaccessible files - ArchiveMedia v6.0.23 (2026-11-27)
+- User run: many `[IO.File]::Move` failures "being used by another process" (mp4 in `T:\!Ира ноут\Тел 2022`) and two "Access to the path is denied" (JPG).
+- Access denied is likely a v6.0.18 regression: `Move-Item -Force` overwrote read-only destinations, `[IO.File]::Move` does not. Read-only is now cleared on the destination before the move.
+- Final move retries IOException 5 times, 2 s apart (antivirus/indexer holding the fresh temp file).
+- After processing, failures matching locked/access-denied prompt `Retry them [R] / Continue [Enter]`; R reruns only those tasks (their earlier results dropped), loop repeats until Enter.
 - Windows runtime: **NOT RUN**.

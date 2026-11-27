@@ -1,10 +1,10 @@
 # Archive Media Compressor
 
-Download and double-click `ArchiveMedia v6.00.22.bat`.
+Download and double-click `ArchiveMedia v6.00.23.bat`.
 
 ## Single-file design
 
-`ArchiveMedia v6.00.22.bat` is self-contained. It embeds the compressor PowerShell payload and extracts it only to a temporary folder while running. Temporary payload files are removed when the run finishes.
+`ArchiveMedia v6.00.23.bat` is self-contained. It embeds the compressor PowerShell payload and extracts it only to a temporary folder while running. Temporary payload files are removed when the run finishes.
 
 On startup it:
 
@@ -35,17 +35,18 @@ The WinGet install/update check runs at most once every 7 days (stamp: `%LOCALAP
 - Reports file count and total size before/after.
 - Prints `[SKIP] <source path>` without an unchanged size comparison or `0 B saved`; meaningful size deltas remain visible for actions that actually produce output.
 - Writes failed-file details to `ArchiveMedia_errors.txt`.
+- When files fail because they are locked or access is denied, offers `Retry them [R] / Continue [Enter]` and reprocesses only those files. Short locks on the final move are retried automatically (5 attempts, 2 s apart); read-only destinations are overwritten as before.
 - Rejects any photo/video conversion or remux whose output is equal to or larger than its source. In **Copy** mode, writes an unchanged copy with the original extension and relative path, without overwriting an existing fallback file. In **Replace** mode, discards the candidate and leaves the original untouched.
 
 ## Download
 
-[Download ArchiveMedia v6.00.22.bat](https://raw.githubusercontent.com/karpuzikov/userscripts/main/archive-media-compressor/ArchiveMedia%20v6.00.22.bat)
+[Download ArchiveMedia v6.00.23.bat](https://raw.githubusercontent.com/karpuzikov/userscripts/main/archive-media-compressor/ArchiveMedia%20v6.00.23.bat)
 
 ## Important
 
 JPEG conversion/resizing is not mathematically lossless. Existing JPEG files already within the configured size limit are copied unchanged.
 
-**v6.0.22 - Under construction ⚠️:** the no-growth guard is implemented but has not yet passed real Windows runtime testing. The new version does not remove oversized MP4s left by older runs. Manually inspect prior outputs before cleanup.
+**v6.0.23 - Under construction ⚠️:** the no-growth guard is implemented but has not yet passed real Windows runtime testing. The new version does not remove oversized MP4s left by older runs. Manually inspect prior outputs before cleanup.
 
 **Safety:** v6.0.13 could delete differently named source files in Replace mode after accepting a larger remux. If that occurred, recover originals from an independent backup where available.
 
