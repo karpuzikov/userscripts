@@ -2,10 +2,16 @@
 
 ## Purpose and current baseline
 - Product: Archive Media Compressor, under `karpuzikov/userscripts/archive-media-compressor/`.
-- Current working build: `ArchiveMedia v6.00.23.bat` (semantic version 6.0.23), **Under construction ⚠️**, published on default `main`. Previous build: `version-history/ArchiveMedia v6.00.22.bat`.
+- Current working build: `ArchiveMedia v6.00.24.bat` (semantic version 6.0.24), **Under construction ⚠️**, published on default `main`. Previous build: `version-history/ArchiveMedia v6.00.23.bat`.
 - Default branch: `main`. No alternate active branch is established.
 - A single versioned Windows .bat embeds a Base64 ZIP containing `ArchiveMedia.ps1`; the BAT bootstraps WinGet, PowerShell 7, FFmpeg/FFprobe, and ImageMagick; extracts payload into a temporary folder; then runs PowerShell. The BAT contains temporary source-repair/worker-tuning transformations in 6.0.13.
 - Project README: `archive-media-compressor/README.md`; repository-wide download/version table: root `README.md`.
+
+## Change: v6.0.24 identical duplicates instead of "[jpeg]" copies (2026-11-28)
+- User report (Replace run on `T:\!Ира ноут\фотки все сайты\...`): `1623781882015.jpg` + `1623781882015.JPEG` both mapped to `1623781882015.jpg`; the collision rename produced `1623781882015 [jpeg].jpg`, leaving two copies of the same picture.
+- Fix (edited inside the embedded ZIP's ArchiveMedia.ps1, not as a runtime patch): before the collision rename, `Test-ArchiveMediaFilesIdentical` (size, then SHA-256) compares the file with the source that already owns the output name. Identical -> no second task. Replace mode deletes the duplicate source (`[DUPLICATE REMOVED] path / identical to path`); Copy mode just skips it (`[DUPLICATE SKIPPED]`). Different bytes still get the `[ext]` rename as before.
+- Existing `* [jpeg].jpg` files from earlier runs are not cleaned automatically.
+- Static checks PASS: PowerShell 7.4 parse of the new payload (0 errors), helper unit test (identical True, different False), ZIP/Base64 round-trip, runtime-patch needles untouched. Windows run NOT RUN.
 
 ## Operational behavior and invariants
 - Recursive source scanning, relative folder preservation, image/video processing, photo size cap (4096x2160 equivalent), video size cap (1080p equivalent), FFprobe analysis, conditional stream remux/re-encoding, source metadata/timestamps, RAW/unknown-file copying and failed-file reporting.
