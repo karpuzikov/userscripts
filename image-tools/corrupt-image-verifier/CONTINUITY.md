@@ -1,14 +1,23 @@
 # Corrupt Image Verifier - Continuity
 
 ## Current version, status, links
-- **Version:** 2.4.0
-- **Status:** **2.4.0 - Under construction ⚠️**
+- **Version:** 2.4.1
+- **Status:** **2.4.1 - Under construction ⚠️**
 - **Branch:** main of karpuzikov/userscripts
-- **Source / download:** image-tools/corrupt-image-verifier/Corrupt Image Verifier v2.04.00.bat
-- **Link (user wants github.com blob links only, never raw):** https://github.com/karpuzikov/userscripts/blob/main/image-tools/corrupt-image-verifier/Corrupt%20Image%20Verifier%20v2.04.00.bat
+- **Source / download:** image-tools/corrupt-image-verifier/Corrupt Image Verifier v2.04.01.bat
+- **Link (user wants github.com blob links only, never raw):** https://github.com/karpuzikov/userscripts/blob/main/image-tools/corrupt-image-verifier/Corrupt%20Image%20Verifier%20v2.04.01.bat
 - All Python versions (v1.0.2 - v1.1.7) are in version-history/ and are superseded.
 
-## v2.4.0 - visual heuristic and review step removed (2026-11-27, current)
+## v2.4.1 - Samsung/Viber false warnings (2026-11-28, current)
+
+Windows run on `T:\!Ира ноут` (6,351 images, 36 s, 175.7 files/s, 20 workers, SSD): GOOD 5,893, WARNING 458, nothing else. Almost all warnings were Samsung phone JPEGs (`20180101_120000.jpg` names) "JPEG cut short (missing FF D9; Invalid SOS parameters for sequential JPEG)" plus Viber JPEGs "missing final FF D9; fully decodable".
+- Samsung/Viber append data after the JPEG end marker, so "last 2 bytes != FF D9" is not damage. **Deleted the missing-EOI check**; truncation is caught by the decoder's "Premature end of JPEG file".
+- "Invalid SOS parameters for sequential JPEG" is a libjpeg warning on healthy Samsung files; it contained the damage word "invalid". New `BenignDecoderMessages` list (this + FFmpeg "non monotonically increasing dts") filters decoder output for all formats.
+- Reasons showed mojibake Cyrillic paths: decoder stderr is now read as UTF-8, and ImageMagick's "`file' @ ..." tail is cut from messages.
+- Linux test: JPEG + 5 KB Samsung-style SEFH/SEFT trailer GOOD; truncated JPEG WARNING "Premature end of JPEG file".
+- NOT RUN on Windows. Expect ~0 warnings on the same folder.
+
+## v2.4.0 - visual heuristic and review step removed (2026-11-27)
 
 User (drive scan): 150+ files were offered for visual review; the samples are healthy, bold-colored art (mirror sculpture, neon portrait, red 3D renders) that open fine everywhere. User: "the whole point of this program is to save my time so I will not review" and "refine your corruption detection".
 - **Deleted** the "VISUAL DAMAGE SUSPECTED" heuristic (CheckVisualDamage/DetectVisualAnomaly), the `Visual review [R]/[D]` step and manual-confirmation moves. Detection now relies only on hard evidence: zero bytes, bytes that match no format, decoder errors/damage warnings, missing JPEG end marker, wrong extension/video. **Do not re-add any pixel-guessing check or any per-file review prompt.**
